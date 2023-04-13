@@ -1,0 +1,113 @@
+/*
+    index.html style overwrite
+*/
+body{
+    background-color:white;
+}
+
+.functiontab{
+    display:none;
+}
+
+.menubar{
+    width: 100%;
+    padding: 0.4em;
+    padding-left: 1.2em;
+    padding-right: 1.2em;
+    background-color: #f5f5f5;
+    margin-bottom: 1em;
+
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 10;
+    box-shadow: 0px 1px 5px 0px rgba(38,38,38,0.26);
+}
+
+.menubar .logo{
+    height: 36px;
+}
+
+.menubar .item{
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.wrapper{
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 4.6em;
+}
+
+.toolbar{
+    width: 240px;
+}
+
+.contentWindow{
+    padding: 1em;
+    flex: 1;
+}
+
+@media screen and (max-width: 750px) {
+    .toolbar {
+        display: inline-block;
+        width: 100%;
+        margin-bottom: 1em;
+    }
+
+    #mainmenu{
+        width: calc(100% - 1em);
+    }
+
+    .contentWindow{
+        display: inline-block;
+        width: 100%;
+    }
+}
+
+.menudivider{
+    font-size: 0.8em !important;
+    color: #9c9c9c !important;
+    padding-left: 0.6em;
+}
+
+/*
+    Global rules overwrite
+*/
+
+.ui.teal.button{
+    background-color: #7fbbc5 !important;
+}
+
+.ui.red.button:not(.basic){
+    background-color: #c78e70 !important;
+}
+
+/*
+    Status style overwrite
+*/
+#serverstatus.green{
+    background-color: #7fbbc5 !important;
+}
+
+#serverstatus:not(.green){
+    background-color: #5f5e5c !important;
+}
+
+.statustab{
+    min-height: 5em;
+}
+
+#summaryTotalCount{
+    font-size: 1.6em;
+    font-weight: 300;
+}
+
+.statustab.summary{
+    background-color: #f1f1f1 !important;
+    border: 0px solid transparent !important;
+}
+
+.statustab.summary span, .statustab.summary i{
+    color: rgb(37, 37, 37);
+}

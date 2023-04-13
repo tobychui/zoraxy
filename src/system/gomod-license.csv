@@ -1,0 +1,17 @@
+github.com/boltdb/bolt,https://github.com/boltdb/bolt/blob/v1.3.1/LICENSE,MIT
+github.com/gorilla/securecookie,https://github.com/gorilla/securecookie/blob/v1.1.1/LICENSE,BSD-3-Clause
+github.com/gorilla/sessions,https://github.com/gorilla/sessions/blob/v1.2.1/LICENSE,BSD-3-Clause
+github.com/gorilla/websocket,https://github.com/gorilla/websocket/blob/v1.4.2/LICENSE,BSD-2-Clause
+github.com/oschwald/geoip2-golang,https://github.com/oschwald/geoip2-golang/blob/v1.8.0/LICENSE,ISC
+github.com/oschwald/maxminddb-golang,https://github.com/oschwald/maxminddb-golang/blob/v1.10.0/LICENSE,ISC
+gitlab.com/NebulousLabs/fastrand,https://gitlab.com/NebulousLabs/fastrand/blob/603482d69e40/LICENSE,MIT
+gitlab.com/NebulousLabs/go-upnp,https://gitlab.com/NebulousLabs/go-upnp/blob/11da932010b6/LICENSE,MIT
+gitlab.com/NebulousLabs/go-upnp/goupnp,https://gitlab.com/NebulousLabs/go-upnp/blob/11da932010b6/goupnp\LICENSE,BSD-2-Clause
+golang.org/x/crypto/blake2b,https://cs.opensource.google/go/x/crypto/+/0c34fe9e:LICENSE,BSD-3-Clause
+golang.org/x/net/html,https://cs.opensource.google/go/x/net/+/afb366fc:LICENSE,BSD-3-Clause
+golang.org/x/sys,https://cs.opensource.google/go/x/sys/+/v0.6.0:LICENSE,BSD-3-Clause
+golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.3.6:LICENSE,BSD-3-Clause
+imuslab.com/zoraxy,Unknown,MIT
+imuslab.com/zoraxy/mod/dynamicproxy/dpcore,Unknown,MIT
+imuslab.com/zoraxy/mod/reverseproxy,Unknown,MIT
+imuslab.com/zoraxy/mod/websocketproxy,Unknown,MIT

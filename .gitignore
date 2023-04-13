@@ -1,15 +1,30 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# ---> Go
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+src/*.o
+src/*.a
+src/*.so
+src/*.exe
 
-# Test binary, built with `go test -c`
-*.test
+# Folders
+src/_obj
+src/_test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+src/*.cgo1.go
+src/*.cgo2.c
+src/_cgo_defun.c
+src/_cgo_gotypes.go
+src/_cgo_export.*
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+src/_testmain.go
+
+src/*.exe
+src/*.test
+src/*.prof
+
+src/sys.db
+src/src/sys.db.lock
+src/conf/*
+src/ReverseProxy_*_*
+src/Zoraxy_*_*
+src/certs/*
+src/rules/*

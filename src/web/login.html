@@ -1,0 +1,262 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <title>Login | Zoraxy</title>
+    <link rel="stylesheet" href="script/semantic/semantic.min.css">
+    <script type="application/javascript" src="script/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="script/semantic/semantic.min.js"></script>
+    <style>
+        body {
+            background: rgb(245,245,245);
+            background: linear-gradient(28deg, rgba(245,245,245,1) 63%, rgba(255,255,255,1) 100%); 
+        }
+
+        .background{
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 100%;
+            opacity: 0.8;
+            z-index: -99;
+            background-image: url("img/public/bg.png");
+            background-size: auto 100%;
+            background-position: right top;
+            background-repeat: no-repeat;
+            overflow-x: hidden;
+        }
+
+        form {
+            margin:auto;
+        }
+
+        #loginForm{
+            height: 100%;
+            background-color: white;
+            width: 25em;
+            margin-left: 10em;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        @media all and (max-width: 550px) {
+            /* CSS rules here for screens lower than 750px */
+            #loginForm{
+                width: calc(100% - 4em);
+                margin-left: 2em;
+            }
+        }
+
+        #errmsg{
+            color: #9f3a38;
+            margin-top: 1em;
+            margin-bottom: 0.4em;
+            text-align: left;
+        }
+
+        .registerOnly{
+            display:none;
+        }
+
+        .ui.fluid.button.registerOnly{
+            display:none;
+        }
+    </style>
+    </head>
+    <body>
+        <div class="background"></div>
+        <div id="loginForm" class="ui middle aligned center aligned grid">
+            <div class="column">
+                <form class="ui large form">
+                    <div class="ui basic segment">
+                        <img class="ui fluid image" src="img/public/logo.svg" style="pointer-events:none;">
+                        <p class="registerOnly">Account Setup</p>
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="user icon"></i>
+                                <input id="username" type="text" name="username" placeholder="Username">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="lock icon"></i>
+                                <input id="magic" type="password" name="password" placeholder="Password">
+                            </div>
+                        </div>
+                        <div class="field registerOnly">
+                            <div class="ui left icon input">
+                                <i class="lock icon"></i>
+                                <input id="repeatMagic" type="password" name="passwordconfirm" placeholder="Confirm Password">
+                            </div>
+                        </div>
+                        <div class="field loginOnly" style="text-align: left;">
+                            <div class="ui checkbox">
+                            <input id="rmbme" type="checkbox" tabindex="0" class="hidden">
+                            <label>Remember Me</label>
+                            </div>
+                        </div>
+                            <div id="loginbtn" class="ui fluid basic blue button loginOnly">Login</div>
+                            <div id="regsiterbtn" class="ui fluid basic blue button registerOnly">Create</div>
+                            <div id="errmsg"></div>
+                    </div>
+                    <div class="ui divider"></div>
+                    <small>Proudly powered by Zoraxy</small>
+                </form>
+            </div>
+        </div>
+    <script>
+        var redirectionAddress = "/";
+        var loginAddress = "/api/auth/login";
+        $(".checkbox").checkbox();
+        $(document).ready(function(){
+            var currentdate = new Date(); 
+            var datetime = currentdate.getDate() + "/"
+                + (currentdate.getMonth()+1)  + "/" 
+                + currentdate.getFullYear() + " "  
+                + currentdate.getHours() + ":"  
+                + currentdate.getMinutes() + ":" 
+                + currentdate.getSeconds();
+            $("#requestTime").text(datetime);
+
+            //Check if this is a new system
+            $.get("/api/auth/userCount", function(data){
+                if (data == 0){
+                    //Allow user creation
+                    $(".loginOnly").hide();
+                    $(".registerOnly").show();
+                }
+            });
+            //Check if the user already logged in
+            $.get("/api/auth/checkLogin",function(data){
+                try{
+                    if (data === true || data.trim() == "true"){
+                    //User already logged in. Redirect to target page.
+                    if (redirectionAddress == ""){
+                        //Redirect back to index
+                        window.location.href = "/";
+                    }else{
+                        console.log(data);
+                        //window.location.href = redirectionAddress;
+                    }
+                }
+                }catch(ex){
+                    //Assume not logged in
+                    console.log(data);
+                }
+                
+            });
+            
+        });
+
+        function updateYear() {
+            const year = new Date().getFullYear();
+            const elements = document.getElementsByClassName("year");
+            for (let i = 0; i < elements.length; i++) {
+                elements[i].textContent = year;
+            }
+        }
+        updateYear();
+
+        //Event handlers for buttons
+        $("#loginbtn").on("click",function(){
+            login();
+        });
+
+        $("input").on("keydown",function(event){
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                if ($(this).attr("id") == "magic"){
+                    login();
+                }else{
+                    //Fuocus to password field
+                    $("#magic").focus();
+                }
+                
+            }
+        });
+
+        $("#regsiterbtn").on("click", function(event){
+            var username = $("#username").val();
+            var magic = $("#magic").val();
+            var repeatMagic = $("#repeatMagic").val();
+
+            if (magic !== repeatMagic) {
+                alert("Password does not match");
+                return;
+            }
+
+            $.ajax({
+                url: "/api/auth/register",
+                method: "POST",
+                data: {
+                    username: username,
+                    password: magic
+                },
+                success: function(data) {
+                    if (data.error != undefined){
+                        alert(data.error);
+                    }else{
+                        //Register success. Refresh page
+                        window.location.reload();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error registering user:", error);
+                }
+            });
+        });
+
+        //Login system with the given username and password
+        function login(){
+            var username = $("#username").val();
+            var magic = $("#magic").val();
+            var rmbme = document.getElementById("rmbme").checked;
+            $("#errmsg").stop().finish().slideUp("fast");
+            $("input").addClass('disabled');
+            $.post(loginAddress, {"username": username, "password": magic, "rmbme": rmbme}).done(function(data){
+                if (data.error !== undefined){
+                    //Something went wrong during the login
+                    $("#errmsg").html(`<i class="red remove icon"></i> ${data.error}`);
+                    $("#errmsg").stop().finish().slideDown('fast');
+                }else if(data.redirect !== undefined){
+                    //LDAP Related Code
+                    window.location.href = data.redirect;
+                }else{
+                    //Login succeed
+                    if (redirectionAddress == ""){
+                        //Redirect back to index
+                        window.location.href = "./";
+                    }else{
+                        window.location.href = redirectionAddress;
+                    }
+                }
+                $("input").removeClass('disabled');
+            });
+
+        }
+
+        function get(name){
+            if(name=(new RegExp('[?&]'+encodeURIComponent(name)+'=([^&]*)')).exec(location.search))
+                return decodeURIComponent(name[1]);
+        }
+
+        $(".thisyear").text(new Date().getFullYear());
+
+        function updateRenderElements(){
+            if (window.innerHeight < 520){
+                $(".bottombar").hide();
+            }else{
+                $(".bottombar").show();
+            }
+        }
+        updateRenderElements();
+        $(window).on("resize", function(){
+            updateRenderElements();
+        });
+    </script>
+    </body>
+</html>
