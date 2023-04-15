@@ -74,16 +74,18 @@ func (c *Collector) SaveSummaryOfDay() {
 	//When it is called in 0:00am, make sure it is stored as yesterday key
 	t := time.Now().Add(-30 * time.Second)
 	summaryKey := t.Format("02_01_2006")
-	c.Option.Database.Write("stats", summaryKey, c.DailySummary)
+	saveData := DailySummaryToExport(*c.DailySummary)
+	c.Option.Database.Write("stats", summaryKey, saveData)
 }
 
 //Load the summary of a day given
 func (c *Collector) LoadSummaryOfDay(year int, month time.Month, day int) *DailySummary {
 	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 	summaryKey := date.Format("02_01_2006")
-	var targetSummary = newDailySummary()
-	c.Option.Database.Read("stats", summaryKey, &targetSummary)
-	return targetSummary
+	targetSummaryExport := DailySummaryExport{}
+	c.Option.Database.Read("stats", summaryKey, &targetSummaryExport)
+	targetSummary := DailySummaryExportToSummary(targetSummaryExport)
+	return &targetSummary
 }
 
 //This function gives the current slot in the 288- 5 minutes interval of the day

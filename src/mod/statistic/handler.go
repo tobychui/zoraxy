@@ -15,15 +15,6 @@ import (
 */
 
 func (c *Collector) HandleTodayStatLoad(w http.ResponseWriter, r *http.Request) {
-	type DailySummaryExport struct {
-		TotalRequest int64 //Total request of the day
-		ErrorRequest int64 //Invalid request of the day, including error or not found
-		ValidRequest int64 //Valid request of the day
-
-		ForwardTypes    map[string]int
-		RequestOrigin   map[string]int
-		RequestClientIp map[string]int
-	}
 
 	fast, err := utils.GetPara(r, "fast")
 	if err != nil {

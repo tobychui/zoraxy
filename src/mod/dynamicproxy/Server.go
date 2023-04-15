@@ -37,6 +37,15 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Check if there are external routing rule matches.
+	//If yes, route them via external rr
+	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)
+	if matchedRoutingRule != nil {
+		//Matching routing rule found. Let the sub-router handle it
+		matchedRoutingRule.Route(w, r)
+		return
+	}
+
 	//Extract request host to see if it is virtual directory or subdomain
 	domainOnly := r.Host
 	if strings.Contains(r.Host, ":") {
@@ -57,10 +66,16 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	//Clean up the request URI
 	proxyingPath := strings.TrimSpace(r.RequestURI)
-
 	targetProxyEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath)
 	if targetProxyEndpoint != nil {
 		h.proxyRequest(w, r, targetProxyEndpoint)
+	} else if !strings.HasSuffix(proxyingPath, "/") {
+		potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/")
+		if potentialProxtEndpoint != nil {
+			h.proxyRequest(w, r, potentialProxtEndpoint)
+		} else {
+			h.proxyRequest(w, r, h.Parent.Root)
+		}
 	} else {
 		h.proxyRequest(w, r, h.Parent.Root)
 	}

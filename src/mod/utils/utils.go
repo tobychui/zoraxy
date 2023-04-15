@@ -1,16 +1,13 @@
 package utils
 
 import (
-	"archive/tar"
 	"bufio"
-	"compress/gzip"
 	"encoding/base64"
 	"errors"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -175,56 +172,4 @@ func StringInArrayIgnoreCase(arr []string, str string) bool {
 	}
 
 	return StringInArray(smallArray, strings.ToLower(str))
-}
-
-func ExtractTarGzipByStream(basedir string, gzipStream io.Reader, onErrorResumeNext bool) error {
-	uncompressedStream, err := gzip.NewReader(gzipStream)
-	if err != nil {
-		return err
-	}
-
-	tarReader := tar.NewReader(uncompressedStream)
-
-	for {
-		header, err := tarReader.Next()
-
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
-			return err
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			err := os.Mkdir(header.Name, 0755)
-			if err != nil {
-				if !onErrorResumeNext {
-					return err
-				}
-
-			}
-		case tar.TypeReg:
-			outFile, err := os.Create(filepath.Join(basedir, header.Name))
-			if err != nil {
-				if !onErrorResumeNext {
-					return err
-				}
-			}
-			_, err = io.Copy(outFile, tarReader)
-			if err != nil {
-				if !onErrorResumeNext {
-					return err
-				}
-			}
-			outFile.Close()
-
-		default:
-			//Unknown filetype, continue
-
-		}
-
-	}
-	return nil
 }

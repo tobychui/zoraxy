@@ -43,6 +43,7 @@ type Router struct {
 	mux               http.Handler
 	server            *http.Server
 	tlsListener       net.Listener
+	routingRules      []*RoutingRule
 }
 
 type ProxyEndpoint struct {
@@ -72,6 +73,7 @@ func NewDynamicProxy(option RouterOption) (*Router, error) {
 		SubdomainEndpoint: &domainMap,
 		Running:           false,
 		server:            nil,
+		routingRules:      []*RoutingRule{},
 	}
 
 	thisRouter.mux = &ProxyHandler{
@@ -307,4 +309,39 @@ func (router *Router) SetRootProxy(proxyLocation string, requireTLS bool) error 
 
 	router.Root = &rootEndpoint
 	return nil
+}
+
+//Helpers to export the syncmap for easier processing
+func (r *Router) GetSDProxyEndpointsAsMap() map[string]*SubdomainEndpoint {
+	m := make(map[string]*SubdomainEndpoint)
+	r.SubdomainEndpoint.Range(func(key, value interface{}) bool {
+		k, ok := key.(string)
+		if !ok {
+			return true
+		}
+		v, ok := value.(*SubdomainEndpoint)
+		if !ok {
+			return true
+		}
+		m[k] = v
+		return true
+	})
+	return m
+}
+
+func (r *Router) GetVDProxyEndpointsAsMap() map[string]*ProxyEndpoint {
+	m := make(map[string]*ProxyEndpoint)
+	r.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		k, ok := key.(string)
+		if !ok {
+			return true
+		}
+		v, ok := value.(*ProxyEndpoint)
+		if !ok {
+			return true
+		}
+		m[k] = v
+		return true
+	})
+	return m
 }
