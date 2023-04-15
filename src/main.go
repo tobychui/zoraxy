@@ -1,14 +1,12 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -20,7 +18,7 @@ import (
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/upnp"
-	"imuslab.com/zoraxy/mod/utils"
+	"imuslab.com/zoraxy/mod/uptime"
 )
 
 //General flags
@@ -29,16 +27,17 @@ var showver = flag.Bool("version", false, "Show version of this server")
 
 var (
 	name    = "Zoraxy"
-	version = "2.1"
+	version = "2.11"
 
-	handler            *aroz.ArozHandler
-	sysdb              *database.Database
-	authAgent          *auth.AuthAgent
-	tlsCertManager     *tlscert.Manager
-	redirectTable      *redirection.RuleTable
-	geodbStore         *geodb.Store
-	statisticCollector *statistic.Collector
-	upnpClient         *upnp.UPnPClient
+	handler            *aroz.ArozHandler      //Handle arozos managed permission system
+	sysdb              *database.Database     //System database
+	authAgent          *auth.AuthAgent        //Authentication agent
+	tlsCertManager     *tlscert.Manager       //TLS / SSL management
+	redirectTable      *redirection.RuleTable //Handle special redirection rule sets
+	geodbStore         *geodb.Store           //GeoIP database
+	statisticCollector *statistic.Collector   //Collecting statistic from visitors
+	upnpClient         *upnp.UPnPClient       //UPnP Client for poking holes
+	uptimeMonitor      *uptime.Monitor        //Uptime monitor service worker
 )
 
 // Kill signal handler. Do something before the system the core terminate.
@@ -63,11 +62,11 @@ func main() {
 		Name:        name,
 		Desc:        "Dynamic Reverse Proxy Server",
 		Group:       "Network",
-		IconPath:    "Zoraxy/img/small_icon.png",
+		IconPath:    "reverseproxy/img/small_icon.png",
 		Version:     version,
-		StartDir:    "Zoraxy/index.html",
+		StartDir:    "reverseproxy/index.html",
 		SupportFW:   true,
-		LaunchFWDir: "Zoraxy/index.html",
+		LaunchFWDir: "reverseproxy/index.html",
 		SupportEmb:  false,
 		InitFWSize:  []int{1080, 580},
 	})
@@ -78,9 +77,6 @@ func main() {
 	}
 
 	SetupCloseHandler()
-
-	//Check if all required files are here
-	ValidateSystemFiles()
 
 	//Create database
 	db, err := database.NewDatabase("sys.db", false)
@@ -127,6 +123,10 @@ func main() {
 		panic(err)
 	}
 
+	if err != nil {
+		panic(err)
+	}
+
 	//Create a upnp client
 	err = initUpnp()
 	if err != nil {
@@ -149,36 +149,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-}
-
-//Unzip web.tar.gz if file exists
-func ValidateSystemFiles() error {
-	if !utils.FileExists("./web") || !utils.FileExists("./system") {
-		//Check if the web.tar.gz exists
-		if utils.FileExists("./web.tar.gz") {
-			//Unzip the file
-			f, err := os.Open("./web.tar.gz")
-			if err != nil {
-				return err
-			}
-
-			err = utils.ExtractTarGzipByStream(filepath.Clean("./"), f, true)
-			if err != nil {
-				return err
-			}
-
-			err = f.Close()
-			if err != nil {
-				return err
-			}
-
-			//Delete the web.tar.gz
-			os.Remove("./web.tar.gz")
-		} else {
-			return errors.New("system files not found")
-		}
-	}
-	return errors.New("system files not found or corrupted")
 
 }

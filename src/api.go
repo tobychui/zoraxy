@@ -68,9 +68,10 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/blacklist/ip/remove", handleIpBlacklistRemove)
 	authRouter.HandleFunc("/api/blacklist/enable", handleBlacklistEnable)
 
-	//Statistic API
+	//Statistic & uptime monitoring API
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
-
+	authRouter.HandleFunc("/api/stats/countries", HandleCountryDistrSummary)
+	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)
 	//Upnp
 	authRouter.HandleFunc("/api/upnp/discover", handleUpnpDiscover)
 	//If you got APIs to add, append them here

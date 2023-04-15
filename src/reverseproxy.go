@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -95,6 +96,18 @@ func ReverseProxtInit() {
 	dynamicProxyRouter.StartProxyService()
 	log.Println("Dynamic Reverse Proxy service started")
 
+	//Add all proxy services to uptime monitor
+	//Create a uptime monitor service
+	go func() {
+		//This must be done in go routine to prevent blocking on system startup
+		uptimeMonitor, _ = uptime.NewUptimeMonitor(&uptime.Config{
+			Targets:         GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter),
+			Interval:        300, //5 minutes
+			MaxRecordsStore: 288, //1 day
+		})
+		log.Println("Uptime Monitor background service started")
+	}()
+
 }
 
 func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
@@ -178,6 +191,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Save it
 	SaveReverseProxyConfig(eptype, rootname, endpoint, useTLS)
 
+	//Update utm if exists
+	if uptimeMonitor != nil {
+		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
+		uptimeMonitor.CleanRecords()
+	}
+
 	utils.SendOK(w)
 
 }
@@ -199,6 +218,13 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RemoveReverseProxyConfig(ep)
+
+	//Update utm if exists
+	if uptimeMonitor != nil {
+		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
+		uptimeMonitor.CleanRecords()
+	}
+
 	utils.SendOK(w)
 }
 
