@@ -41,6 +41,7 @@ body{
 
 .toolbar{
     width: 240px;
+    min-width: 240px;
 }
 
 .contentWindow{
@@ -48,11 +49,28 @@ body{
     flex: 1;
 }
 
+.menutoggle{
+    display: none !important;
+}
+
 @media screen and (max-width: 750px) {
     .toolbar {
+        position: fixed;
         display: inline-block;
-        width: 100%;
+        width: 50%;
+        background-color: white;
+        top: 3.6em;
+        right: 0;
+        height: 100%;
         margin-bottom: 1em;
+        z-index: 9;
+        padding: 1em;
+        display:none;
+        border-left: 1px solid rgb(206, 206, 206);
+    }
+
+    .menutoggle{
+        display: inline-block !important;
     }
 
     #mainmenu{
@@ -63,6 +81,8 @@ body{
         display: inline-block;
         width: 100%;
     }
+
+    
 }
 
 .menudivider{
@@ -95,7 +115,7 @@ body{
 }
 
 .statustab{
-    min-height: 5em;
+    min-height: 5.5em;
 }
 
 #summaryTotalCount{
@@ -110,4 +130,41 @@ body{
 
 .statustab.summary span, .statustab.summary i{
     color: rgb(37, 37, 37);
+}
+
+/*
+    Uptime Monitor
+*/
+#utm{
+    background-color: white;
+    border-radius: 1em;
+}
+
+
+.domain{
+    margin-bottom: 1em;
+    position: relative;
+}
+
+.statusDot{
+    height: 1.8em;
+    border-radius: 0.4em;
+    width: 0.4em;
+    background-color: #e8e8e8;
+    display:inline-block;
+    cursor: pointer;
+    margin-left: 0.1em;
+}
+
+.online.statusDot{
+    background-color: #3bd671;
+}
+.error.statusDot{
+    background-color: #f29030;
+}
+.offline.statusDot{
+    background-color: #df484a;
+}
+.padding.statusDot{
+    cursor: auto;
 }

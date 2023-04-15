@@ -315,6 +315,24 @@
 
     </tbody>
   </table>
+  <div class="ui divider"></div>
+  <h4>Visitor IP list</h4>
+  <button style="margin-top: -1em;" onclick="initBlacklistQuickBanTable();" class="ui green small right floated circular basic icon button"><i class="ui refresh icon"></i></button>
+  <p>Observe strange traffic on your sites? Ban them in the list below.</p>
+ 
+  <table class="ui celled unstackable table" id="ipTable">
+    <thead>
+      <tr>
+        <th>IP</th>
+        <th>Access Count</th>
+        <th>Blacklist</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+  <div class="pagination"></div>
+
 <script>
     $(".dropdown").dropdown();
 
@@ -427,13 +445,15 @@
                         icon = "home icon";
                     }
                     $('#blacklistIpTable').append(`
-                        <tr>
-                        <td><i class="${icon}"></i> ${ip}</td>
-                        <td><button class="ui icon basic mini red button" onclick="removeIpBlacklist('${ip}');"><i class="trash alternate icon"></i></button></td>
+                        <tr class="blacklistItem" ip="${encodeURIComponent(ip)}">
+                            <td><i class="${icon}"></i> ${ip}</td>
+                            <td><button class="ui icon basic mini red button" onclick="removeIpBlacklist('${ip}');"><i class="trash alternate icon"></i></button></td>
                         </tr>
                     `);
                 });
             }
+
+            initBlacklistQuickBanTable();
         });
     }
     initIpBanTable();
@@ -563,6 +583,7 @@
                 error: function() {
                     alert("Failed to remove IP address from blacklist.");
                 }
+                
             });
         }
     }
@@ -594,6 +615,99 @@
     }
     initBlacklistEnableState();
 
+    //Load the summary to ip access table
+    function initBlacklistQuickBanTable(){
+        $.get("/api/stats/summary", function(data){
+            initIpAccessTable(data.RequestClientIp);
+        })
+    }
+    initBlacklistQuickBanTable();
 
+    var blacklist_entriesPerPage = 30;
+    var blacklist_currentPage = 1;
+    var blacklist_totalPages = 0;
 
+    function initIpAccessTable(ipAccessCounts){
+        blacklist_totalPages = Math.ceil(Object.keys(ipAccessCounts).length / blacklist_entriesPerPage);
+
+        function sortkv(obj) {
+            var sortable = [];
+            for (var key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                sortable.push([key, obj[key]]);
+                }
+            }
+            sortable.sort(function(a, b) {
+                return b[1] - a[1];
+            });
+            var sortedObj = {};
+            sortable.forEach(function(item) {
+                sortedObj[item[0]] = item[1];
+            });
+            return sortedObj;
+        }
+
+        ipAccessCounts = sortkv(ipAccessCounts);
+
+        function renderTable() {
+            var tableBody = $("#ipTable tbody");
+            tableBody.empty();
+
+            var startIndex = (blacklist_currentPage - 1) * blacklist_entriesPerPage;
+            var endIndex = startIndex + blacklist_entriesPerPage;
+            var slicedEntries = Object.entries(ipAccessCounts).slice(startIndex, endIndex);
+
+            slicedEntries.forEach(function([ip, accessCount]) {
+                var row = $("<tr>").appendTo(tableBody);
+                $("<td>").text(ip).appendTo(row);
+                $("<td>").text(accessCount).appendTo(row);
+                    if (ipInBlacklist(ip)){
+                        $("<td>").html(`<button class="ui basic green small icon button" title"Unban IP" onclick="handleUnban('${ip}');"><i class="green check icon"></i></button>`).appendTo(row);
+                    }else{
+                        $("<td>").html(`<button class="ui basic red small icon button" title"Ban IP" onclick="handleBanIp('${ip}');"><i class="red ban icon"></i></button>`).appendTo(row);
+                    }
+                
+            });
+        }
+
+        function renderPagination() {
+            var paginationDiv = $(".pagination");
+            paginationDiv.empty();
+
+            for (var i = 1; i <= blacklist_totalPages; i++) {
+                var button = $("<button>").text(i).addClass("ui small basic compact button");
+                if (i === blacklist_currentPage) {
+                    button.addClass("disabled");
+                }
+                button.click(function() {
+                    blacklist_currentPage = parseInt($(this).text());
+                    renderTable();
+                    renderPagination();
+                });
+                button.appendTo(paginationDiv);
+            }
+        }
+
+        renderTable();
+        renderPagination();
+    }
+
+    function ipInBlacklist(targetIp){
+        let inBlacklist = false;
+        $(".blacklistItem").each(function(){
+            if ($(this).attr("ip") == encodeURIComponent(targetIp)){
+                inBlacklist = true;
+            }   
+        });
+        return inBlacklist;
+    }
+
+    function handleBanIp(targetIp){
+        $("#ipAddressInput").val(targetIp);
+        addIpBlacklist();
+    }
+
+    function handleUnban(targetIp){
+        removeIpBlacklist(targetIp);
+    }
 </script>

@@ -25,23 +25,27 @@
             </div>
         </div>
         <div class="column">
-            <div id="connections" class="ui yellow statustab inverted segment">
+            <div id="connections" class="ui statustab segment" style="background-color: #f0ece1; border: 0px solid transparent;">
                 <h4 class="ui header">
-                    <i class="exchange icon"></i>
+                    <i class="arrows alternate horizontal icon"></i>
                     <div class="content">
-                      <span></span>
-                      <div class="sub header"></div>
+                      <span id="forwardtype"></span>
+                      <div class="sub header" id="forwardtypeList">
+
+                      </div>
                     </div>
                 </h4>
             </div>
         </div>
         <div class="column">
-            <div id="connections" class="ui pink statustab inverted segment">
+            <div id="connections" class="ui statustab inverted segment" style="background-color: #7d8e88;">
                 <h4 class="ui header">
-                    <i class="exchange icon"></i>
+                    <i class="map marker alternate icon"></i>
                     <div class="content">
-                      <span></span>
-                      <div class="sub header"></div>
+                      <span id="country"></span>
+                      <div class="sub header" id="countryList">
+
+                      </div>
                     </div>
                 </h4>
             </div>
@@ -81,35 +85,39 @@
 <div class="ui two column stackable grid">
     <div class="column">
       <p>Visitor Counts</p>
-      <table class="ui basic celled table">
+      <table class="ui unstackable celled table">
         <thead>
           <tr>
             <th>Country ISO Code</th>
-            <th>Visitor Count</th>
+            <th>Unique Visitors</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- insert table rows here -->
+        <tbody id="countryCodetable">
+            <tr>
+                <td colspan="2">No Data</td>
+            </tr>
         </tbody>
       </table>
     </div>
     <div class="column">
       <p>Proxy Request Types</p>
-      <table class="ui basic celled table">
+      <table class="ui unstackable celled table">
         <thead>
           <tr>
             <th>Proxy Type</th>
             <th>Count</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- insert table rows here -->
+        <tbody id="forwardTypeTable">
+            <tr>
+                <td colspan="2">No Data</td>
+            </tr>
         </tbody>
       </table>
     </div>
   </div>
   <br>
-  <button class="ui basic green button"><i class="refresh icon"></i> Refresh</button>
+  <button class="ui basic green button" onclick="getDailySummaryDetails();"><i class="refresh icon"></i> Refresh</button>
 <script>
     let loopbackProxiedInterface = false;
     //Initial the start stop button if this is reverse proxied
@@ -148,7 +156,7 @@
 
     function abbreviateNumber(value) {
         var newValue = value;
-        var suffixes = ["", "K", "M", "B", "T"];
+        var suffixes = ["", "k", "m", "b", "t"];
         var suffixNum = 0;
         while (newValue >= 1000 && suffixNum < suffixes.length - 1) {
             newValue /= 1000;
@@ -160,6 +168,90 @@
         
         return newValue + suffixes[suffixNum];
     }
+
+    function getDailySummaryDetails(){
+        function sortObjectByValue(obj) {
+            // Convert object to array of [key, value] pairs
+            const entries = Object.entries(obj);
+            
+            // Sort array based on value of each pair
+            entries.sort((a, b) => {
+                return b[1] - a[1];
+            });
+            
+            // Convert sorted array back to object
+            const sortedObj = {};
+            for (const [key, value] of entries) {
+                sortedObj[key] = value;
+            }
+            
+            return sortedObj;
+        }
+
+        $.get("/api/stats/countries", function(data){
+            data = sortObjectByValue(data);
+            $("#country").html((Object.keys(data)[0])?Object.keys(data)[0]:"No Data");
+            $("#countryList").html(`
+            <div style="color: white;">
+                ${(Object.keys(data)[1])?Object.keys(data)[1]:"No Data"}<br>
+                ${(Object.keys(data)[2])?Object.keys(data)[2]:"No Data"}
+            </div>
+            `);
+
+            //populate the table
+            $("#countryCodetable").html("");
+            for (const [key, value] of Object.entries(data)) {
+                $("#countryCodetable").append(`<tr>
+                    <td>${key}</td>
+                    <td>${value}</td>
+                </tr>`);
+            }
+
+            if (Object.keys(data).length == 0){
+                $("#countryCodetable").append(`<tr>
+                    <td colspan="2">No Data</td>
+                </tr>`);
+            }
+            
+        });
+
+        //Filter forward type
+        function fft(ft){
+            if (ft.indexOf("-") >= 0){
+                ft = ft.replace("-", " (");
+                ft = ft + ")";
+            }
+
+            ft = ft.charAt(0).toUpperCase() + ft.slice(1);
+            return ft;
+        }
+
+        $.get("/api/stats/summary", function(data){
+            data = sortObjectByValue(data.ForwardTypes);
+            $("#forwardtype").html((Object.keys(data)[0])?fft(Object.keys(data)[0]) + ": " + abbreviateNumber(data[Object.keys(data)[0]]):"No Data");
+            $("#forwardtypeList").html(`
+            <div>
+                ${(Object.keys(data)[1])?fft(Object.keys(data)[1]) + ": " + abbreviateNumber(data[Object.keys(data)[1]]):"No Data"}<br>
+                ${(Object.keys(data)[2])?fft(Object.keys(data)[2]) + ": " + abbreviateNumber(data[Object.keys(data)[2]]):"No Data"}
+            </div>
+            `);
+
+            $("#forwardTypeTable").html("");
+            for (const [key, value] of Object.entries(data)) {
+                $("#forwardTypeTable").append(`<tr>
+                    <td>${key}</td>
+                    <td>${value}</td>
+                </tr>`);
+            }
+
+            if (Object.keys(data).length == 0){
+                $("#forwardTypeTable").append(`<tr>
+                    <td colspan="2">No Data</td>
+                </tr>`);
+            }
+        });
+    }
+    getDailySummaryDetails();
 
 
     function getDailySummary(){

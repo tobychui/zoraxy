@@ -20,6 +20,9 @@
                 <img class="logo" src="img/logo.svg">
             </div>
 
+            <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
+                <button class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
+            </div>
             <div class="ui right floated buttons" style="padding-top: 2px;">
                 <button class="ui basic icon button" onclick="logout();"><i class="sign-out icon"></i></button>
             </div>
@@ -63,8 +66,8 @@
                         <i class="remove icon"></i> HTTP over Websocket
                     </a>
                     <div class="ui divider menudivider">Others</div>
-                    <a class="item" tag="">
-                        <i class="remove icon"></i> Uptime Monitor
+                    <a class="item" tag="utm">
+                        <i class="green time icon"></i> Uptime Monitor
                     </a>
                     <a class="item" tag="">
                         <i class="remove icon"></i> Network Tools
@@ -104,6 +107,9 @@
 
                 <!-- UPnP based port fowarding -->
                 <div id="upnp" class="functiontab" target="upnp.html"></div>
+
+                <!-- Up Time Monitor -->
+                <div id="utm" class="functiontab" target="uptime.html"></div>
 
                 <!-- Utilities -->
                 <div id="utils" class="functiontab" target="utils.html"></div>
@@ -207,6 +213,11 @@
                     alert("Invalid tabid given");
                     return;
                 }
+                if (window.innerWidth < 750){
+                    //RWD mode, hide toolbar
+                    $(".toolbar").fadeOut('fast');
+                }
+
                 $("#mainmenu").find(".item").removeClass("active");
                 $(targetBtn).addClass("active");
                 $(".functiontab").hide();
@@ -214,6 +225,12 @@
                 $('html,body').animate({scrollTop: 0}, 'fast');
                 window.location.hash = tabID;
             }
+
+            $(window).on("resize", function(){
+                if (window.innerWidth >= 750 && $(".toolbar").is(":visible") == false){
+                    $(".toolbar").show();
+                }
+            });
 
 
         </script>
