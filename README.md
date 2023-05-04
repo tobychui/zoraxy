@@ -144,6 +144,16 @@ This allows you to have infinite number of network members in your Global Area N
 
 Web SSH currently only support Linux based OS.
 
+### Loopback Connection 
+
+Loopback web ssh connection, by default, is disabled. This means that if you are trying to connect to address like 127.0.0.1 or localhost, the system will reject your connection due to security issues. To enable loopback for testing or development purpose, use the following flags to override the loopback checking.
+
+```
+./zoraxy -sshlb=true
+```
+
+
+
 ## License
 
 This Github repo is for storing the release binary and collecting issue only. **This project is not open source and the provided binaries are for function review purpose only.** For business users, please contact toby@imuslab.com for commercial licensing details.
