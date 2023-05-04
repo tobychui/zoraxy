@@ -1,4 +1,5 @@
 ![](./img/title.png)
+
 # Zoraxy
 
 General purpose request (reverse) proxy and forwarding tool for low power devices. Now written in Go!
@@ -6,20 +7,27 @@ General purpose request (reverse) proxy and forwarding tool for low power device
 ### Features
 
 - Simple to use interface with detail in-system instructions
-
 - Reverse Proxy
   
   - Subdomain Reverse Proxy
   
   - Virtual Directory Reverse Proxy
-
 - Redirection Rules
-
 - TLS / SSL setup and deploy
-
-- Blacklist by country or IP address (single IP, CIDR or wildcard for beginners :D) 
-
-- (More features work in progress)
+- Blacklist by country or IP address (single IP, CIDR or wildcard for beginners)
+- Global Area Network Controller Web UI (ZeroTier not included)
+- Integrated Up-time Monitor
+- Web-SSH Terminal
+- Utilities
+  
+  - CIDR IP converters
+  - mDNS Scanner
+  - IP Scanner
+- Others
+  - Basic single-admin management mode
+  - External permission management system for easy system integration
+  - SMTP config for password reset
+  
 
 ## Usage
 
@@ -32,14 +40,12 @@ Standalone mode is the default mode for Zoraxy. This allow single account to man
 #### Linux
 
 ```bash
-//Download the latest zoraxy binary and web.tar.gz from the Release page
-sudo chmod 775 ./zoraxy web.tar.gz
 sudo ./zoraxy -port=:8000
 ```
 
 #### Windows
 
-Download the binary executable and web.tar.gz, put them into the same folder and double click the binary file to start it.
+Download the binary executable and double click the binary file to start it.
 
 #### Raspberry Pi
 
@@ -49,9 +55,9 @@ The installation method is same as Linux. If you are using Raspberry Pi 4 or new
 
 The installation method is same as Linux. For other ARM SBCs, please refer to your SBC's CPU architecture and pick the one that is suitable for your device. 
 
-### External Permission Managment Mode
+### External Permission Management Mode
 
-If you already have a up-stream reverse proxy server in place with permission management, you can use Zoraxy in noauth mode. To enable no-auth mode, start Zoraxy with the following flag
+If you already have a up-stream reverse proxy server in place with permission management, you can use Zoraxy in noauth mode. To enable noauth mode, start Zoraxy with the following flag
 
 ```bash
 ./zoraxy -noauth=true
@@ -71,22 +77,20 @@ cd ./zoraxy
 
 # Download the release binary from Github release
 wget {binary executable link from release page}
-wget {web.tar.gz link from release page}
 
 # Set permission. Change this if required
-sudo chmod 775 -R ./ 
+sudo chmod 775 -R ./
 
-# Start zoraxy to see if the downloaded arch is correct. If yes, you should
-# see it start unzipping
+# Start zoraxy to see if the downloaded arch is correct.
 ./zoraxy
 
 # After the unzip done, press Ctrl + C to kill it
 # Rename it to valid arozos subservice binary format
 mv ./zoraxy zoraxy_linux_amd64
 
-# If you are using SBCs with different CPU arch
-mv ./zoraxy zoraxy_linux_arm
-mv ./zoraxy zoraxy_linux_arm64
+# If you are using SBCs with different CPU arch, use the following names
+# mv ./zoraxy zoraxy_linux_arm
+# mv ./zoraxy zoraxy_linux_arm64
 
 # Restart arozos
 sudo systemctl restart arozos
@@ -94,36 +98,52 @@ sudo systemctl restart arozos
 
 To start the module, go to System Settings > Modules > Subservice and enable it in the menu. You should be able to see a new module named "Zoraxy" pop up in the start menu.
 
-## Build from Source
+## Screenshots
 
-*Requirement: Go 1.17 or above*
+![](img/screenshots/0_1.png)
 
-```bash
-git clone https://github.com/tobychui/zoraxy
-cd ./zoraxy/src
-go mod tidy
-go build
+![](img/screenshots/0_2.png)
 
-./zoraxy
+![](img/screenshots/1.png)
+
+![](img/screenshots/2.png)
+
+![](img/screenshots/3.png)
+
+![](img/screenshots/4.png)
+
+![](img/screenshots/5.png)
+
+![](img/screenshots/7.png)
+
+![](img/screenshots/8.png)
+
+![](img/screenshots/9.png)
+
+![](img/screenshots/10_1.png)
+
+![](img/screenshots/10_2.png)
+
+## Global Area Network Controller
+
+This project also compatible with [ZeroTier](https://www.zerotier.com/). However, due to licensing issues, ZeroTier is not included in the binary. 
+
+Assuming you already have a valid license, to use Zoraxy with ZeroTier, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken at correct location in your host.
+
+If you prefer not to run Zoraxy in sudo mode or you have some wierd installation profile, you can also pass in the ZeroTier auth token using the following flags
+
+```
+./zoraxy -ztauth="your_zerotier_authtoken" -ztport=9993
 ```
 
-### Forward Modes
+The ZeroTier auth token can usually be found at ```/var/lib/zerotier-one/authtoken.secret``` or ```C:\ProgramData\ZeroTier\One\authtoken.secret```. 
 
-#### Proxy Modes
+This allows you to have infinite number of network members in your Global Area Network controller. For more technical details, see [here](https://docs.zerotier.com/self-hosting/network-controllers/).
 
-There are two mode in the ReverseProxy Subservice
+## Web.SSH
 
-1. vdir mode (Virtual Dirctories)
-2. subd mode (Subdomain Proxying Mode)
-
-Vdir mode proxy web request based on the virtual directories given in the request URL. For example, when configured to redirect /example to example.com, any visits to {your_domain}/example will be proxied to example.com.
-
-Subd mode proxy web request based on sub-domain exists in the request URL. For example, when configured to redirect example.localhost to example.com, any visits that includes example.localhost (e.g. example.localhost/page1) will be proxied to example.com (e.g. example.com/page1)
-
-#### Root Proxy
-
-Root proxy is the main proxy destination where if all proxy root name did not match, the request will be proxied to this request. If you are working with ArozOS system in default configuration, you can set this to localhost:8080 for any unknown request to be handled by the host ArozOS system
+Web SSH currently only support Linux based OS.
 
 ## License
 
-To be decided (Currently: All Right Reserved)
+This Github repo is for storing the release binary and collecting issue only. **This project is not open source and the provided binaries are for function review purpose only.** For business users, please contact toby@imuslab.com for commercial licensing details.
