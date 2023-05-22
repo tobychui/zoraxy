@@ -142,7 +142,12 @@ This allows you to have infinite number of network members in your Global Area N
 
 ## Web.SSH
 
-Web SSH currently only support Linux based OS.
+Web SSH currently only support Linux based OS. The following platforms are supported
+
+- linux/amd64
+- linux/arm64
+- linux/armv6 (experimental)
+- linux/386 (experimental)
 
 ### Loopback Connection 
 
@@ -156,4 +161,5 @@ Loopback web ssh connection, by default, is disabled. This means that if you are
 
 ## License
 
-This Github repo is for storing the release binary and collecting issue only. **This project is not open source and the provided binaries are for function review purpose only.** For business users, please contact toby@imuslab.com for commercial licensing details.
+This project is open source under AGPL. I open source this project so everyone can check for security issues and benefit all users. **If your plans to use this project in commercial environment which violate the AGPL terms, please contact toby@imuslab.com for an alternative commercial license.** 
+
