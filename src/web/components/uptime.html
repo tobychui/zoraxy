@@ -1,0 +1,158 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Uptime Monitor</h2>
+        <p>Check the online state of proxied targets</p>
+    </div>
+    <div class="ui divider"></div>
+    <div id="utmrender" class="ui basic segment">
+        <div class="ui basic segment">
+            <h4 class="ui header">
+                <i class="red remove icon"></i>
+                <div class="content">
+                    Uptime Monitoring service is currently unavailable
+                    <div class="sub header">This might cause by an error in cluster communication within the host servers. Please wait for administrator to resolve the issue.</div>
+                </div>
+            </h4> 
+        </div>
+    </div>
+    <div align="center">
+        <button class="ui basic circular green icon button" onclick="reloadUptimeList();"><i class="refresh icon"></i></button>   
+    </div>
+</div>
+
+
+<script>
+
+        $('#utmEnable').checkbox({
+          onChange: function() {
+            var utmEnable = $('input[name="utmEnable"]').is(":checked");
+            $.post({
+              url: '/api/toggle-utm',
+              data: {utmEnable: utmEnable},
+              success: function(response) {
+                console.log(response);
+              },
+              error: function(error) {
+                console.log(error);
+              }
+            });
+          }
+        });
+
+    function initUptimeTable(){
+        $.get("/api/utm/list", function(data){
+            let records = data;
+            renderRecords(records);
+        })
+    }
+    initUptimeTable();
+
+    function reloadUptimeList(){
+        $("#utmrender").html(`<div class="ui segment">
+        <div class="ui active inverted dimmer" style="z-index: 2;">
+            <div class="ui text loader">Loading</div>
+        </div>
+        <br><br><br><br>
+        </div>`);
+        setTimeout(initUptimeTable, 300);
+    }
+
+    //For every 5 minutes
+    setInterval(function(){
+        $.get("/api/utm/list", function(data){
+            console.log("Status Updated");
+            records = data;
+            renderRecords(records);
+        });
+    }, (300 * 1000));
+    
+    function renderRecords(records){
+        $("#utmrender").html("");
+        for (let [key, value] of Object.entries(records)) {
+            renderUptimeData(key, value);
+        }
+    }
+
+    function format_time(s) {
+        const date = new Date(s * 1e3);
+        return(date.toLocaleString());
+    }
+
+
+    function renderUptimeData(key, value){
+        if (value.length == 0){
+            return
+        }
+
+        let id = value[0].ID;
+        let name = value[0].Name;
+        let url = value[0].URL;
+        let protocol = value[0].Protocol;
+
+        //Generate the status dot
+        let statusDotList = ``;
+        for(var i = 0; i < (288 - value.length); i++){
+            //Padding
+            statusDotList += `<div class="padding statusDot"></div>`
+        }
+
+        let ontimeRate = 0;
+        for (var i = 0; i < value.length; i++){
+            //Render status to html
+            let thisStatus = value[i];
+            let dotType = "";
+            if (thisStatus.Online){
+                if (thisStatus.StatusCode < 200 || thisStatus.StatusCode >= 300){
+                    dotType = "error";
+                }else{
+                    dotType = "online";
+                }
+                ontimeRate++;
+            }else{
+                dotType = "offline";
+            }
+
+            let datetime = format_time(thisStatus.Timestamp);
+            statusDotList += `<div title="${datetime}" class="${dotType} statusDot"></div>`
+        }
+
+        ontimeRate = ontimeRate / value.length * 100;
+        let ontimeColor = "#df484a"
+        if (ontimeRate > 0.8){
+            ontimeColor = "#3bd671";
+        }else if(ontimeRate > 0.5) {
+            ontimeColor = "#f29030";
+        }
+        //Check of online status now
+        let currentOnlineStatus = "Unknown";
+        let onlineStatusCss = ``;
+        if (value[value.length - 1].Online){
+            currentOnlineStatus = `<i class="circle icon"></i> Online`;
+            onlineStatusCss = `color: #3bd671;`;
+        }else{
+            currentOnlineStatus = `<i class="circle icon"></i> Offline`;
+            onlineStatusCss = `color: #df484a;`;
+        }
+
+        //Generate the html
+        $("#utmrender").append(`<div class="ui basic segment statusbar">
+            <div class="domain">
+                <div style="position: absolute; top: 0; right: 0.4em;">
+                    <p class="onlineStatus" style="display: inline-block; font-size: 1.3em; padding-right: 0.5em; padding-left: 0.3em; ${onlineStatusCss}">${currentOnlineStatus}</p>
+                </div>
+                <div>
+                    <h3 class="ui header" style="margin-bottom: 0.2em;">${name}</h3>
+                    <a href="${url}" target="_blank">${url}</a> | <span style="color: ${ontimeColor};">${(ontimeRate).toFixed(2)}%<span>
+                </div>
+                <div class="ui basic label protocol" style="position: absolute; bottom: 0; right: 0.2em; margin-bottom: -0.6em;">
+                    proto: ${protocol}
+                </div>
+            </div>
+            <div class="status" style="marign-top: 1em;">
+                ${statusDotList}
+            </div>
+            <div class="ui divider"></div>
+        </div>`);
+    }
+    
+</script>

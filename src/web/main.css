@@ -1,0 +1,467 @@
+/*
+    index.html style overwrite
+*/
+:root{
+    --theme_grey: #414141;
+    --theme_lgrey: #f6f6f6;
+    --theme_green: #3c9c63;
+    --theme_fcolor: #979797;
+}
+body{
+    background-color:#f6f6f6;
+    color: #414141;
+}
+
+.functiontab{
+    display:none;
+}
+
+.menubar{
+    width: 100%;
+    padding: 0.4em;
+    padding-left: 1.2em;
+    padding-right: 1.2em;
+    background-color: #f5f5f5;
+    margin-bottom: 1em;
+
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 10;
+    box-shadow: 0px 1px 5px 0px rgba(38,38,38,0.26);
+}
+
+.menubar .logo{
+    height: 36px;
+}
+
+.menubar .item{
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.wrapper{
+    display: flex;
+    align-items: flex-start;
+    padding-top: 4.6em;
+}
+
+.toolbar {
+    display: inline-block;
+    height: calc(100% - 51px);
+    overflow-y: auto;
+    width: 240px;
+}
+
+.contentWindow{
+    display: inline-block;
+    width: calc(100% - 240px);
+    vertical-align: top;
+    background-color: white;
+    border-radius: 1em;
+    margin-right: 2em;
+}
+
+.menutoggle{
+    display: none !important;
+}
+
+
+.ui.divider{
+    font-weight: 300;
+}
+
+.serverstatusWrapper{
+    padding-right: 0 !important;
+}
+
+.statisticWrapper{
+    padding-left: 0 !important;
+}
+
+/* Message Box */
+#messageBox{
+    position: fixed;
+    bottom: 1em;
+    right: 1em;
+    display:none;
+    max-width: 300px;
+}
+
+/* Standard containers */
+.standardContainer{
+    position: relative;
+}
+
+.standardContainer.noleftright{
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.standardContainer.noleft{
+    padding-left: 0;
+}
+
+.standardContainer.noright{
+    padding-right: 0;
+}
+
+.standardContainer.notopdown{
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.standardContainer.notop{
+    padding-top: 0;
+}
+
+.standardContainer.nobottom{
+    padding-bottom: 0;
+}
+
+
+/*
+    RWD Rules
+*/
+
+
+@media screen and (min-width: 750px) {
+    #serverstatus{
+        border-top-left-radius: 1em !important;
+    }
+
+    .greybackground.statustab{
+        border-top-right-radius: 1em !important;
+    }
+
+    .standardContainer{
+        padding-left: 2.4em;
+        padding-right: 2.4em;
+        padding-top: 2em;
+        padding-bottom: 2em;
+    }
+
+}
+
+@media screen and (max-width: 750px) {
+    .toolbar {
+        position: fixed;
+        display: inline-block;
+        width: 240px;
+        background-color: white;
+        top: 3.6em;
+        right: 0;
+        height: calc(100% - 51px);
+        overflow-y: auto;
+        margin-bottom: 1em;
+        z-index: 9;
+        padding: 1em;
+        display:none;
+        border-left: 1px solid rgb(206, 206, 206);
+    }
+
+    .menutoggle{
+        display: inline-block !important;
+    }
+
+    #mainmenu{
+        width: calc(100% - 1em);
+    }
+
+    .contentWindow{
+        display: inline-block;
+        width: 100%;
+        margin-right: 0.4em;
+        margin-left: 0.4em;
+    }
+
+    .functiontab{
+        padding: 0em;
+    }
+
+    .ui.grid > .stackable.stackable.row > .column, .ui.stackable.grid > .column.grid > .column, .ui.stackable.grid > .column.row > .column, .ui.stackable.grid > .column:not(.row), .ui.stackable.grid > .row > .column, .ui.stackable.grid > .row > .wide.column, .ui.stackable.grid > .wide.column.serverstatusWrapper {
+        padding: 0rem 0rem !important;
+    }
+
+    #serverstatus.green{
+        border-bottom: 0px solid transparent !important;
+    }
+
+    .greybackground.statustab{
+        border-top-right-radius: 0em !important;
+        padding: 2em 2em !important;
+    }
+
+    .standardContainer{
+        padding-left: 1.2em;
+        padding-right: 1.2em;
+        padding-top: 0.6em;
+        padding-bottom: 0.6em;
+    }
+    
+}
+
+.menudivider{
+    font-size: 0.8em !important;
+    color: #9c9c9c !important;
+    padding-left: 0.6em;
+}
+
+/*
+    Global rules overwrite
+*/
+
+.ui.teal.button{
+    background-color: #3d9c64 !important;
+}
+
+.ui.red.button:not(.basic){
+    background-color: #cc3b3b !important;
+}
+
+.ui.menu .item{
+    color: #5e5d5d;
+}
+
+.ui.secondary.vertical.menu .active.item{
+    background-color: #414141;
+    font-weight: 600;
+    color: white;
+}
+
+.ui.secondary.vertical.menu .active.item .icon{
+    animation: blinker 3s ease-in-out infinite;
+}
+
+.bluefont{
+    color: #417ac1 !important;
+}
+
+
+@keyframes blinker {
+    50% {
+        opacity: 50%;
+    }
+}
+
+/*
+    Status style overwrite
+*/
+#serverstatus{
+    height: 100%;
+}
+
+#statusTitle{
+    font-weight: 300;
+}
+
+.statustab{
+    border-radius: 0 !important;
+}
+
+.greybackground.statustab{
+    background-color: #414141 !important;
+    color: white;
+    
+}
+
+.greybackground.statustab .ui.header:not(:first-child){
+    margin-top: 1em;
+}
+
+.greybackground.statustab span,
+.greybackground.statustab h1,
+.greybackground.statustab h2,
+.greybackground.statustab h3,
+.greybackground.statustab h4,
+.greybackground.statustab h5 {
+    color: white !important;
+}
+
+.greybackground.statustab .header{
+    color: #b7b7b7 !important;
+}
+
+#serverstatus.green{
+    background-color: #fefefe !important;
+    border-right: 5px solid #3d9c64; 
+}
+#serverstatus.green .sub.header{
+    color: rgb(224, 224, 224);
+}
+#serverstatus.green i,
+#serverstatus.green #statusTitle{
+    color: #3d9c64;
+}
+#serverstatus.green #statusText{
+    color: #2c583d;
+}
+
+
+#serverstatus:not(.green) .dot-container{
+    display:none;
+}
+
+#serverstatus:not(.green){
+    background-color: white !important;
+    background-image: url("img/plant.png");
+    background-position: right;
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+}
+
+#serverstatus:not(.green) #statusTitle,
+#serverstatus:not(.green) i,
+#serverstatus:not(.green) .sub.header{
+    color: #4c4c4c;
+}
+
+
+.statustab{
+    min-height: 5.5em;
+}
+
+#summaryTotalCount{
+    font-size: 1.6em;
+    font-weight: 300;
+}
+
+.statustab.summary{
+    background-color: #f1f1f1 !important;
+    border: 0px solid transparent !important;
+}
+
+.statustab.summary span, .statustab.summary i{
+    color: rgb(37, 37, 37);
+}
+
+#networkActivityPlaceHolder{
+    color:rgb(206, 206, 206);
+    height: 200px;
+    width: 100%;
+    text-align: center;
+    padding-top: 80px;
+    display:none;
+}
+
+/* Decorative Animation */
+.dot-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    position: absolute;
+    bottom: 0.6em;
+    right: 1.2em;
+}
+  
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #d9d9d9;
+    margin-right: 6px;
+    animation-name: dot-animation;
+    animation-duration: 4s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  
+  .dot:nth-child(1) {
+    animation-delay: 0s;
+  }
+  
+  .dot:nth-child(2) {
+    animation-delay: 1s;
+  }
+  
+  .dot:nth-child(3) {
+    animation-delay: 2s;
+  }
+  
+  .dot:nth-child(4) {
+    animation-delay: 3s;
+  }
+  
+  @keyframes dot-animation {
+    0% {
+      background-color: #d9d9d9;
+      transform: scale(1);
+    }
+    50% {
+      background-color: #3d9c64;
+      transform: scale(1.5);
+    }
+    100% {
+      background-color: #d9d9d9;
+      transform: scale(1);
+    }
+  }
+
+/*
+    Uptime Monitor
+*/
+#utm{
+    background-color: white;
+    border-radius: 1em;
+}
+
+
+.domain{
+    margin-bottom: 1em;
+    position: relative;
+}
+
+.statusDot{
+    height: 1.8em;
+    border-radius: 0.4em;
+    width: 0.4em;
+    background-color: #e8e8e8;
+    display:inline-block;
+    cursor: pointer;
+    margin-left: 0.1em;
+}
+
+.online.statusDot{
+    background-color: #3bd671;
+}
+.error.statusDot{
+    background-color: #f29030;
+}
+.offline.statusDot{
+    background-color: #df484a;
+}
+.padding.statusDot{
+    cursor: auto;
+}
+
+/*
+    Global Area Network
+    gan.html
+*/
+.clickable{
+    cursor: pointer;
+}
+
+.clickable:hover{
+    opacity: 0.6;
+}
+
+#ganetRangeTable td{
+    text-align: center;
+}
+
+
+.gansnetworks.disabled{
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+}
+
+.GANetMember.authorized{
+    border-left: 6px solid #3c9c63 !important;
+}
+
+.GANetMember.unauthorized{
+    border-left: 6px solid #9c3c3c !important;
+}

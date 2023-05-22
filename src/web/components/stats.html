@@ -1,0 +1,580 @@
+<script src="./script/useragent.js"></script>
+<link href="./script/datepicker/dp-light.css" rel="stylesheet">
+<script defer src="./script/datepicker/datepicker.js"></script>
+
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Statistical Analysis</h2>
+        <p>Statistic of your server in every aspects</p>
+        <div style="margin-bottom: 0.4em;">
+            <div class="ui small input">
+                <input type="text" id="statsRangeStart" placeholder="From date">
+            </div>
+            <span style="padding-left: 0.6em; padding-right: 0.6em;"> <i class="ui right arrow icon"></i> </span>
+            <div class="ui small input">
+                <input type="text" id="statsRangeEnd" placeholder="End date">
+            </div>
+        </div>
+        <button onclick="handleLoadStatisticButtonPress();" class="ui basic button"><i class="blue search icon"></i> Search</button>
+        <button onclick="clearStatisticDateRange();" class="ui yellow basic button"><i class="eraser icon"></i> Clear Range</button>
+        <br>
+        <small>Leave end range as empty for showing starting day only statistic</small>
+    </div>
+    <div class="ui divider"></div>
+    <div id="statisticRenderNotEnoughData" class="ui segment" style="padding: 2em;" align="center">
+        <h4 class="ui icon header">
+            <i class="medium icons" style="color: #dbdbdb !important;">
+                <i class="chart pie icon"></i>
+                <i class="small corner remove icon" style="
+                    font-size: 1.4em;
+                    margin-right: -0.2em;
+                    margin-bottom: -0em;
+                "></i>
+            </i>
+            
+            <div class="content" style="margin-top: 1em; color: #7c7c7c !important;">
+                No Data 
+                <div class="sub header" style="color: #adadad !important;">The selected period contains too little or no request data collected. <br>
+                    Please select a larger range or make sure there are enough traffic routing through this site.</div>
+            </div>
+        </h4>
+    </div>
+    <div id="statisticRenderElement" class="ui basic segment">
+        <!-- View Counts Statistics -->
+        <div class="ui three small statistics">
+            <div class="statistic">
+              <div class="value totalViewCount">
+                
+              </div>
+              <div class="label">
+                Total Requests
+              </div>
+            </div>
+            <div class="statistic">
+                <div class="value">
+                    <i class="ui green check circle icon"></i> <span class="totalSuccCount"></span>
+                </div>
+              <div class="label">
+                 Success Requests
+              </div>
+            </div>
+            <div class="statistic">
+              <div class="value">
+                <i class="ui red times circle icon"></i> <span class="totalErrorCount"></span>
+              </div>
+              <div class="label">
+                Error Requests
+              </div>
+            </div>
+        </div>
+        <!-- Forward Type Data -->
+        <h3>Forward Traffic Types</h3>
+        <p>Traffic forwarding type classified by their protocols and proxy rules.</p>
+        <table class="ui celled unstackable table">
+            <thead>
+                <tr><th>Forward Type</th>
+                <th>Counts</th>
+                <th>Percentage</th>
+            </tr></thead>
+            <tbody class="forwardTypeCounts">
+            </tbody>
+        </table>
+        <!-- Client Geolocation Analysis-->
+        <h3>Visitors Countries</h3>
+        <p>Distributions of visitors by country code. Access origin are estimated using open source GeoIP database and might not be accurate.</p>
+        <div style="min-height: 400px;">
+            <canvas id="stats_visitors"></canvas>
+        </div>
+        <div class="ui divider"></div>
+        <!-- Client IP Analysis -->
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h3>Requests IP Version</h3>
+                <p>The version of Internet Protocol that the client is using. If the request client is pass through a DNS proxy like CloudFlare, 
+                    the CloudFlare proxy server address will be filtered and only the first value in the RemoteAddress field will be analysised.</p>
+                <div>
+                    <canvas id="stats_ipver"></canvas>
+                </div>
+            </div>
+            <div class="eight wide column">
+                <h3>Request Origins</h3>
+                <p>Top 25 request origin sorted by request count</p>
+                <div style="height: 500px; overflow-y: auto;">
+                    <table class="ui unstackable striped celled table">
+                        <thead>
+                          <tr>
+                            <th class="no-sort">Request Origin</th>
+                            <th class="no-sort">No of Requests</th>
+                        </tr></thead>
+                        <tbody id="stats_requestCountlist">
+                         
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <!-- Client Device Analysis -->
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h3>Client Devices</h3>
+                <p>Device type analysis by its request interactions.The number of iteration count does not means the number unique device, as no cookie is used to track the devices identify.</p>
+                <div>
+                    <canvas id="stats_device"></canvas>
+                </div>
+            </div>
+            <div class="eight wide column">
+                <h3>Client Browsers</h3>
+                <p>The browsers where your client is using to visit your site</p>
+                <div>
+                    <canvas id="stats_browsers"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h3>Client OS</h3>
+                <p>The OS where your client is using. Estimated using the UserAgent header sent by the client browser while requesting a resources from one of your host.</p>
+                <div>
+                    <canvas id="stats_OS"></canvas>
+                </div>
+            </div>
+            <div class="eight wide column">
+                <h3>OS Versions</h3>
+                <p>The OS versions most commonly used by your site's visitors.</p>
+                <div style="height: 500px; overflow-y: auto;">
+                    <table class="ui unstackable striped celled table">
+                        <thead>
+                          <tr>
+                            <th>OS Version</th>
+                            <th>Request Counts</th>
+                            <th>Percentage</th>
+                        </tr></thead>
+                        <tbody id="stats_OSVersionList">
+                         
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- <button class="ui icon right floated basic button" onclick="initStatisticSummery();"><i class="green refresh icon"></i> Refresh</button> -->
+    <br><br>
+</div>
+<script>
+    var statisticCharts = [];
+
+    //Start day must be earlier than end date
+    function initStatisticSummery(startdate="", enddate=""){
+            if (startdate == "" && enddate == "" ){
+                let todaykey = getTodayStatisticKey();
+                loadStatisticByDate(todaykey);
+            }else if ((startdate != "" && enddate == "") || startdate == enddate){
+                //Load the target date
+                let targetDate = startdate.trim();
+                loadStatisticByDate(targetDate);
+            }else{
+                //Two dates are given and they are not identical
+                loadStatisticByRange(startdate, enddate);
+                console.log(startdate, enddate);
+
+            }
+    }
+
+   function loadStatisticByDate(dateid){
+        $.getJSON("/api/analytic/load?id=" + dateid, function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false, 6000);
+                return;
+            }
+            
+            //Destroy all the previous charts
+            statisticCharts.forEach(function(thisChart){
+                thisChart.destroy();
+            })
+
+            if (data.TotalRequest == 0){
+                //No data to analysis
+                $("#statisticRenderElement").hide()
+                $("#statisticRenderNotEnoughData").show();
+                return;
+            }else{
+                $("#statisticRenderElement").show();
+                $("#statisticRenderNotEnoughData").hide();
+            }
+
+            //Render the text values
+            $("#statisticRenderElement").find(".totalViewCount").text(abbreviateNumber(data.TotalRequest));
+            $("#statisticRenderElement").find(".totalSuccCount").text(abbreviateNumber(data.ValidRequest));
+            $("#statisticRenderElement").find(".totalErrorCount").text(abbreviateNumber(data.ErrorRequest));
+
+            //Render forward type data
+            renderForwardTypeCounts(data.ForwardTypes);
+            
+            //Render visitor data
+            renderVisitorChart(data.RequestOrigin);
+
+            //Render IP versions
+            renderIPVersionChart(data.RequestClientIp);
+
+            //Render user agent analysis
+            renderUserAgentCharts(data.UserAgent);
+        });
+   }
+   initStatisticSummery();
+   $("#statsRangeStart").val(getTodayStatisticKey().split("_").join("-"));
+
+   function loadStatisticByRange(startdate, endDate){
+        $.getJSON("/api/analytic/loadRange?start=" + startdate + "&end=" + endDate, function(data){
+            console.log(data);
+            //Destroy all the previous charts
+           
+            statisticCharts.forEach(function(thisChart){
+                thisChart.destroy();
+            })
+ 
+            if (data.Summary.TotalRequest == 0){
+                //No data to analysis
+                $("#statisticRenderElement").hide()
+                $("#statisticRenderNotEnoughData").show();
+                return;
+            }else{
+                $("#statisticRenderElement").show();
+                $("#statisticRenderNotEnoughData").hide();
+            }
+
+            //Render the text values
+            $("#statisticRenderElement").find(".totalViewCount").text(abbreviateNumber(data.Summary.TotalRequest));
+            $("#statisticRenderElement").find(".totalSuccCount").text(abbreviateNumber(data.Summary.ValidRequest));
+            $("#statisticRenderElement").find(".totalErrorCount").text(abbreviateNumber(data.Summary.ErrorRequest));
+
+            //Render forward type data
+            renderForwardTypeCounts(data.Summary.ForwardTypes);
+
+            //Render visitor data
+            renderVisitorChart(data.Summary.RequestOrigin);
+
+            //Render IP versions
+            renderIPVersionChart(data.Summary.RequestClientIp);
+
+            //Render user agent analysis
+            renderUserAgentCharts(data.Summary.UserAgent);
+            
+        });
+   }
+
+   picker.attach({ target: document.getElementById("statsRangeStart") });
+   picker.attach({ target: document.getElementById("statsRangeEnd") });
+
+   function renderForwardTypeCounts(forwardTypes){
+        let tablBody = $("#statisticRenderElement").find(".forwardTypeCounts");
+        tablBody.empty();
+        let totalForwardCounts = 0;
+        for (let [key, value] of Object.entries(forwardTypes)) {
+            totalForwardCounts += value;
+        }
+
+        for (let [key, value] of Object.entries(forwardTypes)) {
+            tablBody.append(`<tr>
+                    <td>${key}</td>
+                    <td>${abbreviateNumber(value)} (${value})</td>
+                    <td>${((value/totalForwardCounts)*100).toFixed(3)}%</td>
+                </tr>
+            `);
+        }
+   }
+
+
+   function getTodayStatisticKey(){
+        var today = new Date();
+        var year = today.getFullYear();
+        var month = String(today.getMonth() + 1).padStart(2, '0');
+        var day = String(today.getDate()).padStart(2, '0');
+
+        var formattedDate = year + '_' + month + '_' + day;
+        return formattedDate
+   }
+
+   function handleLoadStatisticButtonPress(){
+        var sd = $("#statsRangeStart").val();
+        var ed = $("#statsRangeEnd").val();
+        //Swap them if sd is later than ed
+        if (sd != "" && ed != "" && sd > ed) {
+            ed = [sd, sd = ed][0];
+            $("#statsRangeStart").val(sd);
+            $("#statsRangeEnd").val(ed);
+        }
+       
+        initStatisticSummery(sd, ed);
+   }
+
+   function clearStatisticDateRange(){
+        $("#statsRangeStart").val("");
+        $("#statsRangeEnd").val("");
+   }
+
+    function renderUserAgentCharts(userAgentsEntries){
+        let userAgents = Object.keys(userAgentsEntries);
+        let requestCounts = Object.values(userAgentsEntries);
+        let mobileUser = 0;
+        let desktopUser = 0;
+        let osTypes = {};
+        let osVersion = {};
+        let browserTypes = {};
+        let totalRequestCounts = 0;
+        
+        requestCounts.forEach(function(rc){
+            totalRequestCounts += rc;
+        })
+
+        //Building a statistic summary
+        userAgents.forEach(function(thisUA){
+           var uaInfo = parseUserAgent(thisUA);
+           if (uaInfo.isMobile){
+                mobileUser+=userAgentsEntries[thisUA];
+           }else{
+                desktopUser+=userAgentsEntries[thisUA];
+           }
+
+           let currentNo = osTypes[uaInfo.os];
+           let osVersionKey = uaInfo.os + " " + uaInfo.version.split("_").join(".");
+           if (currentNo == undefined){
+                osTypes[uaInfo.os] = userAgentsEntries[thisUA];
+           }else{
+                osTypes[uaInfo.os] = currentNo + userAgentsEntries[thisUA];
+           }
+
+           let p = osVersion[osVersionKey];
+           if (p == undefined){
+                osVersion[osVersionKey] = userAgentsEntries[thisUA];
+           }else{
+                osVersion[osVersionKey] = p + userAgentsEntries[thisUA];
+           }
+
+
+           let browserTypeKey = uaInfo.browser;
+           if (browserTypeKey.indexOf("//") >= 0){
+                //This is a uncatergorize browser, mostly a bot
+                browserTypeKey = "Bots";
+           }else if (browserTypeKey == ""){
+                //No information
+                browserTypeKey = "Unknown";
+           }
+           let b = browserTypes[browserTypeKey];
+           if (b == undefined){
+                browserTypes[browserTypeKey] = userAgentsEntries[thisUA];
+           }else{
+                browserTypes[browserTypeKey] = b + userAgentsEntries[thisUA];
+           }
+ 
+        });
+
+        //Create the device chart
+        let deviceTypeChart = new Chart(document.getElementById("stats_device"), {
+            type: 'pie',
+            data: {
+                labels: ['Desktop', 'Mobile'],
+                datasets: [{
+                    data: [desktopUser, mobileUser],
+                    backgroundColor: ['#e56b5e', '#6eb9c1'],
+                    hoverBackgroundColor: ['#e56b5e', '#6eb9c1']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+
+        statisticCharts.push(deviceTypeChart);
+
+        //Create the OS chart
+        let OSnames = [];
+        let OSCounts = [];
+        let OSColors = [];
+        for (const [key, value] of Object.entries(osTypes)) {
+            OSnames.push(key);
+            OSCounts.push(value);
+            OSColors.push(getOSColorCode(key));
+        }
+    
+        let osTypeChart = new Chart(document.getElementById("stats_OS"), {
+            type: 'pie',
+            data: {
+                labels: OSnames,
+                datasets: [{
+                    data: OSCounts,
+                    backgroundColor: OSColors,
+                    hoverBackgroundColor: OSColors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+
+        statisticCharts.push(osTypeChart);
+
+        //Populate the OS version table
+        let sortedOSVersion = Object.entries(osVersion).sort((a, b) => b[1] - a[1]);
+        $("#stats_OSVersionList").html("");
+        // Loop through the sorted data and populate the table
+        for (let i = 0; i < sortedOSVersion.length; i++) {
+            let osVersion = sortedOSVersion[i][0];
+            let requestcount = abbreviateNumber(sortedOSVersion[i][1]);
+            let percentage = (sortedOSVersion[i][1] / totalRequestCounts * 100).toFixed(3);
+            
+            // Create a new row in the table
+            let row = $("<tr>");
+            
+            // Add the OS version and percentage as columns in the row
+            $("<td>").text(osVersion).appendTo(row);
+            $("<td>").text(requestcount).appendTo(row);
+            $("<td>").text(percentage + "%").appendTo(row);
+            
+            // Add the row to the table body
+            $("#stats_OSVersionList").append(row);
+        }
+
+        //Create the browser charts
+        let browserNames = [];
+        let broserCounts = [];
+        let browserColors = [];
+        let sortedBrowserTypes = Object.entries(browserTypes).sort((a, b) => b[1] - a[1]);
+        console.log(sortedBrowserTypes);
+        sortedBrowserTypes.forEach(function(entry){
+            browserNames.push(entry[0]);
+            broserCounts.push(entry[1]);
+            browserColors.push(generateColorFromHash(entry[0]));
+        });
+    
+        let browserTypeChart = new Chart(document.getElementById("stats_browsers"), {
+            type: 'pie',
+            data: {
+                labels: browserNames,
+                datasets: [{
+                    data: broserCounts,
+                    backgroundColor: browserColors,
+                    hoverBackgroundColor: browserColors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+
+        statisticCharts.push(browserTypeChart);
+
+    }
+
+    //Generate the IPversion pie chart
+    function renderIPVersionChart(RequestClientIp){
+        let ipv4Count = Object.keys(RequestClientIp).filter(ip => ip.includes('.')).length;
+        let ipv6Count = Object.keys(RequestClientIp).filter(ip => ip.includes(':')).length;
+        let totalCount = ipv4Count + ipv6Count;
+        let ipv4Percent = ((ipv4Count / totalCount) * 100).toFixed(2);
+        let ipv6Percent = ((ipv6Count / totalCount) * 100).toFixed(2);
+
+        // Create the chart data object
+        let chartData = {
+            labels: ['IPv4', 'IPv6'],
+            datasets: [{
+                data: [ipv4Percent, ipv6Percent],
+                backgroundColor: ['#9295f0', '#bff092'],
+                hoverBackgroundColor: ['#9295f0', '#bff092']
+            }]
+        };
+
+        // Create the chart options object
+        let ipvChartOption = {
+            responsive: true,
+            maintainAspectRatio: false,
+        };
+
+        // Create the pie chart
+        let ipTypeChart = new Chart(document.getElementById("stats_ipver"), {
+            type: 'pie',
+            data: chartData,
+            options: ipvChartOption
+        });
+
+        statisticCharts.push(ipTypeChart);
+
+        //Populate the request count table
+        let requestCounts = Object.entries(RequestClientIp);
+
+        // Sort the array by the value (count)
+        requestCounts.sort((a, b) => b[1] - a[1]);
+
+        // Select the table body and empty it
+        let tableBody = $('#stats_requestCountlist');
+        tableBody.empty();
+
+        // Loop through the sorted array and add the top 25 requested IPs to the table
+        for (let i = 0; i < 25 && i < requestCounts.length; i++) {
+            let [ip, count] = requestCounts[i];
+            let row = $('<tr>').appendTo(tableBody);
+            $('<td style="word-break: break-all;">').text(ip).appendTo(row);
+            $('<td>').text(count).appendTo(row);
+        }
+    }
+
+    //Generate a fixed color code from string hash
+    function generateColorFromHash(stringToHash){
+        let hash = 0;
+        for (let i = 0; i < stringToHash.length; i++) {
+            hash = stringToHash.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = hash % 300;
+        const saturation = Math.floor(Math.random() * 20) + 70;
+        const lightness = Math.floor(Math.random() * 20) + 60;
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    //Generate the visitor country pie chart    
+   function renderVisitorChart(visitorData){
+        // Extract the labels and data from the visitor data object
+        let labels = [];
+        let data = Object.values(visitorData);
+
+        Object.keys(visitorData).forEach(function(cc){
+            if (cc == ""){
+                labels.push("Local / Unknown")
+            }else{
+                labels.push(`${getCountryName(cc)} [${cc.toUpperCase()}]` );
+            }
+        });
+
+        // Define the colors to be used in the pie chart
+        let colors = [];
+        labels.forEach(function(cc){
+            colors.push(generateColorFromHash(cc));
+        });
+
+        // Create the chart data object
+        let CCchartData = {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors
+            }]
+        };
+
+        // Create the chart options object
+        let CCchartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+        };
+
+        // Create the pie chart
+        const visitorsChart = new Chart(document.getElementById("stats_visitors"), {
+            type: 'pie',
+            data: CCchartData,
+            options: CCchartOptions
+        });
+
+        statisticCharts.push(visitorsChart);
+   }
+</script>

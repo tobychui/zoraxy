@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#4b75ff">
+        <link rel="icon" type="image/png" href="./favicon.png" />
+        <title>IP Scanner | Zoraxy</title>
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../../script/ao_module.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/tablesort.js"></script>
+        <link rel="stylesheet" href="../main.css">
+        <style>
+            .offlinehost{
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="ui container">
+            <br>
+            <div class="ui segment">
+                <div style="padding: 1em;">
+                    <div class="ui stackable grid">
+                        <div class="eight wide column">
+                            <h4 class="ui dividing header">Scan IP Range</h4>
+                            <div class="ui form">
+                                <div class="field">
+                                    <label>Start IP</label>
+                                    <input type="text" id="start-ip" name="start-ip">
+                                </div>
+                                <div class="field">
+                                    <label>End IP</label>
+                                    <input type="text" id="end-ip" name="end-ip">
+                                </div>
+                                <button class="ui basic button scanbtn" id="ip-scan-btn"><i class="blue search icon"></i> Scan</button>
+                            </div>
+                            <br>
+                        </div>
+                        <div class="eight wide column">
+                            <h4 class="ui dividing header">Scan CIDR Range</h4>
+                            <div class="ui form">
+                                <div class="field">
+                                    <label>CIDR</label>
+                                    <input type="text" id="cidr" name="cidr">
+                                </div>
+                                <button class="ui basic button scanbtn" id="cidr-scan-btn"><i class="blue search icon"></i> Scan</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="ui basic button" onclick="toggleOfflineHost();"><i class="grey eye icon"></i>View Offline Hosts</button>
+            <div class="ui divider"></div>
+            <br>
+                <div id="scan-results" style="overflow-x: auto;">
+                   
+                </div>
+            <br>
+            <div style="float: right;">
+                <button class="ui basic button" style="margin-right: 1em;" onclick="window.open('', '_self', ''); window.close();"><i class="ui red remove icon"></i> Close</button>
+            </div>
+            <br><br><br>
+        </div>
+        <script>
+            $(document).ready(function() {
+                $('#ip-scan-btn').click(function(event) {
+                    event.preventDefault();
+                    var start = $('#start-ip').val().trim();
+                    var end = $('#end-ip').val().trim();
+                    if (start === '' || end === '') {
+                        alert('Please enter start and end IP range');
+                        return;
+                    }
+
+                    if (!isValidIPv4(start) || !isValidIPv4(end)){
+                        alert('Invalid start or end ip address');
+                        return;
+                    }
+
+                    $(".scanbtn").addClass("disabled");
+                    $("#scan-results").html(`
+                        <div class="ui basic segment" align="center">
+                            <i class="loading spinner icon"></i> Scanning
+                        </div>`);
+                    $.post("/api/tools/ipscan", {start: start, end: end}, function(data) {
+                        displayResults(data);
+                        $(".scanbtn").removeClass("disabled");
+                    });
+                });
+        
+                $('#cidr-scan-btn').click(function(event) {
+                    event.preventDefault();
+                    var cidr = $('#cidr').val().trim();
+                    if (cidr === '') {
+                        alert('Please enter CIDR notation');
+                        return;
+                    }
+
+                    if (!isValidCIDR(cidr)){
+                        alert("Invalid CIDR notation string given");
+                        return;
+                    }
+                    $(".scanbtn").addClass("disabled");
+                    $("#scan-results").html(`
+                        <div class="ui basic segment" align="center">
+                            <i class="loading spinner icon"></i> Scanning
+                        </div>`);
+                    $.post("/api/tools/ipscan", {cidr: cidr}, function(data) {
+                        displayResults(data);
+                        $(".scanbtn").removeClass("disabled");
+                    });
+                });
+
+                function isValidCIDR(str) {
+                    const cidrRegex = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
+                    return cidrRegex.test(str);
+                }
+
+
+                function isValidIPv4(ip) {
+                    var regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+                    if (!regex.test(ip)) {
+                        return false;
+                    }
+                    var parts = ip.split(".");
+                    for (var i = 0; i < parts.length; i++) {
+                        if (parseInt(parts[i], 10) > 255) {
+                        return false;
+                        }
+                    }
+                    return true;
+                }
+
+                function displayResults(data) {
+                    var table = $('<table class="ui celled unstackable table"></table>');
+                    var header = $('<thead><tr><th>IP Address</th><th>Ping</th><th>Hostname</th><th>HTTP Detected</th><th>HTTPS Detected</th></tr></thead>');
+                    table.append(header);
+                    var body = $('<tbody></tbody>');
+                    var offlineHostCounter = 0;
+                    for (var i = 0; i < data.length; i++) {
+                        var classname = "offlinehost";
+                        if (data[i].Ping>=0){
+                            classname = "onlinehost";
+                        }else{
+                            offlineHostCounter++;
+                        }
+                        var row = $('<tr class="' + classname + '"></tr>');
+                        var status = data[i].Ping >= 0 ? '<i class="green circle icon"></i>' : '<i class="grey circle icon"></i>';
+                        row.append($('<td>' + status + data[i].IP + '</td>'));
+                        row.append($('<td>' + ((data[i].Ping>=0)?data[i].Ping+"ms":"Host Unreachable") + '</td>'));
+                        row.append($('<td>' + data[i].Hostname + '</td>'));
+                        row.append($('<td>' + (data[i].HttpPortDetected ? '<i class="green check icon"></i>' : '') + '</td>'));
+                        row.append($('<td>' + (data[i].HttpsPortDetected ? '<i class="green check icon"></i>' : '') + '</td>'));
+                        body.append(row);
+                    }
+
+                    if (data.length == 0){
+                        var body = $(`<tbody>
+                        <tr>
+                            <td colspan="5">
+                                <i class="green circle check icon"></i> Discover no devices in given IP range
+                            </td>
+                        </tr>
+                        </tbody>`);
+                    }
+
+                    if (offlineHostCounter == data.length){
+                        //All offline
+                        var body = $(`<tbody>
+                        <tr>
+                            <td colspan="5">
+                                <i class="green circle check icon"></i> All hosts in given IP range are offline
+                            </td>
+                        </tr>
+                        </tbody>`);
+                    }
+                    table.append(body);
+                    $('#scan-results').empty().append(table);
+                }
+            });
+
+            function toggleOfflineHost(){
+                $(".offlinehost").toggle();
+            }
+        </script>
+    </body>
+</html>

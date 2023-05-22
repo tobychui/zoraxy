@@ -1,0 +1,55 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Subdomain</h2>
+        <p>Subdomains are a way to organize and identify different sections of a website or domain. They are essentially a prefix to the main domain name, separated by a dot. <br>For example, in the domain "blog.example.com," "blog" is the subdomain.</p>
+    </div>
+    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+        <table class="ui celled sortable unstackable compact table">
+            <thead>
+                <tr>
+                    <th>Matching Domain</th>
+                    <th>Proxy To</th>
+                    <th class="no-sort">Remove</th>
+                </tr>
+            </thead>
+            <tbody id="subdList">
+            
+            </tbody>
+        </table>
+    </div>
+    <button class="ui icon right floated basic button" onclick="listSubd();"><i class="green refresh icon"></i> Refresh</button>
+    <br><br>
+</div>
+<script>
+    function listSubd(){
+        $("#subdList").html(``);
+        $.get("/api/proxy/list?type=subd", function(data){
+            if (data.error !== undefined){
+                    $("#subdList").append(`<tr>
+                    <td data-label="" colspan="3"><i class="remove icon"></i> ${data.error}</td>
+                </tr>`);
+            }else if (data.length == 0){
+                $("#subdList").append(`<tr>
+                    <td data-label="" colspan="3"><i class="checkmark icon"></i> No Subdomain Proxy Record</td>
+                </tr>`);
+            }else{
+                data.forEach(subd => {
+                    let tlsIcon = "";
+                    if (subd.RequireTLS){
+                        tlsIcon = `<i class="lock icon"></i>`;
+                    }
+                    $("#subdList").append(`<tr>
+                        <td data-label="">${subd.MatchingDomain}</td>
+                        <td data-label="">${subd.Domain} ${tlsIcon}</td>
+                        <td class="center aligned" data-label=""><button class="ui circular mini red basic icon button" onclick='deleteEndpoint("subd","${subd.MatchingDomain}")'><i class="trash icon"></i></button></td>
+                    </tr>`);
+                });
+            }
+        });
+    }
+
+    //Bind on tab switch events
+    tabSwitchEventBind["subd"] = function(){
+        listSubd();
+    }
+</script>

@@ -1,0 +1,249 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <title>Account Reset | Zoraxy</title>
+    <link rel="stylesheet" href="script/semantic/semantic.min.css">
+    <script type="application/javascript" src="script/jquery-3.6.0.min.js"></script>
+    <script type="application/javascript" src="script/semantic/semantic.min.js"></script>
+    <style>
+        body {
+            background: rgb(245,245,245);
+            background: linear-gradient(28deg, rgba(245,245,245,1) 63%, rgba(255,255,255,1) 100%); 
+        }
+
+        .background{
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 100%;
+            opacity: 0.8;
+            z-index: -99;
+            background-image: url("img/public/bg2.png");
+            background-size: auto 100%;
+            background-position: right top;
+            background-repeat: no-repeat;
+            overflow-x: hidden;
+        }
+
+        form {
+            margin:auto;
+        }
+
+        #loginForm{
+            height: 100%;
+            background-color: white;
+            width: 25em;
+            margin-left: 10em;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        @media all and (max-width: 550px) {
+            /* CSS rules here for screens lower than 750px */
+            #loginForm{
+                width: calc(100% - 4em);
+                margin-left: 2em;
+            }
+        }
+
+        #errmsg{
+            color: #9f3a38;
+            margin-top: 1em;
+            margin-bottom: 0.4em;
+            text-align: left;
+        }
+
+        .backBtn{
+            position: absolute;
+            top: 0em;
+            left: 1em;
+            margin-top: -4em;
+        }
+    </style>
+    </head>
+    <body>
+        <div class="background"></div>
+        <div id="loginForm" class="ui middle aligned center aligned grid">
+            <div class="column">
+                <a class="backBtn" href="/">
+                    <i class="huge black chevron circle left icon"></i>
+                </a>
+                <form class="ui large form">
+                    <div class="ui basic segment">
+                        <img class="ui fluid image" src="img/public/logo.svg" style="pointer-events:none;">
+                        <p>Reset Password</p>
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="user icon"></i>
+                                <input id="username" type="text" name="username" placeholder="Username">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="ticket alternate icon"></i>
+                                <input id="token" type="text" name="token" placeholder="Token">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="lock icon"></i>
+                                <input id="magic" type="password" name="New password" placeholder="New Password">
+                            </div>
+                        </div>
+                        <div id="resetBtn" class="ui fluid basic green button">Set New Password</div>
+                        <div id="errmsg" class="ui red message" style="display: none;">
+                            <i class="red remove icon"></i> Unknown Error Occured
+                        </div>
+                        <div id="succmsg" class="ui message" style="display:none;">
+                            <i class="ui green check circle icon"></i> Password Updated. <br><small>Redirecting to <a href="/">login page</a> in 3 seconds</small>
+                        </div>
+                        <div id="countdown" class="ui message" style="color: grey;">
+                            <span id="countdownText"><i class="ui loading circle notch icon"></i> Resend email in <span id="countdown-num">30</span> seconds</span>
+                            <a href="#" id="resendEmailLink" onclick="sendResetAccountEmail();">Resend Email</a>
+                        </div>
+                    </div>
+                    <div class="ui divider"></div>
+                    <small>Proudly powered by Zoraxy</small>
+                </form>
+            </div>
+        </div>
+    <script>
+        var redirectionAddress = "/";
+        var loginAddress = "/api/auth/login";
+        $(".checkbox").checkbox();
+        $(document).ready(function(){
+            var currentdate = new Date(); 
+            var datetime = currentdate.getDate() + "/"
+                + (currentdate.getMonth()+1)  + "/" 
+                + currentdate.getFullYear() + " "  
+                + currentdate.getHours() + ":"  
+                + currentdate.getMinutes() + ":" 
+                + currentdate.getSeconds();
+            $("#requestTime").text(datetime);
+
+            //Check if the user already logged in
+            $.get("/api/auth/checkLogin",function(data){
+                try{
+                    if (data === true || data.trim() == "true"){
+                    //User already logged in. Redirect to target page.
+                    if (redirectionAddress == ""){
+                        //Redirect back to index
+                        window.location.href = "/";
+                    }else{
+                        console.log(data);
+                        //window.location.href = redirectionAddress;
+                    }
+                }
+                }catch(ex){
+                    //Assume not logged in
+                    console.log(data);
+                }
+                
+            });
+            
+        });
+
+        //Bind reset password events
+        $('#resetBtn').on('click', function() {
+            // Get input values
+            var username = $('#username').val();
+            var token = $('#token').val();
+            var newPassword = $('#magic').val();
+
+            // Send POST request with input values as data
+            $.post('/api/account/new', { username: username, token: token, newpw: newPassword })
+            .done(function(data) {
+                // Handle successful response
+                if (data.error != undefined){
+                    $("#errmsg").html(`<i class="red circle times icon"></i> ` + data.error);
+                    $("#errmsg").show();
+                }else{
+                    $("#errmsg").hide();
+                    $("#countdown").hide();
+                    $("#succmsg").show();
+                    setTimeout(function(){
+                        window.location.href = "/";
+                    }, 3000);
+                }
+            })
+            .fail(function(error) {
+                // Handle error response
+                console.error(error);
+            });
+        });
+
+
+        function updateYear() {
+            const year = new Date().getFullYear();
+            const elements = document.getElementsByClassName("year");
+            for (let i = 0; i < elements.length; i++) {
+                elements[i].textContent = year;
+            }
+        }
+        updateYear();
+
+        
+        function startCountdown() {
+            var count = 30;
+            var countdownNum = $('#countdown-num');
+            countdownNum.text(count);
+            $("#countdownText").show();
+            $('#resendEmailLink').hide();
+            var countdownTimer = setInterval(function() {
+                count--;
+                if (count === 0) {
+                    clearInterval(countdownTimer);
+                    $("#countdownText").hide();
+                    $('#resendEmailLink').show();
+                } else {
+                    countdownNum.text(count);
+                }
+            }, 1000);
+        }
+
+        //Send account reset email to preset admin account  
+        function sendResetAccountEmail(){
+            $("#resendEmailLink").html(`<i class="ui loading spinner icon"></i> Sending Email`);
+            $("#resendEmailLink").css({
+                "opacity": "0.8",
+                "pointer-events": "none"
+            });
+            $.get("/api/account/reset", function(data){
+                $("#resendEmailLink").html(`<a href="#" onclick="sendResetAccountEmail();">Resend Email</a>`);
+                $("#resendEmailLink").css({
+                    "opacity": "1",
+                    "pointer-events": "auto"
+                });
+                if (data.error !== undefined){
+                    alert(data.error);
+                }else{
+                    //Start countdown again
+                    startCountdown();
+                }
+            });
+        }
+
+        $(".thisyear").text(new Date().getFullYear());
+
+        function updateRenderElements(){
+            if (window.innerHeight < 520){
+                $(".bottombar").hide();
+            }else{
+                $(".bottombar").show();
+            }
+        }
+        updateRenderElements();
+        $(window).on("resize", function(){
+            updateRenderElements();
+        });
+
+        //Start the countdown on redirect
+        startCountdown();
+    </script>
+    </body>
+</html>

@@ -1,0 +1,441 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Network Tools</h2>
+        <p>Network tools to help manage your cluster nodes</p>
+    </div>
+
+
+    <div class="ui top attached tabular menu">
+        <a class="nettools item active bluefont" data-tab="tab1">Discovery</a>
+        <a class="nettools item bluefont" data-tab="tab2">Connection</a>
+        <a class="nettools item bluefont" data-tab="tab3">Interface</a>
+    </div>
+
+    <div class="ui bottom attached tab segment active" data-tab="tab1">
+        <h2>Multicast DNS (mDNS) Scanner</h2>
+        <p>Discover mDNS enabled service in this gateway forwarded network</p>
+        <button class="ui basic larger circular button" onclick="launchToolWithSize('./tools/mdns.html',1000, 640);">View Discovery</button>
+        <div class="ui divider"></div>
+        <h2>IP Scanner</h2>
+        <p>Discover local area network devices by pinging them one by one</p>
+        <button class="ui basic larger circular button" onclick="launchToolWithSize('./tools/ipscan.html',1000, 640);">Start Scanner</button>
+    </div>
+
+    <div class="ui bottom attached tab segment" data-tab="tab2">
+        <div id="websshTool" style="position: relative;">
+            <h2>Web SSH</h2>
+            <p>Connect to a network node within the local area network of the gateway</p>
+            <div class="ui small form">
+                <div class="three fields">
+                    <div class="field">
+                        <label>Server Name or IP Address</label>
+                        <input type="text" id="ssh_server" placeholder="e.g. example.com or 192.168.1.1">
+                    </div>
+                    <div class="field">
+                        <label>Port Number</label>
+                        <input type="number" id="ssh_port" placeholder="e.g. 22 or 2022">
+                    </div>
+                    <div class="field">
+                        <label>Username</label>
+                        <input type="text" id="ssh_username" placeholder="root">
+                    </div>
+                </div>
+            </div>
+            <button class="ui basic larger orange circular button" onclick="connectSSH();">Connect using SSH</button>
+            <div class="ui inverted message" style="display: block;">
+                Copy from Terminal <code style="float: right;">Ctrl + Insert</code><br>
+                Paste to Terminal <code style="float: right;">Shift + Insert</code>
+            </div>
+        </div>
+       
+        <div class="ui divider"></div>
+        <h2>Wake On LAN</h2>
+        <p>Wake up a remote server by WOL Magic Packet or an IoT device</p>
+        <div class="ui form">
+            <div class="two fields">
+                <div class="field">
+                  <input type="text" id="wol_servername" placeholder="Server Name">
+                </div>
+                <div class="field">
+                  <input type="text" id="wol_mac" placeholder="MAC Address">
+                </div>
+                <div class="field">
+                    <button class="ui basic right floated button" onclick="setWoLAddress();"><i class="ui blue add icon"></i> Add Address</button>
+                </div>
+            </div>
+        </div>
+        <div class="ui accordion">
+            <div class="title">
+                <i class="dropdown icon"></i>
+                Pick from mDNS scan results
+            </div>
+            <div class="content">
+                <div class="ui basic segment">
+                    <div class="ui selection fluid dropdown" id="mdnsWoL">
+                        <input type="hidden">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select a server</div>
+                        <div class="menu" id="mdnsResultForWoL">
+                        </div>
+                    </div>
+                    <br>
+                    <button class="ui basic button" onclick="updateMDNSListForWoL();"><i class="ui green refresh icon"></i> Refresh mDNS Results</button>
+                    <button class="ui basic button" onclick="selectMdnsResultForWol();"><i class="ui blue add icon"></i> Add from mDNS</button>
+                </div>
+            </div>
+        </div>
+       
+        
+        <table class="ui celled unstackable table">
+            <thead>
+                <tr><th>Server Name</th>
+                <th>MAC Address</th>
+                <th>Action</th>
+            </tr></thead>
+            <tbody id="wolAddressList">
+                <tr>
+                    <td colspan="3"><i class="ui green circle checkmark"></i> No stored MAC address</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="ui basic button" onclick="listWoL();"><i class="ui green refresh icon"></i> Refresh</button>
+    </div>
+
+    <div class="ui bottom attached tab segment" data-tab="tab3">
+        <h2>Network Interfaces</h2>
+        <p>Network Interface Card (NIC) currently installed on this host</p>
+        <table id="network-interfaces-table" class="ui selectable inverted striped celled table">
+            <thead>
+                <tr>
+                    <th>Interface Name</th>
+                    <th>ID</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Activate the default tab
+    $('.ui.accordion').accordion();
+    $('.menu .nettools.item').tab();
+    $('.menu .nettools.item').addClass("activated");
+
+    // Switch tabs when clicking on the menu items
+    $('.menu .nettools.item').on('click', function() {
+        $('.menu .item').removeClass('active');
+        $(this).addClass('active');
+        var tab = $(this).attr('data-tab');
+        $('.tab.segment').removeClass('active');
+        $('div[data-tab="' + tab + '"]').addClass('active');
+    }); 
+
+    //Check if web.ssh is supported
+    function checkWebSSHSupport(){
+        $.get("/api/tools/websshSupported", function(data){
+            if (data == false){
+                $("#websshTool").css({
+                    "opacity": "0.6",
+                    "pointer-events": "none",
+                    "user-select": "none",
+                });
+                $("#websshTool").find("button").addClass("disabled");
+            }
+        })
+    }
+    checkWebSSHSupport();
+
+    //Connect SSH using web.ssh tool
+    function connectSSH(){
+        function validateForm() {
+            var serverInput = document.getElementById("ssh_server");
+            var portInput = document.getElementById("ssh_port");
+            var usernameInput = document.getElementById("ssh_username");
+
+            var server = serverInput.value.trim();
+            var port = parseInt(portInput.value.trim() || "22");
+            var username = usernameInput.value.trim() || "root";
+
+            var isValid = true;
+
+            // Validate server input
+            if (server === "") {
+                msgbox("Server Name or IP Address is required", false, 5000);
+                serverInput.focus();
+                isValid = false;
+            } else if (!isIpAddress(server) && !isDomainName(server)) {
+                msgbox("Invalid Server Name or IP Address", false, 5000);
+                serverInput.focus();
+                isValid = false;
+            }
+
+            // Validate port input
+            if (isNaN(port) || port < 2 || port > 65533) {
+                msgbox("Port Number must be a number between 2 and 65533", false, 5000);
+                portInput.focus();
+                isValid = false;
+            }
+
+            if (isValid){
+                //OK! Launch SSH terminal
+                let settingPayload = {
+                    server: server,
+                    port: port,
+                    username: username
+                }
+
+                let settings = encodeURIComponent(JSON.stringify(settingPayload));
+                launchToolWithSize('./tools/sshconn.html#' + settings,1000, 640);
+            }else{
+
+            }
+        }
+
+        // Returns true if the given string is a valid IP address
+        function isIpAddress(str) {
+            var pattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+            return pattern.test(str);
+        }
+
+        // Returns true if the given string is a valid domain name
+        function isDomainName(str) {
+            var pattern = /^[a-z\d\-]{1,63}(\.[a-z\d\-]{1,63})*$/i;
+            return pattern.test(str);
+        }
+
+        validateForm();
+    }
+    
+</script>
+<script>
+function launchToolWithSize(url, width, height){
+    let windowName = Date.now();
+    window.open(url,'w'+windowName,
+    `toolbar=no,
+    location=no,
+    status=no,
+    menubar=no,
+    scrollbars=yes,
+    resizable=yes,
+    width=${width},
+    height=${height}`);
+}
+
+/*
+    NIC Info
+*/
+
+function renderNICInfo(){
+    $.get("/api/stats/listnic",function(data){
+        var tbody = document.querySelector("#network-interfaces-table tbody");
+        data.forEach(function(item) {
+            var tr = document.createElement("tr");
+            var name = document.createElement("td");
+            name.textContent = item.Name;
+            var id = document.createElement("td");
+            id.textContent = item.ID;
+            var ips = document.createElement("td");
+            if (item.IPs == null){
+                ips.innerHTML = "NOT CONNECTED";
+            }else{
+                ips.innerHTML = item.IPs.join("<br>");
+            }
+            
+            tr.appendChild(name);
+            tr.appendChild(id);
+            tr.appendChild(ips);
+            tbody.appendChild(tr);
+        });
+    });
+}
+renderNICInfo();
+
+/*
+    Wake On Lan functions
+*/
+
+const wake_on_lan_API = "/api/tools/wol";
+
+function selectMdnsResultForWol(){
+    let selectedText = $("#mdnsWoL").dropdown("get value");
+    let selectedWoL = JSON.parse(decodeURIComponent(selectedText));
+    $("#wol_servername").val(selectedWoL[0]);
+    $("#wol_mac").val(selectedWoL[1]);
+    setWoLAddress();
+    $("#mdnsWoL").dropdown("clear");
+}
+
+//Set Wake On Lan address
+function setWoLAddress() {
+    var name = $("#wol_servername").val().trim();
+    var mac = $("#wol_mac").val().trim();
+
+    if (name.length == 0){
+        $("#wol_servername").parent().addClass("error");
+    }else{
+        $("#wol_servername").parent().removeClass("error");
+    }
+
+    if (!isValidMacAddress(mac)){
+        $("#wol_mac").parent().addClass("error");
+        msgbox("Invalid MAC address given", false, 5000);
+        return
+    }else{
+        $("#wol_mac").parent().removeClass("error");
+    }
+
+    $.ajax({
+        url: wake_on_lan_API,
+        type: "POST",
+        data: {
+            set: mac,
+            name: name
+        },
+        success: function(result) {
+            msgbox(result.error || "WoL MAC Added", (result.error == undefined), (result.error == undefined)?3000:5000);
+            listWoL();
+
+            if (result.error == undefined){
+                $("#wol_servername").val("");
+                $("#wol_mac").val("");
+            }
+        },
+        error: function(error) {
+            console.error(error);
+        }
+    });
+}
+
+function delWoLAddr(mac, name) {
+    if (confirm(`Confirm remove WoL record for ${name} (${mac}) ?`)){
+        $.ajax({
+            url: wake_on_lan_API,
+            type: "POST",
+            data: {
+                del: mac.trim()
+            },
+            success: function(result) {
+                msgbox(result.error || "WoL MAC Removed", (result.error == undefined), (result.error == undefined)?3000:5000);
+                listWoL();
+            },
+            error: function(error) {
+                console.error(error);
+            }
+        });
+    }
+    
+}
+
+function wakeWoL(mac, object=undefined) {
+    if (object != undefined){
+        $(object).addClass("loading").addClass("disabled");
+    }
+    $.ajax({
+        url: wake_on_lan_API,
+        type: "POST",
+        data: {
+        wake: mac
+        },
+        success: function(result) {
+            if (result.error != undefined){
+                msgbox(result.error, false, 5000);
+            }else{
+                //Success?
+                setTimeout(function(){
+                    if (object != undefined){
+                        $(object).removeClass("loading").removeClass("disabled");
+                    }
+                }, 5000);
+            }
+            console.log(result);
+        },
+        error: function(error) {
+            console.error(error);
+        }
+    });
+}
+
+function listWoL(callback) {
+  $.ajax({
+    url: wake_on_lan_API,
+    type: "GET",
+    success: function(data) {
+        // Clear existing rows from the table
+        $("#wolAddressList").empty();
+
+        // Loop through data and create a new row for each object
+        for (var i = 0; i < data.length; i++) {
+            let thisServerName = data[i].ServerName;
+            let thisMacAddr = data[i].MacAddr
+            $("#wolAddressList").append(`
+                <tr class="wolmacentry" mac="${thisMacAddr}">
+                    <td>${thisServerName}</td>
+                    <td>${thisMacAddr}</td>
+                    <td>
+                        <button onclick="wakeWoL('${thisMacAddr}', this);" class="ui tiny basic button"><i class="green power icon"></i>Wake on LAN</button>
+                        <button onclick="delWoLAddr('${thisMacAddr}', '${thisServerName}');" class="ui tiny red basic icon button"><i class="red trash icon"></i></button>
+                    </td>
+
+                </tr>
+            `);
+        }
+
+        if (data.length == 0){
+            $("#wolAddressList").append(`<tr>
+                <td colspan="3"><i class="ui green circle check icon"></i> No stored MAC address for Wake On Lan (WoL)</td>
+            </tr>`);
+        }   
+
+        //Also update the MDNS list
+        updateMDNSListForWoL();
+
+        if (callback) {
+            callback(data);
+        }
+    },
+    error: function(error) {
+      console.error(error);
+    }
+  });
+}
+listWoL();
+
+function isValidMacAddress(macAddress) {
+  const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+  return macRegex.test(macAddress);
+}
+
+function updateMDNSListForWoL(){
+    let alreadyAddedEntries = [];
+    $(".wolmacentry").each(function(){
+        let thisMac = $(this).attr("mac").trim();
+        if (isValidMacAddress(thisMac)){
+            console.log(thisMac);
+            alreadyAddedEntries.push(thisMac);
+        }
+    });
+    $("#mdnsResultForWoL").html("");
+    $.get("/api/mdns/list", function(data){
+        data.forEach(thisServer => {
+            if (thisServer.MacAddr.length > 0){
+                for (var i = 0; i < thisServer.MacAddr.length; i++){
+                    let thisMacAddr = thisServer.MacAddr[i];
+                    if (!isValidMacAddress(thisMacAddr) || alreadyAddedEntries.includes(thisMacAddr)){
+                        continue;
+                    }
+                    let encodedObject = encodeURIComponent(JSON.stringify([thisServer.HostName, thisMacAddr]));
+                    $("#mdnsResultForWoL").append(`<div class="item" data-value="${encodedObject}"><i class="server icon"></i> ${thisServer.HostName} (${thisMacAddr})</div>`);
+                }
+            }
+        });
+        $("#mdnsResultForWoL").parent().dropdown();
+    });
+}
+updateMDNSListForWoL();
+
+
+</script>
+
+

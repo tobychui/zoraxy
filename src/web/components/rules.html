@@ -1,0 +1,160 @@
+<div class="ui stackable grid">
+        <div class="ten wide column">
+            <div class="standardContainer">
+                <div class="ui basic segment" style="margin-top: 1em;">
+                    <h2>New Proxy Rule</h2>
+                    <p>You can create a proxy endpoing by subdomain or virtual directories</p>
+                    <div class="ui form">
+                        <div class="field">
+                            <label>Proxy Type</label>
+                            <div class="ui selection dropdown">
+                                <input type="hidden" id="ptype" value="subd">
+                                <i class="dropdown icon"></i>
+                                <div class="default text">Proxy Type</div>
+                                <div class="menu">
+                                    <div class="item" data-value="subd">Sub-domain</div>
+                                    <div class="item" data-value="vdir">Virtual Directory</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Subdomain Matching Keyword / Virtual Directory Name</label>
+                            <input type="text" id="rootname" placeholder="s1.mydomain.com">
+                        
+                        </div>
+                        <div class="field">
+                            <label>IP Address or Domain Name with port</label>
+                            <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
+                            <small>E.g. 192.168.0.101:8000 or example.com</small>
+                        </div>
+                        <div class="field">
+                            <div class="ui checkbox">
+                                <input type="checkbox" id="reqTls">
+                                <label>Proxy Target require TLS Connection <br><small>(i.e. Your proxy target starts with https://)</small></label>
+                            </div>
+                        </div>
+                        <button class="ui basic button" onclick="newProxyEndpoint();"><i class="blue add icon"></i> Create Endpoint</button>
+                        <br><br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="six wide column">
+            <div class="ui basic segment" style="height: 100%; background-color: var(--theme_grey); color: var(--theme_lgrey);">
+                <br>
+                <span style="font-size: 1.2em; font-weight: 300;">Subdomain</span><br>
+                Example of subdomain matching keyword:<br>
+                <code>s1.arozos.com</code> <br>(Any access starting with s1.arozos.com will be proxy to the IP address below)<br>
+                <div class="ui divider"></div>
+                <span style="font-size: 1.2em; font-weight: 300;">Virtual Directory</span><br>
+                Example of virtual directory name: <br>
+                <code>/s1/home/</code> <br>(Any access to {this_server}/s1/home/ will be proxy to the IP address below)<br>
+                You can also ignore the tailing slash for wildcard like usage.<br>
+                <code>/s1/room-</code> <br>Any access to {this_server}/s1/classroom_* will be proxied, for example: <br>
+                <div class="ui list">
+                    <div class="item"><code>/s1/room-101</code></div>
+                    <div class="item"><code>/s1/room-102/</code></div>
+                    <div class="item"><code>/s1/room-103/map.txt</code></div>
+                </div><br>
+                
+                <br>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    //New Proxy Endpoint
+    function newProxyEndpoint(){
+        var type = $("#ptype").val();
+        var rootname = $("#rootname").val();
+        var proxyDomain = $("#proxyDomain").val();
+        var useTLS = $("#reqTls")[0].checked;
+
+        if (type === "vdir") {
+            if (!rootname.startsWith("/")) {
+                rootname = "/" + rootname
+                $("#rootname").val(rootname);
+            }
+        }else{
+            if (!isSubdomainDomain(rootname)){
+                //This doesn't seems like a subdomain
+                if (!confirm(rootname + " does not looks like a subdomain. Continue anyway?")){
+                    return;
+                }   
+            }
+        }
+
+        if (rootname.trim() == ""){
+            $("#rootname").parent().addClass("error");
+            return
+        }else{
+            $("#rootname").parent().removeClass("error");
+        }
+
+        if (proxyDomain.trim() == ""){
+            $("#proxyDomain").parent().addClass("error");
+            return
+        }else{
+            $("#proxyDomain").parent().removeClass("error");
+        }
+
+        //Create the endpoint by calling add
+        $.ajax({
+            url: "/api/proxy/add",
+            data: {type: type, rootname: rootname, tls: useTLS, ep: proxyDomain},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                }else{
+                    //OK
+                    listVdirs();
+                    listSubd();
+                    msgbox("Proxy Endpoint Added");
+
+                    //Clear old data
+                    $("#rootname").val("");
+                    $("#proxyDomain").val("");
+                }
+            }
+        });
+        
+    }
+
+    //Generic functions for delete rp endpoints 
+    function deleteEndpoint(ptype, epoint){
+        if (confirm("Confirm remove proxy for :" + epoint + " (type: " + ptype + ")?")){
+            $.ajax({
+                url: "/api/proxy/del",
+                data: {ep: epoint, ptype: ptype},
+                success: function(){
+                    listVdirs();
+                    listSubd();
+                }
+            })
+        }
+    }
+
+
+    function autoCheckTls(targetDomain){
+       $.ajax({
+            url: "/api/proxy/tlscheck",
+            data: {url: targetDomain},
+            success: function(data){
+                if (data.error != undefined){
+
+                }else if (data == "https"){
+                    $("#reqTls").parent().checkbox("set checked");
+                }else if (data == "http"){
+                    $("#reqTls").parent().checkbox("set unchecked");
+                }
+            }
+       })
+    }
+
+
+    //Check if a string is a valid subdomain 
+    function isSubdomainDomain(str) {
+        const regex = /^(localhost|[a-z0-9]+([\-.]{1}[a-z0-9]+)*\.[a-z]{2,}|[a-z0-9]+([\-.]{1}[a-z0-9]+)*\.[a-z]{2,}\.)$/i;
+        return regex.test(str);
+    } 
+</script>

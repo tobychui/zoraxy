@@ -1,0 +1,85 @@
+/* (A) WRAPPER - POPUP MODE */
+.picker-wrap, .picker-wrap * { box-sizing: border-box; }
+.picker-wrap.popup {
+  /* (A1) FULLSCREEN COVER */
+  position: fixed;
+  top: 0; left: 0; z-index: 99;
+  width: 100vw; height: 100vh;
+
+  /* (A2) BACKGROUND + HIDE BY DEFAULT */
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.2s;
+
+  /* (A3) CENTER DATE PICKER */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* (A4) SHOW POPUP */
+.picker-wrap.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* (B) CONTAINER */
+.picker {
+  max-width: 300px;
+  border: 1px solid #000;
+  background: #444;
+  padding: 10px;
+}
+
+/* (C) PERIOD SELECTOR */
+.picker-p {
+  width: 100%;
+  display: flex;
+  background: #333;
+}
+.picker-b, .picker-n {
+  font-weight: 700;
+  padding: 10px;
+  color: #fff;
+  background: #1a1a1a;
+  cursor: pointer;
+}
+.picker-m, .picker-y {
+  flex-grow: 1;
+  padding: 10px;
+  border: 0;
+  color: #fff;
+  background: none;
+}
+.picker-m:focus, .picker-y:focus { outline: none; }
+.picker-m option, .picker-y option { color: #000; }
+
+/* (D) DAYS IN MONTH */
+/* (D1) GRID LAYOUT */
+.picker-d {
+  color: #fff;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.picker-d div { padding: 5px; }
+
+/* (D2) HEADER - DAY NAMES */
+.picker-d-h { font-weight: 700; }
+
+/* (D3) BLANK DATES */
+.picker-d-b { background: #4e4e4e; }
+
+/* (D4) TODAY */
+.picker-d-td { background: #6e1c18; }
+
+/* (D5) PICKABLE DATES */
+.picker-d-d:hover {
+  cursor: pointer;
+  background: #a33c3c;
+}
+
+/* (D6) UNPICKABLE DATES */
+.picker-d-dd {
+  color: #888;
+  background: #4e4e4e;
+}

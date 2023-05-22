@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#4b75ff">
+        <link rel="icon" type="image/png" href="./favicon.png" />
+        <title>mDNS Discovery | Zoraxy</title>
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../../script/ao_module.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/tablesort.js"></script>
+        <link rel="stylesheet" href="../main.css">
+        <style>
+            body{
+                overflow-x: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="mdns-hosts">
+
+        </div>
+        <br>
+        <div class="ui container">
+            <h4>Scan with custom domain filter</h4>
+            <div class="ui form">
+                <div class="field">
+                    <label for="domain">Domain</label>
+                    <input type="text" id="domain" name="domain" placeholder="domain.example.com"/>
+                </div>
+                <button id="discover" class="ui basic button">Discover</button>
+                <small><span id="countdownTimer"></span></small>
+            </div>
+            <br>
+        </div>
+        
+        <div style="float: right;">
+            <button class="ui basic button"  onclick="initMDNSScan()"><i class="ui green refresh icon"></i> Refresh</button>
+            <button class="ui basic button" style="margin-right: 1em;" onclick="window.open('', '_self', ''); window.close();"><i class="ui red remove icon"></i> Close</button>
+        </div>
+        <br><br><br>
+        <script>
+            function initMDNSScan(){
+                $.get("/api/mdns/list", function(data){
+                    renderMDNSHosts(data);
+                });
+            }
+            initMDNSScan();
+            
+            $("#discover").on("click", function() {
+                var domain = $("#domain").val();
+                $("#discover").addClass("loading").addClass('disabled');
+                setCountdown();
+                $.ajax({
+                    type: "POST",
+                    url: "/api/mdns/discover",
+                    data: { domain: domain },
+                    success: function(data) {
+                        $("#discover").removeClass("loading").removeClass('disabled');
+                        renderMDNSHosts(data);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(error);
+                        // Handle error response here
+                    }
+                });
+            });
+
+            function setCountdown() {
+                var timeLeft = 29;
+                var countdownTimer = document.getElementById("countdownTimer");
+
+                // Update the timer every second
+                var countdownInterval = setInterval(function() {
+                    if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownTimer.innerHTML = "Scan Completed";
+                    } else {
+                    countdownTimer.innerHTML = "Estimated Remaining Time: " + timeLeft + " seconds";
+                    timeLeft--;
+                    }
+                }, 1000);
+            }
+
+            function renderMDNSHosts(data) {
+                // Create table header
+                var tableHeader = $('<thead>').append(
+                    $('<tr>').append(
+                    $('<th>').text('Host Name'),
+                    $('<th>').text('IP Address'),
+                    $('<th>').text('MAC Address'),
+                    $('<th>').text('Model'),
+                    $('<th>').text('Vendor')
+                    )
+                );
+                
+                // Create table body
+                var tableBody = $('<tbody>');
+                for (var i = 0; i < data.length; i++) {
+                    var host = data[i];
+                    var ipAddresses = host.IPv4.join('<br> ');
+                    var macAddresses = host.MacAddr.join('<br> ');
+                    if (macAddresses.trim() == ""){
+                        macAddresses = '<i class="ui red remove icon"></i> Not Supported'
+                    }
+                    var row = $('<tr>').append(
+                    $('<td>').html(`<a target="_blank" href="//${host.HostName}:${host.Port}">${host.HostName}</a>`),
+                    $('<td>').html(ipAddresses),
+                    $('<td>').html(macAddresses),
+                    $('<td>').text(host.Model),
+                    $('<td>').text(host.Vendor)
+                    );
+                    tableBody.append(row);
+                }
+                
+                // Create table with header and body
+                var table = $('<table>').addClass('ui celled unstackable table').append(tableHeader, tableBody);
+                
+                // Render table in HTML element with ID 'mdns-hosts'
+                $('#mdns-hosts').html(table);
+
+                if (data.length == 0){
+                    $('#mdns-hosts').find("tbody").append(`<tr><td colspan="5"><i class="ui green circle check icon"></i> No scan results</td></tr>`);
+                }
+            }
+        </script>
+    </body>
+</html>

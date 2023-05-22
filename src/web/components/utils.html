@@ -1,0 +1,392 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Utilities</h2>
+        <p>You might find these tools or information helpful when setting up your gateway server</p>
+    </div>
+    <div class="ui divider"></div>
+    <div class="selfauthOnly">
+        <h3>Account Management</h3>
+        <p>Functions to help management the current account</p>
+        <div class="ui basic segment">
+            <h5><i class="chevron down icon"></i> Change Password</h5>
+            <div class="ui form">
+                <div class="field">
+                    <label>Current Password</label>
+                    <input type="password" name="oldPassword" placeholder="Current Password">
+                </div>
+                <div class="field">
+                    <label>New Password</label>
+                    <input type="password" name="newPassword" placeholder="New Password">
+                </div>
+                <div class="field">
+                    <label>Confirm New Password</label>
+                    <input type="password" name="confirmNewPassword" placeholder="Confirm New Password">
+                </div>
+                <button class="ui basic button" onclick="changePassword()"><i class="ui teal key icon"></i> Change Password</button>
+            </div>
+
+            <div id="passwordChangeSuccMsg" class="ui green message" style="display:none;">
+                <i class="ui circle checkmark green icon "></i> Password Updated
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <h3>Forget Password Email</h3>
+        <p>The following SMTP settings help you to reset your password in case you have lost your management account.</p>
+        <form id="email-form" class="ui form">
+            <div class="field">
+                <div class="fields">
+                    <div class="twelve wide field">
+                        <label>SMTP Provider Hostname</label>
+                        <input type="text" name="hostname" placeholder="E.g. mail.gandi.net">
+                    </div>
+        
+                    <div class="four wide field">
+                        <label>Port</label>
+                        <input type="number" name="port" placeholder="E.g. 587" value="587">
+                    </div>
+                </div>
+            </div>
+          
+            <div class="field">
+                <label>Sender Domain</label>
+                <input type="text" name="domain" min="1" max="65534" placeholder="E.g. arozos.com">
+            </div>
+        
+            <div class="field">
+                <label>Sender Address</label>
+                <input type="text" name="senderAddr" placeholder="E.g. admin@zoraxy.arozos.com">
+            </div>
+
+            <div class="field">
+                <div class="two fields">
+                    <div class="field">
+                        <label>Sender Username</label>
+                        <input type="text" name="username" placeholder="Username of the email account">
+                    </div>
+                
+                    <div class="field">
+                        <label>Sender Password</label>
+                        <input type="password" name="password" placeholder="Password of the email account">
+                        <small>Leave empty to use the old password</small>
+                    </div>
+                </div>
+            </div>
+           
+            <div class="ui divider"></div>
+            <p> Email for sending account reset link</p>
+            <div class="field">
+                <label>Admin Address</label>
+                <input type="text" name="recvAddr" placeholder="E.g. personalEmail@gmail.com">
+            </div>
+            
+            <button class="ui basic button" type="submit"><i class="blue save icon"></i> Set SMTP Configs</button>
+            <button class="ui basic button" onclick="event.preventDefault(); sendTestEmail(this);"><i class="teal mail icon"></i> Send Test Email</button>
+        </form>
+    </div>
+
+    <h3> IP Address to CIDR</h3>
+    <p>No experience with CIDR notations? Here are some tools you can use to make setting up easier.</p>
+    <div class="ui basic segment">
+        <h5><i class="chevron down icon"></i> IP Range to CIDR Conversion</h5>
+        <div class="ui message">
+            <i class="info circle icon"></i> Note that the CIDR generated here covers additional IP address before or after the given range. If you need more details settings, please use CIDR with a smaller range and add additional IPs for detail range adjustment.
+        </div>
+        <div class="ui input">
+            <input type="text" placeholder="Start IP" id="startIpInput">
+        </div>
+        <div class="ui input">
+            <input type="text" placeholder="End IP" id="endIpInput">
+        </div>
+        <br>
+        <button style="margin-top: 0.6em;" class="ui basic button" onclick="convertToCIDR()">Convert</button>
+        <p>Results: <div id="cidrOutput">N/A</div></p>
+    </div>
+
+    <div class="ui basic segment">
+        <h5><i class="chevron down icon"></i> CIDR to IP Range Conversion</h5>
+        <div class="ui action input">
+            <input type="text" placeholder="CIDR" id="cidrInput">
+            <button class="ui basic button" onclick="convertToIPRange()">Convert</button>
+        </div>
+        <p>Results: <div id="ipRangeOutput">N/A</div></p>
+    </div>
+</div>
+<script>
+
+    /*
+        Account Password utilities
+    */
+
+    $.get("/api/auth/userCount", function(data){
+        if (data == 0){
+            //Using external auth manager. Hide options
+            $(".selfauthOnly").hide();
+        }
+    })
+
+    function changePassword() {
+        const oldPassword = document.getElementsByName('oldPassword')[0].value;
+        const newPassword = document.getElementsByName('newPassword')[0].value;
+        const confirmNewPassword = document.getElementsByName('confirmNewPassword')[0].value;
+        
+        $.ajax({
+            type: "POST",
+            url: "/api/auth/changePassword",
+            data: {
+                oldPassword: oldPassword,
+                newPassword: newPassword,
+                confirmPassword: confirmNewPassword,
+            },
+            success: function (data) {
+                if (data.error != undefined){
+                    alert(data.error);
+                }else{
+                    $("#passwordChangeSuccMsg").stop().finish().slideDown("fast").delay(3000).slideUp("fast");
+                    $('[name="oldPassword"]').val('');
+                    $('[name="newPassword"]').val('');
+                    $('[name="confirmNewPassword"]').val('');
+                }
+            },
+            error: function (xhr, status, error) {
+                alert("Error changing password: " + error);
+            },
+        });
+    }
+
+    /*
+        SMTP Settings
+    */
+    
+    //Bind events to the form
+    $('#email-form').submit(function(e) {
+        e.preventDefault();
+        var data = {
+            hostname: $('input[name=hostname]').val(),
+            domain: $('input[name=domain]').val(),
+            port: parseInt($('input[name=port]').val()),
+            username: $('input[name=username]').val(),
+            password: $('input[name=password]').val(),
+            senderAddr: $('input[name=senderAddr]').val(),
+            adminAddr: $('input[name=recvAddr]').val()
+        };
+
+        var inputValid = validateSMTPInputs();
+        if (!inputValid){
+            msgbox("SMTP input not valid", false, 5000);
+            return;
+        }
+
+        $.ajax({
+            type: "POST",
+            url: "/api/tools/smtp/set",
+            data: data,
+            success: function(data) {
+               if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+               }else{
+                    msgbox("SMTP Account Updated")
+               }
+            },
+            error: function(xhr, status, error) {
+                msgbox(xhr.responseText, false, 5000);
+            }
+        });
+    });
+
+    function initSMTPSettings(){
+        $.get("/api/tools/smtp/get", function(data){
+            $('#email-form input[name=hostname]').val(data.Hostname);
+            $('#email-form input[name=domain]').val(data.Domain);
+            $('#email-form input[name=port]').val(data.Port);
+            $('#email-form input[name=username]').val(data.Username);
+            $('#email-form input[name=senderAddr]').val(data.SenderAddr);
+        });
+
+        $.get("/api/tools/smtp/admin", function(data){
+            $('#email-form input[name=recvAddr]').val(data);
+        });
+    }
+    initSMTPSettings();
+
+    function sendTestEmail(btn){
+        $(btn).addClass("loading").addClass("disabled");
+        $.get("/api/tools/smtp/test", function(data){
+            if (data.error !== undefined){
+                msgbox(data.error, false, 5000);
+            }else{
+                msgbox("Test Email Sent")
+            }
+            $(btn).removeClass("loading").removeClass("disabled");
+        })
+    }
+
+    function validateSMTPInputs() {
+        let isValid = true;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // email regex pattern
+        const domainRegex = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i; // domain/subdomain regex pattern
+        const form = $('#email-form');
+
+        // validate hostname
+        const hostname = form.find('input[name="hostname"]').val().trim();
+        if (!domainRegex.test(hostname)) {
+            form.find('input[name="hostname"]').parent().addClass('error');
+            isValid = false;
+        } else {
+            form.find('input[name="hostname"]').parent().removeClass('error');
+        }
+
+        // validate domain
+        const domain = form.find('input[name="domain"]').val().trim();
+        if (!domainRegex.test(domain)) {
+            form.find('input[name="domain"]').parent().addClass('error');
+            isValid = false;
+        } else {
+            form.find('input[name="domain"]').parent().removeClass('error');
+        }
+
+        // validate username
+        const username = form.find('input[name="username"]').val().trim();
+        if (username === '') {
+            form.find('input[name="username"]').parent().addClass('error');
+            isValid = false;
+        } else {
+            form.find('input[name="username"]').parent().removeClass('error');
+        }
+
+        // validate password
+        const password = form.find('input[name="password"]').val().trim();
+        if (password === '') {
+            form.find('input[name="password"]').parent().addClass('error');
+            isValid = false;
+        } else {
+            form.find('input[name="password"]').parent().removeClass('error');
+        }
+
+        // validate sender address
+        const senderAddr = form.find('input[name="senderAddr"]').val().trim();
+        if (!emailRegex.test(senderAddr)) {
+            form.find('input[name="senderAddr"]').parent().addClass('error');
+            isValid = false;
+        } else {
+            form.find('input[name="senderAddr"]').parent().removeClass('error');
+        }
+
+        // validate receiver address
+        const recvAddr = form.find('input[name="recvAddr"]').val().trim();
+        if (!emailRegex.test(recvAddr)) {
+            form.find('input[name="recvAddr"]').parent().addClass('error');
+            isValid = false;
+        } else {
+            form.find('input[name="recvAddr"]').parent().removeClass('error');
+        }
+
+        return isValid;
+    }
+
+    /*
+        IP Address Utilities
+    */
+    //events handler
+    function convertToCIDR() {
+      const startIp = document.getElementById('startIpInput').value.trim();
+      const endIp = document.getElementById('endIpInput').value.trim();
+      const cidrOutput = document.getElementById('cidrOutput');
+      const cidr = ipRangeToCIDR(startIp, endIp);
+      const ipRange = cidrToRange(cidr);
+      cidrOutput.innerHTML = `CIDR: ${cidr} <br> (Cover range: ${ipRange[0]} to ${ipRange[1]})`;
+    }
+
+    // CIDR to IP Range Conversion
+    function convertToIPRange() {
+      const cidr = document.getElementById('cidrInput').value.trim();
+      const ipRangeOutput = document.getElementById('ipRangeOutput');
+      const ipRange = cidrToRange(cidr);
+      ipRangeOutput.innerHTML = `Start IP: ${ipRange[0]}<br>End IP: ${ipRange[1]}`;
+    }
+
+    //Ip conversion function
+    function cidrToRange(cidr) {
+        var range = [2];
+        cidr = cidr.split('/');
+        var cidr_1 = parseInt(cidr[1])
+        range[0] = long2ip((ip2long(cidr[0])) & ((-1 << (32 - cidr_1))));
+        start = ip2long(range[0])
+        range[1] = long2ip( start + Math.pow(2, (32 - cidr_1)) - 1);
+        return range;
+    }
+
+    function ipRangeToCIDR(ipStart, ipEnd) {
+        var start = ip2long(ipStart);
+        var end = ip2long(ipEnd);
+        var cidr = 32;
+
+        while (start != end) {
+            start >>= 1;
+            end >>= 1;
+            cidr--;
+        }
+
+        return ipStart + '/' + cidr;
+    }
+
+    function ip2long (argIP) {
+        //  discuss at: https://locutus.io/php/ip2long/
+        // original by: Waldo Malqui Silva (https://waldo.malqui.info)
+        // improved by: Victor
+        //  revised by: fearphage (https://my.opera.com/fearphage/)
+        //  revised by: Theriault (https://github.com/Theriault)
+        //    estarget: es2015
+        //   example 1: ip2long('192.0.34.166')
+        //   returns 1: 3221234342
+        //   example 2: ip2long('0.0xABCDEF')
+        //   returns 2: 11259375
+        //   example 3: ip2long('255.255.255.256')
+        //   returns 3: false
+        let i = 0
+        // PHP allows decimal, octal, and hexadecimal IP components.
+        // PHP allows between 1 (e.g. 127) to 4 (e.g 127.0.0.1) components.
+        const pattern = new RegExp([
+            '^([1-9]\\d*|0[0-7]*|0x[\\da-f]+)',
+            '(?:\\.([1-9]\\d*|0[0-7]*|0x[\\da-f]+))?',
+            '(?:\\.([1-9]\\d*|0[0-7]*|0x[\\da-f]+))?',
+            '(?:\\.([1-9]\\d*|0[0-7]*|0x[\\da-f]+))?$'
+        ].join(''), 'i')
+        argIP = argIP.match(pattern) // Verify argIP format.
+        if (!argIP) {
+            // Invalid format.
+            return false
+        }
+        // Reuse argIP variable for component counter.
+        argIP[0] = 0
+        for (i = 1; i < 5; i += 1) {
+            argIP[0] += !!((argIP[i] || '').length)
+            argIP[i] = parseInt(argIP[i]) || 0
+        }
+        // Continue to use argIP for overflow values.
+        // PHP does not allow any component to overflow.
+        argIP.push(256, 256, 256, 256)
+        // Recalculate overflow of last component supplied to make up for missing components.
+        argIP[4 + argIP[0]] *= Math.pow(256, 4 - argIP[0])
+        if (argIP[1] >= argIP[5] ||
+            argIP[2] >= argIP[6] ||
+            argIP[3] >= argIP[7] ||
+            argIP[4] >= argIP[8]) {
+            return false
+        }
+        return argIP[1] * (argIP[0] === 1 || 16777216) +
+            argIP[2] * (argIP[0] <= 2 || 65536) +
+            argIP[3] * (argIP[0] <= 3 || 256) +
+            argIP[4] * 1
+    }
+
+    function long2ip (ip) {
+        //  discuss at: https://locutus.io/php/long2ip/
+        // original by: Waldo Malqui Silva (https://fayr.us/waldo/)
+        //   example 1: long2ip( 3221234342 )
+        //   returns 1: '192.0.34.166'
+        if (!isFinite(ip)) {
+            return false
+        }
+        return [ip >>> 24 & 0xFF, ip >>> 16 & 0xFF, ip >>> 8 & 0xFF, ip & 0xFF].join('.')
+    }
+</script>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#4b75ff">
+        <link rel="icon" type="image/png" href="./favicon.png" />
+        <title>Control Panel | Zoraxy</title>
+        <link rel="stylesheet" href="script/semantic/semantic.min.css">
+        <script src="script/jquery-3.6.0.min.js"></script>
+        <script src="../script/ao_module.js"></script>
+        <script src="script/semantic/semantic.min.js"></script>
+        <script src="script/tablesort.js"></script>
+        <script src="script/countryCode.js"></script>
+        <script src="script/chart.js"></script>
+        <script src="script/utils.js"></script>
+        <link rel="stylesheet" href="main.css">
+    </head>
+    <body>
+        <div class="menubar">
+            <div class="item">
+                <img class="logo" src="img/logo.svg">
+            </div>
+
+            <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
+                <button class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
+            </div>
+            <div class="ui right floated buttons" style="padding-top: 2px;">
+                <button class="ui basic icon button" onclick="logout();"><i class="sign-out icon"></i></button>
+            </div>
+        </div>
+        <div class="wrapper">
+            <div class="toolbar">
+                <div id="mainmenu" class="ui secondary vertical menu">
+                    <a class="item active" tag="status">
+                        <i class="simplistic info circle icon"></i>Status
+                    </a>
+                    <a class="item" tag="vdir">
+                        <i class="simplistic folder icon"></i> Virtual Directory
+                    </a>
+                    <a class="item" tag="subd">
+                        <i class="simplistic sitemap icon"></i> Subdomain Proxy
+                    </a>
+                    <a class="item" tag="rules">
+                        <i class="simplistic plus square icon"></i> Create Proxy Rules
+                    </a>
+                    <a class="item" tag="setroot">
+                        <i class="simplistic home icon"></i> Set Proxy Root
+                    </a>
+                    <div class="ui divider menudivider">Access & Connections</div>
+                    <a class="item" tag="cert">
+                        <i class="simplistic lock icon"></i> TLS / SSL certificate
+                    </a>
+                    <a class="item" tag="redirectset">
+                        <i class="simplistic level up alternate icon"></i> Redirection
+                    </a>
+                    <a class="item" tag="blacklist">
+                        <i class="simplistic ban icon"></i> Blacklist
+                    </a>
+                    <div class="ui divider menudivider">Bridging</div>
+                    <a class="item" tag="gan">
+                        <i class="simplistic globe icon"></i> Global Area Network
+                    </a>
+                    <a class="item" tag="">
+                        <i class="simplistic podcast icon"></i> Service Expose Proxy
+                    </a>
+                    <a class="item" tag="tcpprox">
+                        <i class="simplistic exchange icon"></i> TCP Proxy
+                    </a>
+                    <div class="ui divider menudivider">Others</div>
+                    <a class="item" tag="utm">
+                        <i class="simplistic time icon"></i> Uptime Monitor
+                    </a>
+                    <a class="item" tag="networktool">
+                        <i class="simplistic terminal icon"></i> Network Tools
+                    </a>
+                    <a class="item" tag="stats">
+                        <i class="simplistic database icon"></i> Statistical Analysis
+                    </a>
+                    <a class="item" tag="utils">
+                        <i class="simplistic paperclip icon"></i> Utilities
+                    </a>
+                    <!-- Add more components here -->
+                </div>
+            </div>
+            <div class="contentWindow">
+                <!-- Status Tab -->
+                <div id="status" class="functiontab" target="status.html" style="display: block ;">
+                    <br><br><div class="ui active centered inline loader"></div>
+                </div>
+
+                <!-- Virtual Directory Tab -->
+                <div id="vdir" class="functiontab" target="vdir.html"></div>
+
+                <!-- Subdomain Proxy -->
+                <div id="subd" class="functiontab" target="subd.html"></div>
+
+                <!-- Create Rules -->
+                <div id="rules" class="functiontab" target="rules.html"></div>
+
+                <!-- Set proxy root -->
+                <div id="setroot" class="functiontab" target="rproot.html"></div>
+
+                <!-- Set TLS cert -->
+                <div id="cert" class="functiontab" target="cert.html"></div>
+
+                <!-- Redirections -->
+                <div id="redirectset" class="functiontab" target="redirection.html"></div>
+
+                <!-- Blacklist -->
+                <div id="blacklist" class="functiontab" target="blacklist.html"></div>
+
+                <!-- Global Area Networking -->
+                <div id="gan" class="functiontab" target="gan.html"></div>
+
+                <!-- TCP Proxy -->
+                <div id="tcpprox" class="functiontab" target="tcpprox.html"></div>
+
+                <!-- Up Time Monitor -->
+                <div id="utm" class="functiontab" target="uptime.html"></div>
+
+                <!-- Network Tools -->
+                <div id="networktool" class="functiontab" target="networktools.html"></div>
+
+                <!-- Statistic Tools -->
+                <div id="stats" class="functiontab" target="stats.html"></div>
+
+                <!-- Utilities -->
+                <div id="utils" class="functiontab" target="utils.html"></div>
+            </div>
+            </div>
+        </div>
+        <br><br>
+        <div class="ui divider"></div>
+        <div class="ui container" style="color: grey; font-size: 90%">
+            <p>CopyRight Zoraxy project and its author, 2022 - <span class="year"></span></p>
+        </div>
+        
+        <div id="messageBox" class="ui green floating big compact message">
+            <p><i class="green check circle icon"></i> There are no message</p>
+        </div>
+        
+        <br><br>
+        <script>
+            $(".year").text(new Date().getFullYear());
+            /*
+                Loader function
+
+                Load all the components view from the 
+                components/ directory into their corrisponding divs
+            */
+            let loadingComponents = 0;
+            
+            function initTabs(callback=undefined){
+                $('.functiontab').each(function(){
+                    let loadTarget = $(this).attr("target");
+                    if (loadTarget != undefined){
+                        $(this).load("./components/" + loadTarget, function(){
+                            loadingComponents--;
+                        });
+                        loadingComponents++;
+                    }else{
+                        $(this).html(`<p>Unable to load components for this tab</p>`);
+                    }
+                })
+                if (callback != undefined){
+                    waitInit(callback);
+                }
+            }
+
+            function waitInit(callback = undefined, retryCount = 0){
+                if (loadingComponents > 0 && retryCount < 5){
+                    setTimeout(function(){
+                        waitInit(callback, retryCount++);
+                    }, 300);
+                }else if (loadingComponents == 0){
+                    callback();
+                }else{
+                    alert("Missing component. Please check if your installation is complete.")
+                }
+            }
+
+            initTabs(function(){
+                initRPStaste();
+
+                if (window.location.hash.length > 1){
+                    let tabID = window.location.hash.substr(1);
+                    openTabById(tabID);
+                }else{
+                    openTabById("status");
+                }
+                $(".ui.dropdown").dropdown();
+                $(".ui.checkbox").checkbox();
+
+                //Click on the current tab
+                $("#mainmenu").find(".item").each(function(){
+                    $(this).on("click", function(event){
+                        let tabid = $(this).attr("tag");
+                        openTabById(tabid);
+                    });
+                });
+
+                //Initialize all table that is sortable
+                $('table').tablesort();
+            });
+
+            function logout() {
+                $.get("/api/auth/logout", function(response) {
+                    if (response === "OK") {
+                        setTimeout(function(){
+                            window.location.href = "/";
+                        }, 300);
+                    }
+                });
+            }
+
+            function getTabButtonById(targetTabId){
+                let targetTabBtn = undefined;
+                $("#mainmenu").find(".item").each(function(){
+                    let tabid = $(this).attr("tag");
+                    
+                    if (tabid == targetTabId){
+                        targetTabBtn = $(this);
+                    }
+                });
+
+                return targetTabBtn;
+            }
+
+            //Select and open a tab by its tag id
+            let tabSwitchEventBind = {}; //Bind event to tab switch by tabid
+            function openTabById(tabID){
+                let targetBtn = getTabButtonById(tabID);
+                if (targetBtn == undefined){
+                    alert("Invalid tabid given");
+                    return;
+                }
+                if (window.innerWidth < 750){
+                    //RWD mode, hide toolbar
+                    $(".toolbar").fadeOut('fast');
+                }
+
+                $("#mainmenu").find(".item").removeClass("active");
+                $(targetBtn).addClass("active");
+                $(".functiontab").hide();
+                $("#" + tabID).fadeIn('fast', function(){
+                    if (tabSwitchEventBind[tabID]){
+                        tabSwitchEventBind[tabID]();
+                    }
+                });
+                $('html,body').animate({scrollTop: 0}, 'fast');
+                window.location.hash = tabID;
+
+            }
+
+            $(window).on("resize", function(){
+                if (window.innerWidth >= 750 && $(".toolbar").is(":visible") == false){
+                    $(".toolbar").show();
+                }
+            });
+
+            function msgbox(message, succ=true, delayDuration=3000){
+                let icon = `<i class="ui info circle icon"></i>`;
+                if (succ){
+                    $("#messageBox").attr("class", "ui green floating compact message")
+                    icon = `<i class="ui green circle check icon"></i>`;
+                }else{
+                    message = message.capitalize();
+                    $("#messageBox").attr("class", "ui red floating compact message")
+                    icon = `<i class="ui red circle times icon"></i>`;
+                }
+                $("#messageBox").html(`${icon} ${message}`);
+                $("#messageBox").stop().finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
+            }
+
+        </script>
+    </body>
+</html>

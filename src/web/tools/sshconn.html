@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#4b75ff">
+        <link rel="icon" type="image/png" href="./favicon.png" />
+        <title>Web SSH | Zoraxy</title>
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../../script/ao_module.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/tablesort.js"></script>
+        <link rel="stylesheet" href="../main.css">
+        <style>
+            #loadingUI{
+                width: 100%;
+                height: 100%;
+                background-color: black;
+                position: fixed;
+                top: 0;
+                left: 0;
+                display:none;
+            }
+
+            #loadingUI div{
+                color: white;
+                font-family: monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="loadingUI">
+            <div style="margin-top: 2em; margin-left: 2em; color: white;">
+                <i class="ui loading spinner icon"></i> <b>Creating virtual terminal session</b><br>
+                <div id="counter" style="color: white; margin-left: 1.9em;">Setting Up Environment</div>
+            </div>
+        </div>
+        <div id="connectionSettings">
+            <div class="ui container">
+                <br>
+                <div class="ui form">
+                    <div class="two fields">
+                    <div class="field">
+                        <label>Server Name or IP Address</label>
+                        <input type="text" name="server" placeholder="e.g. example.com or 192.168.1.1">
+                    </div>
+                    <div class="field">
+                        <label>Port Number</label>
+                        <input type="number" name="port" placeholder="e.g. 22 or 2022">
+                    </div>
+                        <div class="field">
+                            <label>Username</label>
+                            <input type="text" name="username" placeholder="root">
+                        </div>
+                    </div>
+                </div>
+                <div id="ui error message">
+
+                </div>
+
+                <div style="float: right;">
+                    <button class="ui basic button"  onclick="connectSSH()"><i class="ui blue exchange icon"></i> Connect</button>
+                    <button class="ui basic button" onclick="window.open('', '_self', ''); window.close();"><i class="ui red remove icon"></i> Close</button>
+                </div>
+            </div>
+            <br><br><br>
+        </div>
+        <script>
+            /*
+                SSHCONN
+
+                This interface is designed to start a ssh connection instance
+                and brige the virtual terminal to the web front-end
+
+                Example Usage: 
+                let settingPayload = {
+                    server: "192.168.1.100",
+                    port: 2022,
+                    username: "pi"
+                }
+
+                let settings = encodeURIComponent(JSON.stringify(settingPayload));
+                window.open("sshconn.html#" + settings)
+            */
+
+            if (window.location.hash.length > 1){
+                try{
+                    var c = JSON.parse(decodeURIComponent((window.location.hash.substr(1))));
+                    $('input[name="server"]').val(c.server);
+                    $('input[name="port"]').val(c.port);
+                    $('input[name="username"]').val(c.username);
+                    connectSSH();
+                }catch(ex){
+                    alert("invalid usage")
+                }
+            }
+
+            //Start the SSH connection process
+            function connectSSH() {
+                const serverValue = $('input[name="server"]').val().trim();
+                var portString = $('input[name="port"]').val().trim();
+                if (portString.trim() == ""){
+                    portString = "22";
+                }
+                const portValue = parseInt(portString, 10);
+                const username = $('input[name="username"]').val().trim();
+                if (username == ""){
+                    username = "root";
+                }
+                // Validate server name or IP address
+                const validServer = isValidServerNameOrIPAddress(serverValue);
+                
+                // Validate port number
+                const validPort = (portValue >= 1 && portValue <= 65535);
+                
+                if (validServer && validPort) {
+                    // Call doSomething function if both inputs are valid
+                    createSSHProxy(serverValue, portValue, username);
+                } else {
+                    // Display an error message if either input is invalid
+                    const errorLabel = $('<div>').addClass('ui red basic label');
+                    if (!validServer) {
+                        $('input[name="server"]').parent().addClass('error');
+                    } else{
+                        $('input[name="server"]').parent().removeClass('error');
+                    }
+                    
+                    if (!validPort) {
+                        $('input[name="port"]').parent().addClass('error');
+                    }else{
+                        $('input[name="port"]').parent().removeClass('error');
+                    }
+                }
+            }
+
+            function redirectWithCountdown(url) {
+                $("#loadingUI").show();
+                $("#connectionSettings").hide();
+                var count = 3;
+                var interval = setInterval(function() {
+                    $("#counter").html("ETA " + count + " seconds");
+                        count--;
+                        if (count === 0) {
+                        clearInterval(interval);
+                        window.location.href = url;
+                    }
+                }, 1000);
+            }
+                
+
+            //Try to ask the server side to create a ssh proxy object
+            function createSSHProxy(remoteAddr, remotePort, username){
+                //Request to create a ssh session instance
+                $.ajax({
+                    url: "/api/tools/webssh",
+                    data: {ipaddr: remoteAddr, port: remotePort, username:username},
+                    method: "POST",
+                    success: function(sessionToken){
+                        if (sessionToken.error != undefined){
+                            alert(sessionToken.error);
+                        }else{
+                            //Session created. Redirect to ssh terminal
+                            redirectWithCountdown("/web.ssh/" + sessionToken + "/");
+                        }
+                    },
+                    error: function(){
+
+                    }
+
+                })
+            }
+
+
+            function isValidServerNameOrIPAddress(str) {
+                //loopback
+                if (str == "localhost"){
+                    return true;
+                }
+
+                // First, check if the string is a valid IP address
+                const ipAddressRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+                if (ipAddressRegex.test(str)) {
+                    return true;
+                }
+
+                // If the string is not an IP address, check if it is a valid domain name or server name
+                const serverNameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
+                if (serverNameRegex.test(str)) {
+                    return true;
+                }
+
+                
+
+                // If the string is neither an IP address nor a server name, return false
+                return false;
+            }
+        </script>
+    </body>
+</html>

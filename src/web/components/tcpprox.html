@@ -1,0 +1,355 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>TCP Proxy</h2>
+        <p>Proxy traffic flow on layer 3 via TCP/IP</p>
+    </div>
+    <button class="ui basic orange button" id="addProxyConfigButton"><i class="ui add icon"></i> Add Proxy Config</button>
+    <button class="ui basic circular right floated icon button" title="Refresh List"><i class="ui green refresh icon"></i></button>
+    <div class="ui divider"></div>
+    <div class="ui basic segment" id="addproxyConfig"  style="display:none;">
+        <h3>TCP Proxy Config</h3>
+        <p>Create or edit a new proxy instance</p>
+        <form id="tcpProxyForm" class="ui form">
+            <div class="field" style="display:none;">
+                <label>UUID</label>
+                <input type="text" name="uuid">
+            </div>
+            <div class="field">
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Config Name">
+            </div>
+            <div class="field">
+                <label>Port A</label>
+                <input type="text" name="porta" placeholder="First address or port">
+            </div>
+                <div class="field">
+                <label>Port B</label>
+            <input type="text" name="portb" placeholder="Second address or port">
+            </div>
+            <div class="field">
+                <label>Timeout (s)</label>
+                <input type="text" name="timeout" placeholder="Timeout (s)">
+            </div>
+            <div class="field">
+                <label>Mode</label>
+                <select name="mode" class="ui dropdown">
+                    <option value="">Select Mode</option>
+                    <option value="listen">Listen</option>
+                    <option value="transport">Transport</option>
+                    <option value="starter">Starter</option>
+                </select>
+            </div>
+            <button id="addTcpProxyButton" class="ui basic button" type="submit"><i class="ui blue add icon"></i> Create</button>  
+            <button id="editTcpProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);"><i class="ui blue save icon"></i> Update</button>  
+            <table class="ui celled padded table">
+                <thead>
+                  <tr><th class="single line">Mode</th>
+                  <th>Public-IP</th>
+                  <th>Concurrent Access</th>
+                  <th>Flow Diagram</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <h3 class="ui center aligned header">Listen</h3>
+                    </td>
+                    <td class="single line">
+                        Server: <i class="ui green check icon"></i><br>
+                        A: <i class="ui remove icon"></i><br>
+                        B: <i class="ui remove icon"></i><br>
+                    </td>
+                    <td>
+                        <i class="ui red times icon"></i>
+                    </td>
+                    <td>Port A (e.g. 8080) <i class="arrow right icon"></i> Server<br>
+                        Port B (e.g. 8081) <i class="arrow right icon"></i> Server<br>
+                        <small>Server will act as a bridge to proxy traffic between Port A and B</small>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <h3 class="ui center aligned header">Transport</h3>
+                    </td>
+                    <td class="single line">
+                        Server: <i class="ui green check icon"></i><br>
+                        A: <i class="ui remove icon"></i><br>
+                        B: <i class="ui green check icon"></i> (or same LAN)<br>
+                    </td>
+                    <td>
+                        <i class="ui green check icon"></i>
+                    </td>
+                    <td>Port A (e.g. 25565) <i class="arrow right icon"></i> Server<br>
+                        Server <i class="arrow right icon"></i> Port B (e.g. 192.168.0.2:25565)<br>
+                        <small>Traffic from Port A will be forward to Port B's (IP if provided and) Port</small>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <h3 class="ui center aligned header">Starter</h3>
+                    </td>
+                    <td class="single line">
+                        Server: <i class="ui times icon"></i><br>
+                        A: <i class="ui green check icon"></i><br>
+                        B: <i class="ui green check icon"></i><br>
+                    </td>
+                    <td>
+                        <i class="ui red times icon"></i>
+                    </td>
+                    <td>Server <i class="arrow right icon"></i> Port A (e.g. remote.local.:8080) <br>
+                        Server <i class="arrow right icon"></i> Port B (e.g. recv.local.:8081) <br>
+                        <small>Port A and B will be actively bridged</small>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            
+        </form>
+        <div class="ui divider"></div>
+    </div>
+    <div class="ui basic segment">
+        <div style="overflow-x: auto;">
+            <h3>TCP Proxy Configs</h3>
+            <p>A list of TCP proxy configs created on this host. To enable them, use the toggle button on the right.</p>
+            <table id="proxyTable" class="ui basic celled unstackable table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>PortA</th>
+                        <th>PortB</th>
+                        <th>Mode</th>
+                        <th>Timeout (s)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        let editingTCPProxyConfigUUID = ""; //The current editing TCP Proxy config UUID
+
+        $("#tcpProxyForm .dropdown").dropdown();
+        $('#tcpProxyForm').on('submit', function(event) {
+            event.preventDefault();
+            var form = $(this);
+
+            var formValid = validateTCPProxyConfig(form);
+            if (!formValid){
+                return;
+            }
+
+            // Send the AJAX POST request
+            $.ajax({
+                type: 'POST',
+                url: '/api/tcpprox/config/add',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.error) {
+                        msgbox(response.error, false, 6000);
+                    }else{
+                        msgbox("Config Added");
+                    }
+                    clearTCPProxyAddEditForm();
+                    initProxyConfigList();
+                    $("#addproxyConfig").slideUp("fast");
+                },
+                error: function() {
+                    msgbox('An error occurred while processing the request', false);
+                }
+            });
+        });
+
+        //Add proxy button pressed. Show add TCP proxy menu
+        $("#addProxyConfigButton").on("click", function(){
+            $('#addproxyConfig').slideToggle('fast');
+            $("#addTcpProxyButton").show();
+            $("#editTcpProxyButton").hide();
+        });
+
+            
+        function clearTCPProxyAddEditForm(){
+            $('#tcpProxyForm input, #tcpProxyForm select').val('');
+        }
+
+        function validateTCPProxyConfig(form){
+            // Validate timeout is an integer
+            var timeout = parseInt(form.find('input[name="timeout"]').val());
+            if (isNaN(timeout)) {
+                form.find('input[name="timeout"]').parent().addClass("error");
+                msgbox('Timeout must be a valid integer', false, 5000);
+                return false;
+            }else{
+                form.find('input[name="timeout"]').parent().removeClass("error");
+            }
+
+            // Validate mode is selected
+            var mode = form.find('select[name="mode"]').val();
+            if (mode === '') {
+                form.find('select[name="mode"]').parent().addClass("error");
+                msgbox('Please select a mode', false, 5000);
+                return false;
+            }else{
+                form.find('select[name="mode"]').parent().removeClass("error");
+            }
+            return true;
+        }
+
+        function renderProxyConfigs(proxyConfigs) {
+            var tableBody = $('#proxyTable tbody');
+            tableBody.empty();
+            if (proxyConfigs.length === 0) {
+            var noResultsRow = $('<tr><td colspan="7"><i class="green check circle icon"></i>No Proxy Configs</td></tr>');
+                tableBody.append(noResultsRow);
+            } else {
+               
+                proxyConfigs.forEach(function(config) {
+                    var runningLogo = '<i class="red circle icon"></i>';
+                    var startButton = `<button onclick="startTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="play icon"></i></button>`;
+                    if (config.Running){
+                        runningLogo = '<i class="green circle icon"></i>';
+                        startButton = `<button onclick="stopTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="red stop icon"></i></button>`;
+                    }
+
+                    var modeText = "Unknown";
+                    if (config.Mode == 0){
+                        modeText = "Listen";
+                    }else if (config.Mode == 1){
+                        modeText = "Transport";
+                    }else if (config.Mode == 2){
+                        modeText = "Starter";
+                    }
+
+                    var thisConfig = encodeURIComponent(JSON.stringify(config));
+
+                    var row = $(`<tr class="tcproxConfig" uuid="${config.UUID}" config="${thisConfig}">`);
+                    row.append($('<td>').html(runningLogo + config.Name));
+                    row.append($('<td>').text(config.PortA));
+                    row.append($('<td>').text(config.PortB));
+                    row.append($('<td>').text(modeText));
+                    row.append($('<td>').text(config.Timeout));
+                    row.append($('<td>').html(`
+                        <div class="ui basic icon buttons">
+                            <button class="ui button" onclick="validateProxyConfig('${config.UUID}', this);" title="Validate Config"><i class="teal question circle outline icon"></i></button>
+                            ${startButton}
+                            <button onclick="editTCPProxyConfig('${config.UUID}');" class="ui button" title="Edit Config"><i class="edit icon"></i></button>
+                            <button onclick="deleteTCPProxyConfig('${config.UUID}');" class="ui red button" title="Delete Config"><i class="trash icon"></i></button>
+                        </div>
+                    `));
+                    tableBody.append(row);
+                });
+            }
+        }
+
+        function getConfigDetailsFromDOM(configUUID){
+            let thisConfig = null;
+            $(".tcproxConfig").each(function(){
+                let uuid = $(this).attr("uuid");
+                if (configUUID == uuid){
+                    //This is the one we are looking for
+                    thisConfig = JSON.parse(decodeURIComponent($(this).attr("config")));
+                }
+            });
+            return thisConfig;
+        }   
+
+        function validateProxyConfig(configUUID, btn){
+            $(btn).html(`<i class="ui loading spinner icon"></i>`);
+            $.ajax({
+                url: "/api/tcpprox/config/validate",
+                data: {uuid: configUUID},
+                success: function(data){
+                    if (data.error != undefined){
+                        $(btn).html(`<i class="red times icon"></i>`);
+                        msgbox(data.error, false, 6000);
+                    }else{
+                        $(btn).html(`<i class="green check icon"></i>`);
+                        msgbox("Config Check Passed");
+                    }
+                }
+            })   
+        }
+
+        function editTCPProxyConfig(configUUID){
+            let targetConfig = getConfigDetailsFromDOM(configUUID);
+            if (targetConfig != null){
+                $("#addTcpProxyButton").hide();
+                $("#editTcpProxyButton").show();
+               $.each(targetConfig, function(key, value) {
+                    var field = $("#tcpProxyForm").find('[name="' + key.toLowerCase() + '"]');
+                    if (field.length > 0) {
+                        if (field.is('input')) {
+                            field.val(value);
+                        }else if (field.is('select')){
+                            if (key.toLowerCase() == "mode"){
+                                if (value == 0){
+                                    value = "listen";
+                                }else if (value == 1){
+                                    value = "transport";
+                                }else if (value == 2){
+                                    value = "starter";
+                                }
+                            }
+                            $(field).dropdown("set selected", value);
+                        }
+                    }
+                });
+                editingTCPProxyConfigUUID = configUUID;
+                $("#addproxyConfig").slideDown("fast");
+
+            }else{
+                msgbox("Unable to load target config", false);
+            }
+        }
+
+        function confirmEditTCPProxyConfig(event){
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            var form = $("#tcpProxyForm");
+
+            var formValid = validateTCPProxyConfig(form);
+            if (!formValid){
+                return;
+            }
+
+            // Send the AJAX POST request
+            $.ajax({
+                type: 'POST',
+                url: '/api/tcpprox/config/edit',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.error) {
+                        msgbox(response.error, false, 6000);
+                    }else{
+                        msgbox("Config Updated");
+                    }
+                    initProxyConfigList();
+                    clearTCPProxyAddEditForm();
+                    $("#addproxyConfig").slideUp("fast");
+                },
+                error: function() {
+                    msgbox('An error occurred while processing the request', false);
+                }
+            });
+        }
+
+        function deleteTCPProxyConfig(configUUID){
+
+        }
+
+        function initProxyConfigList(){
+            $.ajax({
+                type: 'GET',
+                url: '/api/tcpprox/config/list',
+                success: function(response) {
+                    renderProxyConfigs(response);
+                },
+                error: function() {
+                    msgbox('Unable to load proxy configs', false);
+                }
+            });
+        }
+        initProxyConfigList();
+    </script>
+</div>
