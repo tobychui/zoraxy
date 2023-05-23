@@ -27,7 +27,18 @@ General purpose request (reverse) proxy and forwarding tool for low power device
   - Basic single-admin management mode
   - External permission management system for easy system integration
   - SMTP config for password reset
-  
+ 
+## Build from Source
+Require Go 1.20 or above
+
+```
+git clone https://github.com/tobychui/zoraxy
+cd ./zoraxy/src/
+go mod tidy
+go build
+
+sudo ./zoraxy -port=:8000
+```
 
 ## Usage
 
