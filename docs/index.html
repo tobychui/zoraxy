@@ -1,9 +1,162 @@
-<html>
-    <head>
-        <title>Zoraxy</title>
-    </head>
-    <body>
-        <br>
-        <h1>Work In Progress</h1>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="Reverse Proxy, Cluster, Gateway, Go, Homelab, Network Tools" name="keywords">
+    <meta content="A reverse proxy server and cluster network gateway for noobs" name="description">
+    <meta name="author" content="tobychui">
+
+    <!-- HTML Meta Tags -->
+    <title>Cluster Proxy Gateway | Zoraxy</title>
+    <meta name="description" content="A reverse proxy server and cluster network gateway for noobs">
+
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="https://zoraxy.arozos.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Cluster Proxy Gateway | Zoraxy">
+    <meta property="og:description" content="A reverse proxy server and cluster network gateway for noobs">
+    <meta property="og:image" content="https://zoraxy.arozos.com/img/og.png">
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="twitter:domain" content="arozos.com">
+    <meta property="twitter:url" content="https://zoraxy.arozos.com/">
+    <meta name="twitter:title" content="Cluster Proxy Gateway | Zoraxy">
+    <meta name="twitter:description" content="A reverse proxy server and cluster network gateway for noobs">
+    <meta name="twitter:image" content="https://zoraxy.arozos.com/img/og.png">
+
+    <!-- Favicons -->
+    <link href="favicon.png" rel="icon">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@100;300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+
+    <!-- Main Stylesheet File -->
+    <link href="style.css" rel="stylesheet">
+    <script
+      src="https://code.jquery.com/jquery-3.7.0.min.js"
+      integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g="
+      crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.js" integrity="sha512-5cguXwRllb+6bcc2pogwIeQmQPXEzn2ddsqAexIBhh7FO1z5Hkek1J9mrK2+rmZCTU6b6pERxI7acnp1MpAg4Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.css" integrity="sha512-n//BDM4vMPvyca4bJjZPDh7hlqsQ7hqbP9RH18GF2hTXBY5amBwM2501M0GPiwCU/v9Tor2m13GOTFjk00tkQA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+      p,a,div,span,h1,h2,h3,h4,h5,h6{
+        font-family: 'Source Sans Pro', sans-serif !important;
+        color: #404040;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main">
+      <div class="left-menu">
+        <div class="iconWrapper">
+          <a href="index.html"><img class="ui fluid image" src="img/icon.png"></a>
+        </div>
+        <a href="#home" class="menu-item active" align="center">
+          <img src="img/icons/home.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/awesome.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/proxy.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/redirect.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/blacklist.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/scan.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/stats.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/terminal.svg">
+        </a>
+        <a href="#" class="menu-item" align="center">
+          <img src="img/icons/code.svg">
+        </a>
+      </div>
+      <div class="right-content">
+        <!-- Hero Banner Section -->
+        <div class="dot-container">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div class="headbanner"></div>
+        <div id="home" class="herotext">
+          <div class="ui basic segment">
+            <div class="bannerHeaderWrapper">
+              <h1 class="bannerHeader">Zoraxy</h1>
+              <p class="bannerSubheader">All in one homelab network routing solution</p>
+            </div>
+            <br><br>
+            <a class="ui black big button"  href="#features">Learn More</a>
+            <br><br>
+            <table class="ui very basic collapsing unstackable celled table">
+              <thead>
+                <tr><th colspan="2">Quick Access</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <h4 class="ui image header">
+                    <i class="ui download icon"></i>
+                    <div class="content">
+                      Download
+                      <div class="sub header">Prebuild Binary
+                    </div>
+                  </div>
+                </h4></td>
+                <td>
+                  <a href="https://github.com/tobychui/zoraxy/releases" target="_blank">Open <i class="ui external icon"></i></a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <h4 class="ui image header">
+                    <i class="ui github icon"></i>
+                    <div class="content">
+                      Github
+                      <div class="sub header">Source Code
+                    </div>
+                  </div>
+                </h4></td>
+                <td>
+                  <a href="https://github.com/tobychui/zoraxy" target="_blank">Open <i class="ui external icon"></i></a>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="ui divider" style="margin-top: 0;"></div>
+        <div class="ui container">
+          <br>
+          <h1>What is Zoraxy</h1>
+        </div>
+
+        <div class="ui divider"></div>
+        <div class="ui container">
+          <p style="color: #3a3a3a">CopyRight Zoraxy Project and its authors © 2021 - <span class="year"></span></p>
+        </div>
+        <br><br><br>
+      </div>
+    </div>
+    <br>
+    <script>
+      $(".year").text(new Date().getFullYear()  );
+
+    </script>
+  </body>
 </html>

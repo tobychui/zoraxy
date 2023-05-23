@@ -1,0 +1,209 @@
+body{
+    background: #f6f6f6 !important;
+    margin: 0;
+    padding: 0;
+    overflow-y: hidden;
+}
+
+:root{
+    --themeTextColor: #404040;
+    --themeSkyblueColor: #a9d1f3;
+    --themeSkyblueColorDecondary: #8eb9df;
+}
+.main {
+    display: flex;
+    height: 100vh;
+}
+
+.left-menu {
+    width: 80px;
+    min-width: 80px;
+    background-color: #ffffff;
+    min-height: 100vh;
+}
+
+.iconWrapper{
+    padding: 1em;
+    border-bottom: 1px solid #f6f6f6;
+}
+
+.right-content {
+    flex-grow: 1;
+    position: relative;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+.ui.black.button{
+    background-color: var(--themeTextColor) !important;
+}
+
+/* Menu items */
+.menu-item{
+    display: block;
+    padding: 0.4em;
+    padding-top: 1.2em;
+    padding-bottom: 1.2em;
+    text-align: center;
+    border-bottom: 1px solid #f6f6f6;
+    width: 100%;
+    border-right: 0.4em solid var(--themeTextColor);
+    transition: border-left ease-in-out 0.1s, background-color ease-in-out 0.1s;
+}
+
+.menu-item.active{
+    border-right: 0.4em solid var(--themeSkyblueColorDecondary);
+    background-color: #f0f8ff;
+}
+
+.menu-item:hover{
+    border-right: 0.4em solid var(--themeSkyblueColorDecondary);
+}
+
+.menu-item img{
+    width: 30px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+
+/* Head banner */
+.headbanner{
+    background-image: url('img/bg.png');
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: auto 100%;
+    position:absolute;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    z-index: -100;
+}
+
+.herotext{
+    padding-top: 15em; 
+    padding-left: 5em;
+    min-height: 100vh;
+}
+
+.bannerHeader{
+    font-size: 8em; 
+    font-weight: 600;
+}
+
+.bannerSubheader{
+    font-weight: 400; 
+    font-size: 1.2em; 
+    margin-top: -20px;
+}
+
+.bannerHeaderWrapper{
+    text-align: center; 
+    display: inline-block;
+}
+
+
+/* RWD */
+@media (max-width:960px) {
+    /* Menu RWD */
+    .left-menu {
+        width: 50px;
+        min-width: 50px;
+    }
+    .iconWrapper{
+        padding: 0.2em;
+        border-bottom: 1px solid #f6f6f6;
+    }
+
+    .menu-item{
+        padding: 0.3em;
+        padding-top: 0.5em;
+        padding-bottom: 0.5em;
+    }
+
+    .menu-item img{
+        width: 26px;
+    }
+
+    /* head banner RWD */
+    .headbanner{
+        opacity: 0.1;
+    }
+
+    .herotext{
+        padding-left: 0;
+        text-align: center;
+    }
+
+    .bannerSubheader{
+        font-size: 1.2em; 
+    }
+
+    .bannerHeader{
+        font-size: 5em; 
+    }
+
+    .bannerHeaderWrapper{
+        display: inline;
+        width: 100%;
+    }
+    
+    .herotext .ui.collapsing.table{
+        width: 100%;
+    }
+}
+
+/* Decorative Animation */
+.dot-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    position: absolute;
+    top: 2em;
+    left: 2em;
+}
+  
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #d9d9d9;
+    margin-right: 6px;
+    animation-name: dot-animation;
+    animation-duration: 4s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+}
+
+.dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 1s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 2s;
+}
+
+.dot:nth-child(4) {
+    animation-delay: 3s;
+}
+
+@keyframes dot-animation {
+    0% {
+        background-color: #d9d9d9;
+        transform: scale(1);
+    }
+    50% {
+        background-color: #a9d1f3;
+        transform: scale(1.5);
+    }
+    100% {
+        background-color: #d9d9d9;
+        transform: scale(1);
+    }
+}
