@@ -55,6 +55,11 @@ The installation method is same as Linux. If you are using Raspberry Pi 4 or new
 
 The installation method is same as Linux. For other ARM SBCs, please refer to your SBC's CPU architecture and pick the one that is suitable for your device. 
 
+#### Docker
+Thanks for PassiveLemon for providing support over the Docker installation. You can check out his repo over here.
+
+[https://github.com/PassiveLemon/zoraxy-docker](https://github.com/PassiveLemon/zoraxy-docker)
+
 ### External Permission Management Mode
 
 If you already have a up-stream reverse proxy server in place with permission management, you can use Zoraxy in noauth mode. To enable noauth mode, start Zoraxy with the following flag
