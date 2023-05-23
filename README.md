@@ -146,7 +146,7 @@ This project also compatible with [ZeroTier](https://www.zerotier.com/). However
 
 Assuming you already have a valid license, to use Zoraxy with ZeroTier, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken at correct location in your host.
 
-If you prefer not to run Zoraxy in sudo mode or you have some wierd installation profile, you can also pass in the ZeroTier auth token using the following flags
+If you prefer not to run Zoraxy in sudo mode or you have some weird installation profile, you can also pass in the ZeroTier auth token using the following flags
 
 ```
 ./zoraxy -ztauth="your_zerotier_authtoken" -ztport=9993
