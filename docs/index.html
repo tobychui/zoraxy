@@ -51,7 +51,7 @@
     </style>
   </head>
   <body>
-    <div class="main">
+    <div class="main section">
       <div class="left-menu">
         <div class="iconWrapper">
           <a href="index.html"><img class="ui fluid image" src="img/icon.png"></a>
@@ -59,28 +59,16 @@
         <a href="#home" class="menu-item active" align="center">
           <img src="img/icons/home.svg">
         </a>
-        <a href="#" class="menu-item" align="center">
+        <a href="#features" class="menu-item" align="center">
           <img src="img/icons/awesome.svg">
         </a>
-        <a href="#" class="menu-item" align="center">
-          <img src="img/icons/proxy.svg">
+        <a href="#screenshots" class="menu-item" align="center">
+          <img src="img/icons/screenshots.svg">
         </a>
-        <a href="#" class="menu-item" align="center">
-          <img src="img/icons/redirect.svg">
+        <a href="#plugins" class="menu-item" align="center">
+          <img src="img/icons/plugin.svg">
         </a>
-        <a href="#" class="menu-item" align="center">
-          <img src="img/icons/blacklist.svg">
-        </a>
-        <a href="#" class="menu-item" align="center">
-          <img src="img/icons/scan.svg">
-        </a>
-        <a href="#" class="menu-item" align="center">
-          <img src="img/icons/stats.svg">
-        </a>
-        <a href="#" class="menu-item" align="center">
-          <img src="img/icons/terminal.svg">
-        </a>
-        <a href="#" class="menu-item" align="center">
+        <a href="#source" class="menu-item" align="center">
           <img src="img/icons/code.svg">
         </a>
       </div>
@@ -140,13 +128,209 @@
           </div>
         </div>
 
-        <div class="ui divider" style="margin-top: 0;"></div>
-        <div class="ui container">
-          <br>
-          <h1>What is Zoraxy</h1>
+        <!-- Features -->
+        <div id="features" class="section">
+          <div class="ui container">
+            <div class="ui basic segment">
+              <h1 class="ui header">
+                <img class="ui small image" src="img/icons/awesome.svg">
+                <div class="content">
+                    Features
+                    <div class="sub header">Highlighting a few important features of Zoraxy</div>
+                </div>
+              </h1>
+              <br>
+              <div class="ui stackable grid featureList">
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/proxy.svg">
+                    <div class="content">
+                      Reverse Proxy
+                    </div>
+                  </h3>
+                  <p>Simple to use, noobs friendly reverse proxy server that can be easily set-up using a web form and a few toggle switches.</p>
+                </div>
+
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/redirect.svg">
+                    <div class="content">
+                      Redirection
+                    </div>
+                  </h3>
+                  <p>Direct and intuitive redirection rules with basic rewrite options. Suitable for most of the simple use cases.</p>
+                </div>
+
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/blacklist.svg">
+                    <div class="content">
+                      Geo-IP & Blacklist
+                    </div>
+                  </h3>
+                  <p>Blacklist with GeoIP support. Allow easy setup for regional services.</p>
+                </div>
+
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/gan.svg">
+                    <div class="content">
+                      Global Area Network
+                    </div>
+                  </h3>
+                  <p>ZeroTier controller integrated GAN. Enable unlimited nodes in your network with a few clicks.</p>
+                </div>
+
+                <!-- Row 2-->
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/terminal.svg">
+                    <div class="content">
+                      Web SSH
+                    </div>
+                  </h3>
+                  <p>Integrated with Gotty Web SSH terminal, allow one-stop management of your nodes inside private LAN via gateway nodes.</p>
+                </div>
+
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/stats.svg">
+                    <div class="content">
+                      Real Time Statistics
+                    </div>
+                  </h3>
+                  <p>Traffic data collection and real time analytic tools, provide you the best insights of visitors data without cookies.</p>
+                </div>
+
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/scan.svg">
+                    <div class="content">
+                      Scanner & Utilities
+                    </div>
+                  </h3>
+                  <p>Build in IP scanner and mDNS discovering service, enable automatic service discovery within LAN.</p>
+                </div>
+
+                <div class="four wide column featureItem">
+                  <h3 class="ui header featureHeader">
+                    <img class="ui image" src="img/icons/code.svg">
+                    <div class="content">
+                      Open Source
+                    </div>
+                  </h3>
+                  <p>Project is open source under AGPL on Github. Feel free to contribute on missing functions you need! </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="ui divider"></div>
+        <!-- Screenshots -->
+        <div id="screenshots" class="ui container">
+          <div class="ui basic segment">
+            <br>
+            <h1 class="ui header">
+              <img class="ui small image" src="img/icons/screenshots.svg">
+              <div class="content">
+                  Screenshots
+                  <div class="sub header">A quick overview of the UI designs</div>
+              </div>
+            </h1>
+            
+            <div class="ui three column stackable grid">
+              <div class="column">
+                <a href="img/screenshots/1.webp" target="_blank"><img src="img/screenshots/1.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/2.webp" target="_blank"><img src="img/screenshots/2.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/3.webp" target="_blank"><img src="img/screenshots/3.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/4.webp" target="_blank"><img src="img/screenshots/4.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/5.webp" target="_blank"><img src="img/screenshots/5.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/6.webp" target="_blank"><img src="img/screenshots/6.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/7.webp" target="_blank"><img src="img/screenshots/7.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/8.webp" target="_blank"><img src="img/screenshots/8.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/9.webp" target="_blank"><img src="img/screenshots/9.webp" class="ui fluid image screenshot"></a>
+              </div>
+              <div class="column">
+                <a href="img/screenshots/10.webp" target="_blank"><img src="img/screenshots/10.webp" class="ui fluid image screenshot"></a>
+              </div>
+            </div> 
+          </div>
+        </div>
+
+        <!-- Plugin Developments -->
+        <div id="plugins" class="ui container">
+          <div class="ui basic segment">
+            <br>
+            <h1 class="ui header">
+              <img class="ui small image" src="img/icons/plugin.svg">
+              <div class="content">
+                  Plugins
+                  <div class="sub header">Add custom routing rules via simple scripts</div>
+              </div>
+            </h1>
+            <div style="width: 100%; text-align: center;">
+              <br>
+              <p>Documentation work in progress</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Source code -->
+        <div id="source" class="ui container">
+          <div class="ui basic segment">
+            <br>
+            <h1 class="ui header">
+              <img class="ui small image" src="img/icons/code.svg">
+              <div class="content">
+                  View the Source
+                  <div class="sub header">If you like this project, please feel free to give us a ⭐ star ⭐.</div>
+              </div>
+            </h1>
+            <br>
+            <div class="ui two column grid" align="center">
+              <div class="column">
+                  <h3 class="ui header">
+                    <i class="grey github icon"></i>
+                    <div class="content" style="text-align: left;">
+                      <a href="https://github.com/tobychui/zoraxy">
+                        Github
+                        <div class="sub header">https://github.com/tobychui/zoraxy</div>
+                      </a>
+                    </div>
+                  </h3>
+              </div>
+              <div class="column">
+                <h3 class="ui header">
+                  <i class="blue mail icon"></i>
+                  <div class="content" style="text-align: left;">
+                    <a href="mailto:toby@imuslab.com">
+                      Email Contact
+                      <div class="sub header">toby@imuslab.com</div>
+                    </a>
+                  </div>
+                </h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <br><br>
         <div class="ui container">
           <p style="color: #3a3a3a">CopyRight Zoraxy Project and its authors © 2021 - <span class="year"></span></p>
         </div>
@@ -156,6 +340,35 @@
     <br>
     <script>
       $(".year").text(new Date().getFullYear()  );
+
+      $(".menu-item").on("click", function(){
+        $(".menu-item.active").removeClass("active");
+        $(this).addClass("active");
+      });
+
+      $(".right-content").on("scroll", function() {
+        var scrollPos = $(".right-content").scrollTop();
+        if (scrollPos < 10){
+          //Reaching the top
+          $('.menu-item.active').removeClass("active");
+          $($('.menu-item')[0]).addClass('active');
+          return;
+        }else if ($(".right-content")[0].scrollHeight  ==  $(".right-content").scrollTop() + window.innerHeight ){
+          //Reaching the bottom
+          $('.menu-item.active').removeClass("active");
+          $($('.menu-item').get().reverse()[0]).addClass('active');
+          return
+        }
+        $('.menu-item').each(function() {
+          var currLink = $(this);
+          var refElement = $(currLink.attr("href"));
+          if (refElement.offset().top <= (window.innerHeight / 2)) {
+            $('.menu-item.active').removeClass("active");
+            currLink.addClass("active");
+            console.log(currLink.attr("href"));
+          }
+        });
+      });
 
     </script>
   </body>

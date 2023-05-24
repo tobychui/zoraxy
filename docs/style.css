@@ -20,6 +20,7 @@ body{
     min-width: 80px;
     background-color: #ffffff;
     min-height: 100vh;
+    padding-top: 1.5em;
 }
 
 .iconWrapper{
@@ -83,7 +84,7 @@ body{
 
 .herotext{
     padding-top: 15em; 
-    padding-left: 5em;
+    padding-left: 8vw;
     min-height: 100vh;
 }
 
@@ -101,6 +102,24 @@ body{
 .bannerHeaderWrapper{
     text-align: center; 
     display: inline-block;
+}
+
+/* features */
+#features{
+    padding-top: 4em;
+    padding-bottom: 4em;
+    background-color: white;
+}
+
+/* screenshots */
+.screenshot{
+    transition: transform ease-in-out 0.1s;
+    box-shadow: 3px 3px 5px 0px rgba(51,51,51,0.14);
+    margin-bottom: 1em;
+}
+
+.screenshot:hover {
+    transform: scale(1.1); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
 }
 
 
