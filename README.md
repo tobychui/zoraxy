@@ -67,7 +67,9 @@ The installation method is same as Linux. If you are using Raspberry Pi 4 or new
 The installation method is same as Linux. For other ARM SBCs, please refer to your SBC's CPU architecture and pick the one that is suitable for your device. 
 
 #### Docker
-Thanks for PassiveLemon for providing support over the Docker installation. You can check out his repo over here.
+Thanks for cyb3rdoc and PassiveLemon for providing support over the Docker installation. You can check out their repo over here.
+
+[https://github.com/cyb3rdoc/zoraxy-docker](https://github.com/cyb3rdoc/zoraxy-docker)
 
 [https://github.com/PassiveLemon/zoraxy-docker](https://github.com/PassiveLemon/zoraxy-docker)
 
