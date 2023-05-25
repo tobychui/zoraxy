@@ -175,7 +175,9 @@ Loopback web ssh connection, by default, is disabled. This means that if you are
 ./zoraxy -sshlb=true
 ```
 
-
+## FAQ
+- [How to run Zoraxy as system daemon?](https://github.com/tobychui/zoraxy/issues/8#issuecomment-1561539919)
+- 
 
 ## License
 
