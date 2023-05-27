@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
@@ -41,21 +43,41 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 		type CertInfo struct {
 			Domain           string
 			LastModifiedDate string
+			ExpireDate       string
 		}
 
 		results := []*CertInfo{}
 
 		for _, filename := range filenames {
-			fileInfo, err := os.Stat(filepath.Join(tlsCertManager.CertStore, filename+".crt"))
+			certFilepath := filepath.Join(tlsCertManager.CertStore, filename+".crt")
+			//keyFilepath := filepath.Join(tlsCertManager.CertStore, filename+".key")
+			fileInfo, err := os.Stat(certFilepath)
 			if err != nil {
 				utils.SendErrorResponse(w, "invalid domain certificate discovered: "+filename)
 				return
 			}
 			modifiedTime := fileInfo.ModTime().Format("2006-01-02 15:04:05")
 
+			certExpireTime := "Unknown"
+			certBtyes, err := os.ReadFile(certFilepath)
+			if err != nil {
+				//Unable to load this file
+				continue
+			} else {
+				//Cert loaded. Check its expire time
+				block, _ := pem.Decode(certBtyes)
+				if block != nil {
+					cert, err := x509.ParseCertificate(block.Bytes)
+					if err == nil {
+						certExpireTime = cert.NotAfter.Format("2006-01-02 15:04:05")
+					}
+				}
+			}
+
 			thisCertInfo := CertInfo{
 				Domain:           filename,
 				LastModifiedDate: modifiedTime,
+				ExpireDate:       certExpireTime,
 			}
 
 			results = append(results, &thisCertInfo)

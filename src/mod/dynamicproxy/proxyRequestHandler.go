@@ -28,23 +28,34 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 	return targetProxyEndpoint
 }
 
-func (router *Router) getSubdomainProxyEndpointFromHostname(hostname string) *SubdomainEndpoint {
-	var targetSubdomainEndpoint *SubdomainEndpoint = nil
+func (router *Router) getSubdomainProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
+	var targetSubdomainEndpoint *ProxyEndpoint = nil
 	ep, ok := router.SubdomainEndpoint.Load(hostname)
 	if ok {
-		targetSubdomainEndpoint = ep.(*SubdomainEndpoint)
+		targetSubdomainEndpoint = ep.(*ProxyEndpoint)
 	}
 
 	return targetSubdomainEndpoint
 }
 
+// Clearn URL Path (without the http:// part) replaces // in a URL to /
+func (router *Router) clearnURL(targetUrlOPath string) string {
+	return strings.ReplaceAll(targetUrlOPath, "//", "/")
+}
+
+// Rewrite URL rewrite the prefix part of a virtual directory URL with /
 func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	rewrittenURL := requestURL
 	rewrittenURL = strings.TrimPrefix(rewrittenURL, strings.TrimSuffix(rooturl, "/"))
+
+	if strings.Contains(rewrittenURL, "//") {
+		rewrittenURL = router.clearnURL(rewrittenURL)
+	}
 	return rewrittenURL
 }
 
-func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, target *SubdomainEndpoint) {
+// Handle subdomain request
+func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	requestURL := r.URL.String()
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
@@ -69,8 +80,20 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	r.Host = r.URL.Host
-	err := target.Proxy.ServeHTTP(w, r)
+	originalHostHeader := r.Host
+	if r.URL != nil {
+		r.Host = r.URL.Host
+	} else {
+		//Fallback when the upstream proxy screw something up in the header
+		r.URL, _ = url.Parse(originalHostHeader)
+	}
+
+	err := target.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+		ProxyDomain:  target.Domain,
+		OriginalHost: originalHostHeader,
+		UseTLS:       target.RequireTLS,
+		PathPrefix:   "",
+	})
 	var dnsError *net.DNSError
 	if err != nil {
 		if errors.As(err, &dnsError) {
@@ -87,8 +110,9 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 	h.logRequest(r, true, 200, "subdomain-http", target.Domain)
 }
 
+// Handle vdir type request
 func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
-	rewriteURL := h.Parent.rewriteURL(target.Root, r.RequestURI)
+	rewriteURL := h.Parent.rewriteURL(target.RootOrMatchingDomain, r.RequestURI)
 	r.URL, _ = url.Parse(rewriteURL)
 
 	r.Header.Set("X-Forwarded-Host", r.Host)
@@ -110,12 +134,18 @@ func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, targ
 	}
 
 	originalHostHeader := r.Host
-	r.Host = r.URL.Host
+	if r.URL != nil {
+		r.Host = r.URL.Host
+	} else {
+		//Fallback when the upstream proxy screw something up in the header
+		r.URL, _ = url.Parse(originalHostHeader)
+	}
+
 	err := target.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:  target.Domain,
 		OriginalHost: originalHostHeader,
 		UseTLS:       target.RequireTLS,
-		PathPrefix:   target.Root,
+		PathPrefix:   target.RootOrMatchingDomain,
 	})
 
 	var dnsError *net.DNSError

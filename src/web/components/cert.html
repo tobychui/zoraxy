@@ -58,6 +58,7 @@
             <thead>
             <tr><th>Domain</th>
             <th>Last Update</th>
+            <th>Expire At</th>
             <th class="no-sort">Remove</th>
             </tr></thead>
         <tbody id="certifiedDomainList">
@@ -108,6 +109,7 @@
                     $("#certifiedDomainList").append(`<tr>
                     <td>${entry.Domain}</td>
                     <td>${entry.LastModifiedDate}</td>
+                    <td>${entry.ExpireDate}</td>
                     <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
                     </tr>`);
                 })

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -14,57 +13,11 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
-	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
-	"imuslab.com/zoraxy/mod/geodb"
-	"imuslab.com/zoraxy/mod/reverseproxy"
-	"imuslab.com/zoraxy/mod/statistic"
-	"imuslab.com/zoraxy/mod/tlscert"
 )
 
 /*
-Zoraxy Dynamic Proxy
+	Zoraxy Dynamic Proxy
 */
-type RouterOption struct {
-	Port               int
-	UseTls             bool
-	ForceHttpsRedirect bool
-	TlsManager         *tlscert.Manager
-	RedirectRuleTable  *redirection.RuleTable
-	GeodbStore         *geodb.Store
-	StatisticCollector *statistic.Collector
-}
-
-type Router struct {
-	Option            *RouterOption
-	ProxyEndpoints    *sync.Map
-	SubdomainEndpoint *sync.Map
-	Running           bool
-	Root              *ProxyEndpoint
-	mux               http.Handler
-	server            *http.Server
-	tlsListener       net.Listener
-	routingRules      []*RoutingRule
-
-	tlsRedirectStop chan bool
-}
-
-type ProxyEndpoint struct {
-	Root       string
-	Domain     string
-	RequireTLS bool
-	Proxy      *dpcore.ReverseProxy `json:"-"`
-}
-
-type SubdomainEndpoint struct {
-	MatchingDomain string
-	Domain         string
-	RequireTLS     bool
-	Proxy          *reverseproxy.ReverseProxy `json:"-"`
-}
-
-type ProxyHandler struct {
-	Parent *Router
-}
 
 func NewDynamicProxy(option RouterOption) (*Router, error) {
 	proxyMap := sync.Map{}
@@ -250,8 +203,8 @@ func (router *Router) IsProxiedSubdomain(r *http.Request) bool {
 /*
 Add an URL into a custom proxy services
 */
-func (router *Router) AddVirtualDirectoryProxyService(rootname string, domain string, requireTLS bool) error {
-
+func (router *Router) AddVirtualDirectoryProxyService(options *VdirOptions) error {
+	domain := options.Domain
 	if domain[len(domain)-1:] == "/" {
 		domain = domain[:len(domain)-1]
 	}
@@ -263,7 +216,7 @@ func (router *Router) AddVirtualDirectoryProxyService(rootname string, domain st
 	*/
 
 	webProxyEndpoint := domain
-	if requireTLS {
+	if options.RequireTLS {
 		webProxyEndpoint = "https://" + webProxyEndpoint
 	} else {
 		webProxyEndpoint = "http://" + webProxyEndpoint
@@ -274,18 +227,22 @@ func (router *Router) AddVirtualDirectoryProxyService(rootname string, domain st
 		return err
 	}
 
-	proxy := dpcore.NewDynamicProxyCore(path, rootname)
+	proxy := dpcore.NewDynamicProxyCore(path, options.RootName, options.SkipCertValidations)
 
 	endpointObject := ProxyEndpoint{
-		Root:       rootname,
-		Domain:     domain,
-		RequireTLS: requireTLS,
-		Proxy:      proxy,
+		ProxyType:            ProxyType_Vdir,
+		RootOrMatchingDomain: options.RootName,
+		Domain:               domain,
+		RequireTLS:           options.RequireTLS,
+		SkipCertValidations:  options.SkipCertValidations,
+		RequireBasicAuth:     options.RequireBasicAuth,
+		BasicAuthCredentials: options.BasicAuthCredentials,
+		Proxy:                proxy,
 	}
 
-	router.ProxyEndpoints.Store(rootname, &endpointObject)
+	router.ProxyEndpoints.Store(options.RootName, &endpointObject)
 
-	log.Println("Adding Proxy Rule: ", rootname+" to "+domain)
+	log.Println("Adding Proxy Rule: ", options.RootName+" to "+domain)
 	return nil
 }
 
@@ -307,13 +264,14 @@ func (router *Router) RemoveProxy(ptype string, key string) error {
 /*
 Add an default router for the proxy server
 */
-func (router *Router) SetRootProxy(proxyLocation string, requireTLS bool) error {
+func (router *Router) SetRootProxy(options *RootOptions) error {
+	proxyLocation := options.ProxyLocation
 	if proxyLocation[len(proxyLocation)-1:] == "/" {
 		proxyLocation = proxyLocation[:len(proxyLocation)-1]
 	}
 
 	webProxyEndpoint := proxyLocation
-	if requireTLS {
+	if options.RequireTLS {
 		webProxyEndpoint = "https://" + webProxyEndpoint
 	} else {
 		webProxyEndpoint = "http://" + webProxyEndpoint
@@ -324,13 +282,17 @@ func (router *Router) SetRootProxy(proxyLocation string, requireTLS bool) error 
 		return err
 	}
 
-	proxy := dpcore.NewDynamicProxyCore(path, "")
+	proxy := dpcore.NewDynamicProxyCore(path, "", options.SkipCertValidations)
 
 	rootEndpoint := ProxyEndpoint{
-		Root:       "/",
-		Domain:     proxyLocation,
-		RequireTLS: requireTLS,
-		Proxy:      proxy,
+		ProxyType:            ProxyType_Vdir,
+		RootOrMatchingDomain: "/",
+		Domain:               proxyLocation,
+		RequireTLS:           options.RequireTLS,
+		SkipCertValidations:  options.SkipCertValidations,
+		RequireBasicAuth:     options.RequireBasicAuth,
+		BasicAuthCredentials: options.BasicAuthCredentials,
+		Proxy:                proxy,
 	}
 
 	router.Root = &rootEndpoint
@@ -338,14 +300,14 @@ func (router *Router) SetRootProxy(proxyLocation string, requireTLS bool) error 
 }
 
 // Helpers to export the syncmap for easier processing
-func (r *Router) GetSDProxyEndpointsAsMap() map[string]*SubdomainEndpoint {
-	m := make(map[string]*SubdomainEndpoint)
+func (r *Router) GetSDProxyEndpointsAsMap() map[string]*ProxyEndpoint {
+	m := make(map[string]*ProxyEndpoint)
 	r.SubdomainEndpoint.Range(func(key, value interface{}) bool {
 		k, ok := key.(string)
 		if !ok {
 			return true
 		}
-		v, ok := value.(*SubdomainEndpoint)
+		v, ok := value.(*ProxyEndpoint)
 		if !ok {
 			return true
 		}

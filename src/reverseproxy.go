@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
@@ -71,23 +72,32 @@ func ReverseProxtInit() {
 		}
 
 		if record.ProxyType == "root" {
-			dynamicProxyRouter.SetRootProxy(record.ProxyTarget, record.UseTLS)
+			dynamicProxyRouter.SetRootProxy(&dynamicproxy.RootOptions{
+				ProxyLocation: record.ProxyTarget,
+				RequireTLS:    record.UseTLS,
+			})
 		} else if record.ProxyType == "subd" {
-			dynamicProxyRouter.AddSubdomainRoutingService(record.Rootname, record.ProxyTarget, record.UseTLS)
+			dynamicProxyRouter.AddSubdomainRoutingService(&dynamicproxy.SubdOptions{
+				MatchingDomain:       record.Rootname,
+				Domain:               record.ProxyTarget,
+				RequireTLS:           record.UseTLS,
+				SkipCertValidations:  record.SkipTlsValidation,
+				RequireBasicAuth:     record.RequireBasicAuth,
+				BasicAuthCredentials: record.BasicAuthCredentials,
+			})
 		} else if record.ProxyType == "vdir" {
-			dynamicProxyRouter.AddVirtualDirectoryProxyService(record.Rootname, record.ProxyTarget, record.UseTLS)
+			dynamicProxyRouter.AddVirtualDirectoryProxyService(&dynamicproxy.VdirOptions{
+				RootName:             record.Rootname,
+				Domain:               record.ProxyTarget,
+				RequireTLS:           record.UseTLS,
+				SkipCertValidations:  record.SkipTlsValidation,
+				RequireBasicAuth:     record.RequireBasicAuth,
+				BasicAuthCredentials: record.BasicAuthCredentials,
+			})
 		} else {
 			log.Println("Unsupported endpoint type: " + record.ProxyType + ". Skipping " + filepath.Base(conf))
 		}
 	}
-
-	/*
-		dynamicProxyRouter.SetRootProxy("192.168.0.107:8080", false)
-		dynamicProxyRouter.AddSubdomainRoutingService("aroz.localhost", "192.168.0.107:8080/private/AOB/", false)
-		dynamicProxyRouter.AddSubdomainRoutingService("loopback.localhost", "localhost:8080", false)
-		dynamicProxyRouter.AddSubdomainRoutingService("git.localhost", "mc.alanyeung.co:3000", false)
-		dynamicProxyRouter.AddVirtualDirectoryProxyService("/git/server/", "mc.alanyeung.co:3000", false)
-	*/
 
 	//Start Service
 	//Not sure why but delay must be added if you have another
@@ -111,7 +121,6 @@ func ReverseProxtInit() {
 }
 
 func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
-
 	enable, _ := utils.PostPara(r, "enable") //Support root, vdir and subd
 	if enable == "true" {
 		err := dynamicProxyRouter.StartProxyService()
@@ -157,6 +166,49 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	useTLS := (tls == "true")
+
+	stv, _ := utils.PostPara(r, "tlsval")
+	if stv == "" {
+		stv = "false"
+	}
+
+	skipTlsValidation := (stv == "true")
+
+	rba, _ := utils.PostPara(r, "bauth")
+	if rba == "" {
+		rba = "false"
+	}
+
+	requireBasicAuth := (rba == "true")
+
+	//Prase the basic auth to correct structure
+	cred, _ := utils.PostPara(r, "cred")
+	basicAuthCredentials := []*dynamicproxy.BasicAuthCredentials{}
+	if requireBasicAuth {
+		preProcessCredentials := []*dynamicproxy.BasicAuthUnhashedCredentials{}
+		err = json.Unmarshal([]byte(cred), &preProcessCredentials)
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid user credentials")
+			return
+		}
+
+		//Check if there are empty password credentials
+		for _, credObj := range preProcessCredentials {
+			if strings.TrimSpace(credObj.Password) == "" {
+				utils.SendErrorResponse(w, credObj.Username+" has empty password")
+				return
+			}
+		}
+
+		//Convert and hash the passwords
+		for _, credObj := range preProcessCredentials {
+			basicAuthCredentials = append(basicAuthCredentials, &dynamicproxy.BasicAuthCredentials{
+				Username:     credObj.Username,
+				PasswordHash: auth.Hash(credObj.Password),
+			})
+		}
+	}
+
 	rootname := ""
 	if eptype == "vdir" {
 		vdir, err := utils.PostPara(r, "rootname")
@@ -170,7 +222,16 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			vdir = "/" + vdir
 		}
 		rootname = vdir
-		dynamicProxyRouter.AddVirtualDirectoryProxyService(vdir, endpoint, useTLS)
+
+		thisOption := dynamicproxy.VdirOptions{
+			RootName:             vdir,
+			Domain:               endpoint,
+			RequireTLS:           useTLS,
+			SkipCertValidations:  skipTlsValidation,
+			RequireBasicAuth:     requireBasicAuth,
+			BasicAuthCredentials: basicAuthCredentials,
+		}
+		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
 
 	} else if eptype == "subd" {
 		subdomain, err := utils.PostPara(r, "rootname")
@@ -179,10 +240,22 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rootname = subdomain
-		dynamicProxyRouter.AddSubdomainRoutingService(subdomain, endpoint, useTLS)
+		thisOption := dynamicproxy.SubdOptions{
+			MatchingDomain:       subdomain,
+			Domain:               endpoint,
+			RequireTLS:           useTLS,
+			SkipCertValidations:  skipTlsValidation,
+			RequireBasicAuth:     requireBasicAuth,
+			BasicAuthCredentials: basicAuthCredentials,
+		}
+		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
 	} else if eptype == "root" {
 		rootname = "root"
-		dynamicProxyRouter.SetRootProxy(endpoint, useTLS)
+		thisOption := dynamicproxy.RootOptions{
+			ProxyLocation: endpoint,
+			RequireTLS:    useTLS,
+		}
+		dynamicProxyRouter.SetRootProxy(&thisOption)
 	} else {
 		//Invalid eptype
 		utils.SendErrorResponse(w, "Invalid endpoint type")
@@ -190,7 +263,16 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save it
-	SaveReverseProxyConfig(eptype, rootname, endpoint, useTLS)
+	thisProxyConfigRecord := Record{
+		ProxyType:            eptype,
+		Rootname:             rootname,
+		ProxyTarget:          endpoint,
+		UseTLS:               useTLS,
+		SkipTlsValidation:    skipTlsValidation,
+		RequireBasicAuth:     requireBasicAuth,
+		BasicAuthCredentials: basicAuthCredentials,
+	}
+	SaveReverseProxyConfig(&thisProxyConfigRecord)
 
 	//Update utm if exists
 	if uptimeMonitor != nil {
@@ -255,14 +337,14 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(results)
 		utils.SendJSONResponse(w, string(js))
 	} else if eptype == "subd" {
-		results := []*dynamicproxy.SubdomainEndpoint{}
+		results := []*dynamicproxy.ProxyEndpoint{}
 		dynamicProxyRouter.SubdomainEndpoint.Range(func(key, value interface{}) bool {
-			results = append(results, value.(*dynamicproxy.SubdomainEndpoint))
+			results = append(results, value.(*dynamicproxy.ProxyEndpoint))
 			return true
 		})
 
 		sort.Slice(results, func(i, j int) bool {
-			return results[i].MatchingDomain < results[j].MatchingDomain
+			return results[i].RootOrMatchingDomain < results[j].RootOrMatchingDomain
 		})
 
 		js, _ := json.Marshal(results)

@@ -28,3 +28,4 @@ src/ReverseProxy_*_*
 src/Zoraxy_*_*
 src/certs/*
 src/rules/*
+src/README.md

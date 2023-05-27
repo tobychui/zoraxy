@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -19,23 +20,22 @@ import (
 */
 
 type Record struct {
-	ProxyType   string
-	Rootname    string
-	ProxyTarget string
-	UseTLS      bool
+	ProxyType            string
+	Rootname             string
+	ProxyTarget          string
+	UseTLS               bool
+	SkipTlsValidation    bool
+	RequireBasicAuth     bool
+	BasicAuthCredentials []*dynamicproxy.BasicAuthCredentials
 }
 
-func SaveReverseProxyConfig(ptype string, rootname string, proxyTarget string, useTLS bool) error {
+func SaveReverseProxyConfig(proxyConfigRecord *Record) error {
+	//TODO: Make this accept new def types
 	os.MkdirAll("conf", 0775)
-	filename := getFilenameFromRootName(rootname)
+	filename := getFilenameFromRootName(proxyConfigRecord.Rootname)
 
 	//Generate record
-	thisRecord := Record{
-		ProxyType:   ptype,
-		Rootname:    rootname,
-		ProxyTarget: proxyTarget,
-		UseTLS:      useTLS,
-	}
+	thisRecord := proxyConfigRecord
 
 	//Write to file
 	js, _ := json.MarshalIndent(thisRecord, "", " ")
@@ -67,7 +67,6 @@ func LoadReverseProxyConfig(filename string) (*Record, error) {
 	}
 
 	//Unmarshal the content into config
-
 	err = json.Unmarshal(configContent, &thisRecord)
 	if err != nil {
 		return &thisRecord, err

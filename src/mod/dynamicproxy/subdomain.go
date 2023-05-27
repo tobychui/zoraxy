@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/url"
 
-	"imuslab.com/zoraxy/mod/reverseproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
 
 /*
@@ -12,13 +12,14 @@ import (
 
 */
 
-func (router *Router) AddSubdomainRoutingService(hostnameWithSubdomain string, domain string, requireTLS bool) error {
+func (router *Router) AddSubdomainRoutingService(options *SubdOptions) error {
+	domain := options.Domain
 	if domain[len(domain)-1:] == "/" {
 		domain = domain[:len(domain)-1]
 	}
 
 	webProxyEndpoint := domain
-	if requireTLS {
+	if options.RequireTLS {
 		webProxyEndpoint = "https://" + webProxyEndpoint
 	} else {
 		webProxyEndpoint = "http://" + webProxyEndpoint
@@ -30,15 +31,18 @@ func (router *Router) AddSubdomainRoutingService(hostnameWithSubdomain string, d
 		return err
 	}
 
-	proxy := reverseproxy.NewReverseProxy(path)
+	proxy := dpcore.NewDynamicProxyCore(path, "", options.SkipCertValidations)
 
-	router.SubdomainEndpoint.Store(hostnameWithSubdomain, &SubdomainEndpoint{
-		MatchingDomain: hostnameWithSubdomain,
-		Domain:         domain,
-		RequireTLS:     requireTLS,
-		Proxy:          proxy,
+	router.SubdomainEndpoint.Store(options.MatchingDomain, &ProxyEndpoint{
+		RootOrMatchingDomain: options.MatchingDomain,
+		Domain:               domain,
+		RequireTLS:           options.RequireTLS,
+		Proxy:                proxy,
+		SkipCertValidations:  options.SkipCertValidations,
+		RequireBasicAuth:     options.RequireBasicAuth,
+		BasicAuthCredentials: options.BasicAuthCredentials,
 	})
 
-	log.Println("Adding Subdomain Rule: ", hostnameWithSubdomain+" to "+domain)
+	log.Println("Adding Subdomain Rule: ", options.MatchingDomain+" to "+domain)
 	return nil
 }

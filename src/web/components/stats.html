@@ -157,6 +157,42 @@
                 </div>
             </div>
         </div>
+        <div class="ui divider"></div>
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h3>Request File Types</h3>
+                <p>The file types being served by this proxy</p>
+                <div>
+                    <canvas id="stats_filetype"></canvas>
+                </div>
+            </div>
+            <div class="eight wide column">
+                <h3>Referring Sites</h3>
+                <p>The Top 100 sources of traffic according to referer header</p>
+                <div>
+                    <div style="height: 500px; overflow-y: auto;">
+                        <table class="ui unstackable striped celled table">
+                            <thead>
+                              <tr>
+                                <th class="no-sort">Referer</th>
+                                <th class="no-sort">Requests</th>
+                            </tr></thead>
+                            <tbody id="stats_RefererTable">
+                             
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>  
+        <div class="ui divider"></div>
+        <div class="ui basic segment" id="trendGraphs">
+            <h3>Visitor Trend Analysis</h3>
+            <p>Request trends in the selected time range</p>
+            <div>
+                <canvas id="requestTrends"></canvas>
+            </div>
+        </div>
     </div>
     <!-- <button class="ui icon right floated basic button" onclick="initStatisticSummery();"><i class="green refresh icon"></i> Refresh</button> -->
     <br><br>
@@ -177,7 +213,6 @@
                 //Two dates are given and they are not identical
                 loadStatisticByRange(startdate, enddate);
                 console.log(startdate, enddate);
-
             }
     }
 
@@ -219,6 +254,15 @@
 
             //Render user agent analysis
             renderUserAgentCharts(data.UserAgent);
+
+            //Render file type by analysising request URL paths
+            renderFileTypeGraph(data.RequestURL);
+
+            //Render Referer header
+            renderRefererTable(data.Referer);
+
+            //Hide the trend graphs
+            $("#trendGraphs").hide();
         });
    }
    initStatisticSummery();
@@ -259,7 +303,16 @@
 
             //Render user agent analysis
             renderUserAgentCharts(data.Summary.UserAgent);
+
+            //Render file type by analysising request URL paths
+            renderFileTypeGraph(data.Summary.RequestURL);
             
+            //Render Referer header
+            renderRefererTable(data.Summary.Referer);
+
+            //Render the trend graph
+            $("#trendGraphs").show();
+            renderTrendGraph(data.Records);
         });
    }
 
@@ -311,6 +364,155 @@
    function clearStatisticDateRange(){
         $("#statsRangeStart").val("");
         $("#statsRangeEnd").val("");
+   }
+
+   function renderRefererTable(refererList){
+        const sortedEntries = Object.entries(refererList).sort(([, valueA], [, valueB]) => valueB - valueA);
+        console.log(sortedEntries);
+        $("#stats_RefererTable").html("");
+        let endStop = 100;
+        if (sortedEntries.length < 100){
+            endStop = sortedEntries.length;
+        }
+        for (var i = 0; i < endStop; i++) {
+            let referer = (decodeURIComponent(sortedEntries[i][0])).replace(/(<([^>]+)>)/ig,"");
+            if (sortedEntries[i][0] == ""){
+                //Root
+                referer = `<span style="color: #b5b5b5;">(<i class="eye slash outline icon"></i> Unknown or Hidden)</span>`;
+            }
+            $("#stats_RefererTable").append(`<tr>
+                    <td>${referer}</td>
+                    <td>${sortedEntries[i][1]}</td>
+                </tr>`);
+        }
+   }
+
+   function renderFileTypeGraph(requestURLs){
+     //Create the device chart
+     let fileExtensions = {};
+     for (const [url, count] of Object.entries(requestURLs)) {
+        let filename = url.split("/").pop();
+        let ext = "";
+        if (filename == ""){
+            //Loading from a folder
+            ext = "Folder path"
+        }else{
+            if (filename.includes(".")){
+                ext = filename.split(".").pop();
+            }else{
+                ext = "API call"
+            }
+        }
+
+        if (fileExtensions[ext] != undefined){
+            fileExtensions[ext] = fileExtensions[ext] + count;
+        }else{
+            //First time this ext show up
+            fileExtensions[ext] = count;
+        }
+     }
+
+     //Convert the key-value pairs to array for graph render
+     let fileTypes = [];
+     let fileCounts = [];
+     let colors = [];
+     for (const [ftype, count] of Object.entries(fileExtensions)) {
+        fileTypes.push(ftype);
+        fileCounts.push(count);
+        colors.push(generateColorFromHash(ftype));
+     }  
+
+     let filetypeChart = new Chart(document.getElementById("stats_filetype"), {
+            type: 'pie',
+            data: {
+                labels: fileTypes,
+                datasets: [{
+                    data: fileCounts,
+                    backgroundColor: colors,
+                    hoverBackgroundColor: colors,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+
+        statisticCharts.push(filetypeChart);
+   }
+   
+   function renderTrendGraph(dailySummary){
+        // Get the canvas element
+        const canvas = document.getElementById('requestTrends');
+
+        //Generate the X axis labels
+        let datesLabel = [];
+        let succData = [];
+        let errorData = [];
+        let totalData = [];
+        for (var i = 0; i < dailySummary.length; i++){
+            let thisDayData = dailySummary[i];
+            datesLabel.push("Day " + i);
+            succData.push(thisDayData.ValidRequest);
+            errorData.push(thisDayData.ErrorRequest);
+            totalData.push(thisDayData.TotalRequest);
+        }
+        // Create the chart
+        let TrendChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: datesLabel,
+                datasets: [
+                    {
+                        label: 'All Requests',
+                        data: totalData,
+                        borderColor: '#7d99f7',
+                        backgroundColor: 'rgba(125, 153, 247, 0.4)',
+                        fill: false
+                    },
+                    {
+                        label: 'Success Requests',
+                        data: succData,
+                        borderColor: '#6dad7c',
+                        backgroundColor: "rgba(109, 173, 124, 0.4)",
+                        fill: true
+                    },
+                    {
+                        label: 'Error Requests',
+                        data: errorData,
+                        borderColor: '#de7373',
+                        backgroundColor: "rgba(222, 115, 115, 0.4)",
+                        fill: true
+                    },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                title: {
+                    display: true,
+                    //text: 'Line Chart Example'
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: false,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Request Counts'
+                        }
+                    }
+                }
+            }
+        });
+
+        statisticCharts.push(TrendChart);
    }
 
     function renderUserAgentCharts(userAgentsEntries){

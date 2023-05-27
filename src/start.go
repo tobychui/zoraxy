@@ -86,10 +86,6 @@ func startupSequence() {
 		panic(err)
 	}
 
-	if err != nil {
-		panic(err)
-	}
-
 	//Create a netstat buffer
 	netstatBuffers, err = netstat.NewNetStatBuffer(300)
 	if err != nil {

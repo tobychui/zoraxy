@@ -71,7 +71,7 @@ type requestCanceler interface {
 	CancelRequest(req *http.Request)
 }
 
-func NewDynamicProxyCore(target *url.URL, prepender string) *ReverseProxy {
+func NewDynamicProxyCore(target *url.URL, prepender string, ignoreTLSVerification bool) *ReverseProxy {
 	targetQuery := target.RawQuery
 	director := func(req *http.Request) {
 		req.URL.Scheme = target.Scheme
@@ -95,7 +95,12 @@ func NewDynamicProxyCore(target *url.URL, prepender string) *ReverseProxy {
 	thisTransporter.(*http.Transport).MaxIdleConnsPerHost = 3000
 	thisTransporter.(*http.Transport).IdleConnTimeout = 10 * time.Second
 	thisTransporter.(*http.Transport).MaxConnsPerHost = 0
-	thisTransporter.(*http.Transport).DisableCompression = true
+	//thisTransporter.(*http.Transport).DisableCompression = true
+
+	if ignoreTLSVerification {
+		//Ignore TLS certificate validation error
+		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+	}
 
 	return &ReverseProxy{
 		Director:  director,
@@ -278,9 +283,6 @@ func addXForwardedForHeader(req *http.Request) {
 
 func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) error {
 	transport := p.Transport
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
 
 	outreq := new(http.Request)
 	// Shallow copies of maps, like header

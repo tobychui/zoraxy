@@ -9,7 +9,9 @@
                 <tr>
                     <th>Matching Domain</th>
                     <th>Proxy To</th>
-                    <th class="no-sort">Remove</th>
+                    <th>TLS/SSL Verification</th>
+                    <th>Basic Auth</th>
+                    <th class="no-sort" style="min-width: 7.2em;">Actions</th>
                 </tr>
             </thead>
             <tbody id="subdList">
@@ -36,12 +38,17 @@
                 data.forEach(subd => {
                     let tlsIcon = "";
                     if (subd.RequireTLS){
-                        tlsIcon = `<i class="lock icon"></i>`;
+                        tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
                     }
                     $("#subdList").append(`<tr>
-                        <td data-label="">${subd.MatchingDomain}</td>
+                        <td data-label="">${subd.RootOrMatchingDomain}</td>
                         <td data-label="">${subd.Domain} ${tlsIcon}</td>
-                        <td class="center aligned" data-label=""><button class="ui circular mini red basic icon button" onclick='deleteEndpoint("subd","${subd.MatchingDomain}")'><i class="trash icon"></i></button></td>
+                        <td data-label="">${!subd.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`}</td>
+                        <td data-label="">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
+                        <td class="center aligned" data-label="">
+                            <button class="ui circular mini basic icon button" onclick='editEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
+                            <button class="ui circular mini red basic icon button" onclick='deleteEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="trash icon"></i></button>
+                        </td>
                     </tr>`);
                 });
             }
