@@ -11,7 +11,7 @@
         <a class="nettools item bluefont" data-tab="tab3">Interface</a>
     </div>
 
-    <div class="ui bottom attached tab segment active" data-tab="tab1">
+    <div class="ui bottom attached tab segment nettoolstab active" data-tab="tab1">
         <h2>Multicast DNS (mDNS) Scanner</h2>
         <p>Discover mDNS enabled service in this gateway forwarded network</p>
         <button class="ui basic larger circular button" onclick="launchToolWithSize('./tools/mdns.html',1000, 640);">View Discovery</button>
@@ -21,7 +21,7 @@
         <button class="ui basic larger circular button" onclick="launchToolWithSize('./tools/ipscan.html',1000, 640);">Start Scanner</button>
     </div>
 
-    <div class="ui bottom attached tab segment" data-tab="tab2">
+    <div class="ui bottom attached tab segment nettoolstab" data-tab="tab2">
         <div id="websshTool" style="position: relative;">
             <h2>Web SSH</h2>
             <p>Connect to a network node within the local area network of the gateway</p>
@@ -101,7 +101,7 @@
         <button class="ui basic button" onclick="listWoL();"><i class="ui green refresh icon"></i> Refresh</button>
     </div>
 
-    <div class="ui bottom attached tab segment" data-tab="tab3">
+    <div class="ui bottom attached tab segment nettoolstab" data-tab="tab3">
         <h2>Network Interfaces</h2>
         <p>Network Interface Card (NIC) currently installed on this host</p>
         <table id="network-interfaces-table" class="ui selectable inverted striped celled table">
@@ -125,10 +125,10 @@
 
     // Switch tabs when clicking on the menu items
     $('.menu .nettools.item').on('click', function() {
-        $('.menu .item').removeClass('active');
+        $('.menu .nettools.item').removeClass('active');
         $(this).addClass('active');
         var tab = $(this).attr('data-tab');
-        $('.tab.segment').removeClass('active');
+        $('.nettoolstab.tab.segment').removeClass('active');
         $('div[data-tab="' + tab + '"]').addClass('active');
     }); 
 

@@ -24,6 +24,10 @@ func ipToBitString(ip string) string {
 
 	// Convert the IP address to a 4-byte slice
 	ipBytes := parsedIP.To4()
+	if ipBytes == nil {
+		//This is an IPv6 address
+		ipBytes = parsedIP.To16()
+	}
 
 	// Convert each byte in the IP address to its 8-bit binary representation
 	var result []string
@@ -36,23 +40,38 @@ func ipToBitString(ip string) string {
 }
 
 func bitStringToIp(bitString string) string {
-	// Split the bit string into four 8-bit segments
-	segments := []string{
-		bitString[:8],
-		bitString[8:16],
-		bitString[16:24],
-		bitString[24:32],
+	// Check if the bit string represents an IPv4 or IPv6 address
+	isIPv4 := len(bitString) == 32
+
+	// Split the bit string into 8-bit segments
+	segments := make([]string, 0)
+	if isIPv4 {
+		for i := 0; i < 4; i++ {
+			segments = append(segments, bitString[i*8:(i+1)*8])
+		}
+	} else {
+		for i := 0; i < 16; i++ {
+			segments = append(segments, bitString[i*8:(i+1)*8])
+		}
 	}
 
 	// Convert each segment to its decimal equivalent
-	var decimalSegments []int
-	for _, s := range segments {
-		i, _ := strconv.ParseInt(s, 2, 64)
-		decimalSegments = append(decimalSegments, int(i))
+	decimalSegments := make([]int, len(segments))
+	for i, s := range segments {
+		val, _ := strconv.ParseInt(s, 2, 64)
+		decimalSegments[i] = int(val)
 	}
 
-	// Join the decimal segments with dots to form the IP address string
-	return fmt.Sprintf("%d.%d.%d.%d", decimalSegments[0], decimalSegments[1], decimalSegments[2], decimalSegments[3])
+	// Construct the IP address string based on the type (IPv4 or IPv6)
+	if isIPv4 {
+		return fmt.Sprintf("%d.%d.%d.%d", decimalSegments[0], decimalSegments[1], decimalSegments[2], decimalSegments[3])
+	} else {
+		ip := make(net.IP, net.IPv6len)
+		for i := 0; i < net.IPv6len; i++ {
+			ip[i] = byte(decimalSegments[i])
+		}
+		return ip.String()
+	}
 }
 
 // inititlaizing a new trie
@@ -93,17 +112,11 @@ func isReservedIP(ip string) bool {
 	if parsedIP.IsLinkLocalUnicast() || parsedIP.IsLinkLocalMulticast() {
 		return true
 	}
-	// Check if the IP address is in the private address ranges
-	privateRanges := []*net.IPNet{
-		{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)},
-		{IP: net.ParseIP("172.16.0.0"), Mask: net.CIDRMask(12, 32)},
-		{IP: net.ParseIP("192.168.0.0"), Mask: net.CIDRMask(16, 32)},
+
+	if parsedIP.IsPrivate() {
+		return true
 	}
-	for _, r := range privateRanges {
-		if r.Contains(parsedIP) {
-			return true
-		}
-	}
+
 	// If the IP address is not a reserved address, return false
 	return false
 }

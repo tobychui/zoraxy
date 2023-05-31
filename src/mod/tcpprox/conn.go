@@ -158,6 +158,11 @@ func (c *ProxyRelayConfig) Start() error {
 }
 
 // Stop a running proxy if running
+func (c *ProxyRelayConfig) IsRunning() bool {
+	return c.Running || c.stopChan != nil
+}
+
+// Stop a running proxy if running
 func (c *ProxyRelayConfig) Stop() {
 	if c.Running || c.stopChan != nil {
 		c.stopChan <- true

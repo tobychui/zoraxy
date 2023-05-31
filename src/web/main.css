@@ -86,6 +86,7 @@ body{
     right: 1em;
     display:none;
     max-width: 300px;
+    z-index: 999;
 }
 
 /* Standard containers */
@@ -119,6 +120,45 @@ body{
     padding-bottom: 0;
 }
 
+/*
+    Side Wrapper
+*/
+.sideWrapper{
+    position: fixed;
+    right: 0;
+    top: 52px;
+    height: 100%;
+    width: calc(100% - 5em);
+    max-width: 500px;
+    z-index: 10;
+}
+
+.sideWrapper .content{
+    height: 100%;
+    width: 100%;
+    position: relative;
+    background-color: white;
+}
+
+.sideWrapper iframe{
+    height: 100%;
+    width: 100%;
+    border: 0px solid transparent;
+}
+
+.sideWrapper .fadingBackground{
+    position: fixed;
+    top: 52px;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 52px);
+    background-color: rgba(38,38,38,0.26);
+}
+
+.sideWrapperMenu{
+    height: 3px;
+    background-color: #414141;
+}
 
 /*
     RWD Rules
@@ -397,6 +437,27 @@ body{
       transform: scale(1);
     }
   }
+
+/*
+    Access Control
+*/
+
+.ui.very.compact.table th{
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+}
+
+
+.ui.very.compact.table td{
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+}
+
+#ipTable.disabled{
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+}
 
 /*
     Uptime Monitor

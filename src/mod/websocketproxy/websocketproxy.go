@@ -2,6 +2,7 @@
 package websocketproxy
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -46,16 +47,19 @@ type WebsocketProxy struct {
 	//  If nil, DefaultDialer is used.
 	Dialer *websocket.Dialer
 
-	Verbal bool
+	Verbal            bool
+	SkipTlsValidation bool
 }
 
 // ProxyHandler returns a new http.Handler interface that reverse proxies the
 // request to the given target.
-func ProxyHandler(target *url.URL) http.Handler { return NewProxy(target) }
+func ProxyHandler(target *url.URL, skipTlsValidation bool) http.Handler {
+	return NewProxy(target, skipTlsValidation)
+}
 
 // NewProxy returns a new Websocket reverse proxy that rewrites the
 // URL's to the scheme, host and base path provider in target.
-func NewProxy(target *url.URL) *WebsocketProxy {
+func NewProxy(target *url.URL, skipTlsValidation bool) *WebsocketProxy {
 	backend := func(r *http.Request) *url.URL {
 		// Shallow copy
 		u := *target
@@ -64,7 +68,7 @@ func NewProxy(target *url.URL) *WebsocketProxy {
 		u.RawQuery = r.URL.RawQuery
 		return &u
 	}
-	return &WebsocketProxy{Backend: backend, Verbal: false}
+	return &WebsocketProxy{Backend: backend, Verbal: false, SkipTlsValidation: skipTlsValidation}
 }
 
 // ServeHTTP implements the http.Handler that proxies WebSocket connections.
@@ -84,7 +88,15 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	dialer := w.Dialer
 	if w.Dialer == nil {
-		dialer = DefaultDialer
+		if w.SkipTlsValidation {
+			//Disable TLS secure check if target allow skip verification
+			bypassDialer := websocket.DefaultDialer
+			bypassDialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+			dialer = bypassDialer
+		} else {
+			//Just use the default dialer come with gorilla websocket
+			dialer = DefaultDialer
+		}
 	}
 
 	// Pass headers from the incoming request to the dialer to forward them to

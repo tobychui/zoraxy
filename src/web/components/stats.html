@@ -212,7 +212,7 @@
             }else{
                 //Two dates are given and they are not identical
                 loadStatisticByRange(startdate, enddate);
-                console.log(startdate, enddate);
+                //console.log(startdate, enddate);
             }
     }
 
@@ -270,7 +270,7 @@
 
    function loadStatisticByRange(startdate, endDate){
         $.getJSON("/api/analytic/loadRange?start=" + startdate + "&end=" + endDate, function(data){
-            console.log(data);
+            //console.log(data);
             //Destroy all the previous charts
            
             statisticCharts.forEach(function(thisChart){
@@ -368,7 +368,6 @@
 
    function renderRefererTable(refererList){
         const sortedEntries = Object.entries(refererList).sort(([, valueA], [, valueB]) => valueB - valueA);
-        console.log(sortedEntries);
         $("#stats_RefererTable").html("");
         let endStop = 100;
         if (sortedEntries.length < 100){

@@ -69,7 +69,7 @@ func HandleCheckSiteSupportTLS(w http.ResponseWriter, r *http.Request) {
 	Statistic Summary
 */
 
-//Handle conversion of statistic daily summary to country summary
+// Handle conversion of statistic daily summary to country summary
 func HandleCountryDistrSummary(w http.ResponseWriter, r *http.Request) {
 	requestClientCountry := map[string]int{}
 	statisticCollector.DailySummary.RequestClientIp.Range(func(key, value interface{}) bool {
@@ -143,7 +143,7 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 	return UptimeTargets
 }
 
-//Handle rendering up time monitor data
+// Handle rendering up time monitor data
 func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 	if uptimeMonitor != nil {
 		uptimeMonitor.HandleUptimeLogRead(w, r)
@@ -153,7 +153,7 @@ func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//Handle listing current registered mdns nodes
+// Handle listing current registered mdns nodes
 func HandleMdnsListing(w http.ResponseWriter, r *http.Request) {
 	js, _ := json.Marshal(previousmdnsScanResults)
 	utils.SendJSONResponse(w, string(js))
@@ -175,7 +175,7 @@ func HandleMdnsScanning(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
-//handle ip scanning
+// handle ip scanning
 func HandleIpScan(w http.ResponseWriter, r *http.Request) {
 	cidr, err := utils.PostPara(r, "cidr")
 	if err != nil {
@@ -214,14 +214,16 @@ func HandleIpScan(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
+	WAKE ON LAN
+
 	Handle wake on LAN
 	Support following methods
 	/?set=xxx&name=xxx Record a new MAC address into the database
 	/?wake=xxx Wake a server given its MAC address
 	/?del=xxx Delete a server given its MAC address
 	/ Default: list all recorded WoL MAC address
-
 */
+
 func HandleWakeOnLan(w http.ResponseWriter, r *http.Request) {
 	set, _ := utils.PostPara(r, "set")
 	del, _ := utils.PostPara(r, "del")
@@ -296,4 +298,31 @@ func HandleWakeOnLan(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(results)
 		utils.SendJSONResponse(w, string(js))
 	}
+}
+
+/*
+	Zoraxy Host Info
+*/
+
+func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
+	type ZoraxyInfo struct {
+		Version           string
+		NodeUUID          string
+		Development       bool
+		BootTime          int64
+		EnableSshLoopback bool
+		ZerotierConnected bool
+	}
+
+	info := ZoraxyInfo{
+		Version:           version,
+		NodeUUID:          nodeUUID,
+		Development:       development,
+		BootTime:          bootTime,
+		EnableSshLoopback: *allowSshLoopback,
+		ZerotierConnected: ganManager.ControllerID != "",
+	}
+
+	js, _ := json.MarshalIndent(info, "", " ")
+	utils.SendJSONResponse(w, string(js))
 }

@@ -25,6 +25,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		General Access Check
 	*/
+
 	//Check if this ip is in blacklist
 	clientIpAddr := geodb.GetRequesterIP(r)
 	if h.Parent.Option.GeodbStore.IsBlacklisted(clientIpAddr) {
@@ -37,6 +38,20 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write(template)
 		}
 		h.logRequest(r, false, 403, "blacklist", "")
+		return
+	}
+
+	//Check if this ip is in whitelist
+	if !h.Parent.Option.GeodbStore.IsWhitelisted(clientIpAddr) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		template, err := os.ReadFile("./web/forbidden.html")
+		if err != nil {
+			w.Write([]byte("403 - Forbidden"))
+		} else {
+			w.Write(template)
+		}
+		h.logRequest(r, false, 403, "whitelist", "")
 		return
 	}
 

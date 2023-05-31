@@ -132,10 +132,12 @@ func (m *Manager) EditConfig(configUUID string, newName string, newPortA string,
 		foundConfig.Timeout = newTimeout
 	}
 
-	err = foundConfig.ValidateConfigs()
-	if err != nil {
-		return err
-	}
+	/*
+		err = foundConfig.ValidateConfigs()
+		if err != nil {
+			return err
+		}
+	*/
 
 	m.SaveConfigToDatabase()
 

@@ -55,8 +55,8 @@
                     <a class="item" tag="redirectset">
                         <i class="simplistic level up alternate icon"></i> Redirection
                     </a>
-                    <a class="item" tag="blacklist">
-                        <i class="simplistic ban icon"></i> Blacklist
+                    <a class="item" tag="access">
+                        <i class="simplistic ban icon"></i> Access Control
                     </a>
                     <div class="ui divider menudivider">Bridging</div>
                     <a class="item" tag="gan">
@@ -109,7 +109,7 @@
                 <div id="redirectset" class="functiontab" target="redirection.html"></div>
 
                 <!-- Blacklist -->
-                <div id="blacklist" class="functiontab" target="blacklist.html"></div>
+                <div id="access" class="functiontab" target="access.html"></div>
 
                 <!-- Global Area Networking -->
                 <div id="gan" class="functiontab" target="gan.html"></div>
@@ -129,6 +129,13 @@
                 <!-- Utilities -->
                 <div id="utils" class="functiontab" target="utils.html"></div>
             </div>
+            </div>
+        </div>
+        <div class="sideWrapper" style="display:none;">
+            <div class="fadingBackground" onclick="hideSideWrapper();"></div>
+            <div class="content">
+                <div class="sideWrapperMenu"></div>
+                <iframe src="snippet/placeholder.html"></iframe>
             </div>
         </div>
         <br><br>
@@ -251,7 +258,6 @@
                 });
                 $('html,body').animate({scrollTop: 0}, 'fast');
                 window.location.hash = tabID;
-
             }
 
             $(window).on("resize", function(){
@@ -274,6 +280,36 @@
                 $("#messageBox").stop().finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
             }
 
+            /*
+                Toggles for side wrapper
+            */
+
+            function showSideWrapper(scriptpath=""){
+                if (scriptpath != ""){
+                    $(".sideWrapper iframe").attr("src", scriptpath);
+                }
+
+                if ($(".sideWrapper .content").transition("is animating") || $(".sideWrapper .content").transition("is visible")){
+                    return
+                }
+                $(".sideWrapper").show();
+                $(".sideWrapper .fadingBackground").fadeIn("fast");
+                $(".sideWrapper .content").transition('slide left in', 300);
+            }
+
+            function hideSideWrapper(discardFrameContent = false){
+                if (discardFrameContent){
+                    $(".sideWrapper iframe").attr("src", "snippet/placeholder.html");
+                }
+                if ($(".sideWrapper .content").transition("is animating") || !$(".sideWrapper .content").transition("is visible")){
+                    return
+                }
+                $(".sideWrapper .content").transition('slide left out', 300, function(){
+                    $(".sideWrapper .fadingBackground").fadeOut("fast", function(){
+                        $(".sideWrapper").hide(); 
+                    });
+                });
+            }
         </script>
     </body>
 </html>

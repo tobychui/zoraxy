@@ -45,7 +45,9 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/add", ReverseProxyHandleAddEndpoint)
 	authRouter.HandleFunc("/api/proxy/status", ReverseProxyStatus)
 	authRouter.HandleFunc("/api/proxy/list", ReverseProxyList)
+	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
+	authRouter.HandleFunc("/api/proxy/updateCredentials", UpdateProxyBasicAuthCredentials)
 	authRouter.HandleFunc("/api/proxy/tlscheck", HandleCheckSiteSupportTLS)
 	authRouter.HandleFunc("/api/proxy/setIncoming", HandleIncomingPortSet)
 	authRouter.HandleFunc("/api/proxy/useHttpsRedirect", HandleUpdateHttpsRedirect)
@@ -70,6 +72,14 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/blacklist/ip/add", handleIpBlacklistAdd)
 	authRouter.HandleFunc("/api/blacklist/ip/remove", handleIpBlacklistRemove)
 	authRouter.HandleFunc("/api/blacklist/enable", handleBlacklistEnable)
+
+	//Whitelist APIs
+	authRouter.HandleFunc("/api/whitelist/list", handleListWhitelisted)
+	authRouter.HandleFunc("/api/whitelist/country/add", handleCountryWhitelistAdd)
+	authRouter.HandleFunc("/api/whitelist/country/remove", handleCountryWhitelistRemove)
+	authRouter.HandleFunc("/api/whitelist/ip/add", handleIpWhitelistAdd)
+	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
+	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
 
 	//Statistic & uptime monitoring API
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
@@ -97,6 +107,9 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/tcpprox/config/add", tcpProxyManager.HandleAddProxyConfig)
 	authRouter.HandleFunc("/api/tcpprox/config/edit", tcpProxyManager.HandleEditProxyConfigs)
 	authRouter.HandleFunc("/api/tcpprox/config/list", tcpProxyManager.HandleListConfigs)
+	authRouter.HandleFunc("/api/tcpprox/config/start", tcpProxyManager.HandleStartProxy)
+	authRouter.HandleFunc("/api/tcpprox/config/stop", tcpProxyManager.HandleStopProxy)
+	authRouter.HandleFunc("/api/tcpprox/config/delete", tcpProxyManager.HandleRemoveProxy)
 	authRouter.HandleFunc("/api/tcpprox/config/status", tcpProxyManager.HandleGetProxyStatus)
 	authRouter.HandleFunc("/api/tcpprox/config/validate", tcpProxyManager.HandleConfigValidate)
 
@@ -122,6 +135,9 @@ func initAPIs() {
 	//Account Reset
 	http.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)
 	http.HandleFunc("/api/account/new", HandleNewPasswordSetup)
+
+	//Others
+	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
 
 	//If you got APIs to add, append them here
 }

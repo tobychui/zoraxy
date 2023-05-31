@@ -3,7 +3,6 @@ package geodb
 import (
 	_ "embed"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 
@@ -11,14 +10,23 @@ import (
 )
 
 //go:embed geoipv4.csv
-var geoipv4 []byte //Original embedded csv file
+var geoipv4 []byte //Geodb dataset for ipv4
+
+//go:embed geoipv6.csv
+var geoipv6 []byte //Geodb dataset for ipv6
 
 type Store struct {
-	Enabled bool
-	geodb   [][]string //Parsed geodb list
+	BlacklistEnabled bool
+	WhitelistEnabled bool
+	geodb            [][]string //Parsed geodb list
+	geodbIpv6        [][]string //Parsed geodb list for ipv6
+
+	geotrie     *trie
+	geotrieIpv6 *trie
+
 	//geoipCache sync.Map
-	geotrie *trie
-	sysdb   *database.Database
+
+	sysdb *database.Database
 }
 
 type CountryInfo struct {
@@ -32,7 +40,13 @@ func NewGeoDb(sysdb *database.Database) (*Store, error) {
 		return nil, err
 	}
 
+	parsedGeoDataIpv6, err := parseCSV(geoipv6)
+	if err != nil {
+		return nil, err
+	}
+
 	blacklistEnabled := false
+	whitelistEnabled := false
 	if sysdb != nil {
 		err = sysdb.NewTable("blacklist-cn")
 		if err != nil {
@@ -44,27 +58,46 @@ func NewGeoDb(sysdb *database.Database) (*Store, error) {
 			return nil, err
 		}
 
-		err = sysdb.NewTable("blacklist")
+		err = sysdb.NewTable("whitelist-cn")
 		if err != nil {
 			return nil, err
 		}
-		sysdb.Read("blacklist", "enabled", &blacklistEnabled)
+
+		err = sysdb.NewTable("whitelist-ip")
+		if err != nil {
+			return nil, err
+		}
+
+		err = sysdb.NewTable("blackwhitelist")
+		if err != nil {
+			return nil, err
+		}
+
+		sysdb.Read("blackwhitelist", "blacklistEnabled", &blacklistEnabled)
+		sysdb.Read("blackwhitelist", "whitelistEnabled", &whitelistEnabled)
 	} else {
 		log.Println("Database pointer set to nil: Entering debug mode")
 	}
 
 	return &Store{
-		Enabled: blacklistEnabled,
-		geodb:   parsedGeoData,
-		//geoipCache: sync.Map{},
-		geotrie: constrctTrieTree(parsedGeoData),
-		sysdb:   sysdb,
+		BlacklistEnabled: blacklistEnabled,
+		WhitelistEnabled: whitelistEnabled,
+		geodb:            parsedGeoData,
+		geotrie:          constrctTrieTree(parsedGeoData),
+		geodbIpv6:        parsedGeoDataIpv6,
+		geotrieIpv6:      constrctTrieTree(parsedGeoDataIpv6),
+		sysdb:            sysdb,
 	}, nil
 }
 
 func (s *Store) ToggleBlacklist(enabled bool) {
-	s.sysdb.Write("blacklist", "enabled", enabled)
-	s.Enabled = enabled
+	s.sysdb.Write("blackwhitelist", "blacklistEnabled", enabled)
+	s.BlacklistEnabled = enabled
+}
+
+func (s *Store) ToggleWhitelist(enabled bool) {
+	s.sysdb.Write("blackwhitelist", "whitelistEnabled", enabled)
+	s.WhitelistEnabled = enabled
 }
 
 func (s *Store) ResolveCountryCodeFromIP(ipstring string) (*CountryInfo, error) {
@@ -79,6 +112,10 @@ func (s *Store) Close() {
 
 }
 
+/*
+	Country code based black / white list
+*/
+
 func (s *Store) AddCountryCodeToBlackList(countryCode string) {
 	countryCode = strings.ToLower(countryCode)
 	s.sysdb.Write("blacklist-cn", countryCode, true)
@@ -89,11 +126,28 @@ func (s *Store) RemoveCountryCodeFromBlackList(countryCode string) {
 	s.sysdb.Delete("blacklist-cn", countryCode)
 }
 
+func (s *Store) AddCountryCodeToWhitelist(countryCode string) {
+	countryCode = strings.ToLower(countryCode)
+	s.sysdb.Write("whitelist-cn", countryCode, true)
+}
+
+func (s *Store) RemoveCountryCodeFromWhitelist(countryCode string) {
+	countryCode = strings.ToLower(countryCode)
+	s.sysdb.Delete("whitelist-cn", countryCode)
+}
+
 func (s *Store) IsCountryCodeBlacklisted(countryCode string) bool {
 	countryCode = strings.ToLower(countryCode)
 	var isBlacklisted bool = false
 	s.sysdb.Read("blacklist-cn", countryCode, &isBlacklisted)
 	return isBlacklisted
+}
+
+func (s *Store) IsCountryCodeWhitelisted(countryCode string) bool {
+	countryCode = strings.ToLower(countryCode)
+	var isWhitelisted bool = false
+	s.sysdb.Read("whitelist-cn", countryCode, &isWhitelisted)
+	return isWhitelisted
 }
 
 func (s *Store) GetAllBlacklistedCountryCode() []string {
@@ -110,6 +164,24 @@ func (s *Store) GetAllBlacklistedCountryCode() []string {
 	return bannedCountryCodes
 }
 
+func (s *Store) GetAllWhitelistedCountryCode() []string {
+	whitelistedCountryCode := []string{}
+	entries, err := s.sysdb.ListTable("whitelist-cn")
+	if err != nil {
+		return whitelistedCountryCode
+	}
+	for _, keypairs := range entries {
+		ip := string(keypairs[0])
+		whitelistedCountryCode = append(whitelistedCountryCode, ip)
+	}
+
+	return whitelistedCountryCode
+}
+
+/*
+	IP based black / whitelist
+*/
+
 func (s *Store) AddIPToBlackList(ipAddr string) {
 	s.sysdb.Write("blacklist-ip", ipAddr, true)
 }
@@ -118,9 +190,41 @@ func (s *Store) RemoveIPFromBlackList(ipAddr string) {
 	s.sysdb.Delete("blacklist-ip", ipAddr)
 }
 
+func (s *Store) AddIPToWhiteList(ipAddr string) {
+	s.sysdb.Write("whitelist-ip", ipAddr, true)
+}
+
+func (s *Store) RemoveIPFromWhiteList(ipAddr string) {
+	s.sysdb.Delete("whitelist-ip", ipAddr)
+}
+
 func (s *Store) IsIPBlacklisted(ipAddr string) bool {
 	var isBlacklisted bool = false
 	s.sysdb.Read("blacklist-ip", ipAddr, &isBlacklisted)
+	if isBlacklisted {
+		return true
+	}
+
+	//Check for IP wildcard and CIRD rules
+	AllBlacklistedIps := s.GetAllBlacklistedIp()
+	for _, blacklistRule := range AllBlacklistedIps {
+		wildcardMatch := MatchIpWildcard(ipAddr, blacklistRule)
+		if wildcardMatch {
+			return true
+		}
+
+		cidrMatch := MatchIpCIDR(ipAddr, blacklistRule)
+		if cidrMatch {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *Store) IsIPWhitelisted(ipAddr string) bool {
+	var isBlacklisted bool = false
+	s.sysdb.Read("whitelist-ip", ipAddr, &isBlacklisted)
 	if isBlacklisted {
 		return true
 	}
@@ -157,9 +261,27 @@ func (s *Store) GetAllBlacklistedIp() []string {
 	return bannedIps
 }
 
-// Check if a IP address is blacklisted, in either country or IP blacklist
+func (s *Store) GetAllWhitelistedIp() []string {
+	whitelistedIp := []string{}
+	entries, err := s.sysdb.ListTable("whitelist-ip")
+	if err != nil {
+		return whitelistedIp
+	}
+
+	for _, keypairs := range entries {
+		ip := string(keypairs[0])
+		whitelistedIp = append(whitelistedIp, ip)
+	}
+
+	return whitelistedIp
+}
+
+/*
+Check if a IP address is blacklisted, in either country or IP blacklist
+IsBlacklisted default return is false (allow access)
+*/
 func (s *Store) IsBlacklisted(ipAddr string) bool {
-	if !s.Enabled {
+	if !s.BlacklistEnabled {
 		//Blacklist not enabled. Always return false
 		return false
 	}
@@ -185,6 +307,40 @@ func (s *Store) IsBlacklisted(ipAddr string) bool {
 	return false
 }
 
+/*
+IsWhitelisted check if a given IP address is in the current
+server's white list.
+
+Note that the Whitelist default result is true even
+when encountered error
+*/
+func (s *Store) IsWhitelisted(ipAddr string) bool {
+	if !s.WhitelistEnabled {
+		//Whitelist not enabled. Always return true (allow access)
+		return true
+	}
+
+	if ipAddr == "" {
+		//Unable to get the target IP address, assume ok
+		return true
+	}
+
+	countryCode, err := s.ResolveCountryCodeFromIP(ipAddr)
+	if err != nil {
+		return true
+	}
+
+	if s.IsCountryCodeWhitelisted(countryCode.CountryIsoCode) {
+		return true
+	}
+
+	if s.IsIPWhitelisted(ipAddr) {
+		return true
+	}
+
+	return false
+}
+
 func (s *Store) GetRequesterCountryISOCode(r *http.Request) string {
 	ipAddr := GetRequesterIP(r)
 	if ipAddr == "" {
@@ -196,55 +352,4 @@ func (s *Store) GetRequesterCountryISOCode(r *http.Request) string {
 	}
 
 	return countryCode.CountryIsoCode
-}
-
-// Utilities function
-func GetRequesterIP(r *http.Request) string {
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.Header.Get("X-Real-IP")
-		if ip == "" {
-			ip = strings.Split(r.RemoteAddr, ":")[0]
-		}
-	}
-	return ip
-}
-
-// Match the IP address with a wildcard string
-func MatchIpWildcard(ipAddress, wildcard string) bool {
-	// Split IP address and wildcard into octets
-	ipOctets := strings.Split(ipAddress, ".")
-	wildcardOctets := strings.Split(wildcard, ".")
-
-	// Check that both have 4 octets
-	if len(ipOctets) != 4 || len(wildcardOctets) != 4 {
-		return false
-	}
-
-	// Check each octet to see if it matches the wildcard or is an exact match
-	for i := 0; i < 4; i++ {
-		if wildcardOctets[i] == "*" {
-			continue
-		}
-		if ipOctets[i] != wildcardOctets[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-// Match ip address with CIDR
-func MatchIpCIDR(ip string, cidr string) bool {
-	// parse the CIDR string
-	_, cidrnet, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return false
-	}
-
-	// parse the IP address
-	ipAddr := net.ParseIP(ip)
-
-	// check if the IP address is within the CIDR range
-	return cidrnet.Contains(ipAddr)
 }

@@ -126,7 +126,7 @@
                 var nodeCount = 0;
                 data.forEach(function(gan){
                     $("#GANetList").append(`<tr class="ganetEntry" addr="${gan.nwid}">
-                        <td>${gan.nwid}</td>
+                        <td><a href="#" onclick="event.preventDefault(); openGANetDetails('${gan.nwid}');">${gan.nwid}</a></td>
                         <td>${gan.name}</td>
                         <td class="gandesc" addr="${gan.nwid}"></td>
                         <td class="ganetSubnet"></td>

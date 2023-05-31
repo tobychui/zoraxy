@@ -242,8 +242,42 @@ func (router *Router) AddVirtualDirectoryProxyService(options *VdirOptions) erro
 
 	router.ProxyEndpoints.Store(options.RootName, &endpointObject)
 
-	log.Println("Adding Proxy Rule: ", options.RootName+" to "+domain)
+	log.Println("Registered Proxy Rule: ", options.RootName+" to "+domain)
 	return nil
+}
+
+/*
+Load routing from RP
+*/
+func (router *Router) LoadProxy(ptype string, key string) (*ProxyEndpoint, error) {
+	if ptype == "vdir" {
+		proxy, ok := router.ProxyEndpoints.Load(key)
+		if !ok {
+			return nil, errors.New("target proxy not found")
+		}
+		return proxy.(*ProxyEndpoint), nil
+	} else if ptype == "subd" {
+		proxy, ok := router.SubdomainEndpoint.Load(key)
+		if !ok {
+			return nil, errors.New("target proxy not found")
+		}
+		return proxy.(*ProxyEndpoint), nil
+	}
+
+	return nil, errors.New("unsupported ptype")
+}
+
+/*
+Save routing from RP
+*/
+func (router *Router) SaveProxy(ptype string, key string, newConfig *ProxyEndpoint) {
+	if ptype == "vdir" {
+		router.ProxyEndpoints.Store(key, newConfig)
+
+	} else if ptype == "subd" {
+		router.SubdomainEndpoint.Store(key, newConfig)
+	}
+
 }
 
 /*

@@ -4,6 +4,8 @@
         <p>You might find these tools or information helpful when setting up your gateway server</p>
     </div>
     <div class="ui divider"></div>
+  
+    
     <div class="selfauthOnly">
         <h3>Account Management</h3>
         <p>Functions to help management the current account</p>
@@ -34,6 +36,11 @@
         <p>The following SMTP settings help you to reset your password in case you have lost your management account.</p>
         <form id="email-form" class="ui form">
             <div class="field">
+                <label>Sender Address</label>
+                <input type="text" name="senderAddr" placeholder="E.g. noreply@zoraxy.arozos.com">
+            </div>
+            <div class="field">
+                <p><i class="caret down icon"></i> Connection setup for email service provider</p>
                 <div class="fields">
                     <div class="twelve wide field">
                         <label>SMTP Provider Hostname</label>
@@ -46,36 +53,35 @@
                     </div>
                 </div>
             </div>
-          
-            <div class="field">
-                <label>Sender Domain</label>
-                <input type="text" name="domain" min="1" max="65534" placeholder="E.g. arozos.com">
-            </div>
-        
-            <div class="field">
-                <label>Sender Address</label>
-                <input type="text" name="senderAddr" placeholder="E.g. admin@zoraxy.arozos.com">
-            </div>
 
             <div class="field">
+                <p><i class="caret down icon"></i> Credentials for SMTP server authentications</p>
                 <div class="two fields">
                     <div class="field">
                         <label>Sender Username</label>
-                        <input type="text" name="username" placeholder="Username of the email account">
+                        <input type="text" name="username" placeholder="E.g. admin">
                     </div>
                 
                     <div class="field">
-                        <label>Sender Password</label>
-                        <input type="password" name="password" placeholder="Password of the email account">
-                        <small>Leave empty to use the old password</small>
+                        <label>Sender Domain</label>
+                        <div class="ui labeled input">
+                            <div class="ui basic label">
+                              @
+                            </div>
+                            <input type="text" name="domain" min="1" max="65534" placeholder="E.g. arozos.com">
+                        </div>
                     </div>
                 </div>
             </div>
-           
-            <div class="ui divider"></div>
-            <p> Email for sending account reset link</p>
             <div class="field">
-                <label>Admin Address</label>
+                <label>Sender Password</label>
+                <input type="password" name="password" placeholder="Password of the email account">
+                <small>Leave empty to use the old password</small>
+            </div>
+           
+            <p> <i class="caret down icon"></i> Email for sending account reset link</p>
+            <div class="field">
+                <label>Admin / Receiver Address</label>
                 <input type="text" name="recvAddr" placeholder="E.g. personalEmail@gmail.com">
             </div>
             
@@ -83,7 +89,7 @@
             <button class="ui basic button" onclick="event.preventDefault(); sendTestEmail(this);"><i class="teal mail icon"></i> Send Test Email</button>
         </form>
     </div>
-
+    <div class="ui divider"></div>
     <h3> IP Address to CIDR</h3>
     <p>No experience with CIDR notations? Here are some tools you can use to make setting up easier.</p>
     <div class="ui basic segment">
@@ -110,6 +116,45 @@
         </div>
         <p>Results: <div id="ipRangeOutput">N/A</div></p>
     </div>
+
+    <div class="ui divider"></div>
+    <div id="zoraxyinfo">
+        <h3 class="ui header">
+            System Information
+        </h3>
+        <p>Basic information about this zoraxy host</p>
+        <table class="ui very basic collapsing celled table">
+            <tbody>
+                <tr>
+                    <td>Host UUID</td>
+                    <td class="uuid"></td>
+                </tr>
+                <tr>
+                    <td>Version</td>
+                    <td class="version"></td>
+                </tr>
+                <tr>
+                    <td>Build</td>
+                    <td class="development"></td>
+                </tr>
+                <tr>
+                    <td>Running Since</td>
+                    <td class="boottime"></td>
+                </tr>
+                
+                <tr>
+                    <td>ZeroTier Linked</td>
+                    <td class="zt"></td>
+                </tr>
+                <tr>
+                    <td>Enable SSH Loopback</td>
+                    <td class="sshlb"></td>
+                </tr>
+            </tbody>
+          </table>
+          <p>Zoraxy is developed by tobychui for <a href="//imuslab.com" target="_blank">imuslab</a> and open source under <a href="https://www.gnu.org/licenses/agpl-3.0.txt">AGPL</a></p>
+    </div>
+    <br>
 </div>
 <script>
 
@@ -122,7 +167,44 @@
             //Using external auth manager. Hide options
             $(".selfauthOnly").hide();
         }
-    })
+    });
+
+    $.get("/api/info/x", function(data){
+        function timeConverter(UNIX_timestamp){
+            var a = new Date(UNIX_timestamp * 1000);
+            var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            var year = a.getFullYear();
+            var month = months[a.getMonth()];
+            var date = a.getDate();
+            var hour = a.getHours();
+            var min = a.getMinutes();
+            var sec = a.getSeconds();
+            var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec ;
+            return time;
+        }
+
+        function secondsToDhms(seconds) {
+            seconds = Number(seconds);
+            var d = Math.floor(seconds / (3600*24));
+            var h = Math.floor(seconds % (3600*24) / 3600);
+            var m = Math.floor(seconds % 3600 / 60);
+            var s = Math.floor(seconds % 60);
+
+            var dDisplay = d > 0 ? d + (d == 1 ? " day, " : " days, ") : "";
+            var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
+            var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
+            var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
+            return dDisplay + hDisplay + mDisplay + sDisplay;
+        }
+
+        console.log(data);
+        $("#zoraxyinfo .uuid").text(data.NodeUUID);
+        $("#zoraxyinfo .development").text(data.Development?"Development":"Release");
+        $("#zoraxyinfo .version").text(data.Version);
+        $("#zoraxyinfo .boottime").text(timeConverter(data.BootTime) + ` ( ${secondsToDhms(parseInt(Date.now()/1000) - data.BootTime)} ago)`);
+        $("#zoraxyinfo .zt").html(data.ZerotierConnected?`<i class="ui green check icon"></i> Connected`:`<i class="ui red times icon"></i> Link Error`);
+        $("#zoraxyinfo .sshlb").html(data.EnableSshLoopback?`<i class="ui yellow exclamation triangle icon"></i> Enabled`:`Disabled`);
+    });
 
     function changePassword() {
         const oldPassword = document.getElementsByName('oldPassword')[0].value;

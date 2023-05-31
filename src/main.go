@@ -38,9 +38,10 @@ var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local no
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var (
 	name        = "Zoraxy"
-	version     = "2.6"
+	version     = "2.6.1"
 	nodeUUID    = "generic"
-	development = false //Set this to false to use embedded web fs
+	development = true //Set this to false to use embedded web fs
+	bootTime    = time.Now().Unix()
 
 	/*
 		Binary Embedding File System
@@ -56,7 +57,7 @@ var (
 	authAgent          *auth.AuthAgent         //Authentication agent
 	tlsCertManager     *tlscert.Manager        //TLS / SSL management
 	redirectTable      *redirection.RuleTable  //Handle special redirection rule sets
-	geodbStore         *geodb.Store            //GeoIP database
+	geodbStore         *geodb.Store            //GeoIP database, also handle black list and whitelist features
 	netstatBuffers     *netstat.NetStatBuffers //Realtime graph buffers
 	statisticCollector *statistic.Collector    //Collecting statistic from visitors
 	uptimeMonitor      *uptime.Monitor         //Uptime monitor service worker

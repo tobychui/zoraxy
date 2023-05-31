@@ -145,7 +145,9 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 		//Filter out CF forwarded requests
 		if strings.Contains(ri.IpAddr, ",") {
 			ips := strings.Split(strings.TrimSpace(ri.IpAddr), ",")
-			if len(ips) >= 1 {
+			if len(ips) >= 1 && IsValidIPAddress(strings.TrimPrefix(ips[0], "[")) {
+				//Example when forwarded from CF: 158.250.160.114,109.21.249.211
+				//Or IPv6 [15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7],109.21.249.211
 				ri.IpAddr = ips[0]
 			}
 		}

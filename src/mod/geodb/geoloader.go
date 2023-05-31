@@ -24,7 +24,13 @@ func (s *Store) search(ip string) string {
 	*/
 
 	//Search in geotrie tree
-	cc := s.geotrie.search(ip)
+	cc := ""
+	if IsIPv6(ip) {
+		cc = s.geotrieIpv6.search(ip)
+	} else {
+		cc = s.geotrie.search(ip)
+	}
+
 	/*
 		if cc != "" {
 			s.geoipCache.Store(ip, cc)

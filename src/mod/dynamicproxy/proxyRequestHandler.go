@@ -75,7 +75,7 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
 		}
 		h.logRequest(r, true, 101, "subdomain-websocket", target.Domain)
-		wspHandler := websocketproxy.NewProxy(u)
+		wspHandler := websocketproxy.NewProxy(u, target.SkipCertValidations)
 		wspHandler.ServeHTTP(w, r)
 		return
 	}
@@ -128,7 +128,7 @@ func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, targ
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
 		}
 		h.logRequest(r, true, 101, "vdir-websocket", target.Domain)
-		wspHandler := websocketproxy.NewProxy(u)
+		wspHandler := websocketproxy.NewProxy(u, target.SkipCertValidations)
 		wspHandler.ServeHTTP(w, r)
 		return
 	}

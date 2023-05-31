@@ -547,20 +547,12 @@
     //Bind event to tab switch
     tabSwitchEventBind["status"] = function(){
         //On switch over to this page, resize the chart
-        $("#networkActivityPlaceHolder").hide();
-        $("#networkActivity").show().delay(100, function(){
-            updateChartSize();
-        });
+        handleChartAccumulateResize();
         
     }
 
     window.addEventListener("focus", function(event){
         handleChartAccumulateResize();
-    });
-
-    document.addEventListener("visibilitychange", () => {
-        // it could be either hidden or visible
-        //handleChartAccumulateResize();
     });
 
 

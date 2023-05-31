@@ -22,10 +22,11 @@
     <button class="ui icon right floated basic button" onclick="listSubd();"><i class="green refresh icon"></i> Refresh</button>
     <br><br>
 </div>
+
 <script>
     function listSubd(){
-        $("#subdList").html(``);
         $.get("/api/proxy/list?type=subd", function(data){
+            $("#subdList").html(``);
             if (data.error !== undefined){
                     $("#subdList").append(`<tr>
                     <td data-label="" colspan="3"><i class="remove icon"></i> ${data.error}</td>
@@ -37,23 +38,24 @@
             }else{
                 data.forEach(subd => {
                     let tlsIcon = "";
+                    let subdData = encodeURIComponent(JSON.stringify(subd));
                     if (subd.RequireTLS){
                         tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
                     }
-                    $("#subdList").append(`<tr>
-                        <td data-label="">${subd.RootOrMatchingDomain}</td>
-                        <td data-label="">${subd.Domain} ${tlsIcon}</td>
-                        <td data-label="">${!subd.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`}</td>
-                        <td data-label="">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
-                        <td class="center aligned" data-label="">
-                            <button class="ui circular mini basic icon button" onclick='editEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
+                    $("#subdList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
+                        <td data-label="" editable="false">${subd.RootOrMatchingDomain}</td>
+                        <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
+                        <td data-label="" editable="true" datatype="skipver">${!subd.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`}</td>
+                        <td data-label="" editable="true" datatype="basicauth">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
+                        <td class="center aligned" editable="true" datatype="action" data-label="">
+                            <button class="ui circular mini basic icon button editBtn" onclick='editEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
                             <button class="ui circular mini red basic icon button" onclick='deleteEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="trash icon"></i></button>
                         </td>
                     </tr>`);
                 });
             }
         });
-    }
+    }   
 
     //Bind on tab switch events
     tabSwitchEventBind["subd"] = function(){

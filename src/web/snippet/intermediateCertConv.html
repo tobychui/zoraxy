@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Intermediate Certificate Converter
+                    <div class="sub header">Convert .cer files to .pem</div>
+                </div>
+            </div>
+            <div class="ui message">
+                <div class="header">
+                    Why I need this?
+                </div>
+                <p>If you have 3 certificate files (2 x .cer + 1 x .key) provided by your ISP, you will need to merge the root and intermediate certificates in order to upload it to Zoraxy. This tool will automate the process for you.</p>
+            </div>
+
+            <div class="ui form">
+                <div class="field">
+                    <label>Select Root Certificate</label>
+                    <input type="file" id="rootCertificateInput">
+                </div>
+                <div class="field">
+                    <label>Select Intermediate Certificate</label>
+                    <input type="file" id="intermediateCertificateInput">
+                </div>
+                <div class="field">
+                    <label>Export File Name (Optional)</label>
+                    <input type="text" id="exportFilename" value="domain.pem">
+                </div>
+                <button class="ui basic button" onclick="convertCertificates()"> <i class="ui blue exchange icon"></i> Convert</button>
+            </div>
+              
+            <br>
+            <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Cancel</button>
+        </div>
+        <script>
+
+            function mergeAndDownload(certificatesArray=["",""]){
+                if (certificatesArray[0] == "" || certificatesArray[1] == ""){
+                    //Data not ready
+                    return;
+                }
+                var filename = $("#exportFilename").val().trim();
+                if (filename == ""){
+                    filename = "export.pem";
+                }
+                //Basically just concat both together. See https://github.com/tobychui/zoraxy/wiki/Import-your-own-certificate
+                generateAndDownload(certificatesArray[0] + '\n' + certificatesArray[1], filename);   
+            }
+
+            
+
+            function convertCertificates() {
+                var rootCertificateFile = document.getElementById('rootCertificateInput').files[0];
+                var intermediateCertificateFile = document.getElementById('intermediateCertificateInput').files[0];
+                var readerr = new FileReader();
+                var readeri = new FileReader();
+                let certificates = ["",""];
+                readerr.onload = function(event) {
+                    var rootCertificateContent = event.target.result;
+
+                    certificates[0] = rootCertificateContent;
+                    mergeAndDownload(certificates);
+                    console.log('Root Certificate Content:', rootCertificateContent);
+                };
+
+                readeri.onload = function(event) {
+                    var intermediateCertificateContent = event.target.result;
+
+                    certificates[1] = intermediateCertificateContent;
+                    mergeAndDownload(certificates);
+                    console.log('Intermediate Certificate Content:', intermediateCertificateContent);
+                };
+
+                readerr.readAsText(rootCertificateFile);
+                readeri.readAsText(intermediateCertificateFile);
+            }
+            
+            function generateAndDownload(content, filename) {
+                var element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+                element.setAttribute('download', filename);
+
+                element.style.display = 'none';
+                document.body.appendChild(element);
+
+                element.click();
+
+                document.body.removeChild(element);
+            }
+
+        </script>
+    </body>
+</html>

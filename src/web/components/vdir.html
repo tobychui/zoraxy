@@ -27,8 +27,8 @@
 <script>
     //Virtual directories functions
     function listVdirs(){
-        $("#vdirList").html(``);
         $.get("/api/proxy/list?type=vdir", function(data){
+            $("#vdirList").html(``);
             if (data.error !== undefined){
                 $("#vdirList").append(`<tr>
                     <td data-label="" colspan="3"><i class="remove icon"></i> ${data.error}</td>
@@ -40,16 +40,17 @@
             }else{
                 data.forEach(vdir => {
                     let tlsIcon = "";
+                    let vdirData = encodeURIComponent(JSON.stringify(vdir));
                     if (vdir.RequireTLS){
                         tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
                     }
-                    $("#vdirList").append(`<tr>
-                        <td data-label="">${vdir.RootOrMatchingDomain}</td>
-                        <td data-label="">${vdir.Domain} ${tlsIcon}</td>
-                        <td data-label="">${!subd.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`}</td>
-                        <td data-label="">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
-                        <td class="center aligned" data-label="">
-                            <button class="ui circular mini basic icon button" onclick='editEndpoint("vdir","${vdir.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
+                    $("#vdirList").append(`<tr eptuuid="${vdir.RootOrMatchingDomain}" payload="${vdirData}" class="vdirEntry">
+                        <td data-label="" editable="false">${vdir.RootOrMatchingDomain}</td>
+                        <td data-label="" editable="true" datatype="domain">${vdir.Domain} ${tlsIcon}</td>
+                        <td data-label="" editable="true" datatype="skipver">${!vdir.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`}</td>
+                        <td data-label="" editable="true" datatype="basicauth">${vdir.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
+                        <td class="center aligned" editable="true" datatype="action" data-label="">
+                            <button class="ui circular mini basic icon button editBtn" onclick='editEndpoint("vdir","${vdir.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
                             <button class="ui circular mini red basic icon button"  onclick='deleteEndpoint("vdir","${vdir.RootOrMatchingDomain}")'><i class="trash icon"></i></button>
                         </td>
                     </tr>`);

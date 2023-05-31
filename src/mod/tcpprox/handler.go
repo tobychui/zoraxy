@@ -122,6 +122,77 @@ func (m *Manager) HandleListConfigs(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+func (m *Manager) HandleStartProxy(w http.ResponseWriter, r *http.Request) {
+	uuid, err := utils.PostPara(r, "uuid")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid uuid given")
+		return
+	}
+
+	targetProxyConfig, err := m.GetConfigByUUID(uuid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	err = targetProxyConfig.Start()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+func (m *Manager) HandleStopProxy(w http.ResponseWriter, r *http.Request) {
+	uuid, err := utils.PostPara(r, "uuid")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid uuid given")
+		return
+	}
+
+	targetProxyConfig, err := m.GetConfigByUUID(uuid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	if !targetProxyConfig.IsRunning() {
+		utils.SendErrorResponse(w, "target proxy service is not running")
+		return
+	}
+
+	targetProxyConfig.Stop()
+	utils.SendOK(w)
+}
+
+func (m *Manager) HandleRemoveProxy(w http.ResponseWriter, r *http.Request) {
+	uuid, err := utils.PostPara(r, "uuid")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid uuid given")
+		return
+	}
+
+	targetProxyConfig, err := m.GetConfigByUUID(uuid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	if targetProxyConfig.IsRunning() {
+		utils.SendErrorResponse(w, "Service is running")
+		return
+	}
+
+	err = m.RemoveConfig(targetProxyConfig.UUID)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
 func (m *Manager) HandleGetProxyStatus(w http.ResponseWriter, r *http.Request) {
 	uuid, err := utils.GetPara(r, "uuid")
 	if err != nil {

@@ -281,23 +281,123 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SendOK(w)
+}
 
+/*
+ReverseProxyHandleEditEndpoint handles proxy endpoint edit
+This endpoint do not handle
+basic auth credential update. The credential
+will be loaded from old config and reused
+*/
+func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
+	eptype, err := utils.PostPara(r, "type") //Support root, vdir and subd
+	if err != nil {
+		utils.SendErrorResponse(w, "type not defined")
+		return
+	}
+
+	rootNameOrMatchingDomain, err := utils.PostPara(r, "rootname")
+	if err != nil {
+		utils.SendErrorResponse(w, "Target proxy rule not defined")
+		return
+	}
+
+	endpoint, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "endpoint not defined")
+		return
+	}
+
+	tls, _ := utils.PostPara(r, "tls")
+	if tls == "" {
+		tls = "false"
+	}
+
+	useTLS := (tls == "true")
+
+	stv, _ := utils.PostPara(r, "tlsval")
+	if stv == "" {
+		stv = "false"
+	}
+
+	skipTlsValidation := (stv == "true")
+
+	rba, _ := utils.PostPara(r, "bauth")
+	if rba == "" {
+		rba = "false"
+	}
+
+	requireBasicAuth := (rba == "true")
+
+	//Load the previous basic auth credentials from current proxy rules
+	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(eptype, rootNameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, "Target proxy config not found or could not be loaded")
+		return
+	}
+
+	if eptype == "vdir" {
+		thisOption := dynamicproxy.VdirOptions{
+			RootName:             targetProxyEntry.RootOrMatchingDomain,
+			Domain:               endpoint,
+			RequireTLS:           useTLS,
+			SkipCertValidations:  skipTlsValidation,
+			RequireBasicAuth:     requireBasicAuth,
+			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
+		}
+		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
+
+	} else if eptype == "subd" {
+		thisOption := dynamicproxy.SubdOptions{
+			MatchingDomain:       targetProxyEntry.RootOrMatchingDomain,
+			Domain:               endpoint,
+			RequireTLS:           useTLS,
+			SkipCertValidations:  skipTlsValidation,
+			RequireBasicAuth:     requireBasicAuth,
+			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
+		}
+		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
+	}
+
+	//Save it to file
+	thisProxyConfigRecord := Record{
+		ProxyType:            eptype,
+		Rootname:             targetProxyEntry.RootOrMatchingDomain,
+		ProxyTarget:          endpoint,
+		UseTLS:               useTLS,
+		SkipTlsValidation:    skipTlsValidation,
+		RequireBasicAuth:     requireBasicAuth,
+		BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
+	}
+	SaveReverseProxyConfig(&thisProxyConfigRecord)
+
+	//Update the current running config
+	targetProxyEntry.Domain = endpoint
+	targetProxyEntry.RequireTLS = useTLS
+	targetProxyEntry.SkipCertValidations = skipTlsValidation
+	targetProxyEntry.RequireBasicAuth = requireBasicAuth
+	dynamicProxyRouter.SaveProxy(eptype, targetProxyEntry.RootOrMatchingDomain, targetProxyEntry)
+
+	utils.SendOK(w)
 }
 
 func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 	ep, err := utils.GetPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
+		return
 	}
 
 	ptype, err := utils.PostPara(r, "ptype")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ptype given")
+		return
 	}
 
 	err = dynamicProxyRouter.RemoveProxy(ptype, ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
+		return
 	}
 
 	RemoveReverseProxyConfig(ep)
@@ -309,6 +409,139 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SendOK(w)
+}
+
+/*
+Handle update request for basic auth credential
+Require paramter: ep (Endpoint) and pytype (proxy Type)
+if request with GET, the handler will return current credentials
+on this endpoint by its username
+
+if request is POST, the handler will write the results to proxy config
+*/
+func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		ep, err := utils.GetPara(r, "ep")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid ep given")
+			return
+		}
+
+		ptype, err := utils.GetPara(r, "ptype")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid ptype given")
+			return
+		}
+
+		//Load the target proxy object from router
+		targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		usernames := []string{}
+		for _, cred := range targetProxy.BasicAuthCredentials {
+			usernames = append(usernames, cred.Username)
+		}
+
+		js, _ := json.Marshal(usernames)
+		utils.SendJSONResponse(w, string(js))
+
+	} else if r.Method == http.MethodPost {
+		//Write to target
+		ep, err := utils.PostPara(r, "ep")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid ep given")
+			return
+		}
+
+		ptype, err := utils.PostPara(r, "ptype")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid ptype given")
+			return
+		}
+
+		if ptype != "vdir" && ptype != "subd" {
+			utils.SendErrorResponse(w, "Invalid ptype given")
+			return
+		}
+
+		creds, err := utils.PostPara(r, "creds")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid ptype given")
+			return
+		}
+
+		//Load the target proxy object from router
+		targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Try to marshal the content of creds into the suitable structure
+		newCredentials := []*dynamicproxy.BasicAuthUnhashedCredentials{}
+		err = json.Unmarshal([]byte(creds), &newCredentials)
+		if err != nil {
+			utils.SendErrorResponse(w, "Malformed credential data")
+			return
+		}
+
+		//Merge the credentials into the original config
+		//If a new username exists in old config with no pw given, keep the old pw hash
+		//If a new username is found with new password, hash it and push to credential slice
+		mergedCredentials := []*dynamicproxy.BasicAuthCredentials{}
+		for _, credential := range newCredentials {
+			if credential.Password == "" {
+				//Check if exists in the old credential files
+				keepUnchange := false
+				for _, oldCredEntry := range targetProxy.BasicAuthCredentials {
+					if oldCredEntry.Username == credential.Username {
+						//Exists! Reuse the old hash
+						mergedCredentials = append(mergedCredentials, &dynamicproxy.BasicAuthCredentials{
+							Username:     oldCredEntry.Username,
+							PasswordHash: oldCredEntry.PasswordHash,
+						})
+						keepUnchange = true
+					}
+				}
+
+				if !keepUnchange {
+					//This is a new username with no pw given
+					utils.SendErrorResponse(w, "Access password for "+credential.Username+" is empty!")
+					return
+				}
+			} else {
+				//This username have given password
+				mergedCredentials = append(mergedCredentials, &dynamicproxy.BasicAuthCredentials{
+					Username:     credential.Username,
+					PasswordHash: auth.Hash(credential.Password),
+				})
+			}
+		}
+
+		targetProxy.BasicAuthCredentials = mergedCredentials
+
+		//Save it to file
+		thisProxyConfigRecord := Record{
+			ProxyType:            ptype,
+			Rootname:             targetProxy.RootOrMatchingDomain,
+			ProxyTarget:          targetProxy.Domain,
+			UseTLS:               targetProxy.RequireTLS,
+			SkipTlsValidation:    targetProxy.SkipCertValidations,
+			RequireBasicAuth:     targetProxy.RequireBasicAuth,
+			BasicAuthCredentials: targetProxy.BasicAuthCredentials,
+		}
+		SaveReverseProxyConfig(&thisProxyConfigRecord)
+
+		//Replace runtime configuration
+		dynamicProxyRouter.SaveProxy(ptype, ep, targetProxy)
+		utils.SendOK(w)
+	} else {
+		http.Error(w, "invalid usage", http.StatusMethodNotAllowed)
+	}
+
 }
 
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {

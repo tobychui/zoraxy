@@ -29,9 +29,9 @@ import (
 */
 
 /*
-	Bianry embedding
+Bianry embedding
 
-	Make sure when compile, gotty binary exists in static.gotty
+Make sure when compile, gotty binary exists in static.gotty
 */
 var (
 	//go:embed gotty/*
@@ -61,7 +61,7 @@ func NewSSHProxyManager() *Manager {
 	}
 }
 
-//Get the next free port in the list
+// Get the next free port in the list
 func (m *Manager) GetNextPort() int {
 	nextPort := m.StartingPort
 	occupiedPort := make(map[int]bool)
@@ -96,7 +96,7 @@ func (m *Manager) HandleHttpByInstanceId(instanceId string, w http.ResponseWrite
 		r.Header.Set("A-Upgrade", "websocket")
 		requestURL = strings.TrimPrefix(requestURL, "/")
 		u, _ := url.Parse("ws://127.0.0.1:" + strconv.Itoa(targetInstance.AssignedPort) + "/" + requestURL)
-		wspHandler := websocketproxy.NewProxy(u)
+		wspHandler := websocketproxy.NewProxy(u, false)
 		wspHandler.ServeHTTP(w, r)
 		return
 	}
@@ -168,7 +168,7 @@ func (m *Manager) NewSSHProxy(binaryRoot string) (*Instance, error) {
 	return &thisInstance, nil
 }
 
-//Create a new Connection to target address
+// Create a new Connection to target address
 func (i *Instance) CreateNewConnection(listenPort int, username string, remoteIpAddr string, remotePort int) error {
 	//Create a gotty instance
 	connAddr := remoteIpAddr

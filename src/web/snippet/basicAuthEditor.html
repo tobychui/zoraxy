@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Basic Auth Credential
+                    <div class="sub header" id="epname"></div>
+                </div>
+            </div>
+            <div class="scrolling content ui form">
+                <div id="inlineEditBasicAuthCredentials" class="field">
+                    <p>Enter the username and password for allowing them to access this proxy endpoint</p>
+                    <table class="ui very basic compacted unstackable celled table">
+                        <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Password</th>
+                            <th>Remove</th>
+                        </tr></thead>
+                        <tbody id="inlineEditBasicAuthCredentialTable">
+                        <tr>
+                            <td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="three small fields credentialEntry">
+                        <div class="field">
+                            <input id="inlineEditBasicAuthCredUsername" type="text" placeholder="Username" autocomplete="off">
+                        </div>
+                        <div class="field">
+                            <input id="inlineEditBasicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
+                        </div>
+                        <div class="field" >
+                            <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="blue add icon"></i> Add Credential</button>
+                        </div>
+                        <div class="ui divider"></div>
+                        <div class="field" >
+                            <button class="ui basic button"  style="float: right;" onclick="saveCredentials();"><i class="green save icon"></i> Save</button>
+                            <button class="ui basic button"  style="float: right;" onclick="cancelCredentialEdit();"><i class="remove icon"></i> Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            let editingCredentials = [];
+            let editingEndpoint = {};
+
+            if (window.location.hash.length > 1){
+                let payloadHash = window.location.hash.substr(1);
+                try{
+                    payloadHash = JSON.parse(decodeURIComponent(payloadHash));
+                    loadBasicAuthCredentials(payloadHash.ept, payloadHash.ep);
+                    $("#epname").text(payloadHash.ep);
+                    editingEndpoint = payloadHash;
+                }catch(ex){
+                    console.log("Unable to load endpoint data from hash")
+                }
+            }
+
+            function loadBasicAuthCredentials(endpointType, uuid){
+                $.ajax({
+                    url: "/api/proxy/updateCredentials",
+                    method: "GET",
+                    data: {
+                        ep: uuid,
+                        ptype: endpointType
+                    },
+                    success: function(data){
+                        //Push the existing account to list
+                        for(var i = 0; i < data.length; i++){
+                            // Create a new credential object
+                            var credential = {
+                                username: data[i],
+                                password: ""
+                            };
+
+                            // Add the credential to the global credentials array
+                            editingCredentials.push(credential);
+                        }
+                        console.log(data);
+                        updateEditingCredentialList();
+                    }
+                })
+            }
+
+            function addCredentialsToEditingList() {
+                // Retrieve the username and password input values
+                var username = $('#inlineEditBasicAuthCredUsername').val();
+                var password = $('#inlineEditBasicAuthCredPassword').val();
+                
+                if(username == "" || password == ""){
+                    parent.msgbox("Username or password cannot be empty", false, 5000);
+                    return;
+                }
+
+                if (alreadyExists(username)){
+                    parent.msgbox("Credential with same username already exists", false, 5000);
+                    return;
+                }
+                
+                // Create a new credential object
+                var credential = {
+                    username: username,
+                    password: password
+                };
+
+                // Add the credential to the global credentials array
+                editingCredentials.push(credential);
+
+                // Clear the input fields
+                $('#inlineEditBasicAuthCredUsername').val('');
+                $('#inlineEditBasicAuthCredPassword').val('');
+
+                // Update the table body with the credentials
+                updateEditingCredentialList();
+            }
+
+            function updateEditingCredentialList() {
+                var tableBody = $('#inlineEditBasicAuthCredentialTable');
+                tableBody.empty();
+
+                if (editingCredentials.length === 0) {
+                    tableBody.append('<tr><td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td></tr>');
+                } else {
+                    for (var i = 0; i < editingCredentials.length; i++) {
+                    var credential = editingCredentials[i];
+                    var username = credential.username;
+                    var password = credential.password.replace(/./g, '*'); // Replace each character with '*'
+                    
+                    if (credential.password == ""){
+                        password = `<span style="color: #c9c9c9;"><i class="eye slash outline icon"></i> Hidden<span>`;
+                    }
+                    var row = '<tr>' +
+                        '<td>' + username + '</td>' +
+                        '<td>' + password + '</td>' +
+                        '<td><button class="ui basic button" onclick="removeCredentialFromEditingList(' + i + ');"><i class="red remove icon"></i> Remove</button></td>' +
+                        '</tr>';
+
+                    tableBody.append(row);
+                    }
+                }
+            }
+
+            function removeCredentialFromEditingList(index) {
+                // Remove the credential from the credentials array
+                editingCredentials.splice(index, 1);
+
+                // Update the table body
+                updateEditingCredentialList();
+            }
+
+            function alreadyExists(username){
+                let isExists = false;
+                editingCredentials.forEach(function(cred){
+                    if (cred.username == username){
+                        isExists = true;
+                    }
+                });
+                return isExists;
+            }
+
+            function cancelCredentialEdit(){
+                parent.hideSideWrapper(true);
+            }
+
+            function saveCredentials(){
+                $.ajax({
+                    url: "/api/proxy/updateCredentials",
+                    method: "POST",
+                    data: {
+                        ep: editingEndpoint.ep, 
+                        ptype: editingEndpoint.ept,
+                        creds: JSON.stringify(editingCredentials)
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false, 6000);
+                        }else{
+                            parent.msgbox("Credentials Updated");
+                            parent.hideSideWrapper(true);
+                        }
+                    }
+                })
+            }
+        </script>
+    </body>
+</html>
