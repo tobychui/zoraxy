@@ -118,7 +118,7 @@ To start the module, go to System Settings > Modules > Subservice and enable it 
 
 ## Screenshots
 
-![](img/README/0_1.png)
+![](img/screenshots/0_1.png)
 
 ![](img/screenshots/1.png)
 
