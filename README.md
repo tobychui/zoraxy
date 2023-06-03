@@ -118,29 +118,11 @@ To start the module, go to System Settings > Modules > Subservice and enable it 
 
 ## Screenshots
 
-![](img/screenshots/0_1.png)
+Screenshots are provided now on the wikipage [Screenshots](https://github.com/tobychui/zoraxy/wiki/Screenshots)!
 
-![](img/screenshots/0_2.png)
+## FAQ
 
-![](img/screenshots/1.png)
-
-![](img/screenshots/2.png)
-
-![](img/screenshots/3.png)
-
-![](img/screenshots/4.png)
-
-![](img/screenshots/5.png)
-
-![](img/screenshots/7.png)
-
-![](img/screenshots/8.png)
-
-![](img/screenshots/9.png)
-
-![](img/screenshots/10_1.png)
-
-![](img/screenshots/10_2.png)
+There is a wikipage with [Frequently-Asked-Questions](https://github.com/tobychui/zoraxy/wiki/FAQ---Frequently-Asked-Questions)!
 
 ## Global Area Network Controller
 
@@ -174,10 +156,6 @@ Loopback web ssh connection, by default, is disabled. This means that if you are
 ```
 ./zoraxy -sshlb=true
 ```
-
-## FAQ
-- [How to run Zoraxy as system daemon?](https://github.com/tobychui/zoraxy/issues/8#issuecomment-1561539919)
-- 
 
 ## License
 
