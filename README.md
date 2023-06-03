@@ -27,7 +27,7 @@ General purpose request (reverse) proxy and forwarding tool for low power device
   - Basic single-admin management mode
   - External permission management system for easy system integration
   - SMTP config for password reset
- 
+
 ## Build from Source
 Require Go 1.20 or above
 
@@ -118,7 +118,11 @@ To start the module, go to System Settings > Modules > Subservice and enable it 
 
 ## Screenshots
 
-Screenshots are provided now on the wikipage [Screenshots](https://github.com/tobychui/zoraxy/wiki/Screenshots)!
+![](img/README/0_1.png)
+
+![](img/screenshots/1.png)
+
+More screenshots on the wikipage [Screenshots](https://github.com/tobychui/zoraxy/wiki/Screenshots)!
 
 ## FAQ
 
