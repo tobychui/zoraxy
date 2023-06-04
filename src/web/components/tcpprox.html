@@ -4,7 +4,7 @@
         <p>Proxy traffic flow on layer 3 via TCP/IP</p>
     </div>
     <button class="ui basic orange button" id="addProxyConfigButton"><i class="ui add icon"></i> Add Proxy Config</button>
-    <button class="ui basic circular right floated icon button" title="Refresh List"><i class="ui green refresh icon"></i></button>
+    <button class="ui basic circular right floated icon button" onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i></button>
     <div class="ui divider"></div>
     <div class="ui basic segment" id="addproxyConfig"  style="display:none;">
         <h3>TCP Proxy Config</h3>
@@ -230,11 +230,13 @@
             } else {
                
                 proxyConfigs.forEach(function(config) {
-                    var runningLogo = '<i class="red circle icon"></i>';
+                    var runningLogo = 'Stopped';
+                    var runningClass = "stopped";
                     var startButton = `<button onclick="startTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="play icon"></i> Start Proxy</button>`;
                     if (config.Running){
-                        runningLogo = '<i class="green circle icon"></i>';
+                        runningLogo = 'Running';
                         startButton = `<button onclick="stopTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="red stop icon"></i> Stop Proxy</button>`;
+                        runningClass = "running"
                     }
 
                     var modeText = "Unknown";
@@ -248,8 +250,10 @@
 
                     var thisConfig = encodeURIComponent(JSON.stringify(config));
 
-                    var row = $(`<tr class="tcproxConfig" uuid="${config.UUID}" config="${thisConfig}">`);
-                    row.append($('<td>').html(runningLogo + config.Name));
+                    var row = $(`<tr class="tcproxConfig ${runningClass}" uuid="${config.UUID}" config="${thisConfig}">`);
+                    row.append($('<td>').html(`
+                        ${config.Name}
+                        <div class="statusText">${runningLogo}</div>`));
                     row.append($('<td>').text(config.PortA));
                     row.append($('<td>').text(config.PortB));
                     row.append($('<td>').text(modeText));

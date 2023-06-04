@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/microcosm-cc/bluemonday"
 	"imuslab.com/zoraxy/mod/database"
 )
 
@@ -96,6 +97,11 @@ func (c *Collector) LoadSummaryOfDay(year int, month time.Month, day int) *Daily
 	return &targetSummary
 }
 
+// Reset today summary, for debug or restoring injections
+func (c *Collector) ResetSummaryOfDay() {
+	c.DailySummary = newDailySummary()
+}
+
 // This function gives the current slot in the 288- 5 minutes interval of the day
 func (c *Collector) GetCurrentRealtimeStatIntervalId() int {
 	now := time.Now()
@@ -160,11 +166,15 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 		}
 
 		//Record the referer
-		rf, ok := c.DailySummary.Referer.Load(ri.Referer)
+		p := bluemonday.StripTagsPolicy()
+		filteredReferer := p.Sanitize(
+			ri.Referer,
+		)
+		rf, ok := c.DailySummary.Referer.Load(filteredReferer)
 		if !ok {
-			c.DailySummary.Referer.Store(ri.Referer, 1)
+			c.DailySummary.Referer.Store(filteredReferer, 1)
 		} else {
-			c.DailySummary.Referer.Store(ri.Referer, rf.(int)+1)
+			c.DailySummary.Referer.Store(filteredReferer, rf.(int)+1)
 		}
 
 		//Record the UserAgent

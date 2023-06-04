@@ -15,8 +15,8 @@
                 <input type="text" id="statsRangeEnd" placeholder="End date">
             </div>
         </div>
-        <button onclick="handleLoadStatisticButtonPress();" class="ui basic button"><i class="blue search icon"></i> Search</button>
-        <button onclick="clearStatisticDateRange();" class="ui yellow basic button"><i class="eraser icon"></i> Clear Range</button>
+        <button onclick="handleLoadStatisticButtonPress();" class="ui basic button"><i class="blue search icon"></i> Load</button>
+        <button onclick="clearStatisticDateRange();" class="ui basic button"><i class="eraser icon"></i> Clear Search</button>
         <br>
         <small>Leave end range as empty for showing starting day only statistic</small>
     </div>
@@ -193,7 +193,9 @@
                 <canvas id="requestTrends"></canvas>
             </div>
         </div>
+        <button onclick="showSideWrapper('snippet/advanceStatsOprs.html?t=' + Date.now() + '#' + encodeURIComponent(JSON.stringify(getStatisticDateRange())));" class="ui basic right floated black button"><i class="external square alternate icon"></i> Advance Operations</button>
     </div>
+    
     <!-- <button class="ui icon right floated basic button" onclick="initStatisticSummery();"><i class="green refresh icon"></i> Refresh</button> -->
     <br><br>
 </div>
@@ -359,6 +361,28 @@
         }
        
         initStatisticSummery(sd, ed);
+   }
+   
+   function getStatisticDateRange(){
+        var sd = $("#statsRangeStart").val();
+        var ed = $("#statsRangeEnd").val();
+
+        if (ed == ""){
+            ed = sd;
+        }
+
+        if (sd == "" && ed == ""){
+            var sk = getTodayStatisticKey();
+            sd = sk;
+            ed = sk;
+        }
+
+         //Swap them if sd is later than ed
+        if (sd != "" && ed != "" && sd > ed) {
+            ed = [sd, sd = ed][0];
+        }
+
+        return [sd, ed];
    }
 
    function clearStatisticDateRange(){

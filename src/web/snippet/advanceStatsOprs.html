@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Advance Statistics Operations
+                    <div class="sub header">Selected Range: <span id="daterange"></span></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <h3>Export Data</h3>
+            <p>You can export the statistics collected by Zoraxy in the selected range for further analysis</p>
+            <button class="ui basic teal button" onclick="handleExportAsCSV();"><i class="download icon"></i> Export CSV</button>
+            <button class="ui basic pink button" onclick="handleExportAsJSON();"><i class="download icon"></i> Export JSON</button>
+            <div class="ui divider"></div>
+            <h3>Reset Statistics</h3>
+            <p>You can reset the statistics within the selected time range for debug purpose. Note that this operation is irreversible.</p>
+            <button class="ui basic red button" onclick="handleResetStats();"><i class="trash icon"></i> RESET STATISTICS</button>
+            <br><br>
+            <button class="ui basic button iframeOnly"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Cancel</button>
+        </div>
+        <script>
+            let startDate = "";
+            let endDate = "";
+
+            /*
+                Actions Handler
+            */
+
+            function handleExportAsJSON(){
+                window.open(`/api/analytic/exportRange?start=${startDate}&end=${endDate}&format=json`, 'download');
+            }
+
+            function handleExportAsCSV(){
+                window.open(`/api/analytic/exportRange?start=${startDate}&end=${endDate}&format=csv`, 'download');
+            }
+
+            function handleResetStats(){
+                if (confirm("Confirm remove statistics from " + startDate + " to " + endDate +"?")){
+                    $.ajax({
+                        url: "/api/analytic/resetRange?start=" + startDate + "&end=" + endDate,
+                        method: "DELETE",
+                        success: function(data){
+                            if (data.error != undefined){
+                                parent.msgbox(data.error, false, 5000);
+                            }else{
+                                parent.msgbox("Statistic Cleared");
+                                parent.hideSideWrapper();
+                            }
+                        }
+                    })
+                }
+            }
+
+            /*
+                Data Loading
+            */
+            function loadDateRange(){
+                if (window.location.hash.length > 1){
+                    try{
+                        var dateRange = JSON.parse(decodeURIComponent(window.location.hash.substr(1)));
+                        startDate = dateRange[0].trim();
+                        endDate = dateRange[1].trim();
+
+                        //Check if they are valid dates
+                        if (!isValidDateFormat(startDate)){
+                            alert("Start date is not a valid date: " + startDate);
+                            return
+                        }
+
+                        if (!isValidDateFormat(endDate)){
+                            alert("End date is not a valid date: " + endDate);
+                            return
+                        }
+
+                        //Sort the two dates if they are placed in invalid orders
+                        var [s, e] = sortDates(startDate, endDate);
+                        startDate = s;
+                        endDate = e;
+
+                        $("#daterange").html(startDate + ` <i class="arrow right icon" style="margin-right: 0;"></i> ` + endDate);
+                    }catch(ex){
+                        alert("Invalid usage: Invalid date range given");
+                    }
+                }
+            }
+            loadDateRange();
+
+            function isValidDateFormat(dateString) {
+                // Create a regular expression pattern for the yyyy-mm-dd format
+                const pattern = /^\d{4}-\d{2}-\d{2}$/;
+
+                // Check if the input string matches the pattern
+                if (!pattern.test(dateString)) {
+                    return false; // Invalid format
+                }
+
+                // Parse the date components
+                const year = parseInt(dateString.substring(0, 4), 10);
+                const month = parseInt(dateString.substring(5, 7), 10);
+                const day = parseInt(dateString.substring(8, 10), 10);
+
+                // Check if the parsed components represent a valid date
+                const date = new Date(year, month - 1, day);
+                if (
+                    date.getFullYear() !== year ||
+                    date.getMonth() + 1 !== month ||
+                    date.getDate() !== day
+                ) {
+                    return false; // Invalid date
+                }
+
+                return true; // Valid date in yyyy-mm-dd format
+            }
+
+            function sortDates(date1, date2) {
+                // Parse the date strings
+                const parsedDate1 = new Date(date1);
+                const parsedDate2 = new Date(date2);
+
+                // Compare the parsed dates
+                if (parsedDate1 > parsedDate2) {
+                    // Swap the dates
+                    const temp = date1;
+                    date1 = date2;
+                    date2 = temp;
+                }
+
+                // Return the swapped dates
+                return [date1, date2];
+            }
+
+
+        </script>
+    </body>
+</html>

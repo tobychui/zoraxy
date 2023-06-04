@@ -604,6 +604,10 @@ func HandleUpdateHttpsRedirect(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentRedirectToHttps)
 		utils.SendJSONResponse(w, string(js))
 	} else {
+		if dynamicProxyRouter.Option.Port == 80 {
+			utils.SendErrorResponse(w, "This option is not available when listening on port 80")
+			return
+		}
 		if useRedirect == "true" {
 			sysdb.Write("settings", "redirect", true)
 			log.Println("Updating force HTTPS redirection to true")

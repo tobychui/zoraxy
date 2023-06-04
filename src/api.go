@@ -121,6 +121,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/analytic/list", AnalyticLoader.HandleSummaryList)
 	authRouter.HandleFunc("/api/analytic/load", AnalyticLoader.HandleLoadTargetDaySummary)
 	authRouter.HandleFunc("/api/analytic/loadRange", AnalyticLoader.HandleLoadTargetRangeSummary)
+	authRouter.HandleFunc("/api/analytic/exportRange", AnalyticLoader.HandleRangeExport)
+	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
 
 	//Network utilities
 	authRouter.HandleFunc("/api/tools/ipscan", HandleIpScan)

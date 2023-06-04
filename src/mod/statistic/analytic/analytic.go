@@ -1,10 +1,9 @@
 package analytic
 
 import (
-	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/statistic"
@@ -24,105 +23,49 @@ func NewDataLoader(db *database.Database, sc *statistic.Collector) *DataLoader {
 	}
 }
 
-func (d *DataLoader) HandleSummaryList(w http.ResponseWriter, r *http.Request) {
-	entries, err := d.Database.ListTable("stats")
+// GetAllStatisticSummaryInRange return all the statisics within the time frame. The second array is the key (dates) of the statistic
+func (d *DataLoader) GetAllStatisticSummaryInRange(start, end string) ([]*statistic.DailySummaryExport, []string, error) {
+	dailySummaries := []*statistic.DailySummaryExport{}
+	collectedDates := []string{}
+	//Generate all the dates in between the range
+	keys, err := generateDateRange(start, end)
 	if err != nil {
-		utils.SendErrorResponse(w, "unable to load data from database")
-		return
+		return dailySummaries, collectedDates, err
 	}
 
-	entryDates := []string{}
-	for _, keypairs := range entries {
-		entryDates = append(entryDates, string(keypairs[0]))
-	}
-
-	js, _ := json.MarshalIndent(entryDates, "", " ")
-	utils.SendJSONResponse(w, string(js))
-}
-
-func (d *DataLoader) HandleLoadTargetDaySummary(w http.ResponseWriter, r *http.Request) {
-	day, err := utils.GetPara(r, "id")
-	if err != nil {
-		utils.SendErrorResponse(w, "id cannot be empty")
-		return
-	}
-
-	if strings.Contains(day, "-") {
-		//Must be underscore
-		day = strings.ReplaceAll(day, "-", "_")
-	}
-
-	if !statistic.IsBeforeToday(day) {
-		utils.SendErrorResponse(w, "given date is in the future")
-		return
-	}
-
-	var targetDailySummary statistic.DailySummaryExport
-
-	if day == time.Now().Format("2006_01_02") {
-		targetDailySummary = *d.StatisticCollector.GetExportSummary()
-	} else {
-		//Not today data
-		err = d.Database.Read("stats", day, &targetDailySummary)
-		if err != nil {
-			utils.SendErrorResponse(w, "target day data not found")
-			return
+	//Load all the data from database
+	for _, key := range keys {
+		thisStat := statistic.DailySummaryExport{}
+		err = d.Database.Read("stats", key, &thisStat)
+		if err == nil {
+			dailySummaries = append(dailySummaries, &thisStat)
+			collectedDates = append(collectedDates, key)
 		}
 	}
 
-	js, _ := json.Marshal(targetDailySummary)
-	utils.SendJSONResponse(w, string(js))
+	return dailySummaries, collectedDates, nil
+
 }
 
-func (d *DataLoader) HandleLoadTargetRangeSummary(w http.ResponseWriter, r *http.Request) {
-	//Get the start date from POST para
+func (d *DataLoader) GetStartAndEndDatesFromRequest(r *http.Request) (string, string, error) {
+	// Get the start date from POST para
 	start, err := utils.GetPara(r, "start")
 	if err != nil {
-		utils.SendErrorResponse(w, "start date cannot be empty")
-		return
+		return "", "", errors.New("start date cannot be empty")
 	}
 	if strings.Contains(start, "-") {
 		//Must be underscore
 		start = strings.ReplaceAll(start, "-", "_")
 	}
-	//Get end date from POST para
+	// Get end date from POST para
 	end, err := utils.GetPara(r, "end")
 	if err != nil {
-		utils.SendErrorResponse(w, "emd date cannot be empty")
-		return
+		return "", "", errors.New("end date cannot be empty")
 	}
 	if strings.Contains(end, "-") {
 		//Must be underscore
 		end = strings.ReplaceAll(end, "-", "_")
 	}
 
-	//Generate all the dates in between the range
-	keys, err := generateDateRange(start, end)
-	if err != nil {
-		utils.SendErrorResponse(w, err.Error())
-		return
-	}
-
-	//Load all the data from database
-	dailySummaries := []*statistic.DailySummaryExport{}
-	for _, key := range keys {
-		thisStat := statistic.DailySummaryExport{}
-		err = d.Database.Read("stats", key, &thisStat)
-		if err == nil {
-			dailySummaries = append(dailySummaries, &thisStat)
-		}
-	}
-
-	//Merge the summaries into one
-	mergedSummary := mergeDailySummaryExports(dailySummaries)
-
-	js, _ := json.Marshal(struct {
-		Summary *statistic.DailySummaryExport
-		Records []*statistic.DailySummaryExport
-	}{
-		Summary: mergedSummary,
-		Records: dailySummaries,
-	})
-
-	utils.SendJSONResponse(w, string(js))
+	return start, end, nil
 }

@@ -70,3 +70,25 @@ func mergeDailySummaryExports(exports []*statistic.DailySummaryExport) *statisti
 
 	return mergedExport
 }
+
+func mapToStringSlice(m map[string]int) []string {
+	slice := make([]string, 0, len(m))
+	for k := range m {
+		slice = append(slice, k)
+	}
+	return slice
+}
+
+func isTodayDate(dateStr string) bool {
+	today := time.Now().Local().Format("2006-01-02")
+	inputDate, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		inputDate, err = time.Parse("2006_01_02", dateStr)
+		if err != nil {
+			fmt.Println("Invalid date format")
+			return false
+		}
+	}
+
+	return inputDate.Format("2006-01-02") == today
+}
