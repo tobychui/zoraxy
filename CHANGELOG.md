@@ -1,3 +1,13 @@
+# v2.6.3 Jun 8 2023
+
++ Added X-Forwarded-Proto for automatic proxy detector
++ Split blacklist and whitelist from geodb script file
++ Optimized compile binary size
++ Added access control to TCP proxy
++ Added "invalid config detect" in up time monitor for isse #7
++ Fixed minor bugs in advance stats panel
++ Reduced file size of embedded materials
+
 # v2.6.2 Jun 4 2023
 
 + Added advance stats operation tab
