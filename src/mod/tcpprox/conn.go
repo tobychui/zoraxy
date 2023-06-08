@@ -58,11 +58,23 @@ func forward(conn1 net.Conn, conn2 net.Conn, aTob *int64, bToa *int64) {
 	wg.Wait()
 }
 
-func accept(listener net.Listener) (net.Conn, error) {
+func (c *ProxyRelayConfig) accept(listener net.Listener) (net.Conn, error) {
+
 	conn, err := listener.Accept()
 	if err != nil {
 		return nil, err
 	}
+
+	//Check if connection in blacklist or whitelist
+	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+		if !c.parent.Options.AccessControlHandler(conn) {
+			time.Sleep(300 * time.Millisecond)
+			conn.Close()
+			log.Println("[x]", "Connection from "+addr.IP.String()+" rejected by access control policy")
+			return nil, errors.New("Connection from " + addr.IP.String() + " rejected by access control policy")
+		}
+	}
+
 	log.Println("[√]", "accept a new client. remote address:["+conn.RemoteAddr().String()+"], local address:["+conn.LocalAddr().String()+"]")
 	return conn, err
 }
@@ -203,7 +215,7 @@ func (c *ProxyRelayConfig) Port2port(port1 string, port2 string, stopChan chan b
 	}()
 
 	for {
-		conn1, err := accept(listen1)
+		conn1, err := c.accept(listen1)
 		if err != nil {
 			if !c.Running {
 				return nil
@@ -211,7 +223,7 @@ func (c *ProxyRelayConfig) Port2port(port1 string, port2 string, stopChan chan b
 			continue
 		}
 
-		conn2, err := accept(listen2)
+		conn2, err := c.accept(listen2)
 		if err != nil {
 			if !c.Running {
 				return nil
@@ -224,7 +236,7 @@ func (c *ProxyRelayConfig) Port2port(port1 string, port2 string, stopChan chan b
 			time.Sleep(time.Duration(c.Timeout) * time.Second)
 			continue
 		}
-		forward(conn1, conn2, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
+		go forward(conn1, conn2, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
 	}
 }
 
@@ -248,7 +260,7 @@ func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, sto
 
 	//Start blocking loop for accepting connections
 	for {
-		conn, err := accept(server)
+		conn, err := c.accept(server)
 		if conn == nil || err != nil {
 			if !c.Running {
 				//Terminate by stop chan. Exit listener loop
@@ -322,7 +334,7 @@ func (c *ProxyRelayConfig) Host2host(address1, address2 string, stopChan chan bo
 				return nil
 			}
 		}
-		forward(host1, host2, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
+		go forward(host1, host2, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
 	}
 
 	return nil

@@ -117,6 +117,7 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 			url = "https://" + target.Domain
 			protocol = "https"
 		}
+
 		UptimeTargets = append(UptimeTargets, &uptime.Target{
 			ID:       subd,
 			Name:     subd,

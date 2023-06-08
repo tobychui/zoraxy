@@ -109,7 +109,13 @@
                 }
                 ontimeRate++;
             }else{
-                dotType = "offline";
+                if (thisStatus.StatusCode >= 500 && thisStatus.StatusCode < 600){
+                    //Special type of error, cause by downstream reverse proxy
+                    dotType = "error";
+                }else{
+                    dotType = "offline";
+                }
+                
             }
 
             let datetime = format_time(thisStatus.Timestamp);
@@ -126,12 +132,20 @@
         //Check of online status now
         let currentOnlineStatus = "Unknown";
         let onlineStatusCss = ``;
+        let reminderEle = ``;
         if (value[value.length - 1].Online){
             currentOnlineStatus = `<i class="circle icon"></i> Online`;
             onlineStatusCss = `color: #3bd671;`;
         }else{
-            currentOnlineStatus = `<i class="circle icon"></i> Offline`;
-            onlineStatusCss = `color: #df484a;`;
+            if (value[value.length - 1].StatusCode >= 500 && value[value.length - 1].StatusCode < 600){
+                currentOnlineStatus = `<i class="exclamation circle icon"></i> Misconfigured`;
+                onlineStatusCss = `color: #f38020;`;
+                reminderEle = `<small style="${onlineStatusCss}">Downstream proxy server is online with misconfigured settings</small>`;
+            }else{
+                currentOnlineStatus = `<i class="circle icon"></i> Offline`;
+                onlineStatusCss = `color: #df484a;`;
+            }
+           
         }
 
         //Generate the html
@@ -151,6 +165,7 @@
             <div class="status" style="marign-top: 1em;">
                 ${statusDotList}
             </div>
+            ${reminderEle}
             <div class="ui divider"></div>
         </div>`);
     }

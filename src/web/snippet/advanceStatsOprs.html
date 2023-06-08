@@ -95,6 +95,10 @@
             loadDateRange();
 
             function isValidDateFormat(dateString) {
+                if (dateString.indexOf("_") >= 0){
+                    //Replace all the _ to -
+                    dateString = dateString.split("_").join("-");
+                }
                 // Create a regular expression pattern for the yyyy-mm-dd format
                 const pattern = /^\d{4}-\d{2}-\d{2}$/;
 

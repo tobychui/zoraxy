@@ -1,7 +1,6 @@
 package sshprox
 
 import (
-	"embed"
 	"errors"
 	"fmt"
 	"log"
@@ -27,16 +26,6 @@ import (
 	so that you can do something similar to
 	online ssh terminal
 */
-
-/*
-Bianry embedding
-
-Make sure when compile, gotty binary exists in static.gotty
-*/
-var (
-	//go:embed gotty/*
-	gotty embed.FS
-)
 
 type Manager struct {
 	StartingPort int

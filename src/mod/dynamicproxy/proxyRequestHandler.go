@@ -57,6 +57,7 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 // Handle subdomain request
 func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
+	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
 	requestURL := r.URL.String()
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
@@ -116,6 +117,7 @@ func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, targ
 	r.URL, _ = url.Parse(rewriteURL)
 
 	r.Header.Set("X-Forwarded-Host", r.Host)
+	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
 		r.Header.Set("A-Upgrade", "websocket")

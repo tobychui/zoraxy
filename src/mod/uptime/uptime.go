@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"imuslab.com/zoraxy/mod/utils"
@@ -220,7 +221,24 @@ func getWebsiteStatusWithLatency(url string) (bool, int64, int) {
 func getWebsiteStatus(url string) (int, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return 0, err
+		//Try replace the http with https and vise versa
+		rewriteURL := ""
+		if strings.Contains(url, "https://") {
+			rewriteURL = strings.ReplaceAll(url, "https://", "http://")
+		} else if strings.Contains(url, "http://") {
+			rewriteURL = strings.ReplaceAll(url, "http://", "https://")
+		}
+
+		resp, err = http.Get(rewriteURL)
+		if err != nil {
+			if strings.Contains(err.Error(), "http: server gave HTTP response to HTTPS client") {
+				//Invalid downstream reverse proxy settings, but it is online
+				//return SSL handshake failed
+				return 525, nil
+			}
+			return 0, err
+		}
+
 	}
 	status_code := resp.StatusCode
 	resp.Body.Close()

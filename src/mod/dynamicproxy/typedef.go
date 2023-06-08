@@ -22,6 +22,7 @@ type ProxyHandler struct {
 }
 
 type RouterOption struct {
+	HostUUID           string
 	Port               int
 	UseTls             bool
 	ForceHttpsRedirect bool

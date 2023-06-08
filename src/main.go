@@ -38,7 +38,7 @@ var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local no
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var (
 	name        = "Zoraxy"
-	version     = "2.6.2"
+	version     = "2.6.3"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()

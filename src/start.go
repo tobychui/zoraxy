@@ -163,7 +163,8 @@ func startupSequence() {
 
 	//Create TCP Proxy Manager
 	tcpProxyManager = tcpprox.NewTCProxy(&tcpprox.Options{
-		Database: sysdb,
+		Database:             sysdb,
+		AccessControlHandler: geodbStore.AllowConnectionAccess,
 	})
 
 	//Create WoL MAC storage table

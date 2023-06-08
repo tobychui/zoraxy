@@ -278,6 +278,12 @@ func addXForwardedForHeader(req *http.Request) {
 			clientIP = strings.Join(prior, ", ") + ", " + clientIP
 		}
 		req.Header.Set("X-Forwarded-For", clientIP)
+		if req.TLS != nil {
+			req.Header.Set("X-Forwarded-Proto", "https")
+		} else {
+			req.Header.Set("X-Forwarded-Proto", "http")
+		}
+
 	}
 }
 

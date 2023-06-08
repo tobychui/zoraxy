@@ -2,6 +2,7 @@ package tcpprox
 
 import (
 	"errors"
+	"net"
 
 	uuid "github.com/satori/go.uuid"
 	"imuslab.com/zoraxy/mod/database"
@@ -40,11 +41,14 @@ type ProxyRelayConfig struct {
 	stopChan                    chan bool //Stop channel to stop the listener
 	aTobAccumulatedByteTransfer int64     //Accumulated byte transfer from A to B
 	bToaAccumulatedByteTransfer int64     //Accumulated byte transfer from B to A
+
+	parent *Manager `json:"-"`
 }
 
 type Options struct {
-	Database       *database.Database
-	DefaultTimeout int
+	Database             *database.Database
+	DefaultTimeout       int
+	AccessControlHandler func(net.Conn) bool
 }
 
 type Manager struct {
@@ -59,16 +63,34 @@ type Manager struct {
 func NewTCProxy(options *Options) *Manager {
 	options.Database.NewTable("tcprox")
 
+	//Load relay configs from db
 	previousRules := []*ProxyRelayConfig{}
 	if options.Database.KeyExists("tcprox", "rules") {
 		options.Database.Read("tcprox", "rules", &previousRules)
 	}
 
-	return &Manager{
+	//Check if the AccessControlHandler is empty. If yes, set it to always allow access
+	if options.AccessControlHandler == nil {
+		options.AccessControlHandler = func(conn net.Conn) bool {
+			//Always allow access
+			return true
+		}
+	}
+
+	//Create a new proxy manager for TCP
+	thisManager := Manager{
 		Options:     options,
-		Configs:     previousRules,
 		Connections: 0,
 	}
+
+	//Inject manager into the rules
+	for _, rule := range previousRules {
+		rule.parent = &thisManager
+	}
+
+	thisManager.Configs = previousRules
+
+	return &thisManager
 }
 
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
@@ -85,6 +107,8 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		stopChan:                    nil,
 		aTobAccumulatedByteTransfer: 0,
 		bToaAccumulatedByteTransfer: 0,
+
+		parent: m,
 	}
 	m.Configs = append(m.Configs, &thisConfig)
 	m.SaveConfigToDatabase()
