@@ -346,6 +346,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 		}
+		dynamicProxyRouter.RemoveProxy("vdir", thisOption.RootName)
 		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
 
 	} else if eptype == "subd" {
@@ -357,6 +358,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 		}
+		dynamicProxyRouter.RemoveProxy("subd", thisOption.MatchingDomain)
 		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
 	}
 
@@ -371,14 +373,6 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 	}
 	SaveReverseProxyConfig(&thisProxyConfigRecord)
-
-	//Update the current running config
-	targetProxyEntry.Domain = endpoint
-	targetProxyEntry.RequireTLS = useTLS
-	targetProxyEntry.SkipCertValidations = skipTlsValidation
-	targetProxyEntry.RequireBasicAuth = requireBasicAuth
-	dynamicProxyRouter.SaveProxy(eptype, targetProxyEntry.RootOrMatchingDomain, targetProxyEntry)
-
 	utils.SendOK(w)
 }
 
