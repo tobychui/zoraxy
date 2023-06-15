@@ -1,19 +1,28 @@
+# v2.6.4 Jun 15 2023
+
++ Added force TLS v1.2 above toggle
++ Added trace route
++ Added ICMP ping
++ Added special routing rules module for up-coming acme integration
++ Fixed IPv6 check bug in black/whitelist
++ Optimized UI for TCP Proxy
+
 # v2.6.3 Jun 8 2023
 
 + Added X-Forwarded-Proto for automatic proxy detector
 + Split blacklist and whitelist from geodb script file
 + Optimized compile binary size
 + Added access control to TCP proxy
-+ Added "invalid config detect" in up time monitor for isse #7
++ Added "invalid config detect" in up time monitor for isse [#7](https://github.com/tobychui/zoraxy/issues/7)
 + Fixed minor bugs in advance stats panel
 + Reduced file size of embedded materials
 
 # v2.6.2 Jun 4 2023
 
 + Added advance stats operation tab
-+ Added statistic reset #13
++ Added statistic reset [#13](https://github.com/tobychui/zoraxy/issues/13)
 + Added statistic export to csv and json (please use json)
-+ Make subdomain clickable (not vdir) #12
++ Make subdomain clickable (not vdir) [#12](https://github.com/tobychui/zoraxy/issues/12)
 + Added TCP Proxy
 + Updates SMTP setup UI to make it more straight forward to setup
 
