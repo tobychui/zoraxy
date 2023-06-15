@@ -15,12 +15,12 @@ import (
 type RoutingRule struct {
 	ID             string
 	MatchRule      func(r *http.Request) bool
-	RoutingHandler http.Handler
+	RoutingHandler func(http.ResponseWriter, *http.Request)
 	Enabled        bool
 }
 
-//Router functions
-//Check if a routing rule exists given its id
+// Router functions
+// Check if a routing rule exists given its id
 func (router *Router) GetRoutingRuleById(rrid string) (*RoutingRule, error) {
 	for _, rr := range router.routingRules {
 		if rr.ID == rrid {
@@ -31,19 +31,19 @@ func (router *Router) GetRoutingRuleById(rrid string) (*RoutingRule, error) {
 	return nil, errors.New("routing rule with given id not found")
 }
 
-//Add a routing rule to the router
+// Add a routing rule to the router
 func (router *Router) AddRoutingRules(rr *RoutingRule) error {
 	_, err := router.GetRoutingRuleById(rr.ID)
-	if err != nil {
+	if err == nil {
 		//routing rule with given id already exists
-		return err
+		return errors.New("routing rule with same id already exists")
 	}
 
 	router.routingRules = append(router.routingRules, rr)
 	return nil
 }
 
-//Remove a routing rule from the router
+// Remove a routing rule from the router
 func (router *Router) RemoveRoutingRule(rrid string) {
 	newRoutingRules := []*RoutingRule{}
 	for _, rr := range router.routingRules {
@@ -55,13 +55,13 @@ func (router *Router) RemoveRoutingRule(rrid string) {
 	router.routingRules = newRoutingRules
 }
 
-//Get all routing rules
+// Get all routing rules
 func (router *Router) GetAllRoutingRules() []*RoutingRule {
 	return router.routingRules
 }
 
-//Get the matching routing rule that describe this request.
-//Return nil if no routing rule is match
+// Get the matching routing rule that describe this request.
+// Return nil if no routing rule is match
 func (router *Router) GetMatchingRoutingRule(r *http.Request) *RoutingRule {
 	for _, thisRr := range router.routingRules {
 		if thisRr.IsMatch(r) {
@@ -71,8 +71,8 @@ func (router *Router) GetMatchingRoutingRule(r *http.Request) *RoutingRule {
 	return nil
 }
 
-//Routing Rule functions
-//Check if a request object match the
+// Routing Rule functions
+// Check if a request object match the
 func (e *RoutingRule) IsMatch(r *http.Request) bool {
 	if !e.Enabled {
 		return false
@@ -81,5 +81,5 @@ func (e *RoutingRule) IsMatch(r *http.Request) bool {
 }
 
 func (e *RoutingRule) Route(w http.ResponseWriter, r *http.Request) {
-	e.RoutingHandler.ServeHTTP(w, r)
+	e.RoutingHandler(w, r)
 }

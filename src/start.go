@@ -15,6 +15,7 @@ import (
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
+	"imuslab.com/zoraxy/mod/pathrule"
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
@@ -67,7 +68,7 @@ func startupSequence() {
 	}
 
 	//Create a redirection rule table
-	redirectTable, err = redirection.NewRuleTable("./rules")
+	redirectTable, err = redirection.NewRuleTable("./rules/redirect")
 	if err != nil {
 		panic(err)
 	}
@@ -92,6 +93,17 @@ func startupSequence() {
 		log.Println("Failed to load network statistic info")
 		panic(err)
 	}
+
+	/*
+		Path Blocker
+
+		This section of starutp script start the pathblocker
+		from file.
+	*/
+
+	pathRuleHandler = pathrule.NewPathBlocker(&pathrule.Options{
+		ConfigFolder: "./rules/pathblock",
+	})
 
 	/*
 		MDNS Discovery Service
@@ -176,4 +188,10 @@ func startupSequence() {
 
 	//Create an analytic loader
 	AnalyticLoader = analytic.NewDataLoader(sysdb, statisticCollector)
+}
+
+// This sequence start after everything is initialized
+func finalSequence() {
+	//Start ACME renew agent
+	acmeRegisterSpecialRoutingRule()
 }

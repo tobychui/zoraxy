@@ -12,13 +12,41 @@
     </div>
 
     <div class="ui bottom attached tab segment nettoolstab active" data-tab="tab1">
+        <!-- MDNS Scanner-->
         <h2>Multicast DNS (mDNS) Scanner</h2>
         <p>Discover mDNS enabled service in this gateway forwarded network</p>
         <button class="ui basic larger circular button" onclick="launchToolWithSize('./tools/mdns.html',1000, 640);">View Discovery</button>
         <div class="ui divider"></div>
+        <!-- IP Scanner-->
         <h2>IP Scanner</h2>
         <p>Discover local area network devices by pinging them one by one</p>
         <button class="ui basic larger circular button" onclick="launchToolWithSize('./tools/ipscan.html',1000, 640);">Start Scanner</button>
+        <div class="ui divider"></div>
+        <!-- Traceroute-->
+        <h2>Traceroute / Ping</h2>
+        <p>Trace the network nodes that your packets hops through</p>
+        <div class="ui form">
+            <div class="two fields">
+                <div class="field">
+                    <label>Target domain or IP</label>
+                    <input type="text" id="traceroute_domain" placeholder="1.1.1.1">
+                </div>
+                <div class="field">
+                  <label>Max Hops</label>
+                  <input type="number" min="1" step="1" id="traceroute_maxhops" placeholder="64" value="64">
+                </div>
+            </div>
+            <button class="ui basic button" onclick="traceroute();"><i class="ui blue location arrow icon"></i> Start Tracing</button>
+            <button class="ui basic button" onclick="ping();"><i class="ui teal circle outline icon"></i> Ping</button>
+            <br><br>
+            <div class="field">
+                <label>Results</label>
+                <textarea id="traceroute_results" rows="10" style=""></textarea>
+            </div>
+            
+        </div>
+        <div class=""></div>
+
     </div>
 
     <div class="ui bottom attached tab segment nettoolstab" data-tab="tab2">
@@ -435,7 +463,32 @@ function updateMDNSListForWoL(){
 }
 updateMDNSListForWoL();
 
+function traceroute(){
+    let domain = $("#traceroute_domain").val().trim();
+    let maxhops = $("#traceroute_maxhops").val().trim();
+    $("#traceroute_results").val("Loading...");
+    $.get("/api/tools/traceroute?target=" + domain + "&maxhops=" + maxhops, function(data){
+        if (data.error != undefined){
+            $("#traceroute_results").val("");
+            msgbox(data.error, false, 6000);
+        }else{
+            $("#traceroute_results").val(data.join("\n"));
+        }
+    });
+}
 
+function ping(){
+    let domain = $("#traceroute_domain").val().trim();
+    $("#traceroute_results").val("Loading...");
+    $.get("/api/tools/ping?target=" + domain, function(data){
+        if (data.error != undefined){
+            $("#traceroute_results").val("");
+            msgbox(data.error, false, 6000);
+        }else{
+            $("#traceroute_results").val(data.join("\n"));
+        }
+    });
+}
 </script>
 
 

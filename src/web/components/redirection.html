@@ -1,78 +1,100 @@
+
 <div class="standardContainer">
-  <div class="ui basic segment">
-    <h2>Redirection Rules</h2>
-    <p>Add exception case for redirecting any matching URLs</p>
-  </div>
-  <div style="width: 100%; overflow-x: auto;">
-      <table class="ui sortable unstackable celled table" >
-        <thead>
-            <tr>
-                <th>Redirection URL</th>
-                <th>Destination URL</th>
-                <th class="no-sort">Copy Pathname</th>
-                <th class="no-sort">Status Code</th>
-                <th class="no-sort">Remove</th>
-            </tr>
-        </thead>
-        <tbody id="redirectionRuleList">
-            <tr>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-            </tr>
-        </tbody>
-    </table>
-  </div>
-  <div class="ui green message" id="delRuleSucc" style="display:none;">
-    <i class="ui green checkmark icon"></i> Redirection Rule Deleted
-  </div>
-  <div class="ui divider"></div>
-  <h4>Add Redirection Rule</h4>
-  <div class="ui form">
-      <div class="field">
-        <label>Redirection URL (From)</label>
-        <input type="text" id="rurl" name="redirection-url" placeholder="Redirection URL">
-        <small><i class="ui circle info icon"></i> Any matching prefix of the request URL will be redirected to the destination URL, e.g. redirect.example.com</small>
-      </div>
-      <div class="field">
-        <label>Destination URL (To)</label>
-        <input type="text" name="destination-url" placeholder="Destination URL">
-        <small><i class="ui circle info icon"></i> The target URL request being redirected to, e.g. dest.example.com/mysite</small>
-      </div>
-      <div class="field">
-        <div class="ui checkbox">
-          <input type="checkbox" name="forward-childpath" tabindex="0" class="hidden" checked>
-          <label>Forward Pathname</label>
+    <div class="ui basic segment">
+      <h2>Redirection Rules</h2>
+      <p>Add exception case for redirecting any matching URLs</p>
+    </div>
+    <div style="width: 100%; overflow-x: auto;">
+        <table class="ui sortable unstackable celled table" >
+          <thead>
+              <tr>
+                  <th>Redirection URL</th>
+                  <th>Destination URL</th>
+                  <th class="no-sort">Copy Pathname</th>
+                  <th class="no-sort">Status Code</th>
+                  <th class="no-sort">Remove</th>
+              </tr>
+          </thead>
+          <tbody id="redirectionRuleList">
+              <tr>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+              </tr>
+          </tbody>
+      </table>
+    </div>
+    <div class="ui green message" id="delRuleSucc" style="display:none;">
+      <i class="ui green checkmark icon"></i> Redirection Rule Deleted
+    </div>
+    <div class="ui divider"></div>
+    <h4>Add Redirection Rule</h4>
+    <div class="ui form">
+        <div class="field">
+          <label>Redirection URL (From)</label>
+          <input type="text" id="rurl" name="redirection-url" placeholder="Redirection URL">
+          <small><i class="ui circle info icon"></i> Any matching prefix of the request URL will be redirected to the destination URL, e.g. redirect.example.com</small>
         </div>
-        <div class="ui message">
-          <p>Append the current pathname after the redirect destination</p>
-          <i class="check square outline icon"></i> old.example.com<b>/blog?post=13</b> <i class="long arrow alternate right icon" style="margin-left: 1em;"></i> new.example.com<b>/blog?post=13</b> <br>
-          <i class="square outline icon"></i> old.example.com<b>/blog?post=13</b> <i class="long arrow alternate right icon" style="margin-left: 1em;"></i> new.example.com
+        <div class="field">
+          <label>Destination URL (To)</label>
+          <input type="text" name="destination-url" placeholder="Destination URL">
+          <small><i class="ui circle info icon"></i> The target URL request being redirected to, e.g. dest.example.com/mysite</small>
         </div>
-      </div>
-      <div class="grouped fields">
-          <label>Redirection Status Code</label>
-          <div class="field">
-            <div class="ui radio checkbox">
-              <input type="radio" name="redirect-type" value="307" checked>
-              <label>Temporary Redirect <br><small>Status Code: 307</small></label>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" name="forward-childpath" tabindex="0" class="hidden" checked>
+            <label>Forward Pathname</label>
+          </div>
+          <div class="ui message">
+            <p>Append the current pathname after the redirect destination</p>
+            <i class="check square outline icon"></i> old.example.com<b>/blog?post=13</b> <i class="long arrow alternate right icon" style="margin-left: 1em;"></i> new.example.com<b>/blog?post=13</b> <br>
+            <i class="square outline icon"></i> old.example.com<b>/blog?post=13</b> <i class="long arrow alternate right icon" style="margin-left: 1em;"></i> new.example.com
+          </div>
+        </div>
+        <div class="grouped fields">
+            <label>Redirection Status Code</label>
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input type="radio" name="redirect-type" value="307" checked>
+                <label>Temporary Redirect <br><small>Status Code: 307</small></label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input type="radio" name="redirect-type" value="301">
+                <label>Moved Permanently <br><small>Status Code: 301</small></label>
+              </div>
+            </div>
+        </div>
+        <button class="ui basic button" onclick="addRules();"><i class="ui teal plus icon"></i> Add Redirection Rule</button>
+        <div class="ui green message" id="ruleAddSucc" style="display:none;">
+          <i class="ui green checkmark icon"></i> Redirection Rules Added
+        </div>
+        <br><br>
+        <!--
+        <div class="advancezone ui basic segment">
+          <div class="ui accordion advanceSettings">
+            <div class="title">
+              <i class="dropdown icon"></i>
+              Advance Options
+            </div>
+            <div class="content">
+              <p>If you need custom header, content or status code other than basic redirects, you can use the advance path rules editor.</p>
+              <button class="ui black basic button" onclick="createAdvanceRules();"><i class="ui black external icon"></i> Open Advance Rules Editor</button>
             </div>
           </div>
-          <div class="field">
-            <div class="ui radio checkbox">
-              <input type="radio" name="redirect-type" value="301">
-              <label>Moved Permanently <br><small>Status Code: 301</small></label>
-            </div>
-          </div>
-      </div>
-      <button class="ui basic button" onclick="addRules();"><i class="ui teal plus icon"></i> Add Redirection Rule</button>
-      <div class="ui green message" id="ruleAddSucc" style="display:none;">
-        <i class="ui green checkmark icon"></i> Redirection Rules Added
-      </div>
+        </div>
+         -->
+    </div>
   </div>
 </div>
 <script>
+    $(".advanceSettings").accordion();
+    
+  /*
+    Redirection functions
+  */
     $(".checkbox").checkbox();
 
     function resetForm() {
@@ -127,6 +149,10 @@
               }
           });
         }
+    }
+
+    function createAdvanceRules(){
+      showSideWrapper("snippet/advancePathRules.html?t=" + Date.now(), true);
     }
 
     function initRedirectionRuleList(){

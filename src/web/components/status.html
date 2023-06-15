@@ -72,11 +72,30 @@
         <label>Use TLS to serve proxy request</label>
     </div>
     <br>
-    <div id="redirect" class="ui toggle notloopbackOnly checkbox" style="margin-top: 0.6em;">
+    <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
         <input type="checkbox">
         <label>Force redirect HTTP request to HTTPS<br>
             <small>(Only apply when listening port is not 80)</small></label>
     </div>
+    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+        <div class="ui accordion advanceSettings">
+            <div class="title">
+              <i class="dropdown icon"></i>
+                Advance Settings
+            </div>
+            <div class="content">
+                <p>If you have no idea what are these, you can leave them as default :)</p>
+                <div id="tlsMinVer" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
+                    <input type="checkbox">
+                    <label>Force TLS v1.2 or above<br>
+                    <small>(Enhance security, but not compatible with legacy browsers)</small></label>
+                </div>
+                <br>
+            </div>
+        </div>
+    </div>
+    
+    
     <br><br>
     <button id="startbtn" class="ui teal button" onclick="startService();">Start Service</button>
     <button id="stopbtn" class="ui red notloopbackOnly disabled button" onclick="stopService();">Stop Service</button>
@@ -128,6 +147,8 @@
 </div>
 <script>
     let loopbackProxiedInterface = false;
+    $(".advanceSettings").accordion();
+
     //Initial the start stop button if this is reverse proxied
     $.get("/api/proxy/requestIsProxied", function(data){
         if (data == true){
@@ -340,21 +361,50 @@
     }
     initHTTPtoHTTPSRedirectSetting();
 
+    function initTlsVersionSetting(){
+        $.get("/api/cert/tlsRequireLatest", function(data){
+            if (data == true){
+                $("#tlsMinVer").checkbox("set checked");
+            }else{
+                $("#tlsMinVer").checkbox("set unchecked");
+            }
+
+            //Bind events to the checkbox
+            $("#tlsMinVer").find("input").on("change", function(){
+                let thisValue = $("#tlsMinVer").checkbox("is checked");
+                $.ajax({
+                    url: "/api/cert/tlsRequireLatest",
+                    data: {"set": thisValue},
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false, 5000);
+                        }else{
+                            msgbox("TLS Version Setting Updated");
+                        }
+                    }
+                })
+            });
+        });
+        
+    }
+    initTlsVersionSetting();
+
     function initTlsSetting(){
         $.get("/api/cert/tls", function(data){
             if (data == true){
                 $("#tls").checkbox("set checked");
             }else{
-                $("#redirect").addClass('disabled');
+                $(".tlsEnabledOnly").addClass('disabled');
+                $(".tlsEnabledOnly").addClass('disabled');
             }
 
             //Initiate the input listener on the checkbox
             $("#tls").find("input").on("change", function(){
                 let thisValue = $("#tls").checkbox("is checked");
                 if (thisValue){
-                    $("#redirect").removeClass('disabled');
+                    $(".tlsEnabledOnly").removeClass('disabled');
                 }else{
-                    $("#redirect").addClass('disabled');
+                    $(".tlsEnabledOnly").addClass('disabled');
                 }
                 $.ajax({
                     url: "/api/cert/tls",
@@ -364,7 +414,27 @@
                             alert(data.error);
                         }else{
                             //Updated
-                            msgbox("Setting Updated");
+                            
+                            //Check for case if the port is invalid default ports
+                            if ($("#incomingPort").val() == "80" && thisValue == true){
+                                confirmBox("Change listen port to :443?", function(choice){
+                                    if (choice == true){
+                                        $("#incomingPort").val("443");
+                                        handlePortChange();
+                                    }
+                                });
+                                   
+                            }else if ($("#incomingPort").val() == "443" && thisValue == false){
+                                confirmBox("Change listen port to :80?", function(choice){
+                                    if (choice == true){
+                                        $("#incomingPort").val("80");
+                                        handlePortChange();
+                                    }
+                                });
+                            }else{
+                                msgbox("Setting Updated");
+                            }
+
                             initRPStaste();
                         }
                     }

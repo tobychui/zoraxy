@@ -38,6 +38,14 @@ func ReverseProxtInit() {
 		log.Println("TLS mode disabled. Serving proxy request with plain http")
 	}
 
+	forceLatestTLSVersion := false
+	sysdb.Read("settings", "forceLatestTLS", &forceLatestTLSVersion)
+	if forceLatestTLSVersion {
+		log.Println("Force latest TLS mode enabled. Minimum TLS LS version is set to v1.2")
+	} else {
+		log.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
+	}
+
 	forceHttpsRedirect := false
 	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
 	if forceHttpsRedirect {
@@ -50,6 +58,7 @@ func ReverseProxtInit() {
 		HostUUID:           nodeUUID,
 		Port:               inboundPort,
 		UseTls:             useTls,
+		ForceTLSLatest:     forceLatestTLSVersion,
 		ForceHttpsRedirect: forceHttpsRedirect,
 		TlsManager:         tlsCertManager,
 		RedirectRuleTable:  redirectTable,

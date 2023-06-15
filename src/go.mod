@@ -12,5 +12,6 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.24
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/satori/go.uuid v1.2.0
+	golang.org/x/net v0.10.0
 	golang.org/x/sys v0.8.0
 )

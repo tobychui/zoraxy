@@ -22,13 +22,14 @@ type ProxyHandler struct {
 }
 
 type RouterOption struct {
-	HostUUID           string
-	Port               int
-	UseTls             bool
-	ForceHttpsRedirect bool
+	HostUUID           string //The UUID of Zoraxy, use for heading mod
+	Port               int    //Incoming port
+	UseTls             bool   //Use TLS to serve incoming requsts
+	ForceTLSLatest     bool   //Force TLS1.2 or above
+	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
 	TlsManager         *tlscert.Manager
 	RedirectRuleTable  *redirection.RuleTable
-	GeodbStore         *geodb.Store
+	GeodbStore         *geodb.Store //GeoIP blacklist and whitelist
 	StatisticCollector *statistic.Collector
 }
 

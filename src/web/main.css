@@ -6,6 +6,7 @@
     --theme_lgrey: #f6f6f6;
     --theme_green: #3c9c63;
     --theme_fcolor: #979797;
+    --theme_advance: #f8f8f9;
 }
 body{
     background-color:#f6f6f6;
@@ -14,6 +15,15 @@ body{
 
 .functiontab{
     display:none;
+}
+
+.advance{
+    background: var(--theme_advance) !important;
+}
+
+.advancezone{
+    background: var(--theme_advance) !important;
+    border-radius: 1em !important;
 }
 
 .menubar{
@@ -87,6 +97,34 @@ body{
     display:none;
     max-width: 300px;
     z-index: 999;
+}
+
+/* Confirm Box */
+#confirmBox{
+    position: fixed;
+    z-index: 999;
+    bottom: 1em;
+    right: 1em;
+    min-width: 300px;
+    background-color: #ffffff;
+    color: rgb(65, 65, 65);
+    box-shadow: 10px 10px 5px -2px rgba(0,0,0,0.13);
+}
+
+#confirmBox .confirmBoxBody{
+    padding: 1em;
+}
+
+#confirmBox .ui.progress .bar{
+    background: #ffe32b !important;
+}
+
+#confirmBox .confirmBoxBody .button{
+    margin-top: -0.4em;
+}
+
+#confirmBox .questionToConfirm{
+    margin-top: -0.2em;
 }
 
 /* Standard containers */
@@ -553,3 +591,17 @@ body{
 .GANetMember.unauthorized{
     border-left: 6px solid #9c3c3c !important;
 }
+
+/*
+    Network Utilities
+*/
+
+#traceroute_results{
+    resize: none; 
+    background-color: #202020; 
+    color: white;
+}
+
+#traceroute_results::selection {
+    background: #a9d1f3; 
+  }

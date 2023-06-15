@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <!-- Path Rules -->
+            <div class="ui header">
+                <div class="content">
+                    Special Path Rules
+                    <div class="sub header">Advanced customization for response on particular matching path or URL</div>
+                </div>
+            </div>
+            <h4>Current list of special path rules.</h4>
+            <div style="width: 100%; overflow-x: auto;">
+                <table class="ui sortable unstackable celled table" >
+                    <thead>
+                        <tr>
+                            <th>Matching Path</th>
+                            <th>Status Code</th>
+                            <th class="no-sort">Exact Match</th>
+                            <th class="no-sort">Case Sensitive</th>
+                            <th class="no-sort">Enabled</th>
+                            <th class="no-sort">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="specialPathRules">
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="ui divider"></div>
+            <h4>Add Special Path Rule</h4>
+            <div class="ui form">
+                <div class="field">
+                <label>Matching URI</label>
+                <input type="text" name="matchingPath" placeholder="Matching URL">
+                <small><i class="ui circle info icon"></i> Any matching prefix of the request URL will be handled by this rule, e.g. example.com/secret</small>
+                </div>
+                <div class="field">
+                <div class="ui checkbox">
+                    <input type="checkbox" name="exactMatch" tabindex="0" class="hidden">
+                    <label>Require Exact Match</label>
+                </div>
+                <div class="ui message">
+                    <p>Require exactly match but not prefix match (default). Enable this if you only want to block access to a directory but not the resources inside the directory. Assume you have entered a matching URI of <b>example.com/secret/</b> and set it to return 401</p>
+                    <i class="check square outline icon"></i> example.com/secret<b>/image.png</b> <i class="long arrow alternate right icon" style="margin-left: 1em;"></i> (content of image.png)<br>
+                    <i class="square outline icon"></i> example.com/secret<b>/image.png</b> <i class="long arrow alternate right icon" style="margin-left: 1em;"></i> HTTP 401 
+                </div>
+                </div>
+                <div class="field">
+                <label>Response Status Code</label>
+                <input type="text"name="statusCode" placeholder="500">
+                <small><i class="ui circle info icon"></i> HTTP Status Code to be served by this rule</small>
+                </div>
+            </div>
+            <br><br>
+            <button class="ui basic button iframeOnly"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Cancel</button>
+        </div>
+        <script>
+
+        </script>
+    </body>
+</html>

@@ -42,11 +42,75 @@
             <button id="addTcpProxyButton" class="ui basic button" type="submit"><i class="ui blue add icon"></i> Create</button>  
             <button id="editTcpProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);"><i class="ui blue save icon"></i> Update</button>  
             <button class="ui basic red button" onclick="event.preventDefault(); cancelTCPProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>  
-            
+            <div class="ui basic inverted segment" style="background-color: #414141; border-radius: 0.6em;">
+                <h3>Proxy Mode Instructions</h3>
+                <p>TCP Proxy support the following TCP sockets proxy modes</p>
+                <table class="ui celled padded inverted basic table">
+                    <thead>
+                      <tr><th class="single line">Mode</th>
+                      <th>Public-IP</th>
+                      <th>Concurrent Access</th>
+                      <th>Flow Diagram</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <h4 class="ui center aligned inverted header">Transport</h4>
+                        </td>
+                        <td class="single line">
+                            Server: <i class="ui green check icon"></i><br>
+                            A: <i class="ui remove icon"></i><br>
+                            B: <i class="ui green check icon"></i> (or same LAN)<br>
+                        </td>
+                        <td>
+                            <i class="ui green check icon"></i>
+                        </td>
+                        <td>Port A (e.g. 25565) <i class="arrow right icon"></i> Server<br>
+                            Server <i class="arrow right icon"></i> Port B (e.g. 192.168.0.2:25565)<br>
+                            <small>Traffic from Port A will be forward to Port B's (IP if provided and) Port</small>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <h4 class="ui center aligned inverted header">Listen</h4>
+                        </td>
+                        <td class="single line">
+                            Server: <i class="ui green check icon"></i><br>
+                            A: <i class="ui remove icon"></i><br>
+                            B: <i class="ui remove icon"></i><br>
+                        </td>
+                        <td>
+                            <i class="ui red times icon"></i>
+                        </td>
+                        <td>Port A (e.g. 8080) <i class="arrow right icon"></i> Server<br>
+                            Port B (e.g. 8081) <i class="arrow right icon"></i> Server<br>
+                            <small>Server will act as a bridge to proxy traffic between Port A and B</small>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <h4 class="ui center aligned inverted header">Starter</h4>
+                        </td>
+                        <td class="single line">
+                            Server: <i class="ui times icon"></i><br>
+                            A: <i class="ui green check icon"></i><br>
+                            B: <i class="ui green check icon"></i><br>
+                        </td>
+                        <td>
+                            <i class="ui red times icon"></i>
+                        </td>
+                        <td>Server <i class="arrow right icon"></i> Port A (e.g. remote.local.:8080) <br>
+                            Server <i class="arrow right icon"></i> Port B (e.g. recv.local.:8081) <br>
+                            <small>Port A and B will be actively bridged</small>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
         </form>
         <div class="ui divider"></div>
     </div>
-    <div class="ui basic segment">
+    <div class="ui basic segment" style="margin-top: 0;">
         <h3>TCP Proxy Configs</h3>
         <p>A list of TCP proxy configs created on this host. To enable them, use the toggle button on the right.</p>
         <div style="overflow-x: auto; min-height: 400px;">
@@ -67,72 +131,7 @@
             </table>
         </div>
     </div>
-    <div class="ui basic inverted segment" style="background-color: #414141; border-radius: 0.6em;">
-        <h3>Proxy Mode</h3>
-        <p>TCP Proxy support the following TCP sockets proxy modes</p>
-        <table class="ui celled padded inverted basic table">
-            <thead>
-              <tr><th class="single line">Mode</th>
-              <th>Public-IP</th>
-              <th>Concurrent Access</th>
-              <th>Flow Diagram</th>
-            </tr></thead>
-            <tbody>
-              <tr>
-                <td>
-                  <h4 class="ui center aligned inverted header">Transport</h4>
-                </td>
-                <td class="single line">
-                    Server: <i class="ui green check icon"></i><br>
-                    A: <i class="ui remove icon"></i><br>
-                    B: <i class="ui green check icon"></i> (or same LAN)<br>
-                </td>
-                <td>
-                    <i class="ui green check icon"></i>
-                </td>
-                <td>Port A (e.g. 25565) <i class="arrow right icon"></i> Server<br>
-                    Server <i class="arrow right icon"></i> Port B (e.g. 192.168.0.2:25565)<br>
-                    <small>Traffic from Port A will be forward to Port B's (IP if provided and) Port</small>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4 class="ui center aligned inverted header">Listen</h4>
-                </td>
-                <td class="single line">
-                    Server: <i class="ui green check icon"></i><br>
-                    A: <i class="ui remove icon"></i><br>
-                    B: <i class="ui remove icon"></i><br>
-                </td>
-                <td>
-                    <i class="ui red times icon"></i>
-                </td>
-                <td>Port A (e.g. 8080) <i class="arrow right icon"></i> Server<br>
-                    Port B (e.g. 8081) <i class="arrow right icon"></i> Server<br>
-                    <small>Server will act as a bridge to proxy traffic between Port A and B</small>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4 class="ui center aligned inverted header">Starter</h4>
-                </td>
-                <td class="single line">
-                    Server: <i class="ui times icon"></i><br>
-                    A: <i class="ui green check icon"></i><br>
-                    B: <i class="ui green check icon"></i><br>
-                </td>
-                <td>
-                    <i class="ui red times icon"></i>
-                </td>
-                <td>Server <i class="arrow right icon"></i> Port A (e.g. remote.local.:8080) <br>
-                    Server <i class="arrow right icon"></i> Port B (e.g. recv.local.:8081) <br>
-                    <small>Port A and B will be actively bridged</small>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-    </div>
+</div>
     <script>
         let editingTCPProxyConfigUUID = ""; //The current editing TCP Proxy config UUID
 

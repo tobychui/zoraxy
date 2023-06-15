@@ -148,6 +148,17 @@
             <p><i class="green check circle icon"></i> There are no message</p>
         </div>
         
+     
+        <div id="confirmBox" style="display:none;">
+            <div class="ui top attached progress">
+                <div class="bar" style="width: 100%; min-width: 0px;"></div>
+            </div>
+            <div class="confirmBoxBody">
+                <button class="ui red basic mini circular icon right floated button" style="margin-left: 0.4em;"><i class="ui times icon"></i></button>
+                <button class="ui green basic mini circular icon right floated button"><i class="ui check icon"></i></button>
+                <div class="questionToConfirm">Confirm Exit?</div>
+            </div>
+        </div>
         <br><br>
         <script>
             $(".year").text(new Date().getFullYear());
@@ -278,6 +289,64 @@
                 }
                 $("#messageBox").html(`${icon} ${message}`);
                 $("#messageBox").stop().finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
+            }
+
+            function confirmBox(question_to_confirm, callback, delaytime=15) {
+                
+                var progressBar = $("#confirmBox .bar");
+                var questionElement = $("#confirmBox .questionToConfirm");
+                
+                //Just to make sure there are no animation runnings
+                progressBar.stop();
+
+                // Update the question to confirm
+                questionElement.text(question_to_confirm);
+
+                // Start the progress bar animation
+                progressBar.css("width", "100%");
+                progressBar.animate({ width: "0%", easing: "linear" }, delaytime * 1000, function() {
+                    // Animation complete, invoke the callback with undefined
+                    callback(undefined);
+
+                    //Unset the event listener
+                    $("#confirmBox .ui.green.button").off("click");
+
+                    // Hide the confirm box
+                    $("#confirmBox").hide();
+                });
+
+                // Bind click event to "Yes" button
+                $("#confirmBox .ui.green.button").on("click", function() {
+                    // Stop the progress bar animation
+                    progressBar.stop();
+
+                    // Invoke the callback with true
+                    callback(true);
+
+                    // Hide the confirm box
+                    $("#confirmBox").hide();
+
+                    //Unset the event listener
+                    $("#confirmBox .ui.green.button").off("click");
+                });
+
+                // Bind click event to "No" button
+                $("#confirmBox .ui.red.button").on("click", function() {
+                    // Stop the progress bar animation
+                    progressBar.stop();
+
+                    // Invoke the callback with false
+                    callback(false);
+
+                    // Hide the confirm box
+                    $("#confirmBox").hide();
+
+                     //Unset the event listener
+                     $("#confirmBox .ui.red.button").off("click");
+                });
+
+                // Show the confirm box
+                $("#confirmBox").show().transition('jiggle');
             }
 
             /*

@@ -130,6 +130,33 @@ func handleToggleTLSProxy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Handle the GET and SET of reverse proxy TLS versions
+func handleSetTlsRequireLatest(w http.ResponseWriter, r *http.Request) {
+	newState, err := utils.PostPara(r, "set")
+	if err != nil {
+		//GET
+		var reqLatestTLS bool = false
+		if sysdb.KeyExists("settings", "forceLatestTLS") {
+			sysdb.Read("settings", "forceLatestTLS", &reqLatestTLS)
+		}
+
+		js, _ := json.Marshal(reqLatestTLS)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		if newState == "true" {
+			sysdb.Write("settings", "forceLatestTLS", true)
+			log.Println("Updating minimum TLS version to v1.2 or above")
+			dynamicProxyRouter.UpdateTLSVersion(true)
+		} else if newState == "false" {
+			sysdb.Write("settings", "forceLatestTLS", false)
+			log.Println("Updating minimum TLS version to v1.0 or above")
+			dynamicProxyRouter.UpdateTLSVersion(false)
+		} else {
+			utils.SendErrorResponse(w, "invalid state given")
+		}
+	}
+}
+
 // Handle upload of the certificate
 func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 	// check if request method is POST

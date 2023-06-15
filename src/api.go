@@ -6,6 +6,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/netstat"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -55,6 +56,7 @@ func initAPIs() {
 
 	//TLS / SSL config
 	authRouter.HandleFunc("/api/cert/tls", handleToggleTLSProxy)
+	authRouter.HandleFunc("/api/cert/tlsRequireLatest", handleSetTlsRequireLatest)
 	authRouter.HandleFunc("/api/cert/upload", handleCertUpload)
 	authRouter.HandleFunc("/api/cert/list", handleListCertificate)
 	authRouter.HandleFunc("/api/cert/checkDefault", handleDefaultCertCheck)
@@ -80,6 +82,11 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/whitelist/ip/add", handleIpWhitelistAdd)
 	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
 	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
+
+	//Path Blocker APIs
+	authRouter.HandleFunc("/api/pathrule/add", pathRuleHandler.HandleAddBlockingPath)
+	authRouter.HandleFunc("/api/pathrule/list", pathRuleHandler.HandleListBlockingPath)
+	authRouter.HandleFunc("/api/pathrule/remove", pathRuleHandler.HandleRemoveBlockingPath)
 
 	//Statistic & uptime monitoring API
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
@@ -126,6 +133,8 @@ func initAPIs() {
 
 	//Network utilities
 	authRouter.HandleFunc("/api/tools/ipscan", HandleIpScan)
+	authRouter.HandleFunc("/api/tools/traceroute", netutils.HandleTraceRoute)
+	authRouter.HandleFunc("/api/tools/ping", netutils.HandlePing)
 	authRouter.HandleFunc("/api/tools/webssh", HandleCreateProxySession)
 	authRouter.HandleFunc("/api/tools/websshSupported", HandleWebSshSupportCheck)
 	authRouter.HandleFunc("/api/tools/wol", HandleWakeOnLan)

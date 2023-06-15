@@ -21,6 +21,7 @@ import (
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
+	"imuslab.com/zoraxy/mod/pathrule"
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
@@ -38,7 +39,7 @@ var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local no
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var (
 	name        = "Zoraxy"
-	version     = "2.6.3"
+	version     = "2.6.4"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -57,6 +58,7 @@ var (
 	authAgent          *auth.AuthAgent         //Authentication agent
 	tlsCertManager     *tlscert.Manager        //TLS / SSL management
 	redirectTable      *redirection.RuleTable  //Handle special redirection rule sets
+	pathRuleHandler    *pathrule.Handler       //Handle specific path blocking or custom headers
 	geodbStore         *geodb.Store            //GeoIP database, also handle black list and whitelist features
 	netstatBuffers     *netstat.NetStatBuffers //Realtime graph buffers
 	statisticCollector *statistic.Collector    //Collecting statistic from visitors
@@ -148,6 +150,9 @@ func main() {
 	}()
 
 	time.Sleep(500 * time.Millisecond)
+
+	//Start the finalize sequences
+	finalSequence()
 
 	log.Println("Zoraxy started. Visit control panel at http://localhost" + handler.Port)
 	err = http.ListenAndServe(handler.Port, nil)

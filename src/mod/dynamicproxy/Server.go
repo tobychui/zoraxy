@@ -115,7 +115,6 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.proxyRequest(w, r, targetProxyEndpoint)
 	} else if !strings.HasSuffix(proxyingPath, "/") {
 		potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/")
-
 		if potentialProxtEndpoint != nil {
 			//Missing tailing slash. Redirect to target proxy endpoint
 			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
