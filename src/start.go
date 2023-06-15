@@ -102,7 +102,7 @@ func startupSequence() {
 	*/
 
 	pathRuleHandler = pathrule.NewPathBlocker(&pathrule.Options{
-		ConfigFolder: "./rules/pathblock",
+		ConfigFolder: "./rules/pathrules",
 	})
 
 	/*
