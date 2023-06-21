@@ -1,14 +1,12 @@
-# zoraxy-docker </br>
-
 [![Repo](https://img.shields.io/badge/Docker-Repo-007EC6?labelColor-555555&color-007EC6&logo=docker&logoColor=fff&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
 [![Version](https://img.shields.io/docker/v/passivelemon/zoraxy-docker/latest?labelColor-555555&color-007EC6&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
 [![Size](https://img.shields.io/docker/image-size/passivelemon/zoraxy-docker/latest?sort=semver&labelColor-555555&color-007EC6&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
 [![Pulls](https://img.shields.io/docker/pulls/passivelemon/zoraxy-docker?labelColor-555555&color-007EC6&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
 
-Docker container for [Zoraxy](https://github.com/tobychui/zoraxy) </br>
-
 ## Setup: </br>
-There really isn't much here, just make sure you find a good place to store the files on your host. The container will download everything automatically so this place is used to store the files so they aren't deleted when the container is deleted. </br>
+Although not required, it is recommended to give Zoraxy a dedicated location on the host to mount the container. That way, the host/user can access them whenever needed. A volume will be created automatically within Docker if a location is not specified. </br>
+
+You may also need to portforward your 80/443 to allow http and https traffic. If you are accessing the interface from outside of the local network, you may also need to forward your management port. If you know how to do this, great! If not, find the manufacturer of your router and search on how to do that. There are too many to be listed here. </br>
 
 ### Using Docker run </br>
 ```
@@ -25,26 +23,27 @@ services:
     ports:
       - 80:80                                        # Http port
       - 443:443                                      # Https port
-      - (wanted port):8000                           # Management portal port
+      - (external):8000                              # Management portal port
     volumes:
       - (path to storage directory):/zoraxy/data/    # Host directory for Zoraxy file storage
     environment:
-      ARGS: '-port=:8000'                            # Telling Zoraxy what port to listen on for the management portal. Changing this means building the image yourself with your own exposed port. Might change in the future.
+      ARGS: '(your arguments)'                       # The arguments to run with Zoraxy. Enter them as they would be entered normally.
 ```
 
 | Operator | Need | Details |
 |:-|:-|:-|
 | `-d` | Yes | will run the container in the background. |
 | `--name (container name)` | No | Sets the name of the container to the following word. You can change this to whatever you want. |
+| `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
 | `-v (path to storage directory):/zoraxy/data/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
-| `-e ARGS=(your arguments)` | No | Sets the arguments to run Zoraxy with. By default, it is ran with `-port=:8000 -noauth=false` |
+| `-e ARGS=(your arguments)` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-port=:8000 -noauth=false` |
 | `-e VERSION=(version)` | No | Sets the version of Zoraxy that the container will download. Must be a supported version found on the Zoraxy Github. Defaults to the latest if not set. |
 | `passivelemon/zoraxy-docker:latest` | Yes | The repository on Docker hub. By default, it is the latest version that I have published. |
 
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 8000:8000/tcp -v /home/docker/Containers/Zoraxy:/zoraxy/data/ -e ARGS="-port=:8000 -noauth=false" passivelemon/zoraxy-docker:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/zoraxy/data/ -e ARGS="-port=:8000 -noauth=false" passivelemon/zoraxy-docker:latest
 ```
 
 ### Docker Compose </br>
@@ -57,12 +56,14 @@ services:
     ports:
       - 80:80
       - 443:443
-      - 8000:8000
+      - 8005:8000/tcp
     volumes:
       - /home/docker/Containers/Zoraxy:/zoraxy/data/
     environment:
-      ARGS: '-port=:8000'
+      ARGS: '-port=:8000 -noauth=false'
 ```
 
 ### Other </br>
+Currently, the internal management port can't be changed without building the image yourself. You can just change the container from `8000:8000` to `new:8000` and access the interface over the new port. </br>
+
 If the container doesn't start properly, you might be rate limited from GitHub for some amount of time. You can check this by running `curl -s https://api.github.com/repos/tobychui/zoraxy/releases` on the host. If you are, you will just have to wait for a little while or use a VPN. </br>
