@@ -29,3 +29,6 @@ src/Zoraxy_*_*
 src/certs/*
 src/rules/*
 src/README.md
+
+docker/ContainerTester.sh
+docker/ImagePublisher.sh
