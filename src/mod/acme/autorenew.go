@@ -185,7 +185,21 @@ func (a *AutoRenewer) HandleLoadAutoRenewDomains(w http.ResponseWriter, r *http.
 }
 
 func (a *AutoRenewer) HandleRenewNow(w http.ResponseWriter, r *http.Request) {
+	renewedDomains, err := a.CheckAndRenewCertificates()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
 
+	message := "Domains renewed"
+	if len(renewedDomains) == 0 {
+		message = ("All certificates are up-to-date!")
+	} else {
+		message = ("The following domains have been renewed: " + strings.Join(renewedDomains, ","))
+	}
+
+	js, _ := json.Marshal(message)
+	utils.SendJSONResponse(w, string(js))
 }
 
 func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Request) {

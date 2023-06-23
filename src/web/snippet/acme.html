@@ -393,10 +393,12 @@
 
     //Handle the renew now btn click
     function renewNow(){
-      alert("wip");
-      return
       $.get("/api/acme/autoRenew/renewNow", function(data){
-        alert(data);
+        if (data.error != undefined){
+          parent.msgbox(data.error, false, 6000);
+        }else{
+          parent.msgbox(data)
+        }
       })
     }
 
