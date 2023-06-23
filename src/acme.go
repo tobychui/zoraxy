@@ -69,7 +69,8 @@ func acmeRegisterSpecialRoutingRule() {
 			}
 			w.Write(resBody)
 		},
-		Enabled: true,
+		Enabled:                true,
+		UseSystemAccessControl: false,
 	})
 
 	if err != nil {

@@ -13,10 +13,11 @@ import (
 */
 
 type RoutingRule struct {
-	ID             string
-	MatchRule      func(r *http.Request) bool
-	RoutingHandler func(http.ResponseWriter, *http.Request)
-	Enabled        bool
+	ID                     string //ID of the routing rule
+	Enabled                bool   //If the routing rule enabled
+	UseSystemAccessControl bool   //Pass access control check to system white/black list, set this to false to bypass white/black list
+	MatchRule              func(r *http.Request) bool
+	RoutingHandler         func(http.ResponseWriter, *http.Request)
 }
 
 // Router functions
