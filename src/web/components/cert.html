@@ -67,6 +67,7 @@
         </tbody>
         </table>
         <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
+        <button class="ui basic button" onclick="openACMEManager();"><i class="yellow refresh icon"></i> Auto Renew (ACME) Settings</button>
     </div>
     <div class="ui message">
         <h4><i class="info circle icon"></i> Sub-domain Certificates</h4>
@@ -106,11 +107,14 @@
                 msgbox(data.error, false, 5000);
             }else{
                 $("#certifiedDomainList").html("");
+                data.sort((a,b) => {
+                    return a.Domain > b.Domain
+                });
                 data.forEach(entry => {
                     $("#certifiedDomainList").append(`<tr>
                         <td>${entry.Domain}</td>
                         <td>${entry.LastModifiedDate}</td>
-                        <td>${entry.ExpireDate}</td>
+                        <td>${entry.ExpireDate} (${entry.RemainingDays} days left)</td>
                         <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
                     </tr>`);
                 });
@@ -124,6 +128,10 @@
         })
     }
     initManagedDomainCertificateList();
+
+    function openACMEManager(){
+        showSideWrapper('snippet/acme.html');
+    }
 
     function handleDomainUploadByKeypress(){
         handleDomainKeysUpload(function(){

@@ -59,6 +59,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/cert/tlsRequireLatest", handleSetTlsRequireLatest)
 	authRouter.HandleFunc("/api/cert/upload", handleCertUpload)
 	authRouter.HandleFunc("/api/cert/list", handleListCertificate)
+	authRouter.HandleFunc("/api/cert/listdomains", handleListDomains)
 	authRouter.HandleFunc("/api/cert/checkDefault", handleDefaultCertCheck)
 	authRouter.HandleFunc("/api/cert/delete", handleCertRemove)
 
@@ -135,6 +136,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/tools/ipscan", HandleIpScan)
 	authRouter.HandleFunc("/api/tools/traceroute", netutils.HandleTraceRoute)
 	authRouter.HandleFunc("/api/tools/ping", netutils.HandlePing)
+	authRouter.HandleFunc("/api/tools/whois", netutils.HandleWhois)
 	authRouter.HandleFunc("/api/tools/webssh", HandleCreateProxySession)
 	authRouter.HandleFunc("/api/tools/websshSupported", HandleWebSshSupportCheck)
 	authRouter.HandleFunc("/api/tools/wol", HandleWakeOnLan)
@@ -149,6 +151,15 @@ func initAPIs() {
 
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
+
+	//ACME & Auto Renewer
+	authRouter.HandleFunc("/api/acme/listExpiredDomains", acmeHandler.HandleGetExpiredDomains)
+	authRouter.HandleFunc("/api/acme/obtainCert", AcmeCheckAndHandleRenewCertificate)
+	authRouter.HandleFunc("/api/acme/autoRenew/enable", acmeAutoRenewer.HandleAutoRenewEnable)
+	authRouter.HandleFunc("/api/acme/autoRenew/email", acmeAutoRenewer.HandleACMEEmail)
+	authRouter.HandleFunc("/api/acme/autoRenew/setDomains", acmeAutoRenewer.HandleSetAutoRenewDomains)
+	authRouter.HandleFunc("/api/acme/autoRenew/listDomains", acmeAutoRenewer.HandleLoadAutoRenewDomains)
+	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)
 
 	//If you got APIs to add, append them here
 }

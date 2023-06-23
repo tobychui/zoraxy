@@ -364,6 +364,7 @@
                 $(".sideWrapper").show();
                 $(".sideWrapper .fadingBackground").fadeIn("fast");
                 $(".sideWrapper .content").transition('slide left in', 300);
+                $("body").css("overflow", "hidden");
             }
 
             function hideSideWrapper(discardFrameContent = false){
@@ -378,6 +379,7 @@
                         $(".sideWrapper").hide(); 
                     });
                 });
+                $("body").css("overflow", "auto");
             }
         </script>
     </body>

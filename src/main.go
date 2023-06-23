@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/aroz"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
@@ -37,11 +38,12 @@ var showver = flag.Bool("version", false, "Show version of this server")
 var allowSshLoopback = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
 var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
+var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 var (
 	name        = "Zoraxy"
-	version     = "2.6.4"
+	version     = "2.6.5"
 	nodeUUID    = "generic"
-	development = false //Set this to false to use embedded web fs
+	development = true //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
@@ -67,6 +69,8 @@ var (
 	ganManager         *ganserv.NetworkManager //Global Area Network Manager
 	webSshManager      *sshprox.Manager        //Web SSH connection service
 	tcpProxyManager    *tcpprox.Manager        //TCP Proxy Manager
+	acmeHandler        *acme.ACMEHandler       //Handler for ACME Certificate renew
+	acmeAutoRenewer    *acme.AutoRenewer       //Handler for ACME auto renew ticking
 
 	//Helper modules
 	EmailSender    *email.Sender        //Email sender that handle email sending

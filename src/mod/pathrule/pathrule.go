@@ -12,15 +12,14 @@ import (
 )
 
 /*
-	Pathblock.go
+	Pathrules.go
 
-	This script block off some of the specific pathname in access
-	For example, this module can help you block request for a particular
-	apache directory or functional endpoints like /.well-known/ when you
-	are not using it
+	This script handle advance path settings and rules on particular
+	paths of the incoming requests
 */
 
 type Options struct {
+	Enabled      bool   //If the pathrule is enabled.
 	ConfigFolder string //The folder to store the path blocking config files
 }
 
@@ -41,7 +40,7 @@ type Handler struct {
 }
 
 // Create a new path blocker handler
-func NewPathBlocker(options *Options) *Handler {
+func NewPathRuleHandler(options *Options) *Handler {
 	//Create folder if not exists
 	if !utils.FileExists(options.ConfigFolder) {
 		os.Mkdir(options.ConfigFolder, 0775)

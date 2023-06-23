@@ -179,7 +179,7 @@ body{
 }
 
 .sideWrapper iframe{
-    height: 100%;
+    height: calc(100% - 55px);
     width: 100%;
     border: 0px solid transparent;
 }
