@@ -184,6 +184,12 @@ func (a *AutoRenewer) HandleLoadAutoRenewDomains(w http.ResponseWriter, r *http.
 	utils.SendJSONResponse(w, string(js))
 }
 
+func (a *AutoRenewer) HandleRenewPolicy(w http.ResponseWriter, r *http.Request) {
+	//Load the current value
+	js, _ := json.Marshal(a.RenewerConfig.RenewAll)
+	utils.SendJSONResponse(w, string(js))
+}
+
 func (a *AutoRenewer) HandleRenewNow(w http.ResponseWriter, r *http.Request) {
 	renewedDomains, err := a.CheckAndRenewCertificates()
 	if err != nil {

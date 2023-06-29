@@ -57,15 +57,18 @@ func acmeRegisterSpecialRoutingRule() {
 			req.Host = r.Host
 			if err != nil {
 				fmt.Printf("client: could not create request: %s\n", err)
+				return
 			}
 			res, err := http.DefaultClient.Do(req)
 			if err != nil {
 				fmt.Printf("client: error making http request: %s\n", err)
+				return
 			}
 
 			resBody, err := ioutil.ReadAll(res.Body)
 			if err != nil {
 				fmt.Printf("error reading: %s\n", err)
+				return
 			}
 			w.Write(resBody)
 		},

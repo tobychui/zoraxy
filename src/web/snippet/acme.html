@@ -56,7 +56,7 @@
           <div class="content">
               <p>Renew all certificates with ACME supported CAs</p>
               <div class="ui toggle checkbox">
-                <input type="checkbox" id="renewAllSupported" onchange="setAutoRenewIfCASupportMode(this.checked);" checked>
+                <input type="checkbox" id="renewAllSupported" onchange="setAutoRenewIfCASupportMode(this.checked);">
                 <label>Renew All Certs</label>
               </div><br>
               <button id="renewNowBtn" onclick="renewNow();" class="ui basic right floated button" style="margin-top: -2em;"><i class="yellow refresh icon"></i> Renew Now</button>
@@ -139,6 +139,7 @@
     }
 
     function initRenewerConfigFromFile(){
+      //Set the renew switch state
       $.get("/api/acme/autoRenew/enable", function(data){
         if (data == true){
           $("#enableCertAutoRenew").parent().checkbox("set checked");
@@ -152,9 +153,19 @@
         })
       });
 
+      //Load the email from server side
       $.get("/api/acme/autoRenew/email", function(data){
         if (data != "" && data != undefined && data != null){
           $("#caRegisterEmail").val(data);
+        }
+      });
+
+      //Load the domain selection options
+      $.get("/api/acme/autoRenew/renewPolicy", function(data){
+        if (data == true){
+          $("#renewAllSupported").parent().checkbox("set checked");
+        }else{
+          $("#renewAllSupported").parent().checkbox("set unchecked");
         }
       });
     }
@@ -237,6 +248,13 @@
         tableBody.append(row);
 
         counter++;
+      }
+
+      if (Object.keys(domainFileList).length == 0){
+        //No certificate in this system
+        tableBody.append(`<tr>
+          <td colspan="3"><i class="ui green circle check icon"></i> No certificate in use</td>
+        </tr>`);
       }
     }
 

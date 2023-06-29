@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -159,7 +160,9 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/acme/autoRenew/email", acmeAutoRenewer.HandleACMEEmail)
 	authRouter.HandleFunc("/api/acme/autoRenew/setDomains", acmeAutoRenewer.HandleSetAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/listDomains", acmeAutoRenewer.HandleLoadAutoRenewDomains)
+	authRouter.HandleFunc("/api/acme/autoRenew/renewPolicy", acmeAutoRenewer.HandleRenewPolicy)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)
+	authRouter.HandleFunc("/api/acme/wizard", acmewizard.HandleGuidedStepCheck) //ACME Wizard
 
 	//If you got APIs to add, append them here
 }
