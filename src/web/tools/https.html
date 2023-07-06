@@ -21,6 +21,11 @@
         <div class="ui container">
             <div class="ui yellow message">
                 This Wizard require both client and server connected to the internet.
+                <br><b>
+                As different deployment methods might involve different network environment, 
+                this wizard is only provided for assistant and the correctness of the setup is not guaranteed.
+                 If you need to verify your TLS/SSL certificate installation is valid, please seek help 
+                 from IT professionals.</b>
             </div>
             <div class="ui segment">
                 <h3 class="ui header">
@@ -114,7 +119,8 @@
                 </div>
             </div>
         <script>
-
+          $(".dropdown").dropdown();
+          
             function checkIfInputDomainIsMultiple(){
                 var inputDomains = $("#domainsInput").val();
                 if (inputDomains.includes(",")){

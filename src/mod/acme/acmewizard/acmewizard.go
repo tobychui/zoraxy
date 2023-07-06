@@ -98,6 +98,10 @@ func isLocalhostListening() (isListening bool, err error) {
 		conn.Close()
 	}
 
+	if isListening {
+		return true, nil
+	}
+
 	return isListening, err
 }
 
