@@ -23,35 +23,32 @@ import (
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
-		General Access Check
+		Special Routing Rules, bypass most of the limitations
 	*/
 
-	//Check if this ip is in blacklist
-	clientIpAddr := geodb.GetRequesterIP(r)
-	if h.Parent.Option.GeodbStore.IsBlacklisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile("./web/forbidden.html")
-		if err != nil {
-			w.Write([]byte("403 - Forbidden"))
-		} else {
-			w.Write(template)
+	//Check if there are external routing rule matches.
+	//If yes, route them via external rr
+	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)
+	if matchedRoutingRule != nil {
+		//Matching routing rule found. Let the sub-router handle it
+		if matchedRoutingRule.UseSystemAccessControl {
+			//This matching rule request system access control.
+			//check access logic
+			respWritten := h.handleAccessRouting(w, r)
+			if respWritten {
+				return
+			}
 		}
-		h.logRequest(r, false, 403, "blacklist", "")
+		matchedRoutingRule.Route(w, r)
 		return
 	}
 
-	//Check if this ip is in whitelist
-	if !h.Parent.Option.GeodbStore.IsWhitelisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile("./web/forbidden.html")
-		if err != nil {
-			w.Write([]byte("403 - Forbidden"))
-		} else {
-			w.Write(template)
-		}
-		h.logRequest(r, false, 403, "whitelist", "")
+	/*
+		General Access Check
+	*/
+
+	respWritten := h.handleAccessRouting(w, r)
+	if respWritten {
 		return
 	}
 
@@ -62,15 +59,6 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.Parent.Option.RedirectRuleTable.IsRedirectable(r) {
 		statusCode := h.Parent.Option.RedirectRuleTable.HandleRedirect(w, r)
 		h.logRequest(r, statusCode != 500, statusCode, "redirect", "")
-		return
-	}
-
-	//Check if there are external routing rule matches.
-	//If yes, route them via external rr
-	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)
-	if matchedRoutingRule != nil {
-		//Matching routing rule found. Let the sub-router handle it
-		matchedRoutingRule.Route(w, r)
 		return
 	}
 
@@ -126,4 +114,39 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		//No routing rules found. Route to root.
 		h.proxyRequest(w, r, h.Parent.Root)
 	}
+}
+
+// Handle access routing logic. Return true if the request is handled or blocked by the access control logic
+// if the return value is false, you can continue process the response writer
+func (h *ProxyHandler) handleAccessRouting(w http.ResponseWriter, r *http.Request) bool {
+	//Check if this ip is in blacklist
+	clientIpAddr := geodb.GetRequesterIP(r)
+	if h.Parent.Option.GeodbStore.IsBlacklisted(clientIpAddr) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		template, err := os.ReadFile("./web/forbidden.html")
+		if err != nil {
+			w.Write([]byte("403 - Forbidden"))
+		} else {
+			w.Write(template)
+		}
+		h.logRequest(r, false, 403, "blacklist", "")
+		return true
+	}
+
+	//Check if this ip is in whitelist
+	if !h.Parent.Option.GeodbStore.IsWhitelisted(clientIpAddr) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		template, err := os.ReadFile("./web/forbidden.html")
+		if err != nil {
+			w.Write([]byte("403 - Forbidden"))
+		} else {
+			w.Write(template)
+		}
+		h.logRequest(r, false, 403, "whitelist", "")
+		return true
+	}
+
+	return false
 }

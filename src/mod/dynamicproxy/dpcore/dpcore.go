@@ -357,11 +357,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 
 	//Custom header rewriter functions
 	if res.Header.Get("Location") != "" {
-		/*
-			fmt.Println(">>> REQ", req)
-			fmt.Println(">>> OUTR", outreq)
-			fmt.Println(">>> RESP", res)
-		*/
 		locationRewrite := res.Header.Get("Location")
 		originLocation := res.Header.Get("Location")
 		res.Header.Set("zr-origin-location", originLocation)
@@ -369,12 +364,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		if strings.HasPrefix(originLocation, "http://") || strings.HasPrefix(originLocation, "https://") {
 			//Full path
 			//Replace the forwarded target with expected Host
-			lr, err := replaceLocationHost(locationRewrite, rrr.OriginalHost, req.TLS != nil)
+			lr, err := replaceLocationHost(locationRewrite, rrr, req.TLS != nil)
 			if err == nil {
 				locationRewrite = lr
 			}
-			//locationRewrite = strings.ReplaceAll(locationRewrite, rrr.ProxyDomain, rrr.OriginalHost)
-			//locationRewrite = strings.ReplaceAll(locationRewrite, domainWithoutPort, rrr.OriginalHost)
 		} else if strings.HasPrefix(originLocation, "/") && rrr.PathPrefix != "" {
 			//Back to the root of this proxy object
 			//fmt.Println(rrr.ProxyDomain, rrr.OriginalHost)
@@ -387,6 +380,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		//Custom redirection to this rproxy relative path
 		res.Header.Set("Location", locationRewrite)
 	}
+
 	// Copy header from response to client.
 	copyHeader(rw.Header(), res.Header)
 

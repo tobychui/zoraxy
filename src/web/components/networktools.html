@@ -45,8 +45,17 @@
             </div>
             
         </div>
-        <div class=""></div>
-
+        <div class="ui divider"></div>
+        <!-- Whois-->
+        <h2>Whois</h2>
+        <p>Check the owner and registration information of a given domain</p>
+        <div class="ui icon input">
+            <input id="whoisdomain" type="text" onkeypress="if(event.keyCode === 13) { performWhoisLookup(); }" placeholder="Domain or IP">
+            <i onclick="performWhoisLookup();" class="circular search link icon"></i>
+        </div><br>
+        <small>Lookup might take a few minutes to complete</small>
+        <br>
+        <div id="whois_table"></div>
     </div>
 
     <div class="ui bottom attached tab segment nettoolstab" data-tab="tab2">
@@ -485,10 +494,70 @@ function ping(){
             $("#traceroute_results").val("");
             msgbox(data.error, false, 6000);
         }else{
-            $("#traceroute_results").val(data.join("\n"));
+            $("#traceroute_results").val(`--------- ICMP Ping -------------
+${data.ICMP.join("\n")}\n
+---------- TCP Ping -------------
+${data.TCP.join("\n")}\n
+---------- UDP Ping -------------
+${data.UDP.join("\n")}`);
         }
     });
 }
+
+function performWhoisLookup(){
+    let whoisDomain = $("#whoisdomain").val().trim();
+    $("#whoisdomain").parent().addClass("disabled");
+    $("#whoisdomain").parent().css({
+        "cursor": "wait"
+    });
+    $.get("/api/tools/whois?target=" + whoisDomain, function(data){
+        $("#whoisdomain").parent().removeClass("disabled");
+        $("#whoisdomain").parent().css({
+            "cursor": "auto"
+        });
+        if (data.error != undefined){
+            msgbox(data.error, false, 6000);
+        }else{
+            renderWhoisDomainTable(data);
+        }
+    })
+}
+
+function renderWhoisDomainTable(jsonData) {
+
+    function formatDate(dateString) {
+        var date = new Date(dateString);
+        return date.toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    var table = $('<table>').addClass('ui definition table');
+
+    // Create table body
+    var body = $('<tbody>');
+    for (var key in jsonData) {
+    var value = jsonData[key];
+    var row = $('<tr>');
+    row.append($('<td>').text(key));
+    if (key.endsWith('Date')) {
+        row.append($('<td>').text(formatDate(value)));
+    } else if (Array.isArray(value)) {
+        row.append($('<td>').text(value.join(', ')));
+    }else if (typeof(value) == "object"){
+        row.append($('<td>').text(JSON.stringify(value)));
+    } else {
+        row.append($('<td>').text(value));
+    }
+    body.append(row);
+    }
+
+    // Append the table body to the table
+    table.append(body);
+
+    // Append the table to the target element
+    $('#whois_table').empty().append(table);
+}
+
+
 </script>
 
 

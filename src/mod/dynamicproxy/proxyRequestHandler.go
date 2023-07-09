@@ -95,6 +95,7 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 		UseTLS:       target.RequireTLS,
 		PathPrefix:   "",
 	})
+
 	var dnsError *net.DNSError
 	if err != nil {
 		if errors.As(err, &dnsError) {

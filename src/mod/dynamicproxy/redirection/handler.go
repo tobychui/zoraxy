@@ -28,10 +28,7 @@ func (t *RuleTable) HandleRedirect(w http.ResponseWriter, r *http.Request) int {
 	rr := t.MatchRedirectRule(requestPath)
 	if rr != nil {
 		redirectTarget := rr.TargetURL
-		//Always pad a / at the back of the target URL
-		if redirectTarget[len(redirectTarget)-1:] != "/" {
-			redirectTarget += "/"
-		}
+
 		if rr.ForwardChildpath {
 			//Remove the first / in the path
 			redirectTarget += strings.TrimPrefix(r.URL.Path, "/")
