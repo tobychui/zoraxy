@@ -43,10 +43,17 @@
                         tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
                     }
 
+                    let tlsVerificationField = "";
+                    if (subd.RequireTLS){
+                        tlsVerificationField = !subd.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`
+                    }else{
+                        tlsVerificationField = "N/A"
+                    }
+
                     $("#subdList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td data-label="" editable="false"><a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a></td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
-                        <td data-label="" editable="true" datatype="skipver">${!subd.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`}</td>
+                        <td data-label="" editable="true" datatype="skipver">${tlsVerificationField}</td>
                         <td data-label="" editable="true" datatype="basicauth">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
                         <td class="center aligned" editable="true" datatype="action" data-label="">
                             <button class="ui circular mini basic icon button editBtn" onclick='editEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="edit icon"></i></button>

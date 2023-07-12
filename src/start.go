@@ -49,8 +49,9 @@ func startupSequence() {
 	//Create tables for the database
 	sysdb.NewTable("settings")
 
-	//Create tmp folder
+	//Create tmp folder and conf folder
 	os.MkdirAll("./tmp", 0775)
+	os.MkdirAll("./conf/proxy/", 0775)
 
 	//Create an auth agent
 	sessionKey, err := auth.GetSessionKey(sysdb)
@@ -63,13 +64,13 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager("./certs", development)
+	tlsCertManager, err = tlscert.NewManager("./conf/certs", development)
 	if err != nil {
 		panic(err)
 	}
 
 	//Create a redirection rule table
-	redirectTable, err = redirection.NewRuleTable("./rules/redirect")
+	redirectTable, err = redirection.NewRuleTable("./conf/redirect")
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +105,7 @@ func startupSequence() {
 
 	pathRuleHandler = pathrule.NewPathRuleHandler(&pathrule.Options{
 		Enabled:      false,
-		ConfigFolder: "./rules/pathrules",
+		ConfigFolder: "./conf/rules/pathrules",
 	})
 
 	/*
@@ -197,7 +198,7 @@ func startupSequence() {
 		Obtaining certificates from ACME Server
 	*/
 	acmeHandler = initACME()
-	acmeAutoRenewer, err = acme.NewAutoRenewer("./rules/acme_conf.json", "./certs/", int64(*acmeAutoRenewInterval), acmeHandler)
+	acmeAutoRenewer, err = acme.NewAutoRenewer("./conf/acme_conf.json", "./conf/certs/", int64(*acmeAutoRenewInterval), acmeHandler)
 	if err != nil {
 		log.Fatal(err)
 	}

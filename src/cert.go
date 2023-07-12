@@ -111,7 +111,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 
 // List all certificates and map all their domains to the cert filename
 func handleListDomains(w http.ResponseWriter, r *http.Request) {
-	filenames, err := os.ReadDir("./certs/")
+	filenames, err := os.ReadDir("./conf/certs/")
 
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
@@ -123,7 +123,7 @@ func handleListDomains(w http.ResponseWriter, r *http.Request) {
 		if filename.IsDir() {
 			continue
 		}
-		certFilepath := filepath.Join("./certs/", filename.Name())
+		certFilepath := filepath.Join("./conf/certs/", filename.Name())
 
 		certBtyes, err := os.ReadFile(certFilepath)
 		if err != nil {
@@ -273,8 +273,8 @@ func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// create file in upload directory
-	os.MkdirAll("./certs", 0775)
-	f, err := os.Create(filepath.Join("./certs", overWriteFilename))
+	os.MkdirAll("./conf/certs", 0775)
+	f, err := os.Create(filepath.Join("./conf/certs", overWriteFilename))
 	if err != nil {
 		http.Error(w, "Failed to create file", http.StatusInternalServerError)
 		return

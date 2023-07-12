@@ -134,12 +134,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = ioutil.WriteFile("./certs/"+certificateName+".crt", certificates.Certificate, 0777)
+	err = ioutil.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
 	}
-	err = ioutil.WriteFile("./certs/"+certificateName+".key", certificates.PrivateKey, 0777)
+	err = ioutil.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -154,7 +154,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 // it will said expired as well!
 func (a *ACMEHandler) CheckCertificate() []string {
 	// read from dir
-	filenames, err := os.ReadDir("./certs/")
+	filenames, err := os.ReadDir("./conf/certs/")
 
 	expiredCerts := []string{}
 
@@ -164,7 +164,7 @@ func (a *ACMEHandler) CheckCertificate() []string {
 	}
 
 	for _, filename := range filenames {
-		certFilepath := filepath.Join("./certs/", filename.Name())
+		certFilepath := filepath.Join("./conf/certs/", filename.Name())
 
 		certBytes, err := os.ReadFile(certFilepath)
 		if err != nil {

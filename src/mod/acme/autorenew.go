@@ -341,6 +341,12 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 	return a.renewExpiredDomains(expiredCertList)
 }
 
+func (a *AutoRenewer) Close() {
+	if a.TickerstopChan != nil {
+		a.TickerstopChan <- true
+	}
+}
+
 // Renew the certificate by filename extract all DNS name from the
 // certificate and renew them one by one by calling to the acmeHandler
 func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, error) {

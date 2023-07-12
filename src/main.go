@@ -83,27 +83,32 @@ func SetupCloseHandler() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("- Shutting down " + name)
-		fmt.Println("- Closing GeoDB ")
-		geodbStore.Close()
-		fmt.Println("- Closing Netstats Listener")
-		netstatBuffers.Close()
-		fmt.Println("- Closing Statistic Collector")
-		statisticCollector.Close()
-		fmt.Println("- Stopping mDNS Discoverer")
-		//Stop the mdns service
-		mdnsTickerStop <- true
-		mdnsScanner.Close()
-
-		//Remove the tmp folder
-		fmt.Println("- Cleaning up tmp files")
-		os.RemoveAll("./tmp")
-
-		//Close database, final
-		fmt.Println("- Stopping system database")
-		sysdb.Close()
+		ShutdownSeq()
 		os.Exit(0)
 	}()
+}
+
+func ShutdownSeq() {
+	fmt.Println("- Shutting down " + name)
+	fmt.Println("- Closing GeoDB ")
+	geodbStore.Close()
+	fmt.Println("- Closing Netstats Listener")
+	netstatBuffers.Close()
+	fmt.Println("- Closing Statistic Collector")
+	statisticCollector.Close()
+	fmt.Println("- Stopping mDNS Discoverer")
+	//Stop the mdns service
+	mdnsTickerStop <- true
+	mdnsScanner.Close()
+	fmt.Println("- Closing Certificates Auto Renewer")
+	acmeAutoRenewer.Close()
+	//Remove the tmp folder
+	fmt.Println("- Cleaning up tmp files")
+	os.RemoveAll("./tmp")
+
+	//Close database, final
+	fmt.Println("- Stopping system database")
+	sysdb.Close()
 }
 
 func main() {
