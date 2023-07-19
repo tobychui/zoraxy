@@ -48,7 +48,7 @@ func acmeRegisterSpecialRoutingRule() {
 	err := dynamicProxyRouter.AddRoutingRules(&dynamicproxy.RoutingRule{
 		ID: "acme-autorenew",
 		MatchRule: func(r *http.Request) bool {
-			found, _ := regexp.MatchString("/.well-known/*", r.RequestURI)
+			found, _ := regexp.MatchString("/.well-known/acme-challenge/*", r.RequestURI)
 			return found
 		},
 		RoutingHandler: func(w http.ResponseWriter, r *http.Request) {

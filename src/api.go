@@ -150,9 +150,6 @@ func initAPIs() {
 	http.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)
 	http.HandleFunc("/api/account/new", HandleNewPasswordSetup)
 
-	//Others
-	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
-
 	//ACME & Auto Renewer
 	authRouter.HandleFunc("/api/acme/listExpiredDomains", acmeHandler.HandleGetExpiredDomains)
 	authRouter.HandleFunc("/api/acme/obtainCert", AcmeCheckAndHandleRenewCertificate)
@@ -163,6 +160,11 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/acme/autoRenew/renewPolicy", acmeAutoRenewer.HandleRenewPolicy)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)
 	authRouter.HandleFunc("/api/acme/wizard", acmewizard.HandleGuidedStepCheck) //ACME Wizard
+
+	//Others
+	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
+	http.HandleFunc("/api/conf/export", ExportConfigAsZip)
+	http.HandleFunc("/api/conf/import", ImportConfigFromZip)
 
 	//If you got APIs to add, append them here
 }

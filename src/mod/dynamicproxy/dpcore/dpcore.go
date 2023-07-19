@@ -91,11 +91,12 @@ func NewDynamicProxyCore(target *url.URL, prepender string, ignoreTLSVerificatio
 
 	//Hack the default transporter to handle more connections
 	thisTransporter := http.DefaultTransport
-	thisTransporter.(*http.Transport).MaxIdleConns = 3000
-	thisTransporter.(*http.Transport).MaxIdleConnsPerHost = 3000
-	thisTransporter.(*http.Transport).IdleConnTimeout = 10 * time.Second
-	thisTransporter.(*http.Transport).MaxConnsPerHost = 0
-	//thisTransporter.(*http.Transport).DisableCompression = true
+	optimalConcurrentConnection := 32
+	thisTransporter.(*http.Transport).MaxIdleConns = optimalConcurrentConnection * 2
+	thisTransporter.(*http.Transport).MaxIdleConnsPerHost = optimalConcurrentConnection
+	thisTransporter.(*http.Transport).IdleConnTimeout = 30 * time.Second
+	thisTransporter.(*http.Transport).MaxConnsPerHost = optimalConcurrentConnection * 2
+	thisTransporter.(*http.Transport).DisableCompression = true
 
 	if ignoreTLSVerification {
 		//Ignore TLS certificate validation error

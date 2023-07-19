@@ -19,8 +19,8 @@ import (
 // Use admin permission to read auth token on Windows
 func readAuthTokenAsAdmin() (string, error) {
 	//Check if the previous startup already extracted the authkey
-	if utils.FileExists("./authtoken.secret") {
-		authKey, err := os.ReadFile("./authtoken.secret")
+	if utils.FileExists("./conf/authtoken.secret") {
+		authKey, err := os.ReadFile("./conf/authtoken.secret")
 		if err == nil {
 			return strings.TrimSpace(string(authKey)), nil
 		}
@@ -30,7 +30,7 @@ func readAuthTokenAsAdmin() (string, error) {
 	exe := "cmd.exe"
 	cwd, _ := os.Getwd()
 
-	output, _ := filepath.Abs(filepath.Join("./", "authtoken.secret"))
+	output, _ := filepath.Abs(filepath.Join("./conf/", "authtoken.secret"))
 	os.WriteFile(output, []byte(""), 0775)
 	args := fmt.Sprintf("/C type \"C:\\ProgramData\\ZeroTier\\One\\authtoken.secret\" > \"" + output + "\"")
 
@@ -49,13 +49,13 @@ func readAuthTokenAsAdmin() (string, error) {
 	log.Println("Please click agree to allow access to ZeroTier authtoken from ProgramData")
 	retry := 0
 	time.Sleep(3 * time.Second)
-	for !utils.FileExists("./authtoken.secret") && retry < 10 {
+	for !utils.FileExists("./conf/authtoken.secret") && retry < 10 {
 		time.Sleep(3 * time.Second)
 		log.Println("Waiting for ZeroTier authtoken extraction...")
 		retry++
 	}
 
-	authKey, err := os.ReadFile("./authtoken.secret")
+	authKey, err := os.ReadFile("./conf/authtoken.secret")
 	if err != nil {
 		return "", err
 	}

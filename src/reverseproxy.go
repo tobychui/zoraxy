@@ -73,7 +73,7 @@ func ReverseProxtInit() {
 	dynamicProxyRouter = dprouter
 
 	//Load all conf from files
-	confs, _ := filepath.Glob("./conf/*.config")
+	confs, _ := filepath.Glob("./conf/proxy/*.config")
 	for _, conf := range confs {
 		record, err := LoadReverseProxyConfig(conf)
 		if err != nil {
