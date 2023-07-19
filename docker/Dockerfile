@@ -1,19 +1,23 @@
 FROM alpine:latest
 
 RUN apk update && apk upgrade &&\
-    apk add bash curl jq sudo &&\
-    mkdir -p /zoraxy/data/
+    apk add bash curl jq git go sudo
 
-VOLUME [ "/zoraxy/data/" ]
+RUN mkdir -p /zoraxy/source/ &&\
+    mkdir -p /zoraxy/config/
+
+VOLUME [ "/zoraxy/config/" ]
 
 COPY entrypoint.sh /zoraxy/
+COPY notifier.sh /zoraxy/
 
-RUN chmod +x /zoraxy/entrypoint.sh
+RUN chmod 755 /zoraxy/ &&\
+    chmod +x /zoraxy/entrypoint.sh
 
+ENV DOCKER="2.0.0"
+ENV NOTIFS="1"
+
+ENV VERSION="latest"
 ENV ARGS="-port=:8000 -noauth=false"
-
-EXPOSE 80
-EXPOSE 443
-EXPOSE 8000
 
 ENTRYPOINT ["/zoraxy/entrypoint.sh"]
