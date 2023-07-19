@@ -1,3 +1,11 @@
+v2.6.5 Jul 19 2023
+
++Added Import / Export-Feature 
++Moved configurationfiles to a separate folder [#26](https://github.com/tobychui/zoraxy/issues/26)
++Added auto-renew with ACME [#6](https://github.com/tobychui/zoraxy/issues/6)
++Fixed Whitelistbug [#18](https://github.com/tobychui/zoraxy/issues/18)
++Added Whois
+
 # v2.6.4 Jun 15 2023
 
 + Added force TLS v1.2 above toggle
