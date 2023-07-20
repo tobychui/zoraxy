@@ -13,8 +13,8 @@ import (
 )
 
 func readAuthTokenAsAdmin() (string, error) {
-	if utils.FileExists("./authtoken.secret") {
-		authKey, err := os.ReadFile("./authtoken.secret")
+	if utils.FileExists("./conf/authtoken.secret") {
+		authKey, err := os.ReadFile("./conf/authtoken.secret")
 		if err == nil {
 			return strings.TrimSpace(string(authKey)), nil
 		}

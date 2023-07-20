@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#4b75ff">
+        <link rel="icon" type="image/png" href="./favicon.png" />
+        <title>HTTPS Setup Wizard | Zoraxy</title>
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../../script/ao_module.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/tablesort.js"></script>
+        <link rel="stylesheet" href="shepherd.js/dist/css/shepherd.css"/>
+        <script src="shepherd.js/dist/js/shepherd.min.js"></script>
+        <link rel="stylesheet" href="../main.css">
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <div class="ui yellow message">
+                This Wizard require both client and server connected to the internet.
+                <br><b>
+                As different deployment methods might involve different network environment, 
+                this wizard is only provided for assistant and the correctness of the setup is not guaranteed.
+                 If you need to verify your TLS/SSL certificate installation is valid, please seek help 
+                 from IT professionals.</b>
+            </div>
+            <div class="ui segment">
+                <h3 class="ui header">
+                    HTTPS (TLS/SSL Certificate) Setup Wizard
+                    <div class="sub header">This tool help you setup https with your domain / subdomain on your Zoraxy host. <br>
+                    Follow the steps below to get started</div>
+                </h3>
+            </div>
+            <div class="ui segment stepContainer" step="1">
+                <h4 class="ui header">
+                    1. Setup Zoraxy to listen to port 80 or 443 and start listening
+                    <div class="sub header">ACME can only works on port 80 (or 80 redirected 443). Please make sure Zoarxy is listening to either one of the ports.</div>
+                </h4>
+                <button class="ui basic green button" onclick="checkStep(1, step1Callback, this);">Check Port Setup</button>
+                <div class="checkResult" style="margin-top: 1em;">
+
+                </div>
+            </div>
+            <div class="ui segment stepContainer" step="2">
+                <h4 class="ui header">
+                    2. If you are under NAT, setup Port Forward and forward external port 80 (<b style="color: rgb(206, 29, 29); font-weight:bolder;">and</b> 443, if you are using 443) to your Zoraxy's LAN IP address port 80 (and 443)
+                    <div class="sub header">If your Zoraxy server IP address starts with 192.168., you are mostly under a NAT router.</div>
+                </h4>
+                <small>The check function below will use public ip to check if port is opened. Make sure your host is reachable from the internet!<br>
+                    <b style="color: rgb(206, 29, 29); font-weight:bolder;">If you are using 443, you still need to forward port 80 for performing 80 to 443 redirect.</b></small><br>
+                <button style="margin-top: 0.6em;" class="ui basic green button" onclick="checkStep(2, step2Callback, this);">Check Internet Reachable</button>
+                <div class="checkResult" style="margin-top: 1em;">
+
+                </div>
+            </div>
+
+            <div class="ui segment stepContainer" step="3">
+                <h4 class="ui header">
+                    3. Point your domain (or sub-domain) to your Zoraxy server public IP address
+                    <div class="sub header">DNS records might takes 5 - 10 minutes to take effect. If checking did not poss the first time, wait for a few minutes and retry.</div>
+                </h4>
+                <div class="ui fluid input">
+                    <input type="text" name="domain" placeholder="Your Domain / DNS name (e.g. dev.example.com)">
+                </div>
+                <br>
+                <button class="ui basic green button" onclick="checkStep(3, step3Callback, this);">Check Domain Reachable</button>
+                <div class="checkResult" style="margin-top: 1em;">
+
+                </div>
+            </div>
+
+            <div class="ui segment stepContainer" step="4">
+                <h4 class="ui header">
+                    4. Request a public CA to assign you a certificate
+                    <div class="sub header">This process might take a few minutes and usually fully automated. If there are any error, you can see Zoraxy STDOUT / log for more information.</div>
+                </h4>
+                <div class="ui form">
+                    <div class="field">
+                        <label>Renewer Email</label>
+                        <div class="ui fluid input">
+                            <input id="caRegisterEmail" type="text" placeholder="webmaster@example.com">
+                        </div>
+                        <small>Your CA might send expire notification to you via this email.</small>
+                    </div>
+                    <div class="field">
+                      <label>Domain(s)</label>
+                      <input id="domainsInput" type="text" placeholder="example.com" onkeyup="checkIfInputDomainIsMultiple();">
+                      <small>If you have more than one domain in a single certificate, enter the domains separated by commas (e.g. s1.dev.example.com,s2.dev.example.com)</small>
+                    </div>
+                    <div class="field multiDomainOnly" style="display:none;">
+                      <label>Matching Rule</label>
+                      <input id="filenameInput" type="text" placeholder="Enter filename (no file extension)">
+                      <small>Matching rule to let Zoraxy pick which certificate to use (Also be used as filename). Usually is the longest common suffix of the entered addresses. (e.g. dev.example.com)</small>
+                    </div>
+                    <div class="field multiDomainOnly" style="display:none;">
+                      <button class="ui basic fluid button" onclick="autoDetectMatchingRules();">Auto Detect Matching Rule</button>
+                    </div>
+                    <div class="field">
+                      <label>Certificate Authority (CA)</label>
+                      <div class="ui selection dropdown" id="ca">
+                        <input type="hidden" name="ca">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Let's Encrypt</div>
+                        <div class="menu">
+                          <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
+                          <div class="item" data-value="Buypass">Buypass</div>
+                          <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+                          <!-- <div class="item" data-value="Google">Google</div> -->
+                        </div>
+                      </div>
+                    </div>
+                    <button id="obtainButton" class="ui green basic button" type="submit"><i class="green download icon"></i> Get Certificate</button>
+                </div>
+                <div class="ui green message" id="installSucc" style="display:none;">
+                    <i class="ui check icon"></i> Certificate for this domain has been installed. Visit the TLS/SSL tab for advance operations.
+                </div>
+            </div>
+        <script>
+          $(".dropdown").dropdown();
+          
+            function checkIfInputDomainIsMultiple(){
+                var inputDomains = $("#domainsInput").val();
+                if (inputDomains.includes(",")){
+                    $(".multiDomainOnly").show();
+                }else{
+                    $(".multiDomainOnly").hide();
+                }
+            }
+
+             //Grab the longest common suffix of all domains
+    //not that smart technically
+    function autoDetectMatchingRules(){
+      var domainsString = $("#domainsInput").val();
+      if (!domainsString.includes(",")){
+        return domainsString;
+      }
+
+      let domains = domainsString.split(",");
+
+      //Clean out any spacing between commas
+      for (var i = 0; i < domains.length; i++){
+        domains[i] = domains[i].trim();
+      }
+
+      function getLongestCommonSuffix(strings) {
+        if (strings.length === 0) {
+          return ''; // Return an empty string if the array is empty
+        }
+
+        var sortedStrings = strings.slice().sort(); // Create a sorted copy of the array
+
+        var firstString = sortedStrings[0];
+        var lastString = sortedStrings[sortedStrings.length - 1];
+
+        var suffix = '';
+        var minLength = Math.min(firstString.length, lastString.length);
+
+        for (var i = 0; i < minLength; i++) {
+          if (firstString[firstString.length - 1 - i] !== lastString[lastString.length - 1 - i]) {
+            break; // Stop iterating if characters don't match
+          }
+          suffix = firstString[firstString.length - 1 - i] + suffix;
+        }
+
+        return suffix;
+      }
+
+      let longestSuffix = getLongestCommonSuffix(domains);
+
+      //Check if the suffix is a valid domain
+      if (longestSuffix.substr(0,1) == "."){
+        //Trim off the first dot
+        longestSuffix = longestSuffix.substr(1);
+      }
+
+      if (!longestSuffix.includes(".")){
+        alert("Auto Detect failed: Multiple Domains");
+        return;
+      }
+      $("#filenameInput").val(longestSuffix);
+    }
+
+    $("#obtainButton").click(function() {
+      $("#obtainButton").addClass("loading").addClass("disabled");
+      obtainCertificate();
+    });
+
+    // Obtain certificate from API
+    function obtainCertificate() {
+      var domains = $("#domainsInput").val();
+      var filename = $("#filenameInput").val();
+      var email = $("#caRegisterEmail").val();
+      if (email == ""){
+        alert("ACME renew email is not set")
+        return;
+      }
+      if (filename.trim() == "" && !domains.includes(",")){
+        //Zoraxy filename are the matching name for domains.
+        //Use the same as domains
+        filename = domains;
+      }else if (filename != "" && !domains.includes(",")){
+        //Invalid settings. Force the filename to be same as domain
+        //if there are only 1 domain
+        filename = domains;
+      }else{
+        alert("Filename cannot be empty for certs containing multiple domains.")
+        return;
+      }
+      var ca = $("#ca").dropdown("get value");
+      $.ajax({
+        url: "/api/acme/obtainCert",
+        method: "GET",
+        data: {
+          domains: domains,
+          filename: filename,
+          email: email,
+          ca: ca,
+        },
+        success: function(response) {
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+          if (response.error) {
+            console.log("Error:", response.error);
+            // Show error message
+            alert(response.error);
+            $("#installSucc").hide();
+          } else {
+            console.log("Certificate installed successfully");
+            // Show success message
+            //alert("Certificate installed successfully");
+            $("#installSucc").show();
+          }
+        },
+        error: function(error) {
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+          console.log("Failed to renewed certificate:", error);
+        }
+      });
+    }
+
+
+            function step3Callback(resultContainer, data){
+                if (data == true){
+                    $(resultContainer).html(`<div class="ui green message">
+                        <i class="ui check icon"></i> Domain is reachable and seems there is a HTTP server listening. Please move on to the next step.
+                    </div>`);
+                }else{
+                    $(resultContainer).html(`<div class="ui red message">
+                        <i class="ui remove icon"></i> Domain is reachable but there are no HTTP server listening<br>
+                        Make sure you have point to the correct IP address and there are not another proxy server above Zoraxy.
+                    </div>`);
+                }
+            }   
+
+            function step2Callback(resultContainer, data){
+                if (data == true){
+                    $(resultContainer).html(`<div class="ui green message">
+                        <i class="ui check icon"></i> HTTP Server reachable from public IP address. Please move on to the next step.
+                    </div>`);
+                }else{
+                    $(resultContainer).html(`<div class="ui red message">
+                        <i class="ui remove icon"></i> Server unreachable from public IP address<br>
+                        Check if you have correct NAT port forward setup in your home router, firewall and make sure network is reachable from the public internet.
+                    </div>`);
+                }
+            }
+
+            function step1Callback(resultContainer, data){
+                if (data == true){
+                    $(resultContainer).html(`<div class="ui green message">
+                        <i class="ui check icon"></i> Supported listening port. Please move on to the next step.
+                    </div>`);
+                }else{
+                    $(resultContainer).html(`<div class="ui red message">
+                        <i class="ui remove icon"></i> Invalid listening port.<br>
+                        Go to Status tab and change the listening port to 80 or 443
+                    </div>`);
+                }
+            }
+
+            function getStepContainerByNo(stepNo){
+                let targetStepContainer = undefined;
+                $(".stepContainer").each(function(){
+                    if ($(this).attr("step") == stepNo){
+                        let thisContainer = $(this);
+                        targetStepContainer = thisContainer;
+                    }
+                });
+
+                return targetStepContainer;
+            }
+            function checkStep(stepNo, callback, btn){
+                let targetContainer = getStepContainerByNo(stepNo);
+                $(btn).addClass("loading");
+
+                //Load all the inputs 
+                data = {};
+                $(targetContainer).find("input").each(function(){
+                    let key = $(this).attr("name")
+                    if (key != undefined){
+                        data[key] = $(this).val();
+                    }
+                });
+                $.ajax({
+                    url: "/api/acme/wizard?step=" + stepNo,
+                    data: data,
+                    success: function(data){
+                        $(btn).removeClass("loading");
+                        if (data.error != undefined){
+                            $(targetContainer).find(".checkResult").html(`
+                            <div class="ui red message">${data.error}</div>`);
+                        }else{
+                            callback($(targetContainer).find(".checkResult"), data);
+                        }
+                    },
+                    error: function(){
+                        $(btn).removeClass("loading");
+                        $(targetContainer).find(".checkResult").html(`
+                            <div class="ui red message">Server return an Unknown Error</div>`);
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -28,13 +28,15 @@ func (t *RuleTable) HandleRedirect(w http.ResponseWriter, r *http.Request) int {
 	rr := t.MatchRedirectRule(requestPath)
 	if rr != nil {
 		redirectTarget := rr.TargetURL
-		//Always pad a / at the back of the target URL
-		if redirectTarget[len(redirectTarget)-1:] != "/" {
-			redirectTarget += "/"
-		}
+
 		if rr.ForwardChildpath {
-			//Remove the first / in the path
-			redirectTarget += strings.TrimPrefix(r.URL.Path, "/")
+			//Remove the first / in the path if the redirect target already have tailing slash
+			if strings.HasSuffix(redirectTarget, "/") {
+				redirectTarget += strings.TrimPrefix(r.URL.Path, "/")
+			} else {
+				redirectTarget += r.URL.Path
+			}
+
 			if r.URL.RawQuery != "" {
 				redirectTarget += "?" + r.URL.RawQuery
 			}

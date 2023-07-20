@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <!-- Notes: This should be open in its original path-->
+      <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+      <script src="../script/jquery-3.6.0.min.js"></script>
+      <script src="../script/semantic/semantic.min.js"></script>
+      <style>
+        .disabled.table{
+          opacity: 0.5;
+          pointer-events: none;
+          
+        }
+
+        .expiredDomain{
+          color: rgb(238, 31, 31);
+        }
+
+        .validDomain{
+          color: rgb(49, 192, 113);
+        }
+      </style>
+  </head>
+  <body>
+  <br>
+  <div class="ui container">
+    <div class="ui header">
+        <div class="content">
+            Certificates Auto Renew Settings
+            <div class="sub header">Fetch and renew your certificates with Automated Certificate Management Environment (ACME) protocol</div>
+        </div>
+    </div>
+    <div class="ui basic segment">
+      <p style="float: right; color: #21ba45; display:none;" id="enableToggleSucc"><i class="green checkmark icon"></i> Setting Updated</p>
+      <div class="ui toggle checkbox">
+        <input type="checkbox" id="enableCertAutoRenew">
+        <label>Enable Certificate Auto Renew</label>
+      </div>
+      <br>
+      <h3>ACME Email</h3>
+      <p>Email is required by many CAs for renewing via ACME protocol</p>
+      <div class="ui fluid action input">
+        <input id="caRegisterEmail" type="text" placeholder="webmaster@example.com">
+        <button class="ui icon basic button" onclick="saveEmailToConfig(this);">
+            <i class="blue save icon"></i>
+        </button>
+      </div>
+      <small>If you don't want to share your private email address, you can also fill in an email address that point to a mailbox not exists on your domain.</small>
+    </div>
+    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+      <div class="ui accordion advanceSettings">
+          <div class="title">
+            <i class="dropdown icon"></i>
+              Advance Renew Policy
+          </div>
+          <div class="content">
+              <p>Renew all certificates with ACME supported CAs</p>
+              <div class="ui toggle checkbox">
+                <input type="checkbox" id="renewAllSupported" onchange="setAutoRenewIfCASupportMode(this.checked);">
+                <label>Renew All Certs</label>
+              </div><br>
+              <button id="renewNowBtn" onclick="renewNow();" class="ui basic right floated button" style="margin-top: -2em;"><i class="yellow refresh icon"></i> Renew Now</button>
+              <div class="ui horizontal divider"> OR </div>
+              <p>Select the certificates to automatic renew in the list below</p>
+              <table id="domainCertFileTable" class="ui very compact unstackable basic disabled table">
+                <thead>
+                  <tr>
+                    <th>Domain Name</th>
+                    <th>Match Rule</th>
+                    <th>Auto-Renew</th>
+                  </tr>
+                </thead>
+                <tbody id="domainTableBody"></tbody>
+              </table>
+              <small><i class="ui red info circle icon"></i> Domain in red are expired</small><br>
+              <div class="ui yellow message">
+                Certificate Renew only works on the certification authority (CA) supported by Zoraxy. Check Zoraxy wiki for more information on supported list of CAs.
+              </div>
+              <button class="ui basic right floated button" onclick="saveAutoRenewPolicy();"><i class="blue save icon"></i> Save Changes</button>
+              <button id="renewSelectedButton" onclick="renewNow();" class="ui basic right floated disabled button"><i class="yellow refresh icon"></i> Renew Selected</button>
+              <br><br>
+          </div>
+      </div>
+  </div>
+  <div class="ui divider"></div>
+  <h3>Manual Renew</h3>
+  <p>Pick a certificate below to force renew</p>
+  <div class="ui form">
+    <div class="field">
+      <label>Domain(s)</label>
+      <input id="domainsInput" type="text" placeholder="example.com" onkeyup="checkIfInputDomainIsMultiple();">
+      <small>If you have more than one domain in a single certificate, enter the domains separated by commas (e.g. s1.dev.example.com,s2.dev.example.com)</small>
+    </div>
+    <div class="field multiDomainOnly" style="display:none;">
+      <label>Matching Rule</label>
+      <input id="filenameInput" type="text" placeholder="Enter filename (no file extension)">
+      <small>Matching rule to let Zoraxy pick which certificate to use (Also be used as filename). Usually is the longest common suffix of the entered addresses. (e.g. dev.example.com)</small>
+    </div>
+    <div class="field multiDomainOnly" style="display:none;">
+      <button class="ui basic fluid button" onclick="autoDetectMatchingRules();">Auto Detect Matching Rule</button>
+    </div>
+    <div class="field">
+      <label>Certificate Authority (CA)</label>
+      <div class="ui selection dropdown" id="ca">
+        <input type="hidden" name="ca">
+        <i class="dropdown icon"></i>
+        <div class="default text">Let's Encrypt</div>
+        <div class="menu">
+          <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
+          <div class="item" data-value="Buypass">Buypass</div>
+          <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+          <!-- <div class="item" data-value="Google">Google</div> -->
+        </div>
+      </div>
+    </div>
+    <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Renew Certificate</button>
+  </div>
+  <div class="ui divider"></div>
+  <small>First time setting up HTTPS?<br>Try out our <a href="../tools/https.html" target="_blank">wizard</a></small>
+  <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Cancel</button>
+  <br><br><br><br>
+  </div>
+
+  <script>
+    let expiredDomains = [];
+    let enableTrigerOnChangeEvent = true;
+    $(".accordion").accordion();
+    $(".dropdown").dropdown();
+
+    function setAutoRenewIfCASupportMode(useAutoMode = true){
+      if (useAutoMode){
+        $("#domainCertFileTable").addClass("disabled");
+        $("#renewNowBtn").removeClass("disabled");
+        $("#renewSelectedButton").addClass("disabled");
+      }else{
+        $("#domainCertFileTable").removeClass("disabled");
+        $("#renewNowBtn").addClass("disabled");
+        $("#renewSelectedButton").removeClass("disabled");
+      }
+    }
+
+    function initRenewerConfigFromFile(){
+      //Set the renew switch state
+      $.get("/api/acme/autoRenew/enable", function(data){
+        if (data == true){
+          $("#enableCertAutoRenew").parent().checkbox("set checked");
+        }
+
+        $("#enableCertAutoRenew").on("change", function(){
+          if (!enableTrigerOnChangeEvent){
+            return;
+          }
+          toggleAutoRenew();
+        })
+      });
+
+      //Load the email from server side
+      $.get("/api/acme/autoRenew/email", function(data){
+        if (data != "" && data != undefined && data != null){
+          $("#caRegisterEmail").val(data);
+        }
+      });
+
+      //Load the domain selection options
+      $.get("/api/acme/autoRenew/renewPolicy", function(data){
+        if (data == true){
+          $("#renewAllSupported").parent().checkbox("set checked");
+        }else{
+          $("#renewAllSupported").parent().checkbox("set unchecked");
+        }
+      });
+    }
+    initRenewerConfigFromFile();
+
+    function saveEmailToConfig(btn){
+      $.ajax({
+        url: "/api/acme/autoRenew/email",
+        data: {set: $("#caRegisterEmail").val()},
+        success: function(data){
+          if (data.error != undefined){
+            parent.msgbox(data.error, false, 5000);
+          }else{
+            parent.msgbox("Email updated");
+            $(btn).html(`<i class="green check icon"></i>`);
+            $(btn).addClass("disabled");
+            setTimeout(function(){
+              $(btn).html(`<i class="blue save icon"></i>`);
+              $(btn).removeClass("disabled");
+            }, 3000);
+          }
+        }
+      });
+    }
+
+    function toggleAutoRenew(){
+      var enabled = $("#enableCertAutoRenew").parent().checkbox("is checked");
+      $.post("/api/acme/autoRenew/enable?enable=" + enabled, function(data){
+        if (data.error){
+          parent.msgbox(data.error, false, 5000);
+          if (enabled){
+            enableTrigerOnChangeEvent = false;
+            $("#enableCertAutoRenew").parent().checkbox("set unchecked");
+            enableTrigerOnChangeEvent = true;
+          }
+        }else{
+          $("#enableToggleSucc").stop().finish().fadeIn("fast").delay(3000).fadeOut("fast");
+        }
+      });
+    }
+
+    //Render the domains table that exists in this zoraxy host
+    function renderDomainTable(domainFileList) {
+      // Get the table body element
+      var tableBody = $('#domainTableBody');
+      
+      // Clear the table body
+      tableBody.empty();
+      
+      // Iterate over the domain names
+      var counter = 0;
+      for (const [srcfile, domains] of Object.entries(domainFileList)) {
+
+        // Create a table row
+        var row = $('<tr>');
+        
+        // Create the domain name cell
+        var domainClass = "validDomain";
+        for (var i = 0; i < domains.length; i++){
+          let thisDomain = domains[i];
+          if (expiredDomains.includes(thisDomain)){
+            domainClass = "expiredDomain";
+          }
+        }
+       
+        var domainCell = $('<td class="' + domainClass  +'">').html(domains.join("<br>"));
+        row.append(domainCell);
+
+        var srcFileCell = $('<td>').text(srcfile);
+        row.append(srcFileCell);
+        
+        // Create the auto-renew checkbox cell
+        let domainsEncoded = encodeURIComponent(JSON.stringify(domains));
+        var checkboxCell = $(`<td domain="${domainsEncoded}" srcfile="${srcfile}">`);
+        var checkbox = $(`<input name="${srcfile}">`).attr('type', 'checkbox');
+        checkboxCell.append(checkbox);
+        row.append(checkboxCell);
+        
+        // Add the row to the table body
+        tableBody.append(row);
+
+        counter++;
+      }
+
+      if (Object.keys(domainFileList).length == 0){
+        //No certificate in this system
+        tableBody.append(`<tr>
+          <td colspan="3"><i class="ui green circle check icon"></i> No certificate in use</td>
+        </tr>`);
+      }
+    }
+
+    //Initiate domain table. If you needs to update the expired domain as well
+    //call from initDomainFileList() instead
+    function initDomainTable(){
+      $.get("/api/cert/listdomains?compact=true", function(data){
+        if (data.error != undefined){
+          parent.msgbox(data.error, false);
+        }else{
+          renderDomainTable(data);
+        }
+        initAutoRenewPolicy();
+      })
+    }
+
+    function initDomainFileList() {
+      $.ajax({
+        url: "/api/acme/listExpiredDomains",
+        method: "GET",
+        success: function(response) {
+          // Render domain table
+          expiredDomains = response.domain;
+          initDomainTable();
+          //renderDomainTable(response.domain);
+        },
+        error: function(error) {
+          console.log("Failed to fetch expired domains:", error);
+        }
+      });
+    }
+    initDomainFileList();
+
+    // Button click event handler for obtaining certificate
+    $("#obtainButton").click(function() {
+      $("#obtainButton").addClass("loading").addClass("disabled");
+      obtainCertificate();
+    });
+
+    // Obtain certificate from API
+    function obtainCertificate() {
+      var domains = $("#domainsInput").val();
+      var filename = $("#filenameInput").val();
+      var email = $("#caRegisterEmail").val();
+      if (email == ""){
+        parent.msgbox("ACME renew email is not set")
+        return;
+      }
+      if (filename.trim() == "" && !domains.includes(",")){
+        //Zoraxy filename are the matching name for domains.
+        //Use the same as domains
+        filename = domains;
+      }else if (filename != "" && !domains.includes(",")){
+        //Invalid settings. Force the filename to be same as domain
+        //if there are only 1 domain
+        filename = domains;
+      }else{
+        parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
+        return;
+      }
+      var ca = $("#ca").dropdown("get value");
+      $.ajax({
+        url: "/api/acme/obtainCert",
+        method: "GET",
+        data: {
+          domains: domains,
+          filename: filename,
+          email: email,
+          ca: ca,
+        },
+        success: function(response) {
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+          if (response.error) {
+            console.log("Error:", response.error);
+            // Show error message
+            parent.msgbox(response.error, false, 12000);
+          } else {
+            console.log("Certificate renewed successfully");
+            // Show success message
+            parent.msgbox("Certificate renewed successfully");
+            
+            // Renew the parent certificate list
+            parent.initManagedDomainCertificateList();
+          }
+        },
+        error: function(error) {
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+          console.log("Failed to renewed certificate:", error);
+        }
+      });
+    }
+
+    function checkIfInputDomainIsMultiple(){
+      var inputDomains = $("#domainsInput").val();
+      if (inputDomains.includes(",")){
+        $(".multiDomainOnly").show();
+      }else{
+        $(".multiDomainOnly").hide();
+      }
+    }
+
+    //Grab the longest common suffix of all domains
+    //not that smart technically
+    function autoDetectMatchingRules(){
+      var domainsString = $("#domainsInput").val();
+      if (!domainsString.includes(",")){
+        return domainsString;
+      }
+
+      let domains = domainsString.split(",");
+
+      //Clean out any spacing between commas
+      for (var i = 0; i < domains.length; i++){
+        domains[i] = domains[i].trim();
+      }
+
+      function getLongestCommonSuffix(strings) {
+        if (strings.length === 0) {
+          return ''; // Return an empty string if the array is empty
+        }
+
+        var sortedStrings = strings.slice().sort(); // Create a sorted copy of the array
+
+        var firstString = sortedStrings[0];
+        var lastString = sortedStrings[sortedStrings.length - 1];
+
+        var suffix = '';
+        var minLength = Math.min(firstString.length, lastString.length);
+
+        for (var i = 0; i < minLength; i++) {
+          if (firstString[firstString.length - 1 - i] !== lastString[lastString.length - 1 - i]) {
+            break; // Stop iterating if characters don't match
+          }
+          suffix = firstString[firstString.length - 1 - i] + suffix;
+        }
+
+        return suffix;
+      }
+
+      let longestSuffix = getLongestCommonSuffix(domains);
+
+      //Check if the suffix is a valid domain
+      if (longestSuffix.substr(0,1) == "."){
+        //Trim off the first dot
+        longestSuffix = longestSuffix.substr(1);
+      }
+
+      if (!longestSuffix.includes(".")){
+        parent.msgbox("Auto Detect failed: Multiple Domains", false, 5000);
+        return;
+      }
+      $("#filenameInput").val(longestSuffix);
+    }
+
+    //Handle the renew now btn click
+    function renewNow(){
+      $.get("/api/acme/autoRenew/renewNow", function(data){
+        if (data.error != undefined){
+          parent.msgbox(data.error, false, 6000);
+        }else{
+          parent.msgbox(data)
+        }
+      })
+    }
+
+    function initAutoRenewPolicy(){
+      $.get("/api/acme/autoRenew/listDomains", function(data){
+        if (data.error != undefined){
+          parent.msgbox(data.error, false)
+        }else{
+          if (data[0] == "*"){
+            //Auto select and renew is enabled
+            $("#renewAllSupported").parent().checkbox("set checked");
+          }else{
+            //This is a list of domain files
+            data.forEach(function(name) {
+              $('#domainTableBody input[type="checkbox"][name="' + name + '"]').prop('checked', true);
+            });
+            $("#domainCertFileTable").removeClass("disabled");
+            $("#renewNowBtn").addClass("disabled");
+            $("#renewSelectedButton").removeClass("disabled");
+          }
+        }
+      })
+    }
+
+    function saveAutoRenewPolicy(){
+      let autoRenewAll = $("#renewAllSupported").parent().checkbox("is checked");
+      if (autoRenewAll == true){
+        $.ajax({
+          url: "/api/acme/autoRenew/setDomains",
+          data: {opr: "setAuto"},
+          success: function(data){
+            parent.msgbox("Renew policy rule updated")
+          }
+        });
+      }else{
+        let checkedNames = [];
+        $('#domainTableBody input[type="checkbox"]:checked').each(function() {
+          checkedNames.push($(this).attr('name'));
+        });
+
+        $.ajax({
+          url: "/api/acme/autoRenew/setDomains",
+          data: {opr: "setSelected", domains: JSON.stringify(checkedNames)},
+          success: function(data){
+            parent.msgbox("Renew policy rule updated")
+          }
+        });
+      }
+    }
+
+    //Clear  up the input field when page load
+    $("#filenameInput").val("");
+  </script>
+</body>
+</html>

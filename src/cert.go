@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -44,6 +46,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 			Domain           string
 			LastModifiedDate string
 			ExpireDate       string
+			RemainingDays    int
 		}
 
 		results := []*CertInfo{}
@@ -60,6 +63,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 
 			certExpireTime := "Unknown"
 			certBtyes, err := os.ReadFile(certFilepath)
+			expiredIn := 0
 			if err != nil {
 				//Unable to load this file
 				continue
@@ -70,6 +74,11 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 					cert, err := x509.ParseCertificate(block.Bytes)
 					if err == nil {
 						certExpireTime = cert.NotAfter.Format("2006-01-02 15:04:05")
+
+						duration := cert.NotAfter.Sub(time.Now())
+
+						// Convert the duration to days
+						expiredIn = int(duration.Hours() / 24)
 					}
 				}
 			}
@@ -78,6 +87,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 				Domain:           filename,
 				LastModifiedDate: modifiedTime,
 				ExpireDate:       certExpireTime,
+				RemainingDays:    expiredIn,
 			}
 
 			results = append(results, &thisCertInfo)
@@ -97,6 +107,64 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 		w.Write(response)
 	}
 
+}
+
+// List all certificates and map all their domains to the cert filename
+func handleListDomains(w http.ResponseWriter, r *http.Request) {
+	filenames, err := os.ReadDir("./conf/certs/")
+
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	certnameToDomainMap := map[string]string{}
+	for _, filename := range filenames {
+		if filename.IsDir() {
+			continue
+		}
+		certFilepath := filepath.Join("./conf/certs/", filename.Name())
+
+		certBtyes, err := os.ReadFile(certFilepath)
+		if err != nil {
+			// Unable to load this file
+			log.Println("Unable to load certificate: " + certFilepath)
+			continue
+		} else {
+			// Cert loaded. Check its expiry time
+			block, _ := pem.Decode(certBtyes)
+			if block != nil {
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err == nil {
+					certname := strings.TrimSuffix(filepath.Base(certFilepath), filepath.Ext(certFilepath))
+					for _, dnsName := range cert.DNSNames {
+						certnameToDomainMap[dnsName] = certname
+					}
+					certnameToDomainMap[cert.Subject.CommonName] = certname
+				}
+			}
+		}
+	}
+
+	requireCompact, _ := utils.GetPara(r, "compact")
+	if requireCompact == "true" {
+		result := make(map[string][]string)
+
+		for key, value := range certnameToDomainMap {
+			if _, ok := result[value]; !ok {
+				result[value] = make([]string, 0)
+			}
+
+			result[value] = append(result[value], key)
+		}
+
+		js, _ := json.Marshal(result)
+		utils.SendJSONResponse(w, string(js))
+		return
+	}
+
+	js, _ := json.Marshal(certnameToDomainMap)
+	utils.SendJSONResponse(w, string(js))
 }
 
 // Handle front-end toggling TLS mode
@@ -205,8 +273,8 @@ func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// create file in upload directory
-	os.MkdirAll("./certs", 0775)
-	f, err := os.Create(filepath.Join("./certs", overWriteFilename))
+	os.MkdirAll("./conf/certs", 0775)
+	f, err := os.Create(filepath.Join("./conf/certs", overWriteFilename))
 	if err != nil {
 		http.Error(w, "Failed to create file", http.StatusInternalServerError)
 		return

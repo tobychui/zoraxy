@@ -63,3 +63,7 @@ services:
     environment:
       ARGS: '-port=:8000 -noauth=false'
 ```
+
+### Other </br>
+If the container doesn't start properly, you might be rate limited from GitHub for some amount of time. You can check this by running `curl -s https://api.github.com/repos/tobychui/zoraxy/releases` on the host. If you are, you will just have to wait for a little while or use a VPN. </br>
+

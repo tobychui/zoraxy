@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Config Export and Import Tool
+                    <div class="sub header">Painless migration with one click</div>
+                </div>
+            </div>
+            <h3>Backup Current Configs</h3>
+            <p>This will download all your configuration on zoraxy in a zip file. This includes all the proxy configs and certificates. Please keep it somewhere safe and after migration, delete this if possible.</p>
+            <div class="ui form">
+                <div class="grouped fields">
+                  <label>Backup Mode</label>
+                  <div class="field">
+                    <div class="ui radio checkbox">
+                      <input type="radio" value="rules" name="backupmode" checked="checked">
+                      <label>Proxy Settings, Redirect Rules and Certificates Only</label>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="ui radio checkbox">
+                      <input type="radio" value="full" name="backupmode">
+                      <label>Full System Snapshot</label>
+                    </div>
+                  </div>
+                </div>
+            </div>
+            <br>
+            <button class="ui basic button" onclick="downloadConfig();"><i class="ui blue download icon"></i> Download</button>
+            <div class="ui divider"></div>
+
+            <h3>Restore from Config</h3>
+            <p>You can restore your previous settings and database from a zip file config backup. 
+            <br><b style="color: rgba(255, 0, 0, 0.644);">RESTORE FULL SYSTEM SNAPSHOT WILL CAUSE THE SYSTEM TO SHUTDOWN AFTER COMPLETED. Make sure your Zoraxy is configured to work with systemd to automatic restart Zoraxy after system restore completed.<br>
+                
+            </b></p>
+            <form class="ui form" id="uploadForm" action="/api/conf/import" method="POST" enctype="multipart/form-data">
+              <input type="file" name="file" id="fileInput" accept=".zip">
+              <button style="margin-top: 0.6em;" class="ui basic button" type="submit"><i class="ui green upload icon"></i> Upload</button>
+            </form>
+            <small>The current config will be backup to ./conf_old{timestamp}. If you screw something up, you can always restore it by ssh to your host and restore the configs from the old folder.</small>
+            <br><br>
+            <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Cancel</button>
+        </div>
+        <script>
+            $(".checkbox").checkbox();
+
+            function getCheckedRadioValue() {
+                var checkedValue = $("input[name='backupmode']:checked").val();
+                return checkedValue;
+            }
+
+
+            function downloadConfig(){
+                let backupMode = getCheckedRadioValue();
+                if (backupMode == "full"){
+                    window.open("/api/conf/export?includeDB=true");
+                }else{
+                    window.open("/api/conf/export");
+                }
+            }
+
+            document.getElementById("uploadForm").addEventListener("submit", function(event) {
+                event.preventDefault(); // Prevent the form from submitting normally
+
+                var fileInput = document.getElementById("fileInput");
+                var file = fileInput.files[0];
+                if (!file) {
+                    alert("Missing file.");
+                    return;
+                }
+
+                var formData = new FormData();
+                formData.append("file", file);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/api/conf/import", true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status === 200) {
+                            parent.msgbox("Config restore succeed. Restart Zoraxy to apply changes.")
+                        } else {
+                            parent.msgbox("Restore failed: " + xhr.responseText, false, 5000);
+                        }
+                    }
+                };
+                xhr.send(formData);
+            });
+        </script>
+    </body>
+</html>

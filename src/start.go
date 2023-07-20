@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
@@ -48,8 +49,9 @@ func startupSequence() {
 	//Create tables for the database
 	sysdb.NewTable("settings")
 
-	//Create tmp folder
+	//Create tmp folder and conf folder
 	os.MkdirAll("./tmp", 0775)
+	os.MkdirAll("./conf/proxy/", 0775)
 
 	//Create an auth agent
 	sessionKey, err := auth.GetSessionKey(sysdb)
@@ -62,13 +64,13 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager("./certs", development)
+	tlsCertManager, err = tlscert.NewManager("./conf/certs", development)
 	if err != nil {
 		panic(err)
 	}
 
 	//Create a redirection rule table
-	redirectTable, err = redirection.NewRuleTable("./rules/redirect")
+	redirectTable, err = redirection.NewRuleTable("./conf/redirect")
 	if err != nil {
 		panic(err)
 	}
@@ -95,14 +97,15 @@ func startupSequence() {
 	}
 
 	/*
-		Path Blocker
+		Path Rules
 
-		This section of starutp script start the pathblocker
-		from file.
+		This section of starutp script start the path rules where
+		user can define their own routing logics
 	*/
 
-	pathRuleHandler = pathrule.NewPathBlocker(&pathrule.Options{
-		ConfigFolder: "./rules/pathrules",
+	pathRuleHandler = pathrule.NewPathRuleHandler(&pathrule.Options{
+		Enabled:      false,
+		ConfigFolder: "./conf/rules/pathrules",
 	})
 
 	/*
@@ -188,6 +191,17 @@ func startupSequence() {
 
 	//Create an analytic loader
 	AnalyticLoader = analytic.NewDataLoader(sysdb, statisticCollector)
+
+	/*
+		ACME API
+
+		Obtaining certificates from ACME Server
+	*/
+	acmeHandler = initACME()
+	acmeAutoRenewer, err = acme.NewAutoRenewer("./conf/acme_conf.json", "./conf/certs/", int64(*acmeAutoRenewInterval), acmeHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // This sequence start after everything is initialized
