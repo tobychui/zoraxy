@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/pprof"
 
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
@@ -165,6 +166,9 @@ func initAPIs() {
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	http.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	http.HandleFunc("/api/conf/import", ImportConfigFromZip)
+
+	//Debug
+	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
 
 	//If you got APIs to add, append them here
 }

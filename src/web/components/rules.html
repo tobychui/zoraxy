@@ -172,13 +172,27 @@
                     //OK
                     listVdirs();
                     listSubd();
-                    msgbox("Proxy Endpoint Added");
+                   
 
                     //Clear old data
                     $("#rootname").val("");
                     $("#proxyDomain").val("");
                     credentials = [];
                     updateTable();
+
+                    //Check if it is a new subdomain and TLS enabled
+                    if (type == "subd" && $("#tls").checkbox("is checked")){
+                        confirmBox("Request new SSL Cert for this subdomain?", function(choice){
+                            if (choice == true){
+                                //Get a new cert using ACME
+                                msgbox("Requesting certificate via Let's Encrypt...");
+                                console.log("Trying to get a new certificate via ACME");
+                                obtainCertificate(rootname);
+                            }
+                        });
+                    }else{
+                        msgbox("Proxy Endpoint Added");
+                    }
                 }
             }
         });
@@ -436,5 +450,68 @@
             ep: uuid
         }));
         showSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+
+    /*
+        Obtain Certificate via ACME
+    */
+
+    //Load the ACME email from server side
+    let acmeEmail = "";
+    $.get("/api/acme/autoRenew/email", function(data){
+        if (data != "" && data != undefined && data != null){
+            acmeEmail = data;
+        }
+    });
+
+   // Obtain certificate from API, only support one domain
+    function obtainCertificate(domains) {
+        let filename = "";
+        let email = acmeEmail;
+        if (acmeEmail == ""){
+            let rootDomain = domains.split(".").pop();
+            email = "admin@" + rootDomain;
+        }
+        if (filename.trim() == "" && !domains.includes(",")){
+            //Zoraxy filename are the matching name for domains.
+            //Use the same as domains
+            filename = domains;
+        }else if (filename != "" && !domains.includes(",")){
+            //Invalid settings. Force the filename to be same as domain
+            //if there are only 1 domain
+            filename = domains;
+        }else{
+            parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
+            return;
+        }
+
+        $.ajax({
+            url: "/api/acme/obtainCert",
+            method: "GET",
+            data: {
+                domains: domains,
+                filename: filename,
+                email: email,
+                ca: "Let's Encrypt",
+            },
+            success: function(response) {
+                if (response.error) {
+                    console.log("Error:", response.error);
+                    // Show error message
+                    msgbox(response.error, false, 12000);
+                } else {
+                    console.log("Certificate installed successfully");
+                    // Show success message
+                    msgbox("Certificate installed successfully");
+                    
+                    // Renew the parent certificate list
+                    initManagedDomainCertificateList();
+                }
+            },
+            error: function(error) {
+                console.log("Failed to install certificate:", error);
+            }
+        });
     }
 </script>

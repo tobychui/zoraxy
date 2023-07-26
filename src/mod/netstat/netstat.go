@@ -213,6 +213,7 @@ func GetNetworkInterfaceStats() (int64, int64, error) {
 			out, err := cmd.Output()
 			if err != nil {
 				callbackChan <- wmicResult{0, 0, err}
+				return
 			}
 
 			//Filter out the first line
@@ -251,18 +252,16 @@ func GetNetworkInterfaceStats() (int64, int64, error) {
 
 		go func() {
 			//Spawn a timer to terminate the cmd process if timeout
-			var timer *time.Timer
-			timer = time.AfterFunc(3*time.Second, func() {
-				timer.Stop()
-				if cmd != nil && cmd.Process != nil {
-					cmd.Process.Kill()
-				}
+			time.Sleep(3 * time.Second)
+			if cmd != nil && cmd.Process != nil {
+				cmd.Process.Kill()
 				callbackChan <- wmicResult{0, 0, errors.New("wmic execution timeout")}
-			})
+			}
 		}()
 
 		result := wmicResult{}
 		result = <-callbackChan
+		cmd = nil
 		if result.Err != nil {
 			log.Println("Unable to extract NIC info from wmic: " + result.Err.Error())
 		}

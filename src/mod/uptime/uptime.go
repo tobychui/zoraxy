@@ -93,8 +93,6 @@ func (m *Monitor) ExecuteUptimeCheck() {
 				Latency:    laterncy,
 			}
 
-			//fmt.Println(thisRecord)
-
 		} else {
 			log.Println("Unknown protocol: " + target.Protocol + ". Skipping")
 			continue
@@ -238,9 +236,11 @@ func getWebsiteStatus(url string) (int, error) {
 			}
 			return 0, err
 		}
-
+		defer resp.Body.Close()
+		status_code := resp.StatusCode
+		return status_code, nil
 	}
+	defer resp.Body.Close()
 	status_code := resp.StatusCode
-	resp.Body.Close()
 	return status_code, nil
 }

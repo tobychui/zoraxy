@@ -66,6 +66,7 @@ func acmeRegisterSpecialRoutingRule() {
 			}
 
 			resBody, err := ioutil.ReadAll(res.Body)
+			defer res.Body.Close()
 			if err != nil {
 				fmt.Printf("error reading: %s\n", err)
 				return

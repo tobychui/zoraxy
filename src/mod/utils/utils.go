@@ -1,10 +1,7 @@
 package utils
 
 import (
-	"bufio"
-	"encoding/base64"
 	"errors"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -129,17 +126,6 @@ func IsDir(path string) bool {
 
 func TimeToString(targetTime time.Time) string {
 	return targetTime.Format("2006-01-02 15:04:05")
-}
-
-func LoadImageAsBase64(filepath string) (string, error) {
-	if !FileExists(filepath) {
-		return "", errors.New("File not exists")
-	}
-	f, _ := os.Open(filepath)
-	reader := bufio.NewReader(f)
-	content, _ := io.ReadAll(reader)
-	encoded := base64.StdEncoding.EncodeToString(content)
-	return string(encoded), nil
 }
 
 // Use for redirections

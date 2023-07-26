@@ -128,7 +128,8 @@ func startupSequence() {
 		BuildVersion: version,
 	}, "")
 	if err != nil {
-		panic(err)
+		log.Println("Unable to startup mDNS service.")
+		log.Fatal(err)
 	}
 
 	//Start initial scanning

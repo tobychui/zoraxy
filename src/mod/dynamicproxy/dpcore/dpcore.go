@@ -14,10 +14,6 @@ import (
 
 var onExitFlushLoop func()
 
-const (
-	defaultTimeout = time.Minute * 5
-)
-
 // ReverseProxy is an HTTP Handler that takes an incoming request and
 // sends it to another server, proxying the response back to the
 // client, support http, also support https tunnel using http.hijacker

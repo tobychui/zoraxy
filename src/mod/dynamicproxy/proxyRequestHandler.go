@@ -183,6 +183,5 @@ func (h *ProxyHandler) logRequest(r *http.Request, succ bool, statusCode int, fo
 			}
 			h.Parent.Option.StatisticCollector.RecordRequest(requestInfo)
 		}()
-
 	}
 }

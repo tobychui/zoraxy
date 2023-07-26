@@ -41,7 +41,7 @@ var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 var (
 	name        = "Zoraxy"
-	version     = "2.6.5"
+	version     = "2.6.6"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
