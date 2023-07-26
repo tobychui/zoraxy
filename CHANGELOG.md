@@ -1,4 +1,10 @@
-v2.6.5 Jul 19 2023
+# 2.6.6 Jul 26 2023
+
++ Patch on memory leaking for Windows netstat module (do not effect any of the previous non Windows builds)
++ Fixed potential memory leak in acme handler logic
++ Added "Do you want to get a TLS certificate for this subdomain?" dialog when a new subdomain proxy rule is created
+
+# v2.6.5 Jul 19 2023
 
 + Added Import / Export-Feature 
 + Moved configurationfiles to a separate folder [#26](https://github.com/tobychui/zoraxy/issues/26)
