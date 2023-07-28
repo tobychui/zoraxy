@@ -1,3 +1,5 @@
+# [zoraxy-docker](https://github.com/tobychui/zoraxy/) </br>
+
 [![Repo](https://img.shields.io/badge/Docker-Repo-007EC6?labelColor-555555&color-007EC6&logo=docker&logoColor=fff&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
 [![Version](https://img.shields.io/docker/v/passivelemon/zoraxy-docker/latest?labelColor-555555&color-007EC6&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
 [![Size](https://img.shields.io/docker/image-size/passivelemon/zoraxy-docker/latest?sort=semver&labelColor-555555&color-007EC6&style=flat-square)](https://hub.docker.com/r/passivelemon/zoraxy-docker)
@@ -38,13 +40,13 @@ services:
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
 | `-v (path to storage directory):/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
 | `-e ARGS=(your arguments)` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-port=:8000 -noauth=false` |
-| `-e VERSION=(version)` | Recommended | Sets the version of Zoraxy that the container will download. Must be a supported release found on the Zoraxy GitHub. Defaults to the latest if not set. |
+| `-e VERSION=(version)` | Recommended | Sets the version of Zoraxy that the container will download. Must be a supported release found on the Zoraxy GitHub. Make sure that it is not set to the containers version. Defaults to the latest if not set. |
 | `passivelemon/zoraxy-docker:latest` | Yes | The repository on Docker hub. By default, it is the latest version that I have published. |
 
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/zoraxy/config/ -e ARGS="-port=:8000 -noauth=false" passivelemon/zoraxy-docker:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/zoraxy/config/ -e ARGS="-port=:8000 -noauth=false" -e  VERSION="2.6.5" passivelemon/zoraxy-docker:latest
 ```
 
 ### Docker Compose </br>
@@ -62,4 +64,5 @@ services:
       - /home/docker/Containers/Zoraxy:/zoraxy/config/
     environment:
       ARGS: '-port=:8000 -noauth=false'
+      VERSION: '2.6.5'
 ```
