@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+echo "|| Testing connectivity... ||"
+if ! curl -sSf https://www.github.com > /dev/null; then
+  echo "|| GitHub could not be reached. Please check your internet connection and try again. ||"
+  exit
+fi
 if [ "$(curl -s "https://api.github.com/repos/tobychui/zoraxy/git/refs/tags" | jq 'any(.[] | tostring; test("API rate limit exceeded"))')" = "true" ]; then
   echo "|| Currently rate limited by GitHub. Please wait until it clears. ||"
   exit
@@ -34,7 +39,7 @@ fi
 if [ ! -f "/zoraxy/server/zoraxy_bin_${VERSION}" ]; then
   echo "|| Cloning repository... ||"
   cd /zoraxy/source/
-  git clone --depth=1 --branch main https://github.com/tobychui/zoraxy
+  git clone --depth 1 --single-branch --branch main https://github.com/tobychui/zoraxy
   cd /zoraxy/source/zoraxy/src/
   echo "|| Building... ||"
   go mod tidy

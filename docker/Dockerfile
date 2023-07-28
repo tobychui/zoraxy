@@ -1,7 +1,6 @@
-FROM alpine:latest
+FROM docker.io/golang:1.21rc3-alpine3.18
 
-RUN apk update && apk upgrade &&\
-    apk add bash curl jq git go sudo
+RUN apk add --no-cache bash curl jq git sudo
 
 RUN mkdir -p /zoraxy/source/ &&\
     mkdir -p /zoraxy/config/
@@ -14,7 +13,7 @@ COPY notifier.sh /zoraxy/
 RUN chmod 755 /zoraxy/ &&\
     chmod +x /zoraxy/entrypoint.sh
 
-ENV DOCKER="2.0.0"
+ENV DOCKER="2.1.0"
 ENV NOTIFS="1"
 
 ENV VERSION="latest"
