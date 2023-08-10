@@ -1,22 +1,19 @@
 FROM docker.io/golang:1.21rc3-alpine3.18
 
-RUN apk add --no-cache bash curl jq git sudo
+WORKDIR /etc/zoraxy/
 
-RUN mkdir -p /zoraxy/source/ &&\
-    mkdir -p /zoraxy/config/
+VOLUME [ "/etc/zoraxy/config/" ]
 
-VOLUME [ "/zoraxy/config/" ]
+COPY ./src ./
 
-COPY entrypoint.sh /zoraxy/
-COPY notifier.sh /zoraxy/
+RUN ls -l
 
-RUN chmod 755 /zoraxy/ &&\
-    chmod +x /zoraxy/entrypoint.sh
+RUN mkdir -p /etc/zoraxy/bin
 
-ENV DOCKER="2.1.0"
-ENV NOTIFS="1"
+RUN go mod tidy 
 
-ENV VERSION="latest"
-ENV ARGS="-port=:8000 -noauth=false"
+RUN go build -o ./bin/zoraxy
 
-ENTRYPOINT ["/zoraxy/entrypoint.sh"]
+WORKDIR /etc/zoraxy/config
+
+CMD ["../bin/zoraxy"]
