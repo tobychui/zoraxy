@@ -39,7 +39,7 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
-          tags: develop
+          tags: tobychui/zoraxy:develop
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             COMMIT_TAG=${{ github.sha }}
