@@ -6,8 +6,6 @@ VOLUME [ "/etc/zoraxy/config/" ]
 
 COPY ./src ./
 
-RUN ls -l
-
 RUN mkdir -p /etc/zoraxy/bin
 
 RUN go mod tidy 
