@@ -12,25 +12,23 @@ You may also need to portforward your 80/443 to allow http and https traffic. If
 
 ### Using Docker run </br>
 ```
-docker run -d --name (container name) -p (ports) -v (path to storage directory):/zoraxy/data/ -e ARGS=(your arguments) -e VERSION=(version) passivelemon/zoraxy-docker:latest
+docker run -d --name (container name) -p (ports) -v (path to storage directory):/etc/zoraxy/data/ --entrypoint /etc/zoraxy/bin/zoraxy (your arguments) passivelemon/zoraxy-docker:latest
 ```
 
 ### Using Docker Compose </br>
-```
+```yml
 version: '3.3'
 services:
   zoraxy-docker:
     image: passivelemon/zoraxy-docker:latest
+    command: /etc/zoraxy/bin/zoraxy (your arguments) # If you don't want to specifiy any extra args you can remove this line entirely
     container_name: (container name)
     ports:
       - 80:80                                        # Http port
       - 443:443                                      # Https port
       - (external):8000                              # Management portal port
     volumes:
-      - (path to storage directory):/zoraxy/config/  # Host directory for Zoraxy file storage
-    environment:
-      ARGS: '(your arguments)'                       # The arguments to run with Zoraxy. Enter them as they would be entered normally.
-      VERSION: '(version in x.x.x)'                  # The release version of Zoraxy.
+      - (path to storage directory):/etc/zoraxy/config/  # Host directory for Zoraxy file storage
 ```
 
 | Operator | Need | Details |
@@ -38,31 +36,28 @@ services:
 | `-d` | Yes | will run the container in the background. |
 | `--name (container name)` | No | Sets the name of the container to the following word. You can change this to whatever you want. |
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
-| `-v (path to storage directory):/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
-| `-e ARGS=(your arguments)` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-port=:8000 -noauth=false` |
-| `-e VERSION=(version)` | Recommended | Sets the version of Zoraxy that the container will download. Must be a supported release found on the Zoraxy GitHub. Make sure that it is not set to the containers version. Defaults to the latest if not set. |
+| `-v (path to storage directory):/etc/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
+| `--entrypoint /etc/zoraxy/bin/zoraxy (your arguments)` | No | Allows you to set the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-port=:8000 -noauth=false` |
 | `passivelemon/zoraxy-docker:latest` | Yes | The repository on Docker hub. By default, it is the latest version that I have published. |
 
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/zoraxy/config/ -e ARGS="-port=:8000 -noauth=false" -e  VERSION="2.6.5" passivelemon/zoraxy-docker:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/etc/zoraxy/config/ --entrypoint "/etc/zoraxy/bin/zoraxy -port=:8000" -noauth=false passivelemon/zoraxy-docker:latest
 ```
 
 ### Docker Compose </br>
-```
+```yml
 version: '3.3'
 services:
   zoraxy-docker:
     image: passivelemon/zoraxy-docker:latest
     container_name: zoraxy
+    command: /etc/zoraxy/bin/zoraxy -port=:8000 -noauth=false
     ports:
       - 80:80
       - 443:443
       - 8005:8000/tcp
     volumes:
-      - /home/docker/Containers/Zoraxy:/zoraxy/config/
-    environment:
-      ARGS: '-port=:8000 -noauth=false'
-      VERSION: '2.6.5'
+      - /home/docker/Containers/Zoraxy:/etc/zoraxy/config/
 ```
