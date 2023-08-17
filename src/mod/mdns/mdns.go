@@ -226,7 +226,7 @@ func (m *MDNSHost) Scan(timeout int, domainFilter string) []*NetworkHost {
 	return discoveredHost
 }
 
-//Get all mac address of all interfaces
+// Get all mac address of all interfaces
 func getMacAddr() ([]string, error) {
 	ifas, err := net.Interfaces()
 	if err != nil {

@@ -649,6 +649,13 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Check if it is identical as proxy root (recursion!)
+	if dynamicProxyRouter.Root == nil || dynamicProxyRouter.Root.Domain == "" {
+		//Check if proxy root is set before checking recursive listen
+		//Fixing issue #43
+		utils.SendErrorResponse(w, "Proxy root not set")
+		return
+	}
+
 	proxyRoot := strings.TrimSuffix(dynamicProxyRouter.Root.Domain, "/")
 	if strings.HasPrefix(proxyRoot, "localhost:"+strconv.Itoa(newIncomingPortInt)) || strings.HasPrefix(proxyRoot, "127.0.0.1:"+strconv.Itoa(newIncomingPortInt)) {
 		//Listening port is same as proxy root
