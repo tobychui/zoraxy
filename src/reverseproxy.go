@@ -644,7 +644,7 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 
 	newIncomingPortInt, err := strconv.Atoi(newIncomingPort)
 	if err != nil {
-		utils.SendErrorResponse(w, "invalid incoming port given")
+		utils.SendErrorResponse(w, "Invalid incoming port given")
 		return
 	}
 
@@ -652,7 +652,7 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	if dynamicProxyRouter.Root == nil || dynamicProxyRouter.Root.Domain == "" {
 		//Check if proxy root is set before checking recursive listen
 		//Fixing issue #43
-		utils.SendErrorResponse(w, "Proxy root not set")
+		utils.SendErrorResponse(w, "Set Proxy Root before changing inbound port")
 		return
 	}
 

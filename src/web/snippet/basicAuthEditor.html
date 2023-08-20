@@ -11,10 +11,12 @@
         <div class="ui container">
             <div class="ui header">
                 <div class="content">
-                    Basic Auth Credential
+                    Basic Auth Settings
                     <div class="sub header" id="epname"></div>
                 </div>
             </div>
+            <div class="ui divider"></div>
+            <h3 class="ui header">Basic Auth Credential</h3>
             <div class="scrolling content ui form">
                 <div id="inlineEditBasicAuthCredentials" class="field">
                     <p>Enter the username and password for allowing them to access this proxy endpoint</p>
@@ -49,6 +51,31 @@
                     </div>
                 </div>
             </div>
+            <div class="ui divider"></div>
+            <h3 class="ui header">No-Auth Paths</h3>
+            <div class="scrolling content ui form">
+                <p>Exclude specific paths from the basic auth interface. Useful if you are hosting services require remote API access.</p>
+                    <table class="ui very basic compacted unstackable celled table">
+                        <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Password</th>
+                            <th>Remove</th>
+                        </tr></thead>
+                        <tbody id="inlineEditExclusionPaths">
+                        <tr>
+                            <td colspan="3"><i class="ui green circle check icon"></i> No Path Excluded</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="field">
+                        <input id="inlineEditExclusionPath" type="text" placeholder="/api" autocomplete="off">
+                    </div>
+                    <div class="field" >
+                        <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="blue add icon"></i> Add Credential</button>
+                    </div>
+            </div>
+
         </div>
         <script>
             let editingCredentials = [];
