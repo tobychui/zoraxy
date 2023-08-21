@@ -95,7 +95,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// if not custom ACME url, load it from ca.json
 	if caName == "custom" {
-		log.Println("[INFO] Using Custom ACME" + caUrl + " for CA Directory URL")
+		log.Println("[INFO] Using Custom ACME " + caUrl + " for CA Directory URL")
 	} else {
 		caLinkOverwrite, err := loadCAApiServerFromName(caName)
 		if err == nil {
@@ -104,7 +104,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		} else {
 			// (caName == "" || caUrl == "") will use default acme
 			config.CADirURL = a.DefaultAcmeServer
-			log.Println("[INFO] Using Default ACME" + a.DefaultAcmeServer + " for CA Directory URL")
+			log.Println("[INFO] Using Default ACME " + a.DefaultAcmeServer + " for CA Directory URL")
 		}
 	}
 
