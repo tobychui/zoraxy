@@ -355,7 +355,7 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 		log.Println("Renewing " + expiredCert.Filepath + " (Might take a few minutes)")
 		fileName := filepath.Base(expiredCert.Filepath)
 		certName := fileName[:len(fileName)-len(filepath.Ext(fileName))]
-		_, err := a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, expiredCert.CA)
+		_, err := a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, expiredCert.CA, "", "")
 		if err != nil {
 			log.Println("Renew " + fileName + "(" + strings.Join(expiredCert.Domains, ",") + ") failed: " + err.Error())
 		} else {

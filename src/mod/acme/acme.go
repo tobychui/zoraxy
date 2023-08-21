@@ -54,18 +54,22 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 type ACMEHandler struct {
 	DefaultAcmeServer string
 	Port              string
+	Kid               string
+	HmacEncoded       string
 }
 
 // NewACME creates a new ACMEHandler instance.
-func NewACME(acmeServer string, port string) *ACMEHandler {
+func NewACME(acmeServer string, port string, kid string, hmacEncoded string) *ACMEHandler {
 	return &ACMEHandler{
 		DefaultAcmeServer: acmeServer,
 		Port:              port,
+		Kid:               kid,
+		HmacEncoded:       hmacEncoded,
 	}
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, ca string) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, ca string, kid string, hmacEncoded string) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -113,12 +117,37 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 
+	var reg *registration.Resource
 	// New users will need to register
-	reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
-	if err != nil {
-		log.Println(err)
-		return false, err
+	if client.GetExternalAccountRequired() {
+		log.Println("External Account Required for this ACME Provider.")
+		// IF KID and HmacEncoded is overidden
+		if kid != "" && hmacEncoded != "" {
+			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
+				TermsOfServiceAgreed: true,
+				Kid:                  kid,
+				HmacEncoded:          hmacEncoded,
+			})
+		} else {
+			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
+				TermsOfServiceAgreed: true,
+				Kid:                  a.Kid,
+				HmacEncoded:          a.HmacEncoded,
+			})
+		}
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+		//return false, errors.New("External Account Required for this ACME Provider.")
+	} else {
+		reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
 	}
+
 	adminUser.Registration = reg
 
 	// obtain the certificate
