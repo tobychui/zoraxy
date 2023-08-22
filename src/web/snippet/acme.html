@@ -109,9 +109,14 @@
           <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
           <div class="item" data-value="Buypass">Buypass</div>
           <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+          <div class="item" data-value="Custom ACME Server">Custom ACME Server</div>
           <!-- <div class="item" data-value="Google">Google</div> -->
         </div>
       </div>
+    </div>
+    <div class="field" id="customca" style="display:none;">
+      <label>ACME Server URL</label>
+      <input id="caurl" type="text" placeholder="https://example.com/acme/dictionary">
     </div>
     <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Renew Certificate</button>
   </div>
@@ -295,6 +300,14 @@
       obtainCertificate();
     });
 
+    $("input[name=ca]").on('change', function() {
+      if(this.value == "Custom ACME Server") {
+        $("#customca").show();
+      } else {
+        $("#customca").hide();
+      }
+    })
+
     // Obtain certificate from API
     function obtainCertificate() {
       var domains = $("#domainsInput").val();
@@ -316,7 +329,14 @@
         parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
         return;
       }
+      
       var ca = $("#ca").dropdown("get value");
+      var ca_url = "";
+      if (ca == "Custom ACME Server") {
+        ca = "custom";
+        ca_url = $("#caurl").val();
+      }
+
       $.ajax({
         url: "/api/acme/obtainCert",
         method: "GET",
@@ -325,6 +345,7 @@
           filename: filename,
           email: email,
           ca: ca,
+          ca_url: ca_url,
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
