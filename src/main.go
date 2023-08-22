@@ -98,7 +98,7 @@ func ShutdownSeq() {
 	fmt.Println("- Closing Statistic Collector")
 	statisticCollector.Close()
 	if mdnsTickerStop != nil {
-		fmt.Println("- Stopping mDNS Discoverer")
+		fmt.Println("- Stopping mDNS Discoverer (might take a few minutes)")
 		// Stop the mdns service
 		mdnsTickerStop <- true
 	}

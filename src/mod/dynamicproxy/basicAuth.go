@@ -3,6 +3,7 @@ package dynamicproxy
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"imuslab.com/zoraxy/mod/auth"
 )
@@ -15,6 +16,16 @@ import (
 */
 
 func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
+	if len(pe.BasicAuthExceptionRules) > 0 {
+		//Check if the current path matches the exception rules
+		for _, exceptionRule := range pe.BasicAuthExceptionRules {
+			if strings.HasPrefix(r.RequestURI, exceptionRule.PathPrefix) {
+				//This path is excluded from basic auth
+				return nil
+			}
+		}
+	}
+
 	proxyType := "vdir-auth"
 	if pe.ProxyType == ProxyType_Subdomain {
 		proxyType = "subd-auth"

@@ -1,3 +1,13 @@
+<style>
+    .expired.certdate{
+        font-weight: bolder;
+        color: #bd001c;
+    }
+
+    .valid.certdate{
+        color: #31c071;
+    }
+</style>
 <div class="standardContainer">
     <div class="ui basic segment">
         <h2>TLS / SSL Certificates</h2>
@@ -111,10 +121,12 @@
                     return a.Domain > b.Domain
                 });
                 data.forEach(entry => {
+                    let isExpired = entry.RemainingDays <= 0;
+
                     $("#certifiedDomainList").append(`<tr>
                         <td>${entry.Domain}</td>
                         <td>${entry.LastModifiedDate}</td>
-                        <td>${entry.ExpireDate} (${entry.RemainingDays} days left)</td>
+                        <td class="${isExpired?"expired":"valid"} certdate">${entry.ExpireDate} (${!isExpired?entry.RemainingDays+" days left":"Expired"})</td>
                         <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
                     </tr>`);
                 });

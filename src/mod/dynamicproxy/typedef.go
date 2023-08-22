@@ -59,56 +59,51 @@ type BasicAuthUnhashedCredentials struct {
 	Password string
 }
 
+// Paths to exclude in basic auth enabled proxy handler
+type BasicAuthExceptionRule struct {
+	PathPrefix string
+}
+
 // A proxy endpoint record
 type ProxyEndpoint struct {
-	ProxyType            int                     //The type of this proxy, see const def
-	RootOrMatchingDomain string                  //Root for vdir or Matching domain for subd
-	Domain               string                  //Domain or IP to proxy to
-	RequireTLS           bool                    //Target domain require TLS
-	SkipCertValidations  bool                    //Set to true to accept self signed certs
-	RequireBasicAuth     bool                    //Set to true to request basic auth before proxy
-	BasicAuthCredentials []*BasicAuthCredentials `json:"-"`
-	Proxy                *dpcore.ReverseProxy    `json:"-"`
+	ProxyType               int                       //The type of this proxy, see const def
+	RootOrMatchingDomain    string                    //Root for vdir or Matching domain for subd, also act as key
+	Domain                  string                    //Domain or IP to proxy to
+	RequireTLS              bool                      //Target domain require TLS
+	SkipCertValidations     bool                      //Set to true to accept self signed certs
+	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
+	BasicAuthCredentials    []*BasicAuthCredentials   `json:"-"` //Basic auth credentials
+	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+	Proxy                   *dpcore.ReverseProxy      `json:"-"`
+
+	parent *Router
 }
 
 type RootOptions struct {
-	ProxyLocation        string
-	RequireTLS           bool
-	SkipCertValidations  bool
-	RequireBasicAuth     bool
-	BasicAuthCredentials []*BasicAuthCredentials
+	ProxyLocation           string
+	RequireTLS              bool
+	SkipCertValidations     bool
+	RequireBasicAuth        bool
+	BasicAuthCredentials    []*BasicAuthCredentials
+	BasicAuthExceptionRules []*BasicAuthExceptionRule
 }
 
 type VdirOptions struct {
-	RootName             string
-	Domain               string
-	RequireTLS           bool
-	SkipCertValidations  bool
-	RequireBasicAuth     bool
-	BasicAuthCredentials []*BasicAuthCredentials
+	RootName                string
+	Domain                  string
+	RequireTLS              bool
+	SkipCertValidations     bool
+	RequireBasicAuth        bool
+	BasicAuthCredentials    []*BasicAuthCredentials
+	BasicAuthExceptionRules []*BasicAuthExceptionRule
 }
 
 type SubdOptions struct {
-	MatchingDomain       string
-	Domain               string
-	RequireTLS           bool
-	SkipCertValidations  bool
-	RequireBasicAuth     bool
-	BasicAuthCredentials []*BasicAuthCredentials
+	MatchingDomain          string
+	Domain                  string
+	RequireTLS              bool
+	SkipCertValidations     bool
+	RequireBasicAuth        bool
+	BasicAuthCredentials    []*BasicAuthCredentials
+	BasicAuthExceptionRules []*BasicAuthExceptionRule
 }
-
-/*
-type ProxyEndpoint struct {
-	Root string
-	Domain         string
-	RequireTLS     bool
-	Proxy          *reverseproxy.ReverseProxy `json:"-"`
-}
-
-type SubdomainEndpoint struct {
-	MatchingDomain string
-	Domain         string
-	RequireTLS     bool
-	Proxy          *reverseproxy.ReverseProxy `json:"-"`
-}
-*/

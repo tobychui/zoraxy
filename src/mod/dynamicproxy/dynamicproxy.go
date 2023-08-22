@@ -246,14 +246,15 @@ func (router *Router) AddVirtualDirectoryProxyService(options *VdirOptions) erro
 	proxy := dpcore.NewDynamicProxyCore(path, options.RootName, options.SkipCertValidations)
 
 	endpointObject := ProxyEndpoint{
-		ProxyType:            ProxyType_Vdir,
-		RootOrMatchingDomain: options.RootName,
-		Domain:               domain,
-		RequireTLS:           options.RequireTLS,
-		SkipCertValidations:  options.SkipCertValidations,
-		RequireBasicAuth:     options.RequireBasicAuth,
-		BasicAuthCredentials: options.BasicAuthCredentials,
-		Proxy:                proxy,
+		ProxyType:               ProxyType_Vdir,
+		RootOrMatchingDomain:    options.RootName,
+		Domain:                  domain,
+		RequireTLS:              options.RequireTLS,
+		SkipCertValidations:     options.SkipCertValidations,
+		RequireBasicAuth:        options.RequireBasicAuth,
+		BasicAuthCredentials:    options.BasicAuthCredentials,
+		BasicAuthExceptionRules: options.BasicAuthExceptionRules,
+		Proxy:                   proxy,
 	}
 
 	router.ProxyEndpoints.Store(options.RootName, &endpointObject)
@@ -271,44 +272,22 @@ func (router *Router) LoadProxy(ptype string, key string) (*ProxyEndpoint, error
 		if !ok {
 			return nil, errors.New("target proxy not found")
 		}
-		return proxy.(*ProxyEndpoint), nil
+
+		targetProxy := proxy.(*ProxyEndpoint)
+		targetProxy.parent = router
+		return targetProxy, nil
 	} else if ptype == "subd" {
 		proxy, ok := router.SubdomainEndpoint.Load(key)
 		if !ok {
 			return nil, errors.New("target proxy not found")
 		}
-		return proxy.(*ProxyEndpoint), nil
+
+		targetProxy := proxy.(*ProxyEndpoint)
+		targetProxy.parent = router
+		return targetProxy, nil
 	}
 
 	return nil, errors.New("unsupported ptype")
-}
-
-/*
-Save routing from RP
-*/
-func (router *Router) SaveProxy(ptype string, key string, newConfig *ProxyEndpoint) {
-	if ptype == "vdir" {
-		router.ProxyEndpoints.Store(key, newConfig)
-
-	} else if ptype == "subd" {
-		router.SubdomainEndpoint.Store(key, newConfig)
-	}
-
-}
-
-/*
-Remove routing from RP
-*/
-func (router *Router) RemoveProxy(ptype string, key string) error {
-	//fmt.Println(ptype, key)
-	if ptype == "vdir" {
-		router.ProxyEndpoints.Delete(key)
-		return nil
-	} else if ptype == "subd" {
-		router.SubdomainEndpoint.Delete(key)
-		return nil
-	}
-	return errors.New("invalid ptype")
 }
 
 /*

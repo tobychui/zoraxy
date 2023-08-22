@@ -55,6 +55,10 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/setIncoming", HandleIncomingPortSet)
 	authRouter.HandleFunc("/api/proxy/useHttpsRedirect", HandleUpdateHttpsRedirect)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
+	//Reverse proxy auth related APIs
+	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
+	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
+	authRouter.HandleFunc("/api/proxy/auth/exceptions/delete", RemoveProxyBasicAuthExceptionPaths)
 
 	//TLS / SSL config
 	authRouter.HandleFunc("/api/cert/tls", handleToggleTLSProxy)

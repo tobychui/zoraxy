@@ -42,39 +42,53 @@
                         </div>
                         <div class="field" >
                             <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="blue add icon"></i> Add Credential</button>
+                            <button class="ui basic button"  style="float: right;" onclick="saveCredentials();"><i class="green save icon"></i> Save Credential</button>
                         </div>
                         <div class="ui divider"></div>
-                        <div class="field" >
-                            <button class="ui basic button"  style="float: right;" onclick="saveCredentials();"><i class="green save icon"></i> Save</button>
-                            <button class="ui basic button"  style="float: right;" onclick="cancelCredentialEdit();"><i class="remove icon"></i> Cancel</button>
-                        </div>
                     </div>
                 </div>
             </div>
             <div class="ui divider"></div>
-            <h3 class="ui header">No-Auth Paths</h3>
+            <h3 class="ui header">Authentication Exclusion Paths</h3>
             <div class="scrolling content ui form">
-                <p>Exclude specific paths from the basic auth interface. Useful if you are hosting services require remote API access.</p>
-                    <table class="ui very basic compacted unstackable celled table">
-                        <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Password</th>
-                            <th>Remove</th>
-                        </tr></thead>
-                        <tbody id="inlineEditExclusionPaths">
-                        <tr>
-                            <td colspan="3"><i class="ui green circle check icon"></i> No Path Excluded</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <div class="field">
-                        <input id="inlineEditExclusionPath" type="text" placeholder="/api" autocomplete="off">
+                <p>Exclude specific directories / paths which contains the following subpath prefix from authentication. Useful if you are hosting services require remote API access.</p>
+                <table class="ui very basic compacted unstackable celled table">
+                    <thead>
+                    <tr>
+                        <th>Path Prefix</th>
+                        <th>Remove</th>
+                    </tr></thead>
+                    <tbody id="exclusionPaths">
+                    <tr>
+                        <td colspan="2"><i class="ui green circle check icon"></i> No Path Excluded</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div class="field">
+                    <input id="newExclusionPath" type="text" placeholder="/public/api/" autocomplete="off">
+                    <small>Make sure you add the tailing slash for only selecting the files / folder inside that path.</small>
+                </div>
+                <div class="field" >
+                    <button class="ui basic button" onclick="addExceptionPath();"><i class="blue add icon"></i> Add Exception</button>
+                </div>
+                <div class="field">
+                    <div class="ui basic message">
+                        <h4>How to use set excluded paths?</h4>
+                        <p>All request URI that contains the given prefix will be allowed to bypass authentication and <b>the prefix must start with a slash.</b> For example, given the following prefix.<br>
+                        <code>/public/res/</code><br>
+                            <br>
+                            Zoraxy will allow authentication bypass of any subdirectories or resources under the /public/res/ directory. For example, the following paths access will be able to bypass basic auth mechanism under this setting.<br>
+                            <code>/public/res/photo.png</code><br>
+                            <code>/public/res/far/boo/</code></p>
                     </div>
-                    <div class="field" >
-                        <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="blue add icon"></i> Add Credential</button>
-                    </div>
+                </div>
+                <div class="ui divider"></div>
+                <div class="field" >
+                    <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
+                </div>
             </div>
+            
+            <br><br><br><br>
 
         </div>
         <script>
@@ -151,6 +165,80 @@
                 updateEditingCredentialList();
             }
 
+            function addExceptionPath(){
+                // Retrieve the username and password input values
+                var newExclusionPathMatchingPrefix = $('#newExclusionPath').val().trim();
+                if (newExclusionPathMatchingPrefix == ""){
+                    parent.msgbox("Matching prefix cannot be empty!", false, 5000);
+                    return;
+                }
+                $.ajax({
+                    url: "/api/proxy/auth/exceptions/add",
+                    data:{
+                        ptype: editingEndpoint.ept,
+                        ep: editingEndpoint.ep,
+                        prefix: newExclusionPathMatchingPrefix
+                    },
+                    method: "POST",
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false, 5000);
+                        }else{
+                            initExceptionPaths();
+                            parent.msgbox("New exception path added", true);
+                            $('#newExclusionPath').val("");
+                        }
+                    }
+                });
+            }
+
+            function removeExceptionPath(object){
+                let matchingPrefix = $(object).attr("prefix");
+                $.ajax({
+                    url: "/api/proxy/auth/exceptions/delete",
+                    data:{
+                        ptype: editingEndpoint.ept,
+                        ep: editingEndpoint.ep,
+                        prefix: matchingPrefix
+                    },
+                    method: "POST",
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false, 5000);
+                        }else{
+                            initExceptionPaths();
+                            parent.msgbox("Exception path removed", true);
+                        }
+                    }
+                });
+            }
+
+            //Load exception paths from server
+            function initExceptionPaths(){
+                $.get(`/api/proxy/auth/exceptions/list?ptype=${editingEndpoint.ept}&ep=${editingEndpoint.ep}`, function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error, false, 5000);
+                    }else{
+                        if (data.length == 0){
+                            $("#exclusionPaths").html(` <tr>
+                                <td colspan="2"><i class="ui green circle check icon"></i> No Path Excluded</td>
+                            </tr>`);
+                        }else{
+                            $("#exclusionPaths").html("");
+                            data.forEach(function(rule){
+                                $("#exclusionPaths").append(` <tr>
+                                    <td>${rule.PathPrefix}</td>
+                                    <td><button class="ui red basic mini icon button" onclick="removeExceptionPath(this);" prefix="${rule.PathPrefix}"><i class="ui red times icon"></i></button></td>
+                                </tr>`);
+                            })
+                        }   
+                    }
+                });
+
+
+            }
+            initExceptionPaths();
+
             function updateEditingCredentialList() {
                 var tableBody = $('#inlineEditBasicAuthCredentialTable');
                 tableBody.empty();
@@ -195,7 +283,7 @@
                 return isExists;
             }
 
-            function cancelCredentialEdit(){
+            function closeThisWrapper(){
                 parent.hideSideWrapper(true);
             }
 
@@ -213,7 +301,7 @@
                             parent.msgbox(data.error, false, 6000);
                         }else{
                             parent.msgbox("Credentials Updated");
-                            parent.hideSideWrapper(true);
+                            //parent.hideSideWrapper(true);
                         }
                     }
                 })

@@ -34,13 +34,14 @@ func (router *Router) AddSubdomainRoutingService(options *SubdOptions) error {
 	proxy := dpcore.NewDynamicProxyCore(path, "", options.SkipCertValidations)
 
 	router.SubdomainEndpoint.Store(options.MatchingDomain, &ProxyEndpoint{
-		RootOrMatchingDomain: options.MatchingDomain,
-		Domain:               domain,
-		RequireTLS:           options.RequireTLS,
-		Proxy:                proxy,
-		SkipCertValidations:  options.SkipCertValidations,
-		RequireBasicAuth:     options.RequireBasicAuth,
-		BasicAuthCredentials: options.BasicAuthCredentials,
+		RootOrMatchingDomain:    options.MatchingDomain,
+		Domain:                  domain,
+		RequireTLS:              options.RequireTLS,
+		Proxy:                   proxy,
+		SkipCertValidations:     options.SkipCertValidations,
+		RequireBasicAuth:        options.RequireBasicAuth,
+		BasicAuthCredentials:    options.BasicAuthCredentials,
+		BasicAuthExceptionRules: options.BasicAuthExceptionRules,
 	})
 
 	log.Println("Adding Subdomain Rule: ", options.MatchingDomain+" to "+domain)
