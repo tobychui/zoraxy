@@ -16,21 +16,20 @@ docker run -d --name (container name) -p (ports) -v (path to storage directory):
 ```
 
 ### Using Docker Compose </br>
-```
+```yml
 version: '3.3'
 services:
   zoraxy-docker:
     image: passivelemon/zoraxy-docker:latest
     container_name: (container name)
     ports:
-      - 80:80                                        # Http port
-      - 443:443                                      # Https port
-      - (external):8000                              # Management portal port
+      - 80:80
+      - 443:443
+      - (external):8000
     volumes:
-      - (path to storage directory):/zoraxy/config/  # Host directory for Zoraxy file storage
+      - (path to storage directory):/opt/zoraxy/config/
     environment:
-      ARGS: '(your arguments)'                       # The arguments to run with Zoraxy. Enter them as they would be entered normally.
-      VERSION: '(version in x.x.x)'                  # The release version of Zoraxy.
+      ARGS: '(your arguments)'
 ```
 
 | Operator | Need | Details |
@@ -38,9 +37,8 @@ services:
 | `-d` | Yes | will run the container in the background. |
 | `--name (container name)` | No | Sets the name of the container to the following word. You can change this to whatever you want. |
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
-| `-v (path to storage directory):/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
-| `-e ARGS=(your arguments)` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-port=:8000 -noauth=false` |
-| `-e VERSION=(version)` | Recommended | Sets the version of Zoraxy that the container will download. Must be a supported release found on the Zoraxy GitHub. Make sure that it is not set to the containers version. Defaults to the latest if not set. |
+| `-v (path to storage directory):/opt/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
+| `-e ARGS=(your arguments)` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-noauth=false` but <b>you cannot change the management port.</b> This is required for the healthcheck to work. |
 | `passivelemon/zoraxy-docker:latest` | Yes | The repository on Docker hub. By default, it is the latest version that I have published. |
 
 ## Examples: </br>
@@ -50,7 +48,7 @@ docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker
 ```
 
 ### Docker Compose </br>
-```
+```yml
 version: '3.3'
 services:
   zoraxy-docker:
@@ -61,8 +59,7 @@ services:
       - 443:443
       - 8005:8000/tcp
     volumes:
-      - /home/docker/Containers/Zoraxy:/zoraxy/config/
+      - /home/docker/Containers/Zoraxy:/opt/zoraxy/config/
     environment:
-      ARGS: '-port=:8000 -noauth=false'
-      VERSION: '2.6.5'
+      ARGS: '-noauth=false'
 ```

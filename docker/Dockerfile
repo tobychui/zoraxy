@@ -1,22 +1,38 @@
-FROM docker.io/golang:1.21rc3-alpine3.18
+FROM docker.io/golang:alpine
+# VERSION comes from the main.yml workflow --build-arg
+ARG VERSION
 
-RUN apk add --no-cache bash curl jq git sudo
+RUN apk add --no-cache bash netcat-openbsd sudo
 
-RUN mkdir -p /zoraxy/source/ &&\
-    mkdir -p /zoraxy/config/
+RUN mkdir -p /opt/zoraxy/source/ &&\
+    mkdir -p /opt/zoraxy/config/ &&\
+    mkdir -p /usr/local/bin/
 
-VOLUME [ "/zoraxy/config/" ]
+COPY entrypoint.sh /opt/zoraxy/
 
-COPY entrypoint.sh /zoraxy/
-COPY notifier.sh /zoraxy/
+RUN chmod -R 755 /opt/zoraxy/ &&\
+    chmod +x /opt/zoraxy/entrypoint.sh
 
-RUN chmod 755 /zoraxy/ &&\
-    chmod +x /zoraxy/entrypoint.sh
+VOLUME [ "/opt/zoraxy/config/" ]
 
-ENV DOCKER="2.1.0"
-ENV NOTIFS="1"
+# If you build it yourself, you will need to add the src directory into the docker directory.
+COPY ./src/ /opt/zoraxy/source/
 
-ENV VERSION="latest"
-ENV ARGS="-port=:8000 -noauth=false"
+WORKDIR /opt/zoraxy/source/
 
-ENTRYPOINT ["/zoraxy/entrypoint.sh"]
+RUN go mod tidy &&\
+    go build -o /usr/local/bin/zoraxy &&\
+    rm -r /opt/zoraxy/source/
+
+RUN chmod +x /usr/local/bin/zoraxy
+
+WORKDIR /opt/zoraxy/config/
+
+ENV VERSION=$VERSION
+
+ENV ARGS="-noauth=false"
+
+ENTRYPOINT ["/opt/zoraxy/entrypoint.sh"]
+
+HEALTHCHECK --interval=5s --timeout=5s --retries=2 CMD nc -vz 127.0.0.1 8000 || exit 1
+
