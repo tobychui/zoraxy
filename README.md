@@ -157,6 +157,12 @@ Loopback web ssh connection, by default, is disabled. This means that if you are
 ./zoraxy -sshlb=true
 ```
 
+## Sponsor This Project
+If you want to donate a few bucks to the developers and maybe get your feature request added a bit faster (not guaranteed) , feel free to use the links below
+- [tobychui (Primary author)](https://paypal.me/tobychui)
+- PassiveLemon (Docker compatibility maintainer)
+
+
 ## License
 
 This project is open source under AGPL. I open source this project so everyone can check for security issues and benefit all users. **If your plans to use this project in commercial environment which violate the AGPL terms, please contact toby@imuslab.com for an alternative commercial license.** 
