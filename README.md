@@ -158,7 +158,7 @@ Loopback web ssh connection, by default, is disabled. This means that if you are
 ```
 
 ## Sponsor This Project
-If you want to donate a few bucks to the developers and maybe get your feature request added a bit faster (not guaranteed) , feel free to use the links below
+If you like the project and want to support us, please consider a donation. You can use the links below
 - [tobychui (Primary author)](https://paypal.me/tobychui)
 - PassiveLemon (Docker compatibility maintainer)
 
