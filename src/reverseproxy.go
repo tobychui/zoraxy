@@ -814,3 +814,34 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendOK(w)
 }
+
+// Handle list of root route options
+func HandleRootRouteOptionList(w http.ResponseWriter, r *http.Request) {
+	js, _ := json.Marshal(dynamicProxyRouter.RootRoutingOptions)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// Handle update of the root route edge case options. See dynamicproxy/rootRoute.go
+func HandleRootRouteOptionsUpdate(w http.ResponseWriter, r *http.Request) {
+	enableUnsetSubdomainRedirect, err := utils.PostBool(r, "unsetRedirect")
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	unsetRedirectTarget, _ := utils.PostPara(r, "unsetRedirectTarget")
+
+	newRootOption := dynamicproxy.RootRoutingOptions{
+		EnableRedirectForUnsetRules: enableUnsetSubdomainRedirect,
+		UnsetRuleRedirectTarget:     unsetRedirectTarget,
+	}
+
+	dynamicProxyRouter.RootRoutingOptions = &newRootOption
+	err = newRootOption.SaveToFile()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}

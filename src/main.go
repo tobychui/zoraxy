@@ -40,6 +40,7 @@ var allowMdnsScanning = flag.Bool("mdns", true, "Enable mDNS scanner and transpo
 var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var (
 	name        = "Zoraxy"
 	version     = "2.6.6"

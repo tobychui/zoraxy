@@ -335,3 +335,20 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 	js, _ := json.MarshalIndent(info, "", " ")
 	utils.SendJSONResponse(w, string(js))
 }
+
+func HandleGeoIpLookup(w http.ResponseWriter, r *http.Request) {
+	ip, err := utils.GetPara(r, "ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "ip not given")
+		return
+	}
+
+	cc, err := geodbStore.ResolveCountryCodeFromIP(ip)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	js, _ := json.Marshal(cc)
+	utils.SendJSONResponse(w, string(js))
+}

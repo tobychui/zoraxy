@@ -34,17 +34,19 @@ type RouterOption struct {
 }
 
 type Router struct {
-	Option            *RouterOption
-	ProxyEndpoints    *sync.Map
-	SubdomainEndpoint *sync.Map
-	Running           bool
-	Root              *ProxyEndpoint
-	mux               http.Handler
-	server            *http.Server
-	tlsListener       net.Listener
-	routingRules      []*RoutingRule
+	Option             *RouterOption
+	ProxyEndpoints     *sync.Map
+	SubdomainEndpoint  *sync.Map
+	Running            bool
+	Root               *ProxyEndpoint
+	RootRoutingOptions *RootRoutingOptions
+	mux                http.Handler
+	server             *http.Server
+	tlsListener        net.Listener
+	routingRules       []*RoutingRule
 
-	tlsRedirectStop chan bool
+	tlsRedirectStop chan bool      //Stop channel for tls redirection server
+	tldMap          map[string]int //Top level domain map, see tld.json
 }
 
 // Auth credential for basic auth on certain endpoints
@@ -70,6 +72,7 @@ type ProxyEndpoint struct {
 	RootOrMatchingDomain    string                    //Root for vdir or Matching domain for subd, also act as key
 	Domain                  string                    //Domain or IP to proxy to
 	RequireTLS              bool                      //Target domain require TLS
+	BypassGlobalTLS         bool                      //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
 	SkipCertValidations     bool                      //Set to true to accept self signed certs
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
 	BasicAuthCredentials    []*BasicAuthCredentials   `json:"-"` //Basic auth credentials
@@ -79,19 +82,31 @@ type ProxyEndpoint struct {
 	parent *Router
 }
 
+// Root options are those that are required for reverse proxy handler to work
 type RootOptions struct {
-	ProxyLocation           string
-	RequireTLS              bool
-	SkipCertValidations     bool
-	RequireBasicAuth        bool
+	ProxyLocation       string //Proxy Root target, all unset traffic will be forward to here
+	RequireTLS          bool   //Proxy root target require TLS connection (not recommended)
+	BypassGlobalTLS     bool   //Bypass global TLS setting and make root http only (not recommended)
+	SkipCertValidations bool   //Skip cert validation, suitable for self-signed certs, CURRENTLY NOT USED
+
+	//Basic Auth Related
+	RequireBasicAuth        bool //Require basic auth, CURRENTLY NOT USED
 	BasicAuthCredentials    []*BasicAuthCredentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule
+}
+
+// Additional options are here for letting router knows how to route exception cases for root
+type RootRoutingOptions struct {
+	//Root only configs
+	EnableRedirectForUnsetRules bool   //Force unset rules to redirect to custom domain
+	UnsetRuleRedirectTarget     string //Custom domain to redirect to for unset rules
 }
 
 type VdirOptions struct {
 	RootName                string
 	Domain                  string
 	RequireTLS              bool
+	BypassGlobalTLS         bool
 	SkipCertValidations     bool
 	RequireBasicAuth        bool
 	BasicAuthCredentials    []*BasicAuthCredentials
@@ -102,6 +117,7 @@ type SubdOptions struct {
 	MatchingDomain          string
 	Domain                  string
 	RequireTLS              bool
+	BypassGlobalTLS         bool
 	SkipCertValidations     bool
 	RequireBasicAuth        bool
 	BasicAuthCredentials    []*BasicAuthCredentials

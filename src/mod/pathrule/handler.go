@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -58,7 +58,7 @@ func (h *Handler) HandleAddBlockingPath(w http.ResponseWriter, r *http.Request) 
 	}
 
 	targetBlockingPath := BlockingPath{
-		UUID:          uuid.NewV4().String(),
+		UUID:          uuid.New().String(),
 		MatchingPath:  matchingPath,
 		ExactMatch:    exactMatch == "true",
 		StatusCode:    statusCode,

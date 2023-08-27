@@ -76,7 +76,10 @@ func startupSequence() {
 	}
 
 	//Create a geodb store
-	geodbStore, err = geodb.NewGeoDb(sysdb)
+	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
+		AllowSlowIpv4LookUp: !*enableHighSpeedGeoIPLookup,
+		AllowSloeIpv6Lookup: !*enableHighSpeedGeoIPLookup,
+	})
 	if err != nil {
 		panic(err)
 	}

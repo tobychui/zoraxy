@@ -3,6 +3,7 @@ package dynamicproxy
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -29,10 +30,17 @@ func NewDynamicProxy(option RouterOption) (*Router, error) {
 		Running:           false,
 		server:            nil,
 		routingRules:      []*RoutingRule{},
+		tldMap:            map[string]int{},
 	}
 
 	thisRouter.mux = &ProxyHandler{
 		Parent: &thisRouter,
+	}
+
+	//Prase the tld map for tld redirection in main router
+	//See Server.go declarations
+	if len(rawTldMap) > 0 {
+		json.Unmarshal(rawTldMap, &thisRouter.tldMap)
 	}
 
 	return &thisRouter, nil
@@ -65,9 +73,17 @@ func (router *Router) StartProxyService() error {
 		return errors.New("Reverse proxy server already running")
 	}
 
+	//Check if root route is set
 	if router.Root == nil {
 		return errors.New("Reverse proxy router root not set")
 	}
+
+	//Load root options from file
+	loadedRootOption, err := loadRootRoutingOptionsFromFile()
+	if err != nil {
+		return err
+	}
+	router.RootRoutingOptions = loadedRootOption
 
 	minVersion := tls.VersionTLS10
 	if router.Option.ForceTLSLatest {
@@ -314,14 +330,15 @@ func (router *Router) SetRootProxy(options *RootOptions) error {
 	proxy := dpcore.NewDynamicProxyCore(path, "", options.SkipCertValidations)
 
 	rootEndpoint := ProxyEndpoint{
-		ProxyType:            ProxyType_Vdir,
-		RootOrMatchingDomain: "/",
-		Domain:               proxyLocation,
-		RequireTLS:           options.RequireTLS,
-		SkipCertValidations:  options.SkipCertValidations,
-		RequireBasicAuth:     options.RequireBasicAuth,
-		BasicAuthCredentials: options.BasicAuthCredentials,
-		Proxy:                proxy,
+		ProxyType:               ProxyType_Vdir,
+		RootOrMatchingDomain:    "/",
+		Domain:                  proxyLocation,
+		RequireTLS:              options.RequireTLS,
+		SkipCertValidations:     options.SkipCertValidations,
+		RequireBasicAuth:        options.RequireBasicAuth,
+		BasicAuthCredentials:    options.BasicAuthCredentials,
+		BasicAuthExceptionRules: options.BasicAuthExceptionRules,
+		Proxy:                   proxy,
 	}
 
 	router.Root = &rootEndpoint

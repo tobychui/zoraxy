@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -180,7 +180,7 @@ func setSMTPAdminAddress(adminAddr string) error {
 	return sysdb.Write("smtp", "admin", adminAddr)
 }
 
-//Load SMTP admin address. Return empty string if not set
+// Load SMTP admin address. Return empty string if not set
 func loadSMTPAdminAddr() string {
 	adminAddr := ""
 	if sysdb.KeyExists("smtp", "admin") {
@@ -223,7 +223,7 @@ func HandleAdminAccountResetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passwordResetAccessToken = uuid.NewV4().String()
+	passwordResetAccessToken = uuid.New().String()
 
 	//SMTP info exists. Send reset account email
 	lastAccountResetEmail = time.Now().Unix()

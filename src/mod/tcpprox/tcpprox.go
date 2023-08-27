@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/database"
 )
 
@@ -95,7 +95,7 @@ func NewTCProxy(options *Options) *Manager {
 
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 	//Generate a new config from options
-	configUUID := uuid.NewV4().String()
+	configUUID := uuid.New().String()
 	thisConfig := ProxyRelayConfig{
 		UUID:                        configUUID,
 		Name:                        config.Name,

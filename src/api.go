@@ -55,6 +55,9 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/setIncoming", HandleIncomingPortSet)
 	authRouter.HandleFunc("/api/proxy/useHttpsRedirect", HandleUpdateHttpsRedirect)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
+	//Reverse proxy root related APIs
+	authRouter.HandleFunc("/api/proxy/root/listOptions", HandleRootRouteOptionList)
+	authRouter.HandleFunc("/api/proxy/root/updateOptions", HandleRootRouteOptionsUpdate)
 	//Reverse proxy auth related APIs
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
@@ -168,6 +171,7 @@ func initAPIs() {
 
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
+	http.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
 	http.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	http.HandleFunc("/api/conf/import", ImportConfigFromZip)
 
