@@ -118,6 +118,12 @@
       <label>ACME Server URL</label>
       <input id="caurl" type="text" placeholder="https://example.com/acme/dictionary">
     </div>
+    <div class="field" id="skipTLS" style="display:none;">
+      <div class="ui checkbox">
+        <input type="checkbox" id="skipTLSCheckbox">
+        <label>Ignore TLS/SSL Verification Error<br><small>E.g. self-signed, expired certificate (Not Recommended)</small></label>
+      </div>
+    </div>
     <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Renew Certificate</button>
   </div>
   <div class="ui divider"></div>
@@ -303,8 +309,10 @@
     $("input[name=ca]").on('change', function() {
       if(this.value == "Custom ACME Server") {
         $("#customca").show();
+        $("#skipTLS").show();
       } else {
         $("#customca").hide();
+        $("#skipTLS").hide();
       }
     })
 
@@ -337,6 +345,8 @@
         ca_url = $("#caurl").val();
       }
 
+      var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
+
       $.ajax({
         url: "/api/acme/obtainCert",
         method: "GET",
@@ -346,6 +356,7 @@
           email: email,
           ca: ca,
           ca_url: ca_url,
+          skipTLS: skipTLSValue,
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
