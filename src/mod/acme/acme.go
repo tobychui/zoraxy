@@ -308,7 +308,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	if ca == "custom" {
-		caUrl, err = utils.PostPara(r, "ca_url")
+		caUrl, err = utils.PostPara(r, "caURL")
 		if err != nil {
 			log.Println("Custom CA set but no URL provide, Using default")
 			ca, caUrl = "", ""
