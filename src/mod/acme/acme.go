@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -30,6 +31,7 @@ import (
 type CertificateInfoJSON struct {
 	AcmeName string `json:"acme_name"`
 	AcmeUrl  string `json:"acme_url"`
+	SkipTLS  bool   `json:"skip_tls"`
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -69,7 +71,7 @@ func NewACME(acmeServer string, port string) *ACMEHandler {
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -87,6 +89,24 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// create config
 	config := lego.NewConfig(&adminUser)
+
+	// skip TLS verify if need
+	// Ref: https://github.com/go-acme/lego/blob/6af2c756ac73a9cb401621afca722d0f4112b1b8/lego/client_config.go#L74
+	if skipTLS {
+		log.Println("[INFO] Ignore TLS/SSL Verification Error for ACME Server")
+		config.HTTPClient.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 
 	// setup the custom ACME url endpoint.
 	if caUrl != "" {
@@ -159,6 +179,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	certInfo := &CertificateInfoJSON{
 		AcmeName: caName,
 		AcmeUrl:  caUrl,
+		SkipTLS:  skipTLS,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -287,15 +308,25 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	if ca == "custom" {
-		caUrl, err = utils.PostPara(r, "ca_url")
+		caUrl, err = utils.PostPara(r, "caURL")
 		if err != nil {
 			log.Println("Custom CA set but no URL provide, Using default")
 			ca, caUrl = "", ""
 		}
 	}
 
+	var skipTLS bool
+
+	if skipTLSString, err := utils.PostPara(r, "skipTLS"); err != nil {
+		skipTLS = false
+	} else if skipTLSString != "true" {
+		skipTLS = false
+	} else {
+		skipTLS = true
+	}
+
 	domains := strings.Split(domainPara, ",")
-	result, err := a.ObtainCert(domains, filename, email, ca, caUrl)
+	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return

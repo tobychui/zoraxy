@@ -365,7 +365,7 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 			certInfo = &CertificateInfoJSON{}
 		}
 
-		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl)
+		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS)
 		if err != nil {
 			log.Println("Renew " + fileName + "(" + strings.Join(expiredCert.Domains, ",") + ") failed: " + err.Error())
 		} else {
