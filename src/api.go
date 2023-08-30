@@ -171,9 +171,9 @@ func initAPIs() {
 
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
-	http.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
-	http.HandleFunc("/api/conf/export", ExportConfigAsZip)
-	http.HandleFunc("/api/conf/import", ImportConfigFromZip)
+	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
+	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
+	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
 
 	//Debug
 	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
