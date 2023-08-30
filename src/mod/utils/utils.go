@@ -37,46 +37,6 @@ func SendOK(w http.ResponseWriter) {
 	w.Write([]byte("\"OK\""))
 }
 
-/*
-	The paramter move function (mv)
-
-	You can find similar things in the PHP version of ArOZ Online Beta. You need to pass in
-	r (HTTP Request Object)
-	getParamter (string, aka $_GET['This string])
-
-	Will return
-	Paramter string (if any)
-	Error (if error)
-
-*/
-/*
-func Mv(r *http.Request, getParamter string, postMode bool) (string, error) {
-	if postMode == false {
-		//Access the paramter via GET
-		keys, ok := r.URL.Query()[getParamter]
-
-		if !ok || len(keys[0]) < 1 {
-			//log.Println("Url Param " + getParamter +" is missing")
-			return "", errors.New("GET paramter " + getParamter + " not found or it is empty")
-		}
-
-		// Query()["key"] will return an array of items,
-		// we only want the single item.
-		key := keys[0]
-		return string(key), nil
-	} else {
-		//Access the parameter via POST
-		r.ParseForm()
-		x := r.Form.Get(getParamter)
-		if len(x) == 0 || x == "" {
-			return "", errors.New("POST paramter " + getParamter + " not found or it is empty")
-		}
-		return string(x), nil
-	}
-
-}
-*/
-
 // Get GET parameter
 func GetPara(r *http.Request, key string) (string, error) {
 	keys, ok := r.URL.Query()[key]
@@ -96,6 +56,24 @@ func PostPara(r *http.Request, key string) (string, error) {
 	} else {
 		return x, nil
 	}
+}
+
+// Get POST paramter as boolean, accept 1 or true
+func PostBool(r *http.Request, key string) (bool, error) {
+	x, err := PostPara(r, key)
+	if err != nil {
+		return false, err
+	}
+
+	x = strings.TrimSpace(x)
+
+	if x == "1" || strings.ToLower(x) == "true" {
+		return true, nil
+	} else if x == "0" || strings.ToLower(x) == "false" {
+		return false, nil
+	}
+
+	return false, errors.New("invalid boolean given")
 }
 
 func FileExists(filename string) bool {
@@ -126,19 +104,6 @@ func IsDir(path string) bool {
 
 func TimeToString(targetTime time.Time) string {
 	return targetTime.Format("2006-01-02 15:04:05")
-}
-
-// Use for redirections
-func ConstructRelativePathFromRequestURL(requestURI string, redirectionLocation string) string {
-	if strings.Count(requestURI, "/") == 1 {
-		//Already root level
-		return redirectionLocation
-	}
-	for i := 0; i < strings.Count(requestURI, "/")-1; i++ {
-		redirectionLocation = "../" + redirectionLocation
-	}
-
-	return redirectionLocation
 }
 
 // Check if given string in a given slice

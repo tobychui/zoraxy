@@ -1,7 +1,7 @@
 <div class="standardContainer">
     <div class="ui basic segment">
         <h2>Set Proxy Root</h2>
-        <p>For all routing not found in the proxy rules, request will be redirected to the proxy root server.</p>
+        <p>The default routing point for all incoming traffics. For all routing not found in the proxy rules, request will be redirected to the proxy root server.</p>
         <div class="ui form">
             <div class="field">
                 <label>Proxy Root</label>
@@ -10,16 +10,54 @@
             </div>
             <div class="field">
                 <div class="ui checkbox">
-                    <input type="checkbox" id="rootReqTLS" >
-                    <label>Root require TLS Connection <br><small>(i.e. Your proxy target starts with https://)</small></label>
+                    <input type="checkbox" id="rootReqTLS">
+                    <label>Root require TLS connection <br><small>Check this if your proxy root URL starts with https://</small></label>
                 </div>
             </div>
+            <br>
+            <button class="ui basic button" onclick="setProxyRoot()"><i class="teal home icon" ></i> Update Proxy Root</button>
+            <div class="ui divider"></div>
+            <div class="field">
+                <h4>Root Routing Options</h4>
+            </div>
+            <div class="field">
+                <div class="ui checkbox">
+                    <input type="checkbox" id="unsetRedirect">
+                    <label>Enable redirect for unset subdomains <br><small>Redirect subdomain that is not found to custom domain</small></label>
+                </div>
+            </div>
+            <div class="ui basic segment" id="unsetRedirectDomainWrapper" style="background-color: #f7f7f7; border-radius: 1em; margin-left: 2em; padding-left: 2em; display:none;">
+                <div style="
+                    position: absolute;
+                    top:0;
+                    left: 1em;
+                    width: 0px;
+                    height: 0px;
+                    margin-top: -10px;
+                    border-left: 10px solid transparent;
+                    border-right: 10px solid transparent;
+                    border-bottom: 10px solid #f7f7f7;">
+
+                </div>
+                <div class="field">
+                    <label>Redirect target domain</label>
+                    <div class="ui input">
+                        <input id="unsetRedirectDomain" type="text" placeholder="http://example.com">
+                    </div>
+                    <small>Unset subdomain will be redirected to the link above. Remember to include the protocol (e.g. http:// or https://)<br>
+                    Leave empty for redirecting to upper level domain (e.g. notfound.example.com <i class="right arrow icon"></i> example.com)</small>
+                </div>
+            </div>
+            <br>
+            <button class="ui basic button" onclick="updateRootOptions()"><i class="blue save icon" ></i> Save Root Options</button>
         </div>
         <br>
-        <button class="ui basic button" onclick="setProxyRoot()"><i class="teal home icon" ></i> Update Proxy Root</button>
+        
     </div>
 </div>
 <script>
+    $("#advanceRootSettings").accordion();
+
     function initRootInfo(){
         $.get("/api/proxy/list?type=root", function(data){
             if (data == null){
@@ -29,10 +67,60 @@
                 checkRootRequireTLS(data.Domain);
             }
         });
+
+        
     }
     initRootInfo();
 
+    function updateRootSettingStates(){
+        $.get("/api/cert/tls", function(data){
+            if (data == true){
+                $("#disableRootTLS").parent().removeClass('disabled').attr("title", "");
+            }else{
+                $("#disableRootTLS").parent().addClass('disabled').attr("title", "TLS listener is not enabled");
+            }
+        });
+    }
+    //Bind event to tab switch
+    tabSwitchEventBind["setroot"] = function(){
+        //On switch over to this page, update root info
+        updateRootSettingStates();
+    }
+
+    //Toggle the display status of the input box for domain setting
+    function updateRedirectionDomainSettingInputBox(useRedirect){
+        if(useRedirect){
+            $("#unsetRedirectDomainWrapper").stop().finish().slideDown("fast");
+        }else{
+            $("#unsetRedirectDomainWrapper").stop().finish().slideUp("fast");
+        }
+    }
+
+    function checkCustomRedirectForUnsetSubd(){
+        $.get("/api/proxy/root/listOptions", function(data){
+            $("#unsetRedirect")[0].checked = data.EnableRedirectForUnsetRules || false;
+            $("#unsetRedirectDomain").val(data.UnsetRuleRedirectTarget);
+            updateRedirectionDomainSettingInputBox(data.EnableRedirectForUnsetRules);
+
+            //Bind event to the checkbox
+            $("#unsetRedirect").off("change").on("change", function(){
+                let useRedirect = $("#unsetRedirect")[0].checked;
+                updateRedirectionDomainSettingInputBox(useRedirect);
+            });
+        })
+       
+    }
+    checkCustomRedirectForUnsetSubd();
+
     function checkRootRequireTLS(targetDomain){
+        //Trim off the http or https from the origin
+        if (targetDomain.startsWith("http://")){
+            targetDomain = targetDomain.substring(7);
+            $("#proxyRoot").val(targetDomain);
+        }else if (targetDomain.startsWith("https://")){
+            targetDomain = targetDomain.substring(8);
+            $("#proxyRoot").val(targetDomain);
+        }
        $.ajax({
             url: "/api/proxy/tlscheck",
             data: {url: targetDomain},
@@ -44,6 +132,8 @@
                 }else if (data == "http"){
                     $("#rootReqTLS").parent().checkbox("set unchecked");
                 }
+
+                
             }
        })
     }
@@ -66,7 +156,7 @@
             data: {"type": "root", tls: rootReqTls, ep: newpr},
             success: function(data){
                 if (data.error != undefined){
-                    alert(data.error);
+                    msgbox(data.error, false, 5000);
                 }else{
                     //OK
                     initRootInfo();
@@ -75,5 +165,26 @@
             }
         });
 
+    }
+
+    function updateRootOptions(){
+        $.ajax({
+            type: "POST",
+            url: "/api/proxy/root/updateOptions",
+            data: {
+                unsetRedirect: $("#unsetRedirect")[0].checked,
+                unsetRedirectTarget: $("#unsetRedirectDomain").val().trim(),
+            },
+            success: function(data) {
+               if (data.error != undefined){
+                    msgbox(data.error, false);
+               }else{
+                    msgbox("Root Routing Options updated");
+               }
+            },
+            error: function(error) {
+                console.log("Error:", error);
+            }
+        });
     }
 </script>

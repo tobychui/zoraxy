@@ -36,9 +36,11 @@ import (
 var noauth = flag.Bool("noauth", false, "Disable authentication for management interface")
 var showver = flag.Bool("version", false, "Show version of this server")
 var allowSshLoopback = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
+var allowMdnsScanning = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
 var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var (
 	name        = "Zoraxy"
 	version     = "2.6.6"
@@ -96,9 +98,12 @@ func ShutdownSeq() {
 	netstatBuffers.Close()
 	fmt.Println("- Closing Statistic Collector")
 	statisticCollector.Close()
-	fmt.Println("- Stopping mDNS Discoverer")
-	//Stop the mdns service
-	mdnsTickerStop <- true
+	if mdnsTickerStop != nil {
+		fmt.Println("- Stopping mDNS Discoverer (might take a few minutes)")
+		// Stop the mdns service
+		mdnsTickerStop <- true
+	}
+
 	mdnsScanner.Close()
 	fmt.Println("- Closing Certificates Auto Renewer")
 	acmeAutoRenewer.Close()

@@ -21,6 +21,17 @@ func replaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS b
 		u.Scheme = "http"
 	}
 
+	//Issue #39: Check if it is location target match the proxying domain
+	//E.g. Proxy config: blog.example.com -> example.com/blog
+	//Check if it is actually redirecting to example.com instead of a new domain
+	//like news.example.com.
+	// The later check bypass apache screw up method of redirection header
+	// e.g. https://imuslab.com -> http://imuslab.com:443
+	if rrr.ProxyDomain != u.Host && !strings.Contains(u.Host, rrr.OriginalHost+":") {
+		//New location domain not matching proxy target domain.
+		//Do not modify location header
+		return urlString, nil
+	}
 	u.Host = rrr.OriginalHost
 
 	if strings.Contains(rrr.ProxyDomain, "/") {

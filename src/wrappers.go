@@ -156,11 +156,19 @@ func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 
 // Handle listing current registered mdns nodes
 func HandleMdnsListing(w http.ResponseWriter, r *http.Request) {
+	if mdnsScanner == nil {
+		utils.SendErrorResponse(w, "mDNS scanner is disabled on this host")
+		return
+	}
 	js, _ := json.Marshal(previousmdnsScanResults)
 	utils.SendJSONResponse(w, string(js))
 }
 
 func HandleMdnsScanning(w http.ResponseWriter, r *http.Request) {
+	if mdnsScanner == nil {
+		utils.SendErrorResponse(w, "mDNS scanner is disabled on this host")
+		return
+	}
 	domain, err := utils.PostPara(r, "domain")
 	var hosts []*mdns.NetworkHost
 	if err != nil {
@@ -325,5 +333,22 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	js, _ := json.MarshalIndent(info, "", " ")
+	utils.SendJSONResponse(w, string(js))
+}
+
+func HandleGeoIpLookup(w http.ResponseWriter, r *http.Request) {
+	ip, err := utils.GetPara(r, "ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "ip not given")
+		return
+	}
+
+	cc, err := geodbStore.ResolveCountryCodeFromIP(ip)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	js, _ := json.Marshal(cc)
 	utils.SendJSONResponse(w, string(js))
 }

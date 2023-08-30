@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -26,16 +25,18 @@ import (
 */
 
 type Record struct {
-	ProxyType            string
-	Rootname             string
-	ProxyTarget          string
-	UseTLS               bool
-	SkipTlsValidation    bool
-	RequireBasicAuth     bool
-	BasicAuthCredentials []*dynamicproxy.BasicAuthCredentials
+	ProxyType               string
+	Rootname                string
+	ProxyTarget             string
+	UseTLS                  bool
+	SkipTlsValidation       bool
+	RequireBasicAuth        bool
+	BasicAuthCredentials    []*dynamicproxy.BasicAuthCredentials
+	BasicAuthExceptionRules []*dynamicproxy.BasicAuthExceptionRule
 }
 
-func SaveReverseProxyConfig(proxyConfigRecord *Record) error {
+// Save a reverse proxy config record to file
+func SaveReverseProxyConfigToFile(proxyConfigRecord *Record) error {
 	//TODO: Make this accept new def types
 	os.MkdirAll("./conf/proxy/", 0775)
 	filename := getFilenameFromRootName(proxyConfigRecord.Rootname)
@@ -45,10 +46,19 @@ func SaveReverseProxyConfig(proxyConfigRecord *Record) error {
 
 	//Write to file
 	js, _ := json.MarshalIndent(thisRecord, "", " ")
-	return ioutil.WriteFile(filepath.Join("./conf/proxy/", filename), js, 0775)
+	return os.WriteFile(filepath.Join("./conf/proxy/", filename), js, 0775)
 }
 
-func RemoveReverseProxyConfig(rootname string) error {
+// Save a running reverse proxy endpoint to file (with automatic endpoint to record conversion)
+func SaveReverseProxyEndpointToFile(proxyEndpoint *dynamicproxy.ProxyEndpoint) error {
+	recordToSave, err := ConvertProxyEndpointToRecord(proxyEndpoint)
+	if err != nil {
+		return err
+	}
+	return SaveReverseProxyConfigToFile(recordToSave)
+}
+
+func RemoveReverseProxyConfigFile(rootname string) error {
 	filename := getFilenameFromRootName(rootname)
 	removePendingFile := strings.ReplaceAll(filepath.Join("./conf/proxy/", filename), "\\", "/")
 	log.Println("Config Removed: ", removePendingFile)
@@ -66,8 +76,18 @@ func RemoveReverseProxyConfig(rootname string) error {
 
 // Return ptype, rootname and proxyTarget, error if any
 func LoadReverseProxyConfig(filename string) (*Record, error) {
-	thisRecord := Record{}
-	configContent, err := ioutil.ReadFile(filename)
+	thisRecord := Record{
+		ProxyType:               "",
+		Rootname:                "",
+		ProxyTarget:             "",
+		UseTLS:                  false,
+		SkipTlsValidation:       false,
+		RequireBasicAuth:        false,
+		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
+		BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
+	}
+
+	configContent, err := os.ReadFile(filename)
 	if err != nil {
 		return &thisRecord, err
 	}
@@ -80,6 +100,22 @@ func LoadReverseProxyConfig(filename string) (*Record, error) {
 
 	//Return it
 	return &thisRecord, nil
+}
+
+// Convert a running proxy endpoint object into a save-able record struct
+func ConvertProxyEndpointToRecord(targetProxyEndpoint *dynamicproxy.ProxyEndpoint) (*Record, error) {
+	thisProxyConfigRecord := Record{
+		ProxyType:               targetProxyEndpoint.GetProxyTypeString(),
+		Rootname:                targetProxyEndpoint.RootOrMatchingDomain,
+		ProxyTarget:             targetProxyEndpoint.Domain,
+		UseTLS:                  targetProxyEndpoint.RequireTLS,
+		SkipTlsValidation:       targetProxyEndpoint.SkipCertValidations,
+		RequireBasicAuth:        targetProxyEndpoint.RequireBasicAuth,
+		BasicAuthCredentials:    targetProxyEndpoint.BasicAuthCredentials,
+		BasicAuthExceptionRules: targetProxyEndpoint.BasicAuthExceptionRules,
+	}
+
+	return &thisProxyConfigRecord, nil
 }
 
 func getFilenameFromRootName(rootname string) string {

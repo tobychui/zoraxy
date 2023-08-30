@@ -20,13 +20,16 @@ type Store struct {
 	WhitelistEnabled bool
 	geodb            [][]string //Parsed geodb list
 	geodbIpv6        [][]string //Parsed geodb list for ipv6
-
-	geotrie     *trie
-	geotrieIpv6 *trie
-
+	geotrie          *trie
+	geotrieIpv6      *trie
 	//geoipCache sync.Map
+	sysdb  *database.Database
+	option *StoreOptions
+}
 
-	sysdb *database.Database
+type StoreOptions struct {
+	AllowSlowIpv4LookUp bool
+	AllowSloeIpv6Lookup bool
 }
 
 type CountryInfo struct {
@@ -34,7 +37,7 @@ type CountryInfo struct {
 	ContinetCode   string
 }
 
-func NewGeoDb(sysdb *database.Database) (*Store, error) {
+func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 	parsedGeoData, err := parseCSV(geoipv4)
 	if err != nil {
 		return nil, err
@@ -79,14 +82,25 @@ func NewGeoDb(sysdb *database.Database) (*Store, error) {
 		log.Println("Database pointer set to nil: Entering debug mode")
 	}
 
+	var ipv4Trie *trie
+	if !option.AllowSlowIpv4LookUp {
+		ipv4Trie = constrctTrieTree(parsedGeoData)
+	}
+
+	var ipv6Trie *trie
+	if !option.AllowSloeIpv6Lookup {
+		ipv6Trie = constrctTrieTree(parsedGeoDataIpv6)
+	}
+
 	return &Store{
 		BlacklistEnabled: blacklistEnabled,
 		WhitelistEnabled: whitelistEnabled,
 		geodb:            parsedGeoData,
-		geotrie:          constrctTrieTree(parsedGeoData),
+		geotrie:          ipv4Trie,
 		geodbIpv6:        parsedGeoDataIpv6,
-		geotrieIpv6:      constrctTrieTree(parsedGeoDataIpv6),
+		geotrieIpv6:      ipv6Trie,
 		sysdb:            sysdb,
+		option:           option,
 	}, nil
 }
 
@@ -106,6 +120,7 @@ func (s *Store) ResolveCountryCodeFromIP(ipstring string) (*CountryInfo, error) 
 		CountryIsoCode: cc,
 		ContinetCode:   "",
 	}, nil
+
 }
 
 func (s *Store) Close() {

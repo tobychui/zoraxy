@@ -96,6 +96,13 @@
                     $('<th>').text('Vendor')
                     )
                 );
+
+                if (data.error != undefined){
+                    $('#mdns-hosts').html(`<table class="ui celled unstackable table"><tbody></tbody></table>`);
+                    $('#mdns-hosts').find("tbody").append(`<tr><td colspan="5"><i class="ui red circle times icon"></i> ${data.error}</td></tr>`);
+                    $("#discover").addClass("disabled");
+                    return;
+                }
                 
                 // Create table body
                 var tableBody = $('<tbody>');

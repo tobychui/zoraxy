@@ -76,7 +76,10 @@ func startupSequence() {
 	}
 
 	//Create a geodb store
-	geodbStore, err = geodb.NewGeoDb(sysdb)
+	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
+		AllowSlowIpv4LookUp: !*enableHighSpeedGeoIPLookup,
+		AllowSloeIpv6Lookup: !*enableHighSpeedGeoIPLookup,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -114,47 +117,49 @@ func startupSequence() {
 		This discover nearby ArozOS Nodes or other services
 		that provide mDNS discovery with domain (e.g. Synology NAS)
 	*/
-	portInt, err := strconv.Atoi(strings.Split(handler.Port, ":")[1])
-	if err != nil {
-		portInt = 8000
-	}
-	mdnsScanner, err = mdns.NewMDNS(mdns.NetworkHost{
-		HostName:     "zoraxy_" + nodeUUID,
-		Port:         portInt,
-		Domain:       "zoraxy.imuslab.com",
-		Model:        "Network Gateway",
-		UUID:         nodeUUID,
-		Vendor:       "imuslab.com",
-		BuildVersion: version,
-	}, "")
-	if err != nil {
-		log.Println("Unable to startup mDNS service.")
-		log.Fatal(err)
-	}
 
-	//Start initial scanning
-	go func() {
-		hosts := mdnsScanner.Scan(30, "")
-		previousmdnsScanResults = hosts
-		log.Println("mDNS Startup scan completed")
-	}()
-
-	//Create a ticker to update mDNS results every 5 minutes
-	ticker := time.NewTicker(15 * time.Minute)
-	stopChan := make(chan bool)
-	go func() {
-		for {
-			select {
-			case <-stopChan:
-				ticker.Stop()
-			case <-ticker.C:
+	if *allowMdnsScanning {
+		portInt, err := strconv.Atoi(strings.Split(handler.Port, ":")[1])
+		if err != nil {
+			portInt = 8000
+		}
+		mdnsScanner, err = mdns.NewMDNS(mdns.NetworkHost{
+			HostName:     "zoraxy_" + nodeUUID,
+			Port:         portInt,
+			Domain:       "zoraxy.arozos.com",
+			Model:        "Network Gateway",
+			UUID:         nodeUUID,
+			Vendor:       "imuslab.com",
+			BuildVersion: version,
+		}, "")
+		if err != nil {
+			log.Println("Unable to startup mDNS service. Disabling mDNS services")
+		} else {
+			//Start initial scanning
+			go func() {
 				hosts := mdnsScanner.Scan(30, "")
 				previousmdnsScanResults = hosts
-				log.Println("mDNS scan result updated")
-			}
+				log.Println("mDNS Startup scan completed")
+			}()
+
+			//Create a ticker to update mDNS results every 5 minutes
+			ticker := time.NewTicker(15 * time.Minute)
+			stopChan := make(chan bool)
+			go func() {
+				for {
+					select {
+					case <-stopChan:
+						ticker.Stop()
+					case <-ticker.C:
+						hosts := mdnsScanner.Scan(30, "")
+						previousmdnsScanResults = hosts
+						log.Println("mDNS scan result updated")
+					}
+				}
+			}()
+			mdnsTickerStop = stopChan
 		}
-	}()
-	mdnsTickerStop = stopChan
+	}
 
 	/*
 		Global Area Network
