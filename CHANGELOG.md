@@ -1,4 +1,15 @@
-# 2.6.6 Jul 26 2023
+# v2.6.6 Aug 30 2023
+
++ Added basic auth editor custom exception rules 
++ Fixed redirection bug under another reverse proxy and Apache location headers [#39](https://github.com/tobychui/zoraxy/issues/39)
++ Optimized memory usage (from 1.2GB to 61MB for low speed geoip lookup) [#52](https://github.com/tobychui/zoraxy/issues/52)
++ Added unset subdomain custom redirection feature [#46](https://github.com/tobychui/zoraxy/issues/46)
++ Fixed potential security issue in satori/go.uuid [#55](https://github.com/tobychui/zoraxy/issues/55)
++ Added custom acme feature in back-end, thx [@daluntw](https://github.com/daluntw)
++ Added bypass TLS check for custom acme server, thx [@daluntw](https://github.com/daluntw)
++ Introduce new startparameter `-fastgeoip=true`, see [Releases](https://github.com/tobychui/zoraxy/releases/tag/2.6.6)
+
+# v2.6.5.1 Jul 26 2023
 
 + Patch on memory leaking for Windows netstat module (do not effect any of the previous non Windows builds)
 + Fixed potential memory leak in acme handler logic
