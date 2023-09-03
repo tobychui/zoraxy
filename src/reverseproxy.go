@@ -88,21 +88,23 @@ func ReverseProxtInit() {
 			})
 		} else if record.ProxyType == "subd" {
 			dynamicProxyRouter.AddSubdomainRoutingService(&dynamicproxy.SubdOptions{
-				MatchingDomain:       record.Rootname,
-				Domain:               record.ProxyTarget,
-				RequireTLS:           record.UseTLS,
-				SkipCertValidations:  record.SkipTlsValidation,
-				RequireBasicAuth:     record.RequireBasicAuth,
-				BasicAuthCredentials: record.BasicAuthCredentials,
+				MatchingDomain:          record.Rootname,
+				Domain:                  record.ProxyTarget,
+				RequireTLS:              record.UseTLS,
+				SkipCertValidations:     record.SkipTlsValidation,
+				RequireBasicAuth:        record.RequireBasicAuth,
+				BasicAuthCredentials:    record.BasicAuthCredentials,
+				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
 			})
 		} else if record.ProxyType == "vdir" {
 			dynamicProxyRouter.AddVirtualDirectoryProxyService(&dynamicproxy.VdirOptions{
-				RootName:             record.Rootname,
-				Domain:               record.ProxyTarget,
-				RequireTLS:           record.UseTLS,
-				SkipCertValidations:  record.SkipTlsValidation,
-				RequireBasicAuth:     record.RequireBasicAuth,
-				BasicAuthCredentials: record.BasicAuthCredentials,
+				RootName:                record.Rootname,
+				Domain:                  record.ProxyTarget,
+				RequireTLS:              record.UseTLS,
+				SkipCertValidations:     record.SkipTlsValidation,
+				RequireBasicAuth:        record.RequireBasicAuth,
+				BasicAuthCredentials:    record.BasicAuthCredentials,
+				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
 			})
 		} else {
 			log.Println("Unsupported endpoint type: " + record.ProxyType + ". Skipping " + filepath.Base(conf))
@@ -282,7 +284,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		RequireBasicAuth:     requireBasicAuth,
 		BasicAuthCredentials: basicAuthCredentials,
 	}
-	SaveReverseProxyConfig(&thisProxyConfigRecord)
+	SaveReverseProxyConfigToFile(&thisProxyConfigRecord)
 
 	//Update utm if exists
 	if uptimeMonitor != nil {
@@ -355,7 +357,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 		}
-		dynamicProxyRouter.RemoveProxy("vdir", thisOption.RootName)
+		targetProxyEntry.Remove()
 		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
 
 	} else if eptype == "subd" {
@@ -367,7 +369,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 		}
-		dynamicProxyRouter.RemoveProxy("subd", thisOption.MatchingDomain)
+		targetProxyEntry.Remove()
 		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
 	}
 
@@ -381,7 +383,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		RequireBasicAuth:     requireBasicAuth,
 		BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 	}
-	SaveReverseProxyConfig(&thisProxyConfigRecord)
+	SaveReverseProxyConfigToFile(&thisProxyConfigRecord)
 	utils.SendOK(w)
 }
 
@@ -398,13 +400,15 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = dynamicProxyRouter.RemoveProxy(ptype, ep)
+	//Remove the config from runtime
+	err = dynamicProxyRouter.RemoveProxyEndpointByRootname(ptype, ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
 
-	RemoveReverseProxyConfig(ep)
+	//Remove the config from file
+	RemoveReverseProxyConfigFile(ep)
 
 	//Update utm if exists
 	if uptimeMonitor != nil {
@@ -528,24 +532,156 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 		targetProxy.BasicAuthCredentials = mergedCredentials
 
 		//Save it to file
-		thisProxyConfigRecord := Record{
-			ProxyType:            ptype,
-			Rootname:             targetProxy.RootOrMatchingDomain,
-			ProxyTarget:          targetProxy.Domain,
-			UseTLS:               targetProxy.RequireTLS,
-			SkipTlsValidation:    targetProxy.SkipCertValidations,
-			RequireBasicAuth:     targetProxy.RequireBasicAuth,
-			BasicAuthCredentials: targetProxy.BasicAuthCredentials,
-		}
-		SaveReverseProxyConfig(&thisProxyConfigRecord)
+		SaveReverseProxyEndpointToFile(targetProxy)
 
 		//Replace runtime configuration
-		dynamicProxyRouter.SaveProxy(ptype, ep, targetProxy)
+		targetProxy.UpdateToRuntime()
 		utils.SendOK(w)
 	} else {
 		http.Error(w, "invalid usage", http.StatusMethodNotAllowed)
 	}
 
+}
+
+// List, Update or Remove the exception paths for basic auth.
+func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+	ep, err := utils.GetPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	ptype, err := utils.GetPara(r, "ptype")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ptype given")
+		return
+	}
+
+	//Load the target proxy object from router
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	//List all the exception paths for this proxy
+	results := targetProxy.BasicAuthExceptionRules
+	if results == nil {
+		//It is a config from a really old version of zoraxy. Overwrite it with empty array
+		results = []*dynamicproxy.BasicAuthExceptionRule{}
+	}
+	js, _ := json.Marshal(results)
+	utils.SendJSONResponse(w, string(js))
+	return
+}
+
+func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
+	ep, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	ptype, err := utils.PostPara(r, "ptype")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ptype given")
+		return
+	}
+
+	matchingPrefix, err := utils.PostPara(r, "prefix")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid matching prefix given")
+		return
+	}
+
+	//Load the target proxy object from router
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	//Check if the prefix starts with /. If not, prepend it
+	if !strings.HasPrefix(matchingPrefix, "/") {
+		matchingPrefix = "/" + matchingPrefix
+	}
+
+	//Add a new exception rule if it is not already exists
+	alreadyExists := false
+	for _, thisExceptionRule := range targetProxy.BasicAuthExceptionRules {
+		if thisExceptionRule.PathPrefix == matchingPrefix {
+			alreadyExists = true
+			break
+		}
+	}
+	if alreadyExists {
+		utils.SendErrorResponse(w, "This matching path already exists")
+		return
+	}
+	targetProxy.BasicAuthExceptionRules = append(targetProxy.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
+		PathPrefix: strings.TrimSpace(matchingPrefix),
+	})
+
+	//Save configs to runtime and file
+	targetProxy.UpdateToRuntime()
+	SaveReverseProxyEndpointToFile(targetProxy)
+
+	utils.SendOK(w)
+}
+
+func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
+	// Delete a rule
+	ep, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	ptype, err := utils.PostPara(r, "ptype")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ptype given")
+		return
+	}
+
+	matchingPrefix, err := utils.PostPara(r, "prefix")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid matching prefix given")
+		return
+	}
+
+	// Load the target proxy object from router
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	newExceptionRuleList := []*dynamicproxy.BasicAuthExceptionRule{}
+	matchingExists := false
+	for _, thisExceptionalRule := range targetProxy.BasicAuthExceptionRules {
+		if thisExceptionalRule.PathPrefix != matchingPrefix {
+			newExceptionRuleList = append(newExceptionRuleList, thisExceptionalRule)
+		} else {
+			matchingExists = true
+		}
+	}
+
+	if !matchingExists {
+		utils.SendErrorResponse(w, "target matching rule not exists")
+		return
+	}
+
+	targetProxy.BasicAuthExceptionRules = newExceptionRuleList
+
+	// Save configs to runtime and file
+	targetProxy.UpdateToRuntime()
+	SaveReverseProxyEndpointToFile(targetProxy)
+
+	utils.SendOK(w)
 }
 
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
@@ -644,11 +780,18 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 
 	newIncomingPortInt, err := strconv.Atoi(newIncomingPort)
 	if err != nil {
-		utils.SendErrorResponse(w, "invalid incoming port given")
+		utils.SendErrorResponse(w, "Invalid incoming port given")
 		return
 	}
 
 	//Check if it is identical as proxy root (recursion!)
+	if dynamicProxyRouter.Root == nil || dynamicProxyRouter.Root.Domain == "" {
+		//Check if proxy root is set before checking recursive listen
+		//Fixing issue #43
+		utils.SendErrorResponse(w, "Set Proxy Root before changing inbound port")
+		return
+	}
+
 	proxyRoot := strings.TrimSuffix(dynamicProxyRouter.Root.Domain, "/")
 	if strings.HasPrefix(proxyRoot, "localhost:"+strconv.Itoa(newIncomingPortInt)) || strings.HasPrefix(proxyRoot, "127.0.0.1:"+strconv.Itoa(newIncomingPortInt)) {
 		//Listening port is same as proxy root
@@ -668,6 +811,37 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sysdb.Write("settings", "inbound", newIncomingPortInt)
+
+	utils.SendOK(w)
+}
+
+// Handle list of root route options
+func HandleRootRouteOptionList(w http.ResponseWriter, r *http.Request) {
+	js, _ := json.Marshal(dynamicProxyRouter.RootRoutingOptions)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// Handle update of the root route edge case options. See dynamicproxy/rootRoute.go
+func HandleRootRouteOptionsUpdate(w http.ResponseWriter, r *http.Request) {
+	enableUnsetSubdomainRedirect, err := utils.PostBool(r, "unsetRedirect")
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	unsetRedirectTarget, _ := utils.PostPara(r, "unsetRedirectTarget")
+
+	newRootOption := dynamicproxy.RootRoutingOptions{
+		EnableRedirectForUnsetRules: enableUnsetSubdomainRedirect,
+		UnsetRuleRedirectTarget:     unsetRedirectTarget,
+	}
+
+	dynamicProxyRouter.RootRoutingOptions = &newRootOption
+	err = newRootOption.SaveToFile()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
 
 	utils.SendOK(w)
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/csv"
 	"io"
-	"net"
 	"strings"
 )
 
@@ -26,9 +25,17 @@ func (s *Store) search(ip string) string {
 	//Search in geotrie tree
 	cc := ""
 	if IsIPv6(ip) {
-		cc = s.geotrieIpv6.search(ip)
+		if s.geotrieIpv6 == nil {
+			cc = s.slowSearchIpv6(ip)
+		} else {
+			cc = s.geotrieIpv6.search(ip)
+		}
 	} else {
-		cc = s.geotrie.search(ip)
+		if s.geotrie == nil {
+			cc = s.slowSearchIpv4(ip)
+		} else {
+			cc = s.geotrie.search(ip)
+		}
 	}
 
 	/*
@@ -68,28 +75,4 @@ func parseCSV(content []byte) ([][]string, error) {
 		records = append(records, record)
 	}
 	return records, nil
-}
-
-// Check if a ip string is within the range of two others
-func isIPInRange(ip, start, end string) bool {
-	ipAddr := net.ParseIP(ip)
-	if ipAddr == nil {
-		return false
-	}
-
-	startAddr := net.ParseIP(start)
-	if startAddr == nil {
-		return false
-	}
-
-	endAddr := net.ParseIP(end)
-	if endAddr == nil {
-		return false
-	}
-
-	if ipAddr.To4() == nil || startAddr.To4() == nil || endAddr.To4() == nil {
-		return false
-	}
-
-	return bytes.Compare(ipAddr.To4(), startAddr.To4()) >= 0 && bytes.Compare(ipAddr.To4(), endAddr.To4()) <= 0
 }

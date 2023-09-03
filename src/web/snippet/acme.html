@@ -109,8 +109,19 @@
           <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
           <div class="item" data-value="Buypass">Buypass</div>
           <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+          <div class="item" data-value="Custom ACME Server">Custom ACME Server</div>
           <!-- <div class="item" data-value="Google">Google</div> -->
         </div>
+      </div>
+    </div>
+    <div class="field" id="caInput" style="display:none;">
+      <label>ACME Server URL</label>
+      <input id="caURL" type="text" placeholder="https://example.com/acme/dictionary">
+    </div>
+    <div class="field" id="skipTLS" style="display:none;">
+      <div class="ui checkbox">
+        <input type="checkbox" id="skipTLSCheckbox">
+        <label>Ignore TLS/SSL Verification Error<br><small>E.g. self-signed, expired certificate (Not Recommended)</small></label>
       </div>
     </div>
     <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Renew Certificate</button>
@@ -126,6 +137,7 @@
     let enableTrigerOnChangeEvent = true;
     $(".accordion").accordion();
     $(".dropdown").dropdown();
+    $(".checkbox").checkbox();
 
     function setAutoRenewIfCASupportMode(useAutoMode = true){
       if (useAutoMode){
@@ -295,6 +307,16 @@
       obtainCertificate();
     });
 
+    $("input[name=ca]").on('change', function() {
+      if(this.value == "Custom ACME Server") {
+        $("#caInput").show();
+        $("#skipTLS").show();
+      } else {
+        $("#caInput").hide();
+        $("#skipTLS").hide();
+      }
+    })
+
     // Obtain certificate from API
     function obtainCertificate() {
       var domains = $("#domainsInput").val();
@@ -316,7 +338,16 @@
         parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
         return;
       }
+      
       var ca = $("#ca").dropdown("get value");
+      var caURL = "";
+      if (ca == "Custom ACME Server") {
+        ca = "custom";
+        caURL = $("#caURL").val();
+      }
+
+      var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
+
       $.ajax({
         url: "/api/acme/obtainCert",
         method: "GET",
@@ -325,6 +356,8 @@
           filename: filename,
           email: email,
           ca: ca,
+          caURL: caURL,
+          skipTLS: skipTLSValue,
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");

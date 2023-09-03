@@ -5,10 +5,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -27,6 +27,12 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/utils"
 )
+
+type CertificateInfoJSON struct {
+	AcmeName string `json:"acme_name"`
+	AcmeUrl  string `json:"acme_url"`
+	SkipTLS  bool   `json:"skip_tls"`
+}
 
 // ACMEUser represents a user in the ACME system.
 type ACMEUser struct {
@@ -69,7 +75,7 @@ func NewACME(acmeServer string, port string, kid string, hmacEncoded string) *AC
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, ca string, kid string, hmacEncoded string) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, kid string, hmacEncoded string) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -88,17 +94,41 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	// create config
 	config := lego.NewConfig(&adminUser)
 
-	// setup who is the issuer and the key type
-	config.CADirURL = a.DefaultAcmeServer
+	// skip TLS verify if need
+	// Ref: https://github.com/go-acme/lego/blob/6af2c756ac73a9cb401621afca722d0f4112b1b8/lego/client_config.go#L74
+	if skipTLS {
+		log.Println("[INFO] Ignore TLS/SSL Verification Error for ACME Server")
+		config.HTTPClient.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 
-	//Overwrite the CADir URL if set
-	if ca != "" {
-		caLinkOverwrite, err := loadCAApiServerFromName(ca)
+	// setup the custom ACME url endpoint.
+	if caUrl != "" {
+		config.CADirURL = caUrl
+	}
+
+	// if not custom ACME url, load it from ca.json
+	if caName == "custom" {
+		log.Println("[INFO] Using Custom ACME " + caUrl + " for CA Directory URL")
+	} else {
+		caLinkOverwrite, err := loadCAApiServerFromName(caName)
 		if err == nil {
 			config.CADirURL = caLinkOverwrite
 			log.Println("[INFO] Using " + caLinkOverwrite + " for CA Directory URL")
 		} else {
-			return false, errors.New("CA " + ca + " is not supported. Please contribute to the source code and add this CA's directory link.")
+			// (caName == "" || caUrl == "") will use default acme
+			config.CADirURL = a.DefaultAcmeServer
+			log.Println("[INFO] Using Default ACME " + a.DefaultAcmeServer + " for CA Directory URL")
 		}
 	}
 
@@ -169,6 +199,25 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 	err = ioutil.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	// Save certificate's ACME info for renew usage
+	certInfo := &CertificateInfoJSON{
+		AcmeName: caName,
+		AcmeUrl:  caUrl,
+		SkipTLS:  skipTLS,
+	}
+
+	certInfoBytes, err := json.Marshal(certInfo)
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+
+	err = os.WriteFile("./conf/certs/"+certificateName+".json", certInfoBytes, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -279,14 +328,34 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	var caUrl string
+
 	ca, err := utils.PostPara(r, "ca")
 	if err != nil {
-		log.Println("CA not set. Using default (Let's Encrypt)")
-		ca = "Let's Encrypt"
+		log.Println("CA not set. Using default")
+		ca, caUrl = "", ""
+	}
+
+	if ca == "custom" {
+		caUrl, err = utils.PostPara(r, "caURL")
+		if err != nil {
+			log.Println("Custom CA set but no URL provide, Using default")
+			ca, caUrl = "", ""
+		}
+	}
+
+	var skipTLS bool
+
+	if skipTLSString, err := utils.PostPara(r, "skipTLS"); err != nil {
+		skipTLS = false
+	} else if skipTLSString != "true" {
+		skipTLS = false
+	} else {
+		skipTLS = true
 	}
 
 	domains := strings.Split(domainPara, ",")
-	result, err := a.ObtainCert(domains, filename, email, ca)
+	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
@@ -314,4 +383,20 @@ func IsPortInUse(port int) bool {
 	}
 	defer listener.Close()
 	return false // Port is not in use
+
+}
+
+func loadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
+
+	certInfoBytes, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	certInfo := &CertificateInfoJSON{}
+	if err = json.Unmarshal(certInfoBytes, certInfo); err != nil {
+		return nil, err
+	}
+
+	return certInfo, nil
 }

@@ -3,6 +3,7 @@ package acme
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/mail"
@@ -355,7 +356,16 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 		log.Println("Renewing " + expiredCert.Filepath + " (Might take a few minutes)")
 		fileName := filepath.Base(expiredCert.Filepath)
 		certName := fileName[:len(fileName)-len(filepath.Ext(fileName))]
-		_, err := a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, expiredCert.CA, "", "")
+
+		// Load certificate info for ACME detail
+		certInfoFilename := fmt.Sprintf("%s/%s.json", filepath.Dir(expiredCert.Filepath), certName)
+		certInfo, err := loadCertInfoJSON(certInfoFilename)
+		if err != nil {
+			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, using default ACME", certName, err)
+			certInfo = &CertificateInfoJSON{}
+		}
+
+		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS)
 		if err != nil {
 			log.Println("Renew " + fileName + "(" + strings.Join(expiredCert.Domains, ",") + ") failed: " + err.Error())
 		} else {

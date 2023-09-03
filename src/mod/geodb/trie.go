@@ -1,15 +1,12 @@
 package geodb
 
 import (
-	"fmt"
+	"math"
 	"net"
-	"strconv"
-	"strings"
 )
 
 type trie_Node struct {
 	childrens [2]*trie_Node
-	ends      bool
 	cc        string
 }
 
@@ -18,7 +15,7 @@ type trie struct {
 	root *trie_Node
 }
 
-func ipToBitString(ip string) string {
+func ipToBytes(ip string) []byte {
 	// Parse the IP address string into a net.IP object
 	parsedIP := net.ParseIP(ip)
 
@@ -29,49 +26,7 @@ func ipToBitString(ip string) string {
 		ipBytes = parsedIP.To16()
 	}
 
-	// Convert each byte in the IP address to its 8-bit binary representation
-	var result []string
-	for _, b := range ipBytes {
-		result = append(result, fmt.Sprintf("%08b", b))
-	}
-
-	// Join the binary representation of each byte with dots to form the final bit string
-	return strings.Join(result, "")
-}
-
-func bitStringToIp(bitString string) string {
-	// Check if the bit string represents an IPv4 or IPv6 address
-	isIPv4 := len(bitString) == 32
-
-	// Split the bit string into 8-bit segments
-	segments := make([]string, 0)
-	if isIPv4 {
-		for i := 0; i < 4; i++ {
-			segments = append(segments, bitString[i*8:(i+1)*8])
-		}
-	} else {
-		for i := 0; i < 16; i++ {
-			segments = append(segments, bitString[i*8:(i+1)*8])
-		}
-	}
-
-	// Convert each segment to its decimal equivalent
-	decimalSegments := make([]int, len(segments))
-	for i, s := range segments {
-		val, _ := strconv.ParseInt(s, 2, 64)
-		decimalSegments[i] = int(val)
-	}
-
-	// Construct the IP address string based on the type (IPv4 or IPv6)
-	if isIPv4 {
-		return fmt.Sprintf("%d.%d.%d.%d", decimalSegments[0], decimalSegments[1], decimalSegments[2], decimalSegments[3])
-	} else {
-		ip := make(net.IP, net.IPv6len)
-		for i := 0; i < net.IPv6len; i++ {
-			ip[i] = byte(decimalSegments[i])
-		}
-		return ip.String()
-	}
+	return ipBytes
 }
 
 // inititlaizing a new trie
@@ -83,20 +38,39 @@ func newTrie() *trie {
 
 // Passing words to trie
 func (t *trie) insert(ipAddr string, cc string) {
-	word := ipToBitString(ipAddr)
+	ipBytes := ipToBytes(ipAddr)
 	current := t.root
-	for _, wr := range word {
-		index := wr - '0'
-		if current.childrens[index] == nil {
-			current.childrens[index] = &trie_Node{
-				childrens: [2]*trie_Node{},
-				ends:      false,
-				cc:        cc,
+	for _, b := range ipBytes {
+		//For each byte in the ip address
+		//each byte is 8 bit
+		for j := 0; j < 8; j++ {
+			bitwise := (b&uint8(math.Pow(float64(2), float64(j))) > 0)
+			bit := 0b0000
+			if bitwise {
+				bit = 0b0001
 			}
+			if current.childrens[bit] == nil {
+				current.childrens[bit] = &trie_Node{
+					childrens: [2]*trie_Node{},
+					cc:        cc,
+				}
+			}
+			current = current.childrens[bit]
 		}
-		current = current.childrens[index]
 	}
-	current.ends = true
+
+	/*
+		for i := 63; i >= 0; i-- {
+			bit := (ipInt64 >> uint(i)) & 1
+			if current.childrens[bit] == nil {
+				current.childrens[bit] = &trie_Node{
+					childrens: [2]*trie_Node{},
+					cc:        cc,
+				}
+			}
+			current = current.childrens[bit]
+		}
+	*/
 }
 
 func isReservedIP(ip string) bool {
@@ -126,16 +100,34 @@ func (t *trie) search(ipAddr string) string {
 	if isReservedIP(ipAddr) {
 		return ""
 	}
-	word := ipToBitString(ipAddr)
+
+	ipBytes := ipToBytes(ipAddr)
 	current := t.root
-	for _, wr := range word {
-		index := wr - '0'
-		if current.childrens[index] == nil {
-			return current.cc
+	for _, b := range ipBytes {
+		//For each byte in the ip address
+		//each byte is 8 bit
+		for j := 0; j < 8; j++ {
+			bitwise := (b&uint8(math.Pow(float64(2), float64(j))) > 0)
+			bit := 0b0000
+			if bitwise {
+				bit = 0b0001
+			}
+			if current.childrens[bit] == nil {
+				return current.cc
+			}
+			current = current.childrens[bit]
 		}
-		current = current.childrens[index]
 	}
-	if current.ends {
+	/*
+		for i := 63; i >= 0; i-- {
+			bit := (ipInt64 >> uint(i)) & 1
+			if current.childrens[bit] == nil {
+				return current.cc
+			}
+			current = current.childrens[bit]
+		}
+	*/
+	if len(current.childrens) == 0 {
 		return current.cc
 	}
 
