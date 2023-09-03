@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -41,6 +42,11 @@ type ACMEUser struct {
 	key          crypto.PrivateKey
 }
 
+type EABConfig struct {
+	Kid     string `json:"kid"`
+	HmacKey string `json:"HmacKey"`
+}
+
 // GetEmail returns the email of the ACMEUser.
 func (u *ACMEUser) GetEmail() string {
 	return u.Email
@@ -58,24 +64,35 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 
 // ACMEHandler handles ACME-related operations.
 type ACMEHandler struct {
-	DefaultAcmeServer string
-	Port              string
-	Kid               string
-	HmacEncoded       string
+	DefaultAcmeServer  string
+	Port               string
+	AuthConfigLocation string
 }
 
 // NewACME creates a new ACMEHandler instance.
-func NewACME(acmeServer string, port string, kid string, hmacEncoded string) *ACMEHandler {
+func NewACME(acmeServer string, port string, authConfigLocation string) *ACMEHandler {
+
+	if !utils.FileExists(authConfigLocation) {
+		//Create one
+		os.MkdirAll(filepath.Dir(authConfigLocation), 0775)
+		js := []byte("{ \"EXAMPLE_CONFIG_PUT_YOUR_SERVICE_DIRECTORY_URL_HERE\": { \"kid\": \"PUT_YOUR_KID_HERE\", \"HmacKey\": \"PUT_YOUR_HMAC_HERE\" } }")
+		err := os.WriteFile(authConfigLocation, js, 0775)
+		if err != nil {
+			log.Fatal("[ACME] Failed to write ACME EAB config")
+			return nil
+		}
+	}
+
 	return &ACMEHandler{
-		DefaultAcmeServer: acmeServer,
-		Port:              port,
-		Kid:               kid,
-		HmacEncoded:       hmacEncoded,
+		DefaultAcmeServer:  acmeServer,
+		Port:               port,
+		AuthConfigLocation: authConfigLocation,
 	}
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, kid string, hmacEncoded string) (bool, error) {
+// , kid string, hmacEncoded string
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -152,17 +169,17 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	if client.GetExternalAccountRequired() {
 		log.Println("External Account Required for this ACME Provider.")
 		// IF KID and HmacEncoded is overidden
+		kid, hmacEncoded, err := a.getKidHmac(config.CADirURL)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+		log.Println("EAB Credential retrieved.")
 		if kid != "" && hmacEncoded != "" {
 			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
 				TermsOfServiceAgreed: true,
 				Kid:                  kid,
 				HmacEncoded:          hmacEncoded,
-			})
-		} else {
-			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
-				TermsOfServiceAgreed: true,
-				Kid:                  a.Kid,
-				HmacEncoded:          a.HmacEncoded,
 			})
 		}
 		if err != nil {
@@ -399,4 +416,27 @@ func loadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
 	}
 
 	return certInfo, nil
+}
+
+func (a *ACMEHandler) getKidHmac(caName string) (string, string, error) {
+	var config map[string]EABConfig
+
+	jsonData, err := ioutil.ReadFile(a.AuthConfigLocation)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = json.Unmarshal([]byte(jsonData), &config)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Access the values for dynamic keys
+	for key, value := range config {
+		if key == caName {
+			return value.Kid, value.HmacKey, nil
+		}
+	}
+
+	return "", "", errors.New("Unable to find appropiate EAB information")
 }
