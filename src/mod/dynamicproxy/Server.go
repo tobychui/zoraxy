@@ -3,6 +3,7 @@ package dynamicproxy
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -108,9 +109,9 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		h.proxyRequest(w, r, targetProxyEndpoint)
 	} else if !strings.HasSuffix(proxyingPath, "/") {
-		if potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/"); potentialProxtEndpoint != nil {
+		if potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(fmt.Sprintf("%s/", proxyingPath)); potentialProxtEndpoint != nil {
 			//Missing tailing slash. Redirect to target proxy endpoint
-			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, fmt.Sprintf("%s/", r.RequestURI), http.StatusTemporaryRedirect)
 		} else {
 			//Passthrough the request to root
 			h.handleRootRouting(w, r)
@@ -146,7 +147,7 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 				//Redirect to proxy root
 				h.proxyRequest(w, r, h.Parent.Root)
 			} else {
-				log.Println("[Router] Redirecting request from " + domainOnly + " to " + fld)
+				log.Printf("[Router] Redirecting request from %s to %s", domainOnly, fld)
 				h.logRequest(r, false, 307, "root-redirect", domainOnly)
 				http.Redirect(w, r, fld, http.StatusTemporaryRedirect)
 			}

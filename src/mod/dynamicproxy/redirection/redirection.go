@@ -2,6 +2,7 @@ package redirection
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -60,7 +61,7 @@ func NewRuleTable(configPath string) (*RuleTable, error) {
 
 	//Map the rules into the sync map
 	for _, rule := range rules {
-		log.Println("Redirection rule added: " + rule.RedirectURL + " -> " + rule.TargetURL)
+		log.Printf("Redirection rule added: %s -> %s\n", rule.RedirectURL, rule.TargetURL)
 		thisRuleTable.rules.Store(rule.RedirectURL, rule)
 	}
 
@@ -77,7 +78,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	}
 
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
-	filename := strings.ReplaceAll(strings.ReplaceAll(redirectURL, "/", "-"), ".", "_") + ".json"
+	filename := fmt.Sprintf("%s.json", strings.ReplaceAll(strings.ReplaceAll(redirectURL, "/", "-"), ".", "_"))
 
 	// Create the full file path by joining the t.configPath with the filename
 	filepath := path.Join(t.configPath, filename)
@@ -85,7 +86,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	// Create a new file for writing the JSON data
 	file, err := os.Create(filepath)
 	if err != nil {
-		log.Printf("Error creating file %s: %s", filepath, err)
+		log.Printf("Error creating file %s: %s\n", filepath, err)
 		return err
 	}
 	defer file.Close()
@@ -93,7 +94,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	// Encode the RedirectRules object to JSON and write it to the file
 	err = json.NewEncoder(file).Encode(newRule)
 	if err != nil {
-		log.Printf("Error encoding JSON to file %s: %s", filepath, err)
+		log.Printf("Error encoding JSON to file %s: %s\n", filepath, err)
 		return err
 	}
 
@@ -105,7 +106,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 
 func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
-	filename := strings.ReplaceAll(strings.ReplaceAll(redirectURL, "/", "-"), ".", "_") + ".json"
+	filename := fmt.Sprintf("%s.json", strings.ReplaceAll(strings.ReplaceAll(redirectURL, "/", "-"), ".", "_"))
 
 	// Create the full file path by joining the t.configPath with the filename
 	filepath := path.Join(t.configPath, filename)
@@ -117,7 +118,7 @@ func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 
 	// Delete the file
 	if err := os.Remove(filepath); err != nil {
-		log.Printf("Error deleting file %s: %s", filepath, err)
+		log.Printf("Error deleting file %s: %s\n", filepath, err)
 		return err
 	}
 

@@ -91,7 +91,7 @@ func (a *AuthAgent) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	username, err := utils.PostPara(r, "username")
 	if err != nil {
 		//Username not defined
-		log.Println("[Auth] " + r.RemoteAddr + " trying to login with username: " + username)
+		log.Printf("[Auth] %s trying to login with username: %s\n", r.RemoteAddr, username)
 		utils.SendErrorResponse(w, "Username not defined or empty.")
 		return
 	}
@@ -120,13 +120,12 @@ func (a *AuthAgent) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		a.LoginUserByRequest(w, r, username, rememberme)
 
 		//Print the login message to console
-		log.Println(username + " logged in.")
+		log.Printf("%s logged in.\n", username)
 		utils.SendOK(w)
 		return
 	}
 	//Password incorrect
-	log.Println(username + " login request rejected: " + rejectionReason)
-
+	log.Printf("%s login request rejected: %s\n", username, rejectionReason)
 	utils.SendErrorResponse(w, rejectionReason)
 }
 
@@ -142,7 +141,7 @@ func (a *AuthAgent) ValidateUsernameAndPasswordWithReason(username string, passw
 	err := a.Database.Read("auth", "passhash/"+username, &passwordInDB)
 	if err != nil {
 		//User not found or db exception
-		log.Println("[Auth] " + username + " login with incorrect password")
+		log.Printf("[Auth] %s login with incorrect password\n", username)
 		return false, "Invalid username or password"
 	}
 

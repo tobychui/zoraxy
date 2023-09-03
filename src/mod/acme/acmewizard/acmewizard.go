@@ -124,8 +124,8 @@ func isHTTPServerAvailable(ipAddress string) bool {
 	}
 
 	urls := []string{
-		"http://" + ipAddress + ":80",
-		"https://" + ipAddress + ":443",
+		fmt.Sprintf("http://%s:80", ipAddress),
+		fmt.Sprintf("https://%s:443", ipAddress),
 	}
 
 	for _, url := range urls {

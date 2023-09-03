@@ -2,6 +2,7 @@ package dynamicproxy
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -65,15 +66,15 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 		wsRedirectionEndpoint := target.Domain
 		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
 			//Append / to the end of the redirection endpoint if not exists
-			wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
+			wsRedirectionEndpoint = fmt.Sprintf("%s/", wsRedirectionEndpoint)
 		}
 		if len(requestURL) > 0 && requestURL[:1] == "/" {
 			//Remove starting / from request URL if exists
 			requestURL = requestURL[1:]
 		}
-		u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
+		u, _ := url.Parse(fmt.Sprintf("ws://%s%s", wsRedirectionEndpoint, requestURL))
 		if target.RequireTLS {
-			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
+			u, _ = url.Parse(fmt.Sprintf("wss://%s%s", wsRedirectionEndpoint, requestURL))
 		}
 		h.logRequest(r, true, 101, "subdomain-websocket", target.Domain)
 		wspHandler := websocketproxy.NewProxy(u, target.SkipCertValidations)
@@ -124,11 +125,11 @@ func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, targ
 		r.Header.Set("A-Upgrade", "websocket")
 		wsRedirectionEndpoint := target.Domain
 		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
-			wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
+			wsRedirectionEndpoint = fmt.Sprintf("%s/", wsRedirectionEndpoint)
 		}
-		u, _ := url.Parse("ws://" + wsRedirectionEndpoint + r.URL.String())
+		u, _ := url.Parse(fmt.Sprintf("ws://%s%s", wsRedirectionEndpoint, r.URL.String()))
 		if target.RequireTLS {
-			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
+			u, _ = url.Parse(fmt.Sprintf("wss://%s%s", wsRedirectionEndpoint, r.URL.String()))
 		}
 		h.logRequest(r, true, 101, "vdir-websocket", target.Domain)
 		wspHandler := websocketproxy.NewProxy(u, target.SkipCertValidations)

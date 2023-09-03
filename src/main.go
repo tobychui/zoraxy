@@ -132,7 +132,7 @@ func main() {
 	})
 
 	if *showver {
-		fmt.Println(name + " - Version " + version)
+		fmt.Printf("%s - Version %s\n", name, version)
 		os.Exit(0)
 	}
 

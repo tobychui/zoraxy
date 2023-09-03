@@ -72,7 +72,7 @@ func (c *ProxyRelayConfig) accept(listener net.Listener) (net.Conn, error) {
 			time.Sleep(300 * time.Millisecond)
 			conn.Close()
 			log.Printf("[x] Connection from %s rejected by access control policy\n", addr.IP.String())
-			return nil, errors.New("Connection from " + addr.IP.String() + " rejected by access control policy")
+			return nil, fmt.Errorf("Connection from %s rejected by access control policy", addr.IP.String())
 		}
 	}
 
@@ -165,7 +165,7 @@ func (c *ProxyRelayConfig) Start() error {
 		}
 		if err != nil {
 			c.Running = false
-			log.Println("Error starting proxy service " + c.Name + "(" + c.UUID + "): " + err.Error())
+			log.Printf("Error starting proxy service %s(%s): %s\n", c.Name, c.UUID, err.Error())
 		}
 	}()
 

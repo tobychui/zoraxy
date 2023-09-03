@@ -94,7 +94,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 			}
 
 		} else {
-			log.Println("Unknown protocol: " + target.Protocol + ". Skipping")
+			log.Printf("Unknown protocol: %s. Skipping\n", target.Protocol)
 			continue
 		}
 

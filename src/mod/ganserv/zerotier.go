@@ -119,7 +119,7 @@ type MemberInfo struct {
 
 // Get the zerotier node info from local service
 func getControllerInfo(token string, apiPort int) (*NodeInfo, error) {
-	url := "http://localhost:" + strconv.Itoa(apiPort) + "/status"
+	url := fmt.Sprintf("http://localhost:%d/status", apiPort)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -226,7 +226,7 @@ func (m *NetworkManager) setNetworkInfoByID(networkId string, newNetworkInfo *Ne
 	payloadBuffer := bytes.NewBuffer(payloadBytes)
 
 	// Create the HTTP request
-	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + networkId + "/"
+	url := fmt.Sprintf("http://localhost:%d/controller/network/%s/", m.apiPort, networkId)
 	req, err := http.NewRequest("POST", url, payloadBuffer)
 	if err != nil {
 		return err
@@ -299,7 +299,7 @@ func (m *NetworkManager) networkExists(networkId string) bool {
 
 // delete a network
 func (m *NetworkManager) deleteNetwork(networkID string) error {
-	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + networkID + "/"
+	url := fmt.Sprintf("http://localhost:%d/controller/network/%s/", m.apiPort, networkID)
 	client := &http.Client{}
 
 	// Create a new DELETE request
@@ -333,7 +333,7 @@ func (m *NetworkManager) deleteNetwork(networkID string) error {
 // Configure network
 // Example: configureNetwork(netid, "192.168.192.1", "192.168.192.254", "192.168.192.0/24")
 func (m *NetworkManager) configureNetwork(networkID string, ipRangeStart string, ipRangeEnd string, routeTarget string) error {
-	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + networkID + "/"
+	url := fmt.Sprintf("http://localhost:%d/controller/network/%s/", m.apiPort, networkID)
 	data := map[string]interface{}{
 		"ipAssignmentPools": []map[string]string{
 			{
@@ -380,7 +380,7 @@ func (m *NetworkManager) configureNetwork(networkID string, ipRangeStart string,
 }
 
 func (m *NetworkManager) setAssignedIps(networkID string, memid string, newIps []string) error {
-	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + networkID + "/member/" + memid
+	url := fmt.Sprintf("http://localhost:%d/controller/network/%s/member/%s", m.apiPort, networkID, memid)
 	data := map[string]interface{}{
 		"ipAssignments": newIps,
 	}
@@ -427,7 +427,7 @@ func (m *NetworkManager) setNetworkNameAndDescription(netid string, name string,
 	// Convert back to string and trim whitespace
 	name = strings.TrimSpace(string(r))
 
-	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + netid + "/"
+	url := fmt.Sprintf("http://localhost:%d/controller/network/%s/", m.apiPort, netid)
 	data := map[string]interface{}{
 		"name": name,
 	}

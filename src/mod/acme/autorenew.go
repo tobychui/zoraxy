@@ -354,7 +354,7 @@ func (a *AutoRenewer) Close() {
 func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, error) {
 	renewedCertFiles := []string{}
 	for _, expiredCert := range certs {
-		log.Println("Renewing " + expiredCert.Filepath + " (Might take a few minutes)")
+		log.Printf("Renewing %s (Might take a few minutes)\n", expiredCert.Filepath)
 		fileName := filepath.Base(expiredCert.Filepath)
 		certName := fileName[:len(fileName)-len(filepath.Ext(fileName))]
 
@@ -368,9 +368,9 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 
 		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS)
 		if err != nil {
-			log.Println("Renew " + fileName + "(" + strings.Join(expiredCert.Domains, ",") + ") failed: " + err.Error())
+			log.Printf("Renew %s (%s) failed: %v\n", fileName, strings.Join(expiredCert.Domains, ","), err)
 		} else {
-			log.Println("Successfully renewed " + filepath.Base(expiredCert.Filepath))
+			log.Printf("Successfully renewed %s\n", filepath.Base(expiredCert.Filepath))
 			renewedCertFiles = append(renewedCertFiles, filepath.Base(expiredCert.Filepath))
 		}
 	}

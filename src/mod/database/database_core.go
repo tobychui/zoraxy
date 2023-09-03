@@ -41,7 +41,7 @@ func (d *Database) dump(filename string) ([]string, error) {
 	d.Tables.Range(func(tableName, v interface{}) bool {
 		entries, err := d.ListTable(tableName.(string))
 		if err != nil {
-			log.Println("Reading table " + tableName.(string) + " failed: " + err.Error())
+			log.Printf("Reading table %s failed: %s\n", tableName.(string), err.Error())
 			return false
 		}
 		for _, keypairs := range entries {

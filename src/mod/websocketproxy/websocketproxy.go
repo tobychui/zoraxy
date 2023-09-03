@@ -124,7 +124,7 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// X-Forwarded-For information as a comma+space
 		// separated list and fold multiple headers into one.
 		if prior, ok := req.Header["X-Forwarded-For"]; ok {
-			clientIP = strings.Join(prior, ", ") + ", " + clientIP
+			clientIP = fmt.Sprintf("%s, %s", strings.Join(prior, ", "), clientIP)
 		}
 		requestHeader.Set("X-Forwarded-For", clientIP)
 	}

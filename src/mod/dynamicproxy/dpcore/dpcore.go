@@ -2,6 +2,7 @@ package dpcore
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -74,9 +75,9 @@ func NewDynamicProxyCore(target *url.URL, prepender string, ignoreTLSVerificatio
 		req.URL.Host = target.Host
 		req.URL.Path, req.URL.RawPath = joinURLPath(target, req.URL)
 		if targetQuery == "" || req.URL.RawQuery == "" {
-			req.URL.RawQuery = targetQuery + req.URL.RawQuery
+			req.URL.RawQuery = fmt.Sprintf("%s%s", targetQuery, req.URL.RawQuery)
 		} else {
-			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+			req.URL.RawQuery = fmt.Sprintf("%s&%s", targetQuery, req.URL.RawQuery)
 		}
 
 		if _, ok := req.Header["User-Agent"]; !ok {
@@ -112,11 +113,11 @@ func singleJoiningSlash(a, b string) string {
 	bslash := strings.HasPrefix(b, "/")
 	switch {
 	case aslash && bslash:
-		return a + b[1:]
+		return fmt.Sprintf("%s%s", a, b[1:])
 	case !aslash && !bslash:
-		return a + "/" + b
+		return fmt.Sprintf("%s/%s", a, b)
 	}
-	return a + b
+	return fmt.Sprintf("%s%s", a, b)
 }
 
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
@@ -133,12 +134,12 @@ func joinURLPath(a, b *url.URL) (path, rawpath string) {
 
 	switch {
 	case aslash && bslash:
-		return a.Path + b.Path[1:], apath + bpath[1:]
+		return fmt.Sprintf("%s%s", a.Path, b.Path[1:]), fmt.Sprintf("%s%s", apath, bpath[1:])
 	case !aslash && !bslash:
-		return a.Path + "/" + b.Path, apath + "/" + bpath
+		return fmt.Sprintf("%s/%s", a.Path, b.Path), fmt.Sprintf("%s/%s", apath, bpath)
 	}
 
-	return a.Path + b.Path, apath + bpath
+	return fmt.Sprintf("%s%s", a.Path, b.Path), fmt.Sprintf("%s%s", apath, bpath)
 }
 
 func copyHeader(dst, src http.Header) {
@@ -258,7 +259,7 @@ func addXForwardedForHeader(req *http.Request) {
 		// X-Forwarded-For information as a comma+space
 		// separated list and fold multiple headers into one.
 		if prior, ok := req.Header["X-Forwarded-For"]; ok {
-			clientIP = strings.Join(prior, ", ") + ", " + clientIP
+			clientIP = fmt.Sprintf("%s, %s", strings.Join(prior, ", "), clientIP)
 		}
 		req.Header.Set("X-Forwarded-For", clientIP)
 		if req.TLS != nil {
