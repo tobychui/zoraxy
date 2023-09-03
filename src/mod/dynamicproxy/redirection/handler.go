@@ -1,6 +1,7 @@
 package redirection
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -43,16 +44,15 @@ func (t *RuleTable) HandleRedirect(w http.ResponseWriter, r *http.Request) int {
 		}
 
 		if !strings.HasPrefix(redirectTarget, "http://") && !strings.HasPrefix(redirectTarget, "https://") {
-			redirectTarget = "http://" + redirectTarget
+			redirectTarget = fmt.Sprintf("http://%s", redirectTarget)
 		}
 
 		http.Redirect(w, r, redirectTarget, rr.StatusCode)
 		return rr.StatusCode
-	} else {
-		//Invalid usage
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("500 - Internal Server Error"))
-		log.Println("Target request URL do not have matching redirect rule. Check with IsRedirectable before calling HandleRedirect!")
-		return 500
 	}
+	//Invalid usage
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte("500 - Internal Server Error"))
+	log.Println("Target request URL do not have matching redirect rule. Check with IsRedirectable before calling HandleRedirect!")
+	return 500
 }

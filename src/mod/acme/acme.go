@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -164,12 +163,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = ioutil.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
+	err = os.WriteFile(fmt.Sprintf("./conf/certs/%s.crt", certificateName), certificates.Certificate, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
 	}
-	err = ioutil.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
+	err = os.WriteFile(fmt.Sprintf("./conf/certs/%s.key", certificateName), certificates.PrivateKey, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -188,7 +187,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 
-	err = os.WriteFile("./conf/certs/"+certificateName+".json", certInfoBytes, 0777)
+	err = os.WriteFile(fmt.Sprintf("./conf/certs/%s.json", certificateName), certInfoBytes, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -219,24 +218,23 @@ func (a *ACMEHandler) CheckCertificate() []string {
 		if err != nil {
 			// Unable to load this file
 			continue
-		} else {
-			// Cert loaded. Check its expiry time
-			block, _ := pem.Decode(certBytes)
-			if block != nil {
-				cert, err := x509.ParseCertificate(block.Bytes)
-				if err == nil {
-					elapsed := time.Since(cert.NotAfter)
-					if elapsed > 0 {
-						// if it is expired then add it in
-						// make sure it's uniqueless
-						for _, dnsName := range cert.DNSNames {
-							if !contains(expiredCerts, dnsName) {
-								expiredCerts = append(expiredCerts, dnsName)
-							}
+		}
+		// Cert loaded. Check its expiry time
+		block, _ := pem.Decode(certBytes)
+		if block != nil {
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err == nil {
+				elapsed := time.Since(cert.NotAfter)
+				if elapsed > 0 {
+					// if it is expired then add it in
+					// make sure it's uniqueless
+					for _, dnsName := range cert.DNSNames {
+						if !contains(expiredCerts, dnsName) {
+							expiredCerts = append(expiredCerts, dnsName)
 						}
-						if !contains(expiredCerts, cert.Subject.CommonName) {
-							expiredCerts = append(expiredCerts, cert.Subject.CommonName)
-						}
+					}
+					if !contains(expiredCerts, cert.Subject.CommonName) {
+						expiredCerts = append(expiredCerts, cert.Subject.CommonName)
 					}
 				}
 			}
@@ -358,7 +356,6 @@ func IsPortInUse(port int) bool {
 }
 
 func loadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
-
 	certInfoBytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err

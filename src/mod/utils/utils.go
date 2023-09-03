@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -41,7 +42,7 @@ func SendOK(w http.ResponseWriter) {
 func GetPara(r *http.Request, key string) (string, error) {
 	keys, ok := r.URL.Query()[key]
 	if !ok || len(keys[0]) < 1 {
-		return "", errors.New("invalid " + key + " given")
+		return "", fmt.Errorf("invalid %s given", key)
 	} else {
 		return keys[0], nil
 	}
@@ -52,7 +53,7 @@ func PostPara(r *http.Request, key string) (string, error) {
 	r.ParseForm()
 	x := r.Form.Get(key)
 	if x == "" {
-		return "", errors.New("invalid " + key + " given")
+		return "", fmt.Errorf("invalid %s given", key)
 	} else {
 		return x, nil
 	}
@@ -78,14 +79,11 @@ func PostBool(r *http.Request, key string) (bool, error) {
 
 func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return !os.IsNotExist(err)
 }
 
 func IsDir(path string) bool {
-	if FileExists(path) == false {
+	if !FileExists(path) {
 		return false
 	}
 	fi, err := os.Stat(path)

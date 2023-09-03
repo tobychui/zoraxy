@@ -62,9 +62,7 @@ func (h *Handler) ListBlockingPath() []*BlockingPath {
 // Get the blocker from matching path (path match, ignore tailing slash)
 func (h *Handler) GetPathBlockerFromMatchingPath(matchingPath string) *BlockingPath {
 	for _, blocker := range h.BlockingPaths {
-		if blocker.MatchingPath == matchingPath {
-			return blocker
-		} else if strings.TrimSuffix(blocker.MatchingPath, "/") == strings.TrimSuffix(matchingPath, "/") {
+		if (blocker.MatchingPath == matchingPath) || (strings.TrimSuffix(blocker.MatchingPath, "/") == strings.TrimSuffix(matchingPath, "/")) {
 			return blocker
 		}
 	}
@@ -137,7 +135,7 @@ func (h *Handler) GetMatchingBlockers(urlPath string) ([]*BlockingPath, *Blockin
 	matchingBlockers := []*BlockingPath{}
 	var longestMatchingPrefix *BlockingPath = nil
 	for _, thisBlocker := range h.BlockingPaths {
-		if thisBlocker.Enabled == false {
+		if !thisBlocker.Enabled {
 			//This blocker is not enabled. Ignore this
 			continue
 		}

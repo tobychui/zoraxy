@@ -11,6 +11,5 @@ func StringToInt64(number string) (int64, error) {
 }
 
 func Int64ToString(number int64) string {
-	convedNumber := strconv.FormatInt(number, 10)
-	return convedNumber
+	return strconv.FormatInt(number, 10)
 }

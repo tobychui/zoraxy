@@ -74,7 +74,7 @@ func HandleCreateProxySession(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
-//Check if the host support ssh, or if the target domain (and port, optional) support ssh
+// Check if the host support ssh, or if the target domain (and port, optional) support ssh
 func HandleWebSshSupportCheck(w http.ResponseWriter, r *http.Request) {
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
@@ -82,26 +82,26 @@ func HandleWebSshSupportCheck(w http.ResponseWriter, r *http.Request) {
 		isSupport := sshprox.IsWebSSHSupported()
 		js, _ := json.Marshal(isSupport)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		//Domain is given. Check if port is given
-		portString, err := utils.PostPara(r, "port")
-		if err != nil {
-			portString = "22"
-		}
-
-		port, err := strconv.Atoi(portString)
-		if err != nil {
-			utils.SendErrorResponse(w, "invalid port number given")
-			return
-		}
-
-		if port < 1 || port > 65534 {
-			utils.SendErrorResponse(w, "invalid port number given")
-			return
-		}
-
-		looksLikeSSHServer := sshprox.IsSSHConnectable(domain, port)
-		js, _ := json.Marshal(looksLikeSSHServer)
-		utils.SendJSONResponse(w, string(js))
+		return
 	}
+	//Domain is given. Check if port is given
+	portString, err := utils.PostPara(r, "port")
+	if err != nil {
+		portString = "22"
+	}
+
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
+	if port < 1 || port > 65534 {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
+	looksLikeSSHServer := sshprox.IsSSHConnectable(domain, port)
+	js, _ := json.Marshal(looksLikeSSHServer)
+	utils.SendJSONResponse(w, string(js))
 }

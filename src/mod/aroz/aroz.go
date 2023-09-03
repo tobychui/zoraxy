@@ -9,13 +9,13 @@ import (
 	"os"
 )
 
-//To be used with arozos system
+// To be used with arozos system
 type ArozHandler struct {
 	Port            string
 	restfulEndpoint string
 }
 
-//Information required for registering this subservice to arozos
+// Information required for registering this subservice to arozos
 type ServiceInfo struct {
 	Name         string   //Name of this module. e.g. "Audio"
 	Desc         string   //Description for this module
@@ -32,11 +32,11 @@ type ServiceInfo struct {
 	SupportedExt []string //Supported File Extensions. e.g. ".mp3", ".flac", ".wav"
 }
 
-//This function will request the required flag from the startup paramters and parse it to the need of the arozos.
+// This function will request the required flag from the startup paramters and parse it to the need of the arozos.
 func HandleFlagParse(info ServiceInfo) *ArozHandler {
-	var infoRequestMode = flag.Bool("info", false, "Show information about this program in JSON")
-	var port = flag.String("port", ":8000", "Management web interface listening port")
-	var restful = flag.String("rpt", "", "Reserved")
+	infoRequestMode := flag.Bool("info", false, "Show information about this program in JSON")
+	port := flag.String("port", ":8000", "Management web interface listening port")
+	restful := flag.String("rpt", "", "Reserved")
 	//Parse the flags
 	flag.Parse()
 	if *infoRequestMode {
@@ -51,19 +51,16 @@ func HandleFlagParse(info ServiceInfo) *ArozHandler {
 	}
 }
 
-//Get the username and resources access token from the request, return username, token
+// Get the username and resources access token from the request, return username, token
 func (a *ArozHandler) GetUserInfoFromRequest(w http.ResponseWriter, r *http.Request) (string, string) {
-	username := r.Header.Get("aouser")
-	token := r.Header.Get("aotoken")
-
-	return username, token
+	return r.Header.Get("aouser"), r.Header.Get("aotoken")
 }
 
 func (a *ArozHandler) IsUsingExternalPermissionManager() bool {
 	return !(a.restfulEndpoint == "")
 }
 
-//Request gateway interface for advance permission sandbox control
+// Request gateway interface for advance permission sandbox control
 func (a *ArozHandler) RequestGatewayInterface(token string, script string) (*http.Response, error) {
 	resp, err := http.PostForm(a.restfulEndpoint,
 		url.Values{"token": {token}, "script": {script}})

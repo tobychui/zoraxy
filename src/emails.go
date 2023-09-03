@@ -168,11 +168,10 @@ func loadSMTPConfig() *email.Sender {
 			}
 		}
 		return &thisEmailSender
-	} else {
-		//Not set. Return an empty one
-		return &email.Sender{
-			Port: 587,
-		}
+	}
+	//Not set. Return an empty one
+	return &email.Sender{
+		Port: 587,
 	}
 }
 
@@ -189,9 +188,8 @@ func loadSMTPAdminAddr() string {
 			return ""
 		}
 		return adminAddr
-	} else {
-		return ""
 	}
+	return ""
 }
 
 /*

@@ -168,11 +168,10 @@ func main() {
 	//Start the finalize sequences
 	finalSequence()
 
-	log.Println("Zoraxy started. Visit control panel at http://localhost" + handler.Port)
+	log.Printf("Zoraxy started. Visit control panel at http://localhost%s\n", handler.Port)
 	err = http.ListenAndServe(handler.Port, nil)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }

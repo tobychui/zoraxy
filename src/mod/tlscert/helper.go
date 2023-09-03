@@ -5,17 +5,20 @@ import (
 	"strings"
 )
 
-//This remove the certificates in the list where either the
-//public key or the private key is missing
+// This remove the certificates in the list where either the
+// public key or the private key is missing
 func getCertPairs(certFiles []string) []string {
 	crtMap := make(map[string]bool)
 	keyMap := make(map[string]bool)
 
 	for _, filename := range certFiles {
-		if filepath.Ext(filename) == ".crt" {
+		switch filepath.Ext(filename) {
+		case ".crt":
 			crtMap[strings.TrimSuffix(filename, ".crt")] = true
-		} else if filepath.Ext(filename) == ".key" {
+		case ".key":
 			keyMap[strings.TrimSuffix(filename, ".key")] = true
+		default:
+			continue
 		}
 	}
 
@@ -29,7 +32,7 @@ func getCertPairs(certFiles []string) []string {
 	return result
 }
 
-//Get the cloest subdomain certificate from a list of domains
+// Get the cloest subdomain certificate from a list of domains
 func matchClosestDomainCertificate(subdomain string, domains []string) string {
 	var matchingDomain string = ""
 	maxLength := 0
@@ -44,7 +47,7 @@ func matchClosestDomainCertificate(subdomain string, domains []string) string {
 	return matchingDomain
 }
 
-//Check if a requesting domain is a subdomain of a given domain
+// Check if a requesting domain is a subdomain of a given domain
 func isSubdomain(subdomain, domain string) bool {
 	subdomainParts := strings.Split(subdomain, ".")
 	domainParts := strings.Split(domain, ".")

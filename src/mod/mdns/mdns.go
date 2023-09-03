@@ -42,13 +42,13 @@ func NewMDNS(config NetworkHost, MacOverride string) (*MDNSHost, error) {
 	if err == nil {
 		macAddressBoardcast = strings.Join(macAddress, ",")
 	} else {
-		log.Println("[mDNS] Unable to get MAC Address: ", err.Error())
+		log.Printf("[mDNS] Unable to get MAC Address: %s\n", err.Error())
 	}
 
 	//Register the mds services
 	server, err := zeroconf.Register(config.HostName, "_http._tcp", "local.", config.Port, []string{"version_build=" + config.BuildVersion, "vendor=" + config.Vendor, "model=" + config.Model, "uuid=" + config.UUID, "domain=" + config.Domain, "mac_addr=" + macAddressBoardcast}, nil)
 	if err != nil {
-		log.Println("[mDNS] Error when registering zeroconf broadcast message", err.Error())
+		log.Printf("[mDNS] Error when registering zeroconf broadcast message %s\n", err.Error())
 		return &MDNSHost{}, err
 	}
 
@@ -58,7 +58,7 @@ func NewMDNS(config NetworkHost, MacOverride string) (*MDNSHost, error) {
 		ifaceIp := ""
 		ifaces, err := net.Interfaces()
 		if err != nil {
-			log.Println("[mDNS] Unable to override iface MAC: " + err.Error() + ". Resuming with default iface")
+			log.Printf("[mDNS] Unable to override iface MAC: %s. Resuming with default iface\n", err.Error())
 		}
 
 		foundMatching := false
@@ -95,9 +95,9 @@ func NewMDNS(config NetworkHost, MacOverride string) (*MDNSHost, error) {
 		}
 
 		if !foundMatching {
-			log.Println("[mDNS] Unable to find the target iface with MAC address: " + MacOverride + ". Resuming with default iface")
+			log.Printf("[mDNS] Unable to find the target iface with MAC address: %s. Resuming with default iface\n", MacOverride)
 		} else {
-			log.Println("[mDNS] Entering force MAC address mode, listening on: " + MacOverride + "(IP address: " + ifaceIp + ")")
+			log.Printf("[mDNS] Entering force MAC address mode, listening on: %s (IP address: %s)\n", MacOverride, ifaceIp)
 		}
 	}
 

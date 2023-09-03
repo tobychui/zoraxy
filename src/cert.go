@@ -130,18 +130,17 @@ func handleListDomains(w http.ResponseWriter, r *http.Request) {
 			// Unable to load this file
 			log.Println("Unable to load certificate: " + certFilepath)
 			continue
-		} else {
-			// Cert loaded. Check its expiry time
-			block, _ := pem.Decode(certBtyes)
-			if block != nil {
-				cert, err := x509.ParseCertificate(block.Bytes)
-				if err == nil {
-					certname := strings.TrimSuffix(filepath.Base(certFilepath), filepath.Ext(certFilepath))
-					for _, dnsName := range cert.DNSNames {
-						certnameToDomainMap[dnsName] = certname
-					}
-					certnameToDomainMap[cert.Subject.CommonName] = certname
+		}
+		// Cert loaded. Check its expiry time
+		block, _ := pem.Decode(certBtyes)
+		if block != nil {
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err == nil {
+				certname := strings.TrimSuffix(filepath.Base(certFilepath), filepath.Ext(certFilepath))
+				for _, dnsName := range cert.DNSNames {
+					certnameToDomainMap[dnsName] = certname
 				}
+				certnameToDomainMap[cert.Subject.CommonName] = certname
 			}
 		}
 	}
@@ -179,23 +178,23 @@ func handleToggleTLSProxy(w http.ResponseWriter, r *http.Request) {
 		//No setting. Get the current status
 		js, _ := json.Marshal(currentTlsSetting)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if newState == "true" {
-			sysdb.Write("settings", "usetls", true)
-			log.Println("Enabling TLS mode on reverse proxy")
-			dynamicProxyRouter.UpdateTLSSetting(true)
-		} else if newState == "false" {
-			sysdb.Write("settings", "usetls", false)
-			log.Println("Disabling TLS mode on reverse proxy")
-			dynamicProxyRouter.UpdateTLSSetting(false)
-		} else {
-			utils.SendErrorResponse(w, "invalid state given. Only support true or false")
-			return
-		}
-
-		utils.SendOK(w)
-
+		return
 	}
+	switch newState {
+	case "true":
+		sysdb.Write("settings", "usetls", true)
+		log.Println("Enabling TLS mode on reverse proxy")
+		dynamicProxyRouter.UpdateTLSSetting(true)
+	case "false":
+		sysdb.Write("settings", "usetls", false)
+		log.Println("Disabling TLS mode on reverse proxy")
+		dynamicProxyRouter.UpdateTLSSetting(false)
+	default:
+		utils.SendErrorResponse(w, "invalid state given. Only support true or false")
+		return
+	}
+
+	utils.SendOK(w)
 }
 
 // Handle the GET and SET of reverse proxy TLS versions
@@ -210,18 +209,19 @@ func handleSetTlsRequireLatest(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(reqLatestTLS)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if newState == "true" {
-			sysdb.Write("settings", "forceLatestTLS", true)
-			log.Println("Updating minimum TLS version to v1.2 or above")
-			dynamicProxyRouter.UpdateTLSVersion(true)
-		} else if newState == "false" {
-			sysdb.Write("settings", "forceLatestTLS", false)
-			log.Println("Updating minimum TLS version to v1.0 or above")
-			dynamicProxyRouter.UpdateTLSVersion(false)
-		} else {
-			utils.SendErrorResponse(w, "invalid state given")
-		}
+		return
+	}
+	switch newState {
+	case "true":
+		sysdb.Write("settings", "forceLatestTLS", true)
+		log.Println("Updating minimum TLS version to v1.2 or above")
+		dynamicProxyRouter.UpdateTLSVersion(true)
+	case "false":
+		sysdb.Write("settings", "forceLatestTLS", false)
+		log.Println("Updating minimum TLS version to v1.0 or above")
+		dynamicProxyRouter.UpdateTLSVersion(false)
+	default:
+		utils.SendErrorResponse(w, "invalid state given")
 	}
 }
 
@@ -248,12 +248,13 @@ func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 		domain = "default"
 	}
 
-	if keytype == "pub" {
-		overWriteFilename = domain + ".crt"
-	} else if keytype == "pri" {
-		overWriteFilename = domain + ".key"
-	} else {
-		http.Error(w, "Not supported keytype: "+keytype, http.StatusBadRequest)
+	switch keytype {
+	case "pub":
+		overWriteFilename = fmt.Sprintf("%s.crt", domain)
+	case "pri":
+		overWriteFilename = fmt.Sprintf("%s.key", domain)
+	default:
+		http.Error(w, fmt.Sprintf("Not supported keytype: %s", keytype), http.StatusBadRequest)
 		return
 	}
 

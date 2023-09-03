@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"embed"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -80,17 +81,20 @@ func (m *Manager) GetCert(helloInfo *tls.ClientHelloInfo) (*tls.Certificate, err
 		os.WriteFile(priKey, buildInPriKey, 0775)
 	}
 
-	if utils.FileExists(filepath.Join(m.CertStore, helloInfo.ServerName+".crt")) && utils.FileExists(filepath.Join(m.CertStore, helloInfo.ServerName+".key")) {
-		pubKey = filepath.Join(m.CertStore, helloInfo.ServerName+".crt")
-		priKey = filepath.Join(m.CertStore, helloInfo.ServerName+".key")
+	crtName := fmt.Sprintf("%s.crt", helloInfo.ServerName)
+	keyName := fmt.Sprintf("%s.key", helloInfo.ServerName)
+
+	if utils.FileExists(filepath.Join(m.CertStore, crtName)) && utils.FileExists(filepath.Join(m.CertStore, keyName)) {
+		pubKey = filepath.Join(m.CertStore, crtName)
+		priKey = filepath.Join(m.CertStore, keyName)
 
 	} else {
 		domainCerts, _ := m.ListCertDomains()
 		cloestDomainCert := matchClosestDomainCertificate(helloInfo.ServerName, domainCerts)
 		if cloestDomainCert != "" {
 			//There is a matching parent domain for this subdomain. Use this instead.
-			pubKey = filepath.Join(m.CertStore, cloestDomainCert+".crt")
-			priKey = filepath.Join(m.CertStore, cloestDomainCert+".key")
+			pubKey = filepath.Join(m.CertStore, fmt.Sprintf("%s.crt", cloestDomainCert))
+			priKey = filepath.Join(m.CertStore, fmt.Sprintf("%s.key", cloestDomainCert))
 		} else if m.DefaultCertExists() {
 			//Use default.crt and default.key
 			pubKey = filepath.Join(m.CertStore, "default.crt")
@@ -171,17 +175,11 @@ func IsValidTLSFile(file io.Reader) bool {
 			return false
 		}
 		// Check if the certificate is a valid TLS/SSL certificate
-		return cert.IsCA == false && cert.KeyUsage&x509.KeyUsageDigitalSignature != 0 && cert.KeyUsage&x509.KeyUsageKeyEncipherment != 0
+		return !cert.IsCA && cert.KeyUsage&x509.KeyUsageDigitalSignature != 0 && cert.KeyUsage&x509.KeyUsageKeyEncipherment != 0
 	} else if strings.Contains(block.Type, "PRIVATE KEY") {
 		// The file contains a private key
 		_, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			// Handle the error
-			return false
-		}
-		return true
-	} else {
-		return false
+		return err == nil
 	}
-
+	return false
 }

@@ -43,8 +43,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if matchedRoutingRule.UseSystemAccessControl {
 			//This matching rule request system access control.
 			//check access logic
-			respWritten := h.handleAccessRouting(w, r)
-			if respWritten {
+			if h.handleAccessRouting(w, r) {
 				return
 			}
 		}
@@ -56,8 +55,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		General Access Check
 	*/
 
-	respWritten := h.handleAccessRouting(w, r)
-	if respWritten {
+	if h.handleAccessRouting(w, r) {
 		return
 	}
 
@@ -104,15 +102,13 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	targetProxyEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath)
 	if targetProxyEndpoint != nil {
 		if targetProxyEndpoint.RequireBasicAuth {
-			err := h.handleBasicAuthRouting(w, r, targetProxyEndpoint)
-			if err != nil {
+			if err := h.handleBasicAuthRouting(w, r, targetProxyEndpoint); err != nil {
 				return
 			}
 		}
 		h.proxyRequest(w, r, targetProxyEndpoint)
 	} else if !strings.HasSuffix(proxyingPath, "/") {
-		potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/")
-		if potentialProxtEndpoint != nil {
+		if potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/"); potentialProxtEndpoint != nil {
 			//Missing tailing slash. Redirect to target proxy endpoint
 			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
 		} else {

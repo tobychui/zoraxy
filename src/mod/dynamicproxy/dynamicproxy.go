@@ -70,12 +70,12 @@ func (router *Router) UpdateHttpToHttpsRedirectSetting(useRedirect bool) {
 func (router *Router) StartProxyService() error {
 	//Create a new server object
 	if router.server != nil {
-		return errors.New("Reverse proxy server already running")
+		return errors.New("reverse proxy server already running")
 	}
 
 	//Check if root route is set
 	if router.Root == nil {
-		return errors.New("Reverse proxy router root not set")
+		return errors.New("reverse proxy router root not set")
 	}
 
 	//Load root options from file
@@ -173,7 +173,7 @@ func (router *Router) StartProxyService() error {
 
 func (router *Router) StopProxyService() error {
 	if router.server == nil {
-		return errors.New("Reverse proxy server already stopped")
+		return errors.New("reverse proxy server already stopped")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

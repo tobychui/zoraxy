@@ -26,7 +26,7 @@ func TryLoadorAskUserForAuthkey() (string, error) {
 				log.Println("Zerotier authkey loaded")
 				authKey = string(b)
 			} else {
-				log.Println("Unable to read authkey at C:\\ProgramData\\ZeroTier\\One\\authtoken.secret: ", err.Error())
+				log.Printf("Unable to read authkey at C:\\ProgramData\\ZeroTier\\One\\authtoken.secret: %s\n", err.Error())
 			}
 		} else {
 			//Elavate the permission to admin
@@ -35,7 +35,7 @@ func TryLoadorAskUserForAuthkey() (string, error) {
 				log.Println("Zerotier authkey loaded")
 				authKey = ak
 			} else {
-				log.Println("Unable to read authkey at C:\\ProgramData\\ZeroTier\\One\\authtoken.secret: ", err.Error())
+				log.Printf("Unable to read authkey at C:\\ProgramData\\ZeroTier\\One\\authtoken.secret: %s\n", err.Error())
 			}
 		}
 
@@ -47,7 +47,7 @@ func TryLoadorAskUserForAuthkey() (string, error) {
 				log.Println("Zerotier authkey loaded")
 				authKey = strings.TrimSpace(ak)
 			} else {
-				log.Println("Unable to read authkey at /var/lib/zerotier-one/authtoken.secret: ", err.Error())
+				log.Printf("Unable to read authkey at /var/lib/zerotier-one/authtoken.secret: %s\n", err.Error())
 			}
 		} else {
 			//Try read from source
@@ -56,7 +56,7 @@ func TryLoadorAskUserForAuthkey() (string, error) {
 				log.Println("Zerotier authkey loaded")
 				authKey = string(b)
 			} else {
-				log.Println("Unable to read authkey at /var/lib/zerotier-one/authtoken.secret: ", err.Error())
+				log.Printf("Unable to read authkey at /var/lib/zerotier-one/authtoken.secret: %s\n", err.Error())
 			}
 		}
 
@@ -66,14 +66,14 @@ func TryLoadorAskUserForAuthkey() (string, error) {
 			log.Println("Zerotier authkey loaded")
 			authKey = string(b)
 		} else {
-			log.Println("Unable to read authkey at /Library/Application Support/ZeroTier/One/authtoken.secret ", err.Error())
+			log.Printf("Unable to read authkey at /Library/Application Support/ZeroTier/One/authtoken.secret %s\n", err.Error())
 		}
 	}
 
 	authKey = strings.TrimSpace(authKey)
 
 	if authKey == "" {
-		return "", errors.New("Unable to load authkey from file")
+		return "", errors.New("unable to load authkey from file")
 	}
 
 	return authKey, nil

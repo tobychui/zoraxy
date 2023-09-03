@@ -65,31 +65,29 @@ func HandleWhois(w http.ResponseWriter, r *http.Request) {
 
 	if raw == "true" {
 		utils.SendTextResponse(w, result)
-	} else {
-		if isDomainName(targetIpOrDomain) {
-			//Is Domain
-			parsedOutput, err := ParseWHOISResponse(result)
-			if err != nil {
-				utils.SendErrorResponse(w, err.Error())
-				return
-			}
-
-			js, _ := json.Marshal(parsedOutput)
-			utils.SendJSONResponse(w, string(js))
-		} else {
-			//Is IP
-			parsedOutput, err := ParseWhoisIpData(result)
-			if err != nil {
-				utils.SendErrorResponse(w, err.Error())
-				return
-			}
-
-			js, _ := json.Marshal(parsedOutput)
-			utils.SendJSONResponse(w, string(js))
+		return
+	}
+	if isDomainName(targetIpOrDomain) {
+		//Is Domain
+		parsedOutput, err := ParseWHOISResponse(result)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
 		}
 
-	}
+		js, _ := json.Marshal(parsedOutput)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Is IP
+		parsedOutput, err := ParseWhoisIpData(result)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
 
+		js, _ := json.Marshal(parsedOutput)
+		utils.SendJSONResponse(w, string(js))
+	}
 }
 
 func HandlePing(w http.ResponseWriter, r *http.Request) {

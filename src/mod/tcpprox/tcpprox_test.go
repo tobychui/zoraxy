@@ -39,5 +39,4 @@ func TestPort2Port(t *testing.T) {
 	if config.Running {
 		t.Errorf("port2port did not stop as expected")
 	}
-
 }

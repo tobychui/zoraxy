@@ -4,7 +4,7 @@ import (
 	"net"
 )
 
-//Generate all ip address from a CIDR
+// Generate all ip address from a CIDR
 func GetAllAddressFromCIDR(cidr string) ([]string, error) {
 	ip, ipnet, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -29,12 +29,7 @@ func inc(ip net.IP) {
 }
 
 func isValidIPAddr(ipAddr string) bool {
-	ip := net.ParseIP(ipAddr)
-	if ip == nil {
-		return false
-	}
-
-	return true
+	return net.ParseIP(ipAddr) == nil
 }
 
 func ipWithinCIDR(ipAddr string, cidr string) bool {

@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"time"
 )
 
-//Get a random free IP from the pool
+// Get a random free IP from the pool
 func (n *Network) GetRandomFreeIP() (net.IP, error) {
 	// Get all IP addresses in the subnet
 	ips, err := GetAllAddressFromCIDR(n.CIDR)
@@ -31,7 +30,6 @@ func (n *Network) GetRandomFreeIP() (net.IP, error) {
 	if len(availableIPs) == 0 {
 		return nil, fmt.Errorf("no available IP")
 	}
-	rand.Seed(time.Now().UnixNano())
 	randIndex := rand.Intn(len(availableIPs))
 	pickedFreeIP := availableIPs[randIndex]
 

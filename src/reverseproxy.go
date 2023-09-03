@@ -81,12 +81,13 @@ func ReverseProxtInit() {
 			return
 		}
 
-		if record.ProxyType == "root" {
+		switch record.ProxyType {
+		case "root":
 			dynamicProxyRouter.SetRootProxy(&dynamicproxy.RootOptions{
 				ProxyLocation: record.ProxyTarget,
 				RequireTLS:    record.UseTLS,
 			})
-		} else if record.ProxyType == "subd" {
+		case "subd":
 			dynamicProxyRouter.AddSubdomainRoutingService(&dynamicproxy.SubdOptions{
 				MatchingDomain:          record.Rootname,
 				Domain:                  record.ProxyTarget,
@@ -96,7 +97,7 @@ func ReverseProxtInit() {
 				BasicAuthCredentials:    record.BasicAuthCredentials,
 				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
 			})
-		} else if record.ProxyType == "vdir" {
+		case "vdir":
 			dynamicProxyRouter.AddVirtualDirectoryProxyService(&dynamicproxy.VdirOptions{
 				RootName:                record.Rootname,
 				Domain:                  record.ProxyTarget,
@@ -106,8 +107,8 @@ func ReverseProxtInit() {
 				BasicAuthCredentials:    record.BasicAuthCredentials,
 				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
 			})
-		} else {
-			log.Println("Unsupported endpoint type: " + record.ProxyType + ". Skipping " + filepath.Base(conf))
+		default:
+			log.Printf("Unsupported endpoint type: %s. Skipping %s\n", record.ProxyType, filepath.Base(conf))
 		}
 	}
 
@@ -222,7 +223,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rootname := ""
-	if eptype == "vdir" {
+	switch eptype {
+	case "vdir":
 		vdir, err := utils.PostPara(r, "rootname")
 		if err != nil {
 			utils.SendErrorResponse(w, "vdir not defined")
@@ -244,8 +246,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthCredentials: basicAuthCredentials,
 		}
 		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
-
-	} else if eptype == "subd" {
+	case "subd":
 		subdomain, err := utils.PostPara(r, "rootname")
 		if err != nil {
 			utils.SendErrorResponse(w, "subdomain not defined")
@@ -261,14 +262,14 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthCredentials: basicAuthCredentials,
 		}
 		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
-	} else if eptype == "root" {
+	case "root":
 		rootname = "root"
 		thisOption := dynamicproxy.RootOptions{
 			ProxyLocation: endpoint,
 			RequireTLS:    useTLS,
 		}
 		dynamicProxyRouter.SetRootProxy(&thisOption)
-	} else {
+	default:
 		//Invalid eptype
 		utils.SendErrorResponse(w, "Invalid endpoint type")
 		return
@@ -348,7 +349,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if eptype == "vdir" {
+	switch eptype {
+	case "vdir":
 		thisOption := dynamicproxy.VdirOptions{
 			RootName:             targetProxyEntry.RootOrMatchingDomain,
 			Domain:               endpoint,
@@ -359,8 +361,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 		targetProxyEntry.Remove()
 		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
-
-	} else if eptype == "subd" {
+	case "subd":
 		thisOption := dynamicproxy.SubdOptions{
 			MatchingDomain:       targetProxyEntry.RootOrMatchingDomain,
 			Domain:               endpoint,
@@ -371,6 +372,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 		targetProxyEntry.Remove()
 		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
+	default:
+		break
 	}
 
 	//Save it to file
@@ -428,7 +431,8 @@ on this endpoint by its username
 if request is POST, the handler will write the results to proxy config
 */
 func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		ep, err := utils.GetPara(r, "ep")
 		if err != nil {
 			utils.SendErrorResponse(w, "Invalid ep given")
@@ -455,8 +459,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(usernames)
 		utils.SendJSONResponse(w, string(js))
-
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		//Write to target
 		ep, err := utils.PostPara(r, "ep")
 		if err != nil {
@@ -537,15 +540,13 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 		//Replace runtime configuration
 		targetProxy.UpdateToRuntime()
 		utils.SendOK(w)
-	} else {
+	default:
 		http.Error(w, "invalid usage", http.StatusMethodNotAllowed)
 	}
-
 }
 
 // List, Update or Remove the exception paths for basic auth.
 func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
@@ -576,7 +577,6 @@ func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 	}
 	js, _ := json.Marshal(results)
 	utils.SendJSONResponse(w, string(js))
-	return
 }
 
 func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
@@ -696,7 +696,8 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if eptype == "vdir" {
+	switch eptype {
+	case "vdir":
 		results := []*dynamicproxy.ProxyEndpoint{}
 		dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
 			results = append(results, value.(*dynamicproxy.ProxyEndpoint))
@@ -709,7 +710,8 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(results)
 		utils.SendJSONResponse(w, string(js))
-	} else if eptype == "subd" {
+		break
+	case "subd":
 		results := []*dynamicproxy.ProxyEndpoint{}
 		dynamicProxyRouter.SubdomainEndpoint.Range(func(key, value interface{}) bool {
 			results = append(results, value.(*dynamicproxy.ProxyEndpoint))
@@ -722,10 +724,10 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(results)
 		utils.SendJSONResponse(w, string(js))
-	} else if eptype == "root" {
+	case "root":
 		js, _ := json.Marshal(dynamicProxyRouter.Root)
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	default:
 		utils.SendErrorResponse(w, "Invalid type given")
 	}
 }
@@ -743,23 +745,23 @@ func HandleUpdateHttpsRedirect(w http.ResponseWriter, r *http.Request) {
 		}
 		js, _ := json.Marshal(currentRedirectToHttps)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if dynamicProxyRouter.Option.Port == 80 {
-			utils.SendErrorResponse(w, "This option is not available when listening on port 80")
-			return
-		}
-		if useRedirect == "true" {
-			sysdb.Write("settings", "redirect", true)
-			log.Println("Updating force HTTPS redirection to true")
-			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(true)
-		} else if useRedirect == "false" {
-			sysdb.Write("settings", "redirect", false)
-			log.Println("Updating force HTTPS redirection to false")
-			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
-		}
-
-		utils.SendOK(w)
+		return
 	}
+	if dynamicProxyRouter.Option.Port == 80 {
+		utils.SendErrorResponse(w, "This option is not available when listening on port 80")
+		return
+	}
+	if useRedirect == "true" {
+		sysdb.Write("settings", "redirect", true)
+		log.Println("Updating force HTTPS redirection to true")
+		dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(true)
+	} else if useRedirect == "false" {
+		sysdb.Write("settings", "redirect", false)
+		log.Println("Updating force HTTPS redirection to false")
+		dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
+	}
+
+	utils.SendOK(w)
 }
 
 // Handle checking if the current user is accessing via the reverse proxied interface

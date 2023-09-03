@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"imuslab.com/zoraxy/mod/utils"
@@ -23,14 +24,17 @@ import (
 func handleListBlacklisted(w http.ResponseWriter, r *http.Request) {
 	bltype, err := utils.GetPara(r, "type")
 	if err != nil {
-		bltype = "country"
+		log.Println("invalid or empty blacklist type, default to country")
 	}
 
 	resulst := []string{}
-	if bltype == "country" {
+	switch bltype {
+	case "country":
 		resulst = geodbStore.GetAllBlacklistedCountryCode()
-	} else if bltype == "ip" {
+	case "ip":
 		resulst = geodbStore.GetAllBlacklistedIp()
+	default:
+		resulst = geodbStore.GetAllBlacklistedCountryCode()
 	}
 
 	js, _ := json.Marshal(resulst)
@@ -91,18 +95,19 @@ func handleBlacklistEnable(w http.ResponseWriter, r *http.Request) {
 		currentEnabled := geodbStore.BlacklistEnabled
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if enable == "true" {
-			geodbStore.ToggleBlacklist(true)
-		} else if enable == "false" {
-			geodbStore.ToggleBlacklist(false)
-		} else {
-			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
-			return
-		}
-
-		utils.SendOK(w)
+		return
 	}
+	switch enable {
+	case "true":
+		geodbStore.ToggleBlacklist(true)
+	case "false":
+		geodbStore.ToggleBlacklist(false)
+	default:
+		utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
+		return
+	}
+
+	utils.SendOK(w)
 }
 
 /*
@@ -110,16 +115,19 @@ func handleBlacklistEnable(w http.ResponseWriter, r *http.Request) {
 */
 
 func handleListWhitelisted(w http.ResponseWriter, r *http.Request) {
-	bltype, err := utils.GetPara(r, "type")
+	wltype, err := utils.GetPara(r, "type")
 	if err != nil {
-		bltype = "country"
+		log.Println("invalid or empty whitelist type, default to country")
 	}
 
 	resulst := []string{}
-	if bltype == "country" {
+	switch wltype {
+	case "country":
 		resulst = geodbStore.GetAllWhitelistedCountryCode()
-	} else if bltype == "ip" {
+	case "ip":
 		resulst = geodbStore.GetAllWhitelistedIp()
+	default:
+		resulst = geodbStore.GetAllWhitelistedCountryCode()
 	}
 
 	js, _ := json.Marshal(resulst)
@@ -180,16 +188,17 @@ func handleWhitelistEnable(w http.ResponseWriter, r *http.Request) {
 		currentEnabled := geodbStore.WhitelistEnabled
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if enable == "true" {
-			geodbStore.ToggleWhitelist(true)
-		} else if enable == "false" {
-			geodbStore.ToggleWhitelist(false)
-		} else {
-			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
-			return
-		}
-
-		utils.SendOK(w)
+		return
 	}
+	switch enable {
+	case "true":
+		geodbStore.ToggleWhitelist(true)
+	case "false":
+		geodbStore.ToggleWhitelist(false)
+	default:
+		utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
+		return
+	}
+
+	utils.SendOK(w)
 }

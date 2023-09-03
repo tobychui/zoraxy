@@ -195,7 +195,8 @@ func HandleGetNetworkInterfaceStats(w http.ResponseWriter, r *http.Request) {
 
 // Get network interface stats, return accumulated rx bits, tx bits and error if any
 func GetNetworkInterfaceStats() (int64, int64, error) {
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		//Windows wmic sometime freeze and not respond.
 		//The safer way is to make a bypass mechanism
 		//when timeout with channel
@@ -266,15 +267,15 @@ func GetNetworkInterfaceStats() (int64, int64, error) {
 			log.Println("Unable to extract NIC info from wmic: " + result.Err.Error())
 		}
 		return result.RX, result.TX, result.Err
-	} else if runtime.GOOS == "linux" {
+	case "linux":
 		allIfaceRxByteFiles, err := filepath.Glob("/sys/class/net/*/statistics/rx_bytes")
 		if err != nil {
 			//Permission denied
-			return 0, 0, errors.New("Access denied")
+			return 0, 0, errors.New("access denied")
 		}
 
 		if len(allIfaceRxByteFiles) == 0 {
-			return 0, 0, errors.New("No valid iface found")
+			return 0, 0, errors.New("no valid iface found")
 		}
 
 		rxSum := int64(0)
@@ -302,8 +303,7 @@ func GetNetworkInterfaceStats() (int64, int64, error) {
 
 		//Return value as bits
 		return rxSum * 8, txSum * 8, nil
-
-	} else if runtime.GOOS == "darwin" {
+	case "darwin":
 		cmd := exec.Command("netstat", "-ib") //get data from netstat -ib
 		out, err := cmd.Output()
 		if err != nil {
@@ -332,7 +332,9 @@ func GetNetworkInterfaceStats() (int64, int64, error) {
 		}
 
 		return 0, 0, nil //no ethernet adapters with en*/<Link#*>
+	default:
+		break
 	}
 
-	return 0, 0, errors.New("Platform not supported")
+	return 0, 0, errors.New("platform not supported")
 }

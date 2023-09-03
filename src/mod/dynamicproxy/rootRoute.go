@@ -2,7 +2,7 @@ package dynamicproxy
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -17,7 +17,7 @@ import (
 	RootRoutingOptions
 */
 
-var rootConfigFilepath string = "conf/root_config.json"
+const rootConfigFilepath string = "conf/root_config.json"
 
 func loadRootRoutingOptionsFromFile() (*RootRoutingOptions, error) {
 	if !utils.FileExists(rootConfigFilepath) {
@@ -25,18 +25,18 @@ func loadRootRoutingOptionsFromFile() (*RootRoutingOptions, error) {
 		js, _ := json.MarshalIndent(RootRoutingOptions{}, "", " ")
 		err := os.WriteFile(rootConfigFilepath, js, 0775)
 		if err != nil {
-			return nil, errors.New("Unable to write root config to file: " + err.Error())
+			return nil, fmt.Errorf("unable to write root config to file: %s", err.Error())
 		}
 	}
 	newRootOption := RootRoutingOptions{}
 	rootOptionsBytes, err := os.ReadFile(rootConfigFilepath)
 	if err != nil {
-		log.Println("[Error] Unable to read root config file at " + rootConfigFilepath + ": " + err.Error())
+		log.Printf("[Error] Unable to read root config file at %s: %s\n", rootConfigFilepath, err.Error())
 		return nil, err
 	}
 	err = json.Unmarshal(rootOptionsBytes, &newRootOption)
 	if err != nil {
-		log.Println("[Error] Unable to parse root config file: " + err.Error())
+		log.Printf("[Error] Unable to parse root config file: %s\n", err.Error())
 		return nil, err
 	}
 

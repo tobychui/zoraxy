@@ -122,7 +122,7 @@ func getFilenameFromRootName(rootname string) string {
 	//Generate a filename for this rootname
 	filename := strings.ReplaceAll(rootname, ".", "_")
 	filename = strings.ReplaceAll(filename, "/", "-")
-	filename = filename + ".config"
+	filename = fmt.Sprintf("%s.config", filename)
 	return filename
 }
 

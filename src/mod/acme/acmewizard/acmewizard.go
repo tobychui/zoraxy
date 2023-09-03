@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -33,7 +33,8 @@ func HandleGuidedStepCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if stepNo == 1 {
+	switch stepNo {
+	case 1:
 		isListening, err := isLocalhostListening()
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
@@ -42,7 +43,7 @@ func HandleGuidedStepCheck(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(isListening)
 		utils.SendJSONResponse(w, string(js))
-	} else if stepNo == 2 {
+	case 2:
 		publicIp, err := getPublicIPAddress()
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
@@ -55,7 +56,7 @@ func HandleGuidedStepCheck(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(httpServerReachable)
 		utils.SendJSONResponse(w, string(js))
-	} else if stepNo == 3 {
+	case 3:
 		domain, err := utils.GetPara(r, "domain")
 		if err != nil {
 			utils.SendErrorResponse(w, "domain cannot be empty")
@@ -75,7 +76,7 @@ func HandleGuidedStepCheck(w http.ResponseWriter, r *http.Request) {
 		httpServerReachable := isHTTPServerAvailable(domain)
 		js, _ := json.Marshal(httpServerReachable)
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	default:
 		utils.SendErrorResponse(w, "invalid step number")
 	}
 }
@@ -98,10 +99,6 @@ func isLocalhostListening() (isListening bool, err error) {
 		conn.Close()
 	}
 
-	if isListening {
-		return true, nil
-	}
-
 	return isListening, err
 }
 
@@ -113,7 +110,7 @@ func getPublicIPAddress() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	ip, err := ioutil.ReadAll(resp.Body)
+	ip, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -156,8 +153,5 @@ func isHTTPServerAvailable(ipAddress string) bool {
 // Step 3
 func isDomainReachable(domain string) bool {
 	_, err := net.LookupHost(domain)
-	if err != nil {
-		return false // Domain is not reachable
-	}
-	return true // Domain is reachable
+	return err == nil
 }

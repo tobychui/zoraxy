@@ -61,19 +61,19 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 		js, _ := json.MarshalIndent(newConfig, "", " ")
 		err := os.WriteFile(config, js, 0775)
 		if err != nil {
-			return nil, errors.New("Failed to create acme auto renewer config: " + err.Error())
+			return nil, errors.New("failed to create acme auto renewer config: " + err.Error())
 		}
 	}
 
 	renewerConfig := AutoRenewConfig{}
 	content, err := os.ReadFile(config)
 	if err != nil {
-		return nil, errors.New("Failed to open acme auto renewer config: " + err.Error())
+		return nil, errors.New("failed to open acme auto renewer config: " + err.Error())
 	}
 
 	err = json.Unmarshal(content, &renewerConfig)
 	if err != nil {
-		return nil, errors.New("Malformed acme config file: " + err.Error())
+		return nil, errors.New("malformed acme config file: " + err.Error())
 	}
 
 	//Create an Auto renew object
@@ -142,7 +142,8 @@ func (a *AutoRenewer) HandleSetAutoRenewDomains(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if opr == "setSelected" {
+	switch opr {
+	case "setSelected":
 		files, err := utils.PostPara(r, "domains")
 		if err != nil {
 			utils.SendErrorResponse(w, "Domains is not defined")
@@ -162,12 +163,13 @@ func (a *AutoRenewer) HandleSetAutoRenewDomains(w http.ResponseWriter, r *http.R
 		a.RenewerConfig.FilesToRenew = matchingRuleFiles
 		a.saveRenewConfigToFile()
 		utils.SendOK(w)
-	} else if opr == "setAuto" {
+	case "setAuto":
 		a.RenewerConfig.RenewAll = true
 		a.saveRenewConfigToFile()
 		utils.SendOK(w)
+	default:
+		break
 	}
-
 }
 
 // if auto renew all is true (aka auto scan), it will return []string{"*"}
@@ -236,7 +238,6 @@ func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Reque
 }
 
 func (a *AutoRenewer) HandleACMEEmail(w http.ResponseWriter, r *http.Request) {
-
 	email, err := utils.PostPara(r, "set")
 	if err != nil {
 		//Return the current email to user
@@ -361,7 +362,7 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 		certInfoFilename := fmt.Sprintf("%s/%s.json", filepath.Dir(expiredCert.Filepath), certName)
 		certInfo, err := loadCertInfoJSON(certInfoFilename)
 		if err != nil {
-			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, using default ACME", certName, err)
+			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, using default ACME\n", certName, err)
 			certInfo = &CertificateInfoJSON{}
 		}
 

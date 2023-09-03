@@ -62,7 +62,7 @@ func (d *Database) dump(filename string) ([]string, error) {
 
 func (d *Database) newTable(tableName string) error {
 	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	if !fileExists(tablePath) {
@@ -86,20 +86,18 @@ func (d *Database) tableExists(tableName string) bool {
 
 func (d *Database) dropTable(tableName string) error {
 	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	if d.tableExists(tableName) {
 		return os.RemoveAll(tablePath)
-	} else {
-		return errors.New("table not exists")
 	}
-
+	return errors.New("table not exists")
 }
 
 func (d *Database) write(tableName string, key string, value interface{}) error {
 	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	js, err := json.Marshal(value)
@@ -139,7 +137,7 @@ func (d *Database) keyExists(tableName string, key string) bool {
 
 func (d *Database) delete(tableName string, key string) error {
 	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 	if !d.keyExists(tableName, key) {
 		return errors.New("key not exists")

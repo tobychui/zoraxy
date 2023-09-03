@@ -34,7 +34,7 @@ func newDatabase(dbfile string, readOnlyMode bool) (*Database, error) {
 	}, err
 }
 
-//Dump the whole db into a log file
+// Dump the whole db into a log file
 func (d *Database) dump(filename string) ([]string, error) {
 	results := []string{}
 
@@ -53,10 +53,10 @@ func (d *Database) dump(filename string) ([]string, error) {
 	return results, nil
 }
 
-//Create a new table
+// Create a new table
 func (d *Database) newTable(tableName string) error {
-	if d.ReadOnly == true {
-		return errors.New("Operation rejected in ReadOnly mode")
+	if d.ReadOnly {
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 
 	err := d.Db.(*bolt.DB).Update(func(tx *bolt.Tx) error {
@@ -71,7 +71,7 @@ func (d *Database) newTable(tableName string) error {
 	return err
 }
 
-//Check is table exists
+// Check is table exists
 func (d *Database) tableExists(tableName string) bool {
 	if _, ok := d.Tables.Load(tableName); ok {
 		return true
@@ -79,10 +79,10 @@ func (d *Database) tableExists(tableName string) bool {
 	return false
 }
 
-//Drop the given table
+// Drop the given table
 func (d *Database) dropTable(tableName string) error {
-	if d.ReadOnly == true {
-		return errors.New("Operation rejected in ReadOnly mode")
+	if d.ReadOnly {
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 
 	err := d.Db.(*bolt.DB).Update(func(tx *bolt.Tx) error {
@@ -95,10 +95,10 @@ func (d *Database) dropTable(tableName string) error {
 	return err
 }
 
-//Write to table
+// Write to table
 func (d *Database) write(tableName string, key string, value interface{}) error {
 	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 
 	jsonString, err := json.Marshal(value)
@@ -156,7 +156,7 @@ func (d *Database) keyExists(tableName string, key string) bool {
 
 func (d *Database) delete(tableName string, key string) error {
 	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
+		return errors.New("operation rejected in ReadOnly mode")
 	}
 
 	err := d.Db.(*bolt.DB).Update(func(tx *bolt.Tx) error {

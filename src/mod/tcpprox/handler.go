@@ -85,13 +85,14 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 	newModeStr, _ := utils.PostPara(r, "mode")
 	newMode := -1
 	if newModeStr != "" {
-		if newModeStr == "listen" {
+		switch newModeStr {
+		case "listen":
 			newMode = 0
-		} else if newModeStr == "transport" {
+		case "transport":
 			newMode = 1
-		} else if newModeStr == "starter" {
+		case "starter":
 			newMode = 2
-		} else {
+		default:
 			utils.SendErrorResponse(w, "invalid new mode value")
 			return
 		}

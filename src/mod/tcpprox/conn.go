@@ -2,6 +2,7 @@ package tcpprox
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -41,7 +42,7 @@ func isReachable(target string) bool {
 func connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *int64) {
 	io.Copy(conn1, conn2)
 	conn1.Close()
-	log.Println("[←]", "close the connect at local:["+conn1.LocalAddr().String()+"] and remote:["+conn1.RemoteAddr().String()+"]")
+	fmt.Printf("[←] close the connect at local:[%s] and remote:[%s]\n", conn1.LocalAddr().String(), conn1.RemoteAddr().String())
 	//conn2.Close()
 	//log.Println("[←]", "close the connect at local:["+conn2.LocalAddr().String()+"] and remote:["+conn2.RemoteAddr().String()+"]")
 	wg.Done()
@@ -70,22 +71,22 @@ func (c *ProxyRelayConfig) accept(listener net.Listener) (net.Conn, error) {
 		if !c.parent.Options.AccessControlHandler(conn) {
 			time.Sleep(300 * time.Millisecond)
 			conn.Close()
-			log.Println("[x]", "Connection from "+addr.IP.String()+" rejected by access control policy")
+			log.Printf("[x] Connection from %s rejected by access control policy\n", addr.IP.String())
 			return nil, errors.New("Connection from " + addr.IP.String() + " rejected by access control policy")
 		}
 	}
 
-	log.Println("[√]", "accept a new client. remote address:["+conn.RemoteAddr().String()+"], local address:["+conn.LocalAddr().String()+"]")
+	log.Printf("[√] accept a new client. remote address:[%s], local address:[%s]\n", conn.RemoteAddr().String(), conn.LocalAddr().String())
 	return conn, err
 }
 
 func startListener(address string) (net.Listener, error) {
-	log.Println("[+]", "try to start server on:["+address+"]")
+	log.Printf("[+] try to start server on:[%s]\n", address)
 	server, err := net.Listen("tcp", address)
 	if err != nil {
-		return nil, errors.New("listen address [" + address + "] faild")
+		return nil, fmt.Errorf("listen address [%s] faild", address)
 	}
-	log.Println("[√]", "start listen at address:["+address+"]")
+	log.Printf("[√] start listen at address:[%s]\n", address)
 	return server, nil
 }
 
@@ -152,12 +153,15 @@ func (c *ProxyRelayConfig) Start() error {
 	//Start the proxy service
 	go func() {
 		c.Running = true
-		if c.Mode == ProxyMode_Transport {
+		switch c.Mode {
+		case ProxyMode_Transport:
 			err = c.Port2host(c.PortA, c.PortB, stopChan)
-		} else if c.Mode == ProxyMode_Listen {
+		case ProxyMode_Listen:
 			err = c.Port2port(c.PortA, c.PortB, stopChan)
-		} else if c.Mode == ProxyMode_Starter {
+		case ProxyMode_Starter:
 			err = c.Host2host(c.PortA, c.PortB, stopChan)
+		default:
+			break
 		}
 		if err != nil {
 			c.Running = false
@@ -203,7 +207,7 @@ func (c *ProxyRelayConfig) Port2port(port1 string, port2 string, stopChan chan b
 		return err
 	}
 
-	log.Println("[√]", "listen port:", port1, "and", port2, "success. waiting for client...")
+	log.Printf("[√] listen port:[%s] and [%s] success. waiting for client...\n", port1, port2)
 	c.Running = true
 
 	go func() {
@@ -232,7 +236,7 @@ func (c *ProxyRelayConfig) Port2port(port1 string, port2 string, stopChan chan b
 		}
 
 		if conn1 == nil || conn2 == nil {
-			log.Println("[x]", "accept client faild. retry in ", c.Timeout, " seconds. ")
+			log.Printf("[x] accept client faild. retry in %d seconds.\n", c.Timeout)
 			time.Sleep(time.Duration(c.Timeout) * time.Second)
 			continue
 		}
@@ -276,13 +280,13 @@ func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, sto
 			target, err := net.Dial("tcp", targetAddress)
 			if err != nil {
 				// temporarily unavailable, don't use fatal.
-				log.Println("[x]", "connect target address ["+targetAddress+"] faild. retry in ", c.Timeout, "seconds. ")
+				log.Printf("[x] connect target address [%s] faild. retry in %d seconds.\n", targetAddress, c.Timeout)
 				conn.Close()
-				log.Println("[←]", "close the connect at local:["+conn.LocalAddr().String()+"] and remote:["+conn.RemoteAddr().String()+"]")
+				log.Printf("[←] close the connect at local:[%s] and remote:[%s]\n", conn.LocalAddr().String(), conn.RemoteAddr().String())
 				time.Sleep(time.Duration(c.Timeout) * time.Second)
 				return
 			}
-			log.Println("[→]", "connect target address ["+targetAddress+"] success.")
+			log.Printf("[→] connect target address [%s] success.\n", targetAddress)
 			forward(target, conn, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
 		}(targetAddress)
 	}
@@ -301,17 +305,17 @@ func (c *ProxyRelayConfig) Host2host(address1, address2 string, stopChan chan bo
 	}()
 
 	for c.Running {
-		log.Println("[+]", "try to connect host:["+address1+"] and ["+address2+"]")
+		log.Printf("[+] try to connect host:[%s] and [%s]\n", address1, address2)
 		var host1, host2 net.Conn
 		var err error
 		for {
 			d := net.Dialer{Timeout: time.Duration(c.Timeout)}
 			host1, err = d.Dial("tcp", address1)
 			if err == nil {
-				log.Println("[→]", "connect ["+address1+"] success.")
+				log.Printf("[→] connect [%s] success.\n", address1)
 				break
 			} else {
-				log.Println("[x]", "connect target address ["+address1+"] faild. retry in ", c.Timeout, " seconds. ")
+				log.Printf("[x] connect target address [%s] faild. retry in %d seconds. \n", address1, c.Timeout)
 				time.Sleep(time.Duration(c.Timeout) * time.Second)
 			}
 
@@ -323,10 +327,10 @@ func (c *ProxyRelayConfig) Host2host(address1, address2 string, stopChan chan bo
 			d := net.Dialer{Timeout: time.Duration(c.Timeout)}
 			host2, err = d.Dial("tcp", address2)
 			if err == nil {
-				log.Println("[→]", "connect ["+address2+"] success.")
+				log.Printf("[→] connect [%s] success.\n", address2)
 				break
 			} else {
-				log.Println("[x]", "connect target address ["+address2+"] faild. retry in ", c.Timeout, " seconds. ")
+				log.Printf("[x] connect target address [%s] faild. retry in %d seconds. \n", address2, c.Timeout)
 				time.Sleep(time.Duration(c.Timeout) * time.Second)
 			}
 

@@ -39,7 +39,7 @@ func init() {
 func loadCAApiServerFromName(caName string) (string, error) {
 	val, ok := caDef.Production[caName]
 	if !ok {
-		return "", errors.New("This CA is not supported")
+		return "", errors.New("this CA is not supported")
 	}
 	return val, nil
 }

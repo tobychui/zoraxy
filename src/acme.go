@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
 	"strconv"
-	"time"
 
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
@@ -29,7 +28,6 @@ func getRandomPort(minPort int) int {
 // init the new ACME instance
 func initACME() *acme.ACMEHandler {
 	log.Println("Starting ACME handler")
-	rand.Seed(time.Now().UnixNano())
 	// Generate a random port above 30000
 	port := getRandomPort(30000)
 
@@ -53,7 +51,7 @@ func acmeRegisterSpecialRoutingRule() {
 		},
 		RoutingHandler: func(w http.ResponseWriter, r *http.Request) {
 
-			req, err := http.NewRequest(http.MethodGet, "http://localhost:"+acmeHandler.Getport()+r.RequestURI, nil)
+			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost:%s%s", acmeHandler.Getport(), r.RequestURI), nil)
 			req.Host = r.Host
 			if err != nil {
 				fmt.Printf("client: could not create request: %s\n", err)
@@ -65,7 +63,7 @@ func acmeRegisterSpecialRoutingRule() {
 				return
 			}
 
-			resBody, err := ioutil.ReadAll(res.Body)
+			resBody, err := io.ReadAll(res.Body)
 			defer res.Body.Close()
 			if err != nil {
 				fmt.Printf("error reading: %s\n", err)
@@ -85,7 +83,8 @@ func acmeRegisterSpecialRoutingRule() {
 // This function check if the renew setup is satisfied. If not, toggle them automatically
 func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
 	isForceHttpsRedirectEnabledOriginally := false
-	if dynamicProxyRouter.Option.Port == 443 {
+	switch dynamicProxyRouter.Option.Port {
+	case 443:
 		//Enable port 80 to 443 redirect
 		if !dynamicProxyRouter.Option.ForceHttpsRedirect {
 			log.Println("Temporary enabling HTTP to HTTPS redirect for ACME certificate renew requests")
@@ -94,12 +93,9 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 			//Set this to true, so after renew, do not turn it off
 			isForceHttpsRedirectEnabledOriginally = true
 		}
-
-	} else if dynamicProxyRouter.Option.Port == 80 {
-		//Go ahead
-
-	} else {
-		//This port do not support ACME
+	case 80:
+		break
+	default:
 		utils.SendErrorResponse(w, "ACME renew only support web server listening on port 80 (http) or 443 (https)")
 	}
 

@@ -2,6 +2,7 @@ package ganserv
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"regexp"
@@ -76,27 +77,25 @@ func (m *NetworkManager) HandleListNetwork(w http.ResponseWriter, r *http.Reques
 
 		js, _ := json.Marshal(targetNetInfo)
 		utils.SendJSONResponse(w, string(js))
-
-	} else {
-		// Return the list of networks as JSON
-		networkIds, err := m.listNetworkIds()
-		if err != nil {
-			utils.SendErrorResponse(w, err.Error())
-			return
-		}
-
-		networkInfos := []*NetworkInfo{}
-		for _, id := range networkIds {
-			thisNetInfo, err := m.getNetworkInfoById(id)
-			if err == nil {
-				networkInfos = append(networkInfos, thisNetInfo)
-			}
-		}
-
-		js, _ := json.Marshal(networkInfos)
-		utils.SendJSONResponse(w, string(js))
+		return
+	}
+	// Return the list of networks as JSON
+	networkIds, err := m.listNetworkIds()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
 	}
 
+	networkInfos := []*NetworkInfo{}
+	for _, id := range networkIds {
+		thisNetInfo, err := m.getNetworkInfoById(id)
+		if err == nil {
+			networkInfos = append(networkInfos, thisNetInfo)
+		}
+	}
+
+	js, _ := json.Marshal(networkInfos)
+	utils.SendJSONResponse(w, string(js))
 }
 
 func (m *NetworkManager) HandleNetworkNaming(w http.ResponseWriter, r *http.Request) {
@@ -126,17 +125,17 @@ func (m *NetworkManager) HandleNetworkNaming(w http.ResponseWriter, r *http.Requ
 		}
 
 		utils.SendOK(w)
-	} else {
-		//Get current name and description
-		name, desc, err := m.getNetworkNameAndDescription(netid)
-		if err != nil {
-			utils.SendErrorResponse(w, err.Error())
-			return
-		}
-
-		js, _ := json.Marshal([]string{name, desc})
-		utils.SendJSONResponse(w, string(js))
+		return
 	}
+	//Get current name and description
+	name, desc, err := m.getNetworkNameAndDescription(netid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	js, _ := json.Marshal([]string{name, desc})
+	utils.SendJSONResponse(w, string(js))
 }
 
 func (m *NetworkManager) HandleNetworkDetails(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +206,7 @@ func (m *NetworkManager) HandleSetRanges(w http.ResponseWriter, r *http.Request)
 	utils.SendOK(w)
 }
 
-//Handle listing of network members. Set details=true for listing all details
+// Handle listing of network members. Set details=true for listing all details
 func (m *NetworkManager) HandleMemberList(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.GetPara(r, "netid")
 	if err != nil {
@@ -226,22 +225,22 @@ func (m *NetworkManager) HandleMemberList(w http.ResponseWriter, r *http.Request
 		//Only show client ids
 		js, _ := json.Marshal(memberIds)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		//Show detail members info
-		detailMemberInfo := []*MemberInfo{}
-		for _, thisMemberId := range memberIds {
-			memInfo, err := m.getNetworkMemberInfo(netid, thisMemberId)
-			if err == nil {
-				detailMemberInfo = append(detailMemberInfo, memInfo)
-			}
-		}
-
-		js, _ := json.Marshal(detailMemberInfo)
-		utils.SendJSONResponse(w, string(js))
+		return
 	}
+	//Show detail members info
+	detailMemberInfo := []*MemberInfo{}
+	for _, thisMemberId := range memberIds {
+		memInfo, err := m.getNetworkMemberInfo(netid, thisMemberId)
+		if err == nil {
+			detailMemberInfo = append(detailMemberInfo, memInfo)
+		}
+	}
+
+	js, _ := json.Marshal(detailMemberInfo)
+	utils.SendJSONResponse(w, string(js))
 }
 
-//Handle Authorization of members
+// Handle Authorization of members
 func (m *NetworkManager) HandleMemberAuthorization(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -281,7 +280,7 @@ func (m *NetworkManager) HandleMemberAuthorization(w http.ResponseWriter, r *htt
 	}
 }
 
-//Handle Delete or Add IP for a member in a network
+// Handle Delete or Add IP for a member in a network
 func (m *NetworkManager) HandleMemberIP(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -309,7 +308,8 @@ func (m *NetworkManager) HandleMemberIP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if opr == "add" {
+	switch opr {
+	case "add":
 		if targetip == "" {
 			utils.SendErrorResponse(w, "ip not set")
 			return
@@ -327,8 +327,7 @@ func (m *NetworkManager) HandleMemberIP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		utils.SendOK(w)
-
-	} else if opr == "del" {
+	case "del":
 		if targetip == "" {
 			utils.SendErrorResponse(w, "ip not set")
 			return
@@ -348,15 +347,15 @@ func (m *NetworkManager) HandleMemberIP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		utils.SendOK(w)
-	} else if opr == "get" {
+	case "get":
 		js, _ := json.Marshal(memberInfo.IPAssignments)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		utils.SendErrorResponse(w, "unsupported opr type: "+opr)
+	default:
+		utils.SendErrorResponse(w, fmt.Sprintf("unsupported opr type: %s", opr))
 	}
 }
 
-//Handle naming for members
+// Handle naming for members
 func (m *NetworkManager) HandleMemberNaming(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -383,15 +382,15 @@ func (m *NetworkManager) HandleMemberNaming(w http.ResponseWriter, r *http.Reque
 		//Send over the member data
 		js, _ := json.Marshal(targetMemberData)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		//Write member data
-		targetMemberData.Name = newname
-		m.WriteMemeberMetaData(netid, memberid, targetMemberData)
-		utils.SendOK(w)
+		return
 	}
+	//Write member data
+	targetMemberData.Name = newname
+	m.WriteMemeberMetaData(netid, memberid, targetMemberData)
+	utils.SendOK(w)
 }
 
-//Handle delete of a given memver
+// Handle delete of a given memver
 func (m *NetworkManager) HandleMemberDelete(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {

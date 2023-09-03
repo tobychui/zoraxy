@@ -1,6 +1,7 @@
 package ganserv
 
 import (
+	"fmt"
 	"net"
 
 	"imuslab.com/zoraxy/mod/database"
@@ -119,10 +120,10 @@ func (m *NetworkManager) WriteNetworkMetaData(netid string, meta *NetworkMetaDat
 
 func (m *NetworkManager) GetMemberMetaData(netid string, memid string) *MemberMetaData {
 	thisMemberData := MemberMetaData{}
-	m.option.Database.Read("ganserv", "memberdata_"+netid+"_"+memid, &thisMemberData)
+	m.option.Database.Read("ganserv", fmt.Sprintf("memberdata_%s_%s", netid, memid), &thisMemberData)
 	return &thisMemberData
 }
 
 func (m *NetworkManager) WriteMemeberMetaData(netid string, memid string, meta *MemberMetaData) {
-	m.option.Database.Write("ganserv", "memberdata_"+netid+"_"+memid, meta)
+	m.option.Database.Write("ganserv", fmt.Sprintf("memberdata_%s_%s", netid, memid), meta)
 }

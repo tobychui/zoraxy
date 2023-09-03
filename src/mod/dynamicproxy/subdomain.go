@@ -1,6 +1,7 @@
 package dynamicproxy
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 
@@ -20,9 +21,9 @@ func (router *Router) AddSubdomainRoutingService(options *SubdOptions) error {
 
 	webProxyEndpoint := domain
 	if options.RequireTLS {
-		webProxyEndpoint = "https://" + webProxyEndpoint
+		webProxyEndpoint = fmt.Sprintf("https://%s", webProxyEndpoint)
 	} else {
-		webProxyEndpoint = "http://" + webProxyEndpoint
+		webProxyEndpoint = fmt.Sprintf("http://%s", webProxyEndpoint)
 	}
 
 	//Create a new proxy agent for this root
@@ -44,6 +45,6 @@ func (router *Router) AddSubdomainRoutingService(options *SubdOptions) error {
 		BasicAuthExceptionRules: options.BasicAuthExceptionRules,
 	})
 
-	log.Println("Adding Subdomain Rule: ", options.MatchingDomain+" to "+domain)
+	log.Printf("Adding Subdomain Rule: %s to %s\n", options.MatchingDomain, domain)
 	return nil
 }

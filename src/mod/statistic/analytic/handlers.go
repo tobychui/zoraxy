@@ -109,7 +109,8 @@ func (d *DataLoader) HandleRangeExport(w http.ResponseWriter, r *http.Request) {
 		format = "json"
 	}
 
-	if format == "csv" {
+	switch format {
+	case "csv":
 		// Create a buffer to store CSV content
 		var csvContent strings.Builder
 
@@ -165,7 +166,7 @@ func (d *DataLoader) HandleRangeExport(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	} else if format == "json" {
+	case "json":
 		type exportData struct {
 			Stats []*statistic.DailySummaryExport
 			Dates []string
@@ -179,7 +180,7 @@ func (d *DataLoader) HandleRangeExport(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.MarshalIndent(results, "", " ")
 		w.Header().Set("Content-Disposition", "attachment; filename=analytics_"+start+"_to_"+end+".json")
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	default:
 		utils.SendErrorResponse(w, "Unsupported export format")
 	}
 }

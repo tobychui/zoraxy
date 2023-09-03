@@ -148,10 +148,9 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 	if uptimeMonitor != nil {
 		uptimeMonitor.HandleUptimeLogRead(w, r)
-	} else {
-		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
 }
 
 // Handle listing current registered mdns nodes
@@ -209,17 +208,17 @@ func HandleIpScan(w http.ResponseWriter, r *http.Request) {
 
 		js, _ := json.Marshal(discoveredHosts)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		//CIDR mode
-		discoveredHosts, err := ipscan.ScanCIDRRange(cidr)
-		if err != nil {
-			utils.SendErrorResponse(w, err.Error())
-			return
-		}
-
-		js, _ := json.Marshal(discoveredHosts)
-		utils.SendJSONResponse(w, string(js))
+		return
 	}
+	//CIDR mode
+	discoveredHosts, err := ipscan.ScanCIDRRange(cidr)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	js, _ := json.Marshal(discoveredHosts)
+	utils.SendJSONResponse(w, string(js))
 }
 
 /*

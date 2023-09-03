@@ -22,7 +22,6 @@ import (
 var requireAuth = true
 
 func initAPIs() {
-
 	authRouter := auth.NewManagedHTTPRouter(auth.RouterOption{
 		AuthAgent:   authAgent,
 		RequireAuth: requireAuth,
@@ -211,9 +210,7 @@ func registerAuthAPIs(requireAuth bool) {
 	http.HandleFunc("/api/auth/register", func(w http.ResponseWriter, r *http.Request) {
 		if authAgent.GetUserCounts() == 0 {
 			//Allow register root admin
-			authAgent.HandleRegisterWithoutEmail(w, r, func(username, reserved string) {
-
-			})
+			authAgent.HandleRegisterWithoutEmail(w, r, func(username, reserved string) {})
 		} else {
 			//This function is disabled
 			utils.SendErrorResponse(w, "Root management account already exists")
@@ -254,5 +251,4 @@ func registerAuthAPIs(requireAuth bool) {
 		authAgent.UnregisterUser(username)
 		authAgent.CreateUserAccount(username, newPassword, "")
 	})
-
 }
