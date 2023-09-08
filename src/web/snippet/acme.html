@@ -334,8 +334,9 @@
         //Invalid settings. Force the filename to be same as domain
         //if there are only 1 domain
         filename = domains;
-      }else{
-        parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
+      }else if (filename == "" && domains.includes(",")){
+        parent.msgbox("Filename cannot be empty for certs containing multiple domains.", false, 5000);
+        $("#obtainButton").removeClass("loading").removeClass("disabled");
         return;
       }
       
