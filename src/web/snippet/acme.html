@@ -344,6 +344,8 @@
       if (ca == "Custom ACME Server") {
         ca = "custom";
         caURL = $("#caURL").val();
+      } else if (ca == "") {
+        ca = "Let's Encrypt";
       }
 
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
