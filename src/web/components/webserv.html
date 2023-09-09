@@ -1,0 +1,75 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Static Web Server</h2>
+        <p>A simple static web server that serve html css and js files</p>
+    </div>
+    <div class="ui divider"></div>
+    <h3>Web Server Settings</h3>
+    <div class="ui form">
+        <div class="inline field">
+            <div class="ui toggle checkbox">
+                <input id="webserv_enable" type="checkbox" class="hidden">
+                <label>Enable Static Web Server</label>
+            </div>
+        </div>
+        <div class="inline field">
+            <div class="ui toggle checkbox">
+                <input id="webserv_enableDirList" type="checkbox" class="hidden">
+                <label>Enable Directory Listing</label>
+                <small>If this folder do not contains any index files, list the directory of this folder.</small>
+            </div>
+        </div>
+        <div class="field">
+            <label>Document Root Folder</label>
+            <input id="webserv_docRoot" type="text" readonly="true">
+            <small>
+                The web server root folder can only be changed via startup flags of zoraxy for security reasons. 
+                See the -webserv flag for more details.
+            </small>
+        </div>
+        <div class="field">
+            <label>Port Number</label>
+            <input id="webserv_docRoot" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
+            <small>Use <code>http://127.0.0.1:<span class="webserv_port">8081</span></code> in proxy rules to access the web server</small>
+        </div>
+    </div>
+    <br>
+    <div class="ui message">
+        <div class="ui accordion webservhelp">
+            <div class="title">
+                <i class="dropdown icon"></i>
+                How to access the static web server?
+            </div>
+            <div class="content">
+                There are three ways to access the static web server. <br>
+                <div class="ui ordered list">
+                    <div class="item">
+                        If you are using Zoraxy as your gateway reverse proxy server, 
+                        you can add a new subdomain proxy rule that points to 
+                        <a>http://127.0.0.1:<span class="webserv_port">8081</span></a>
+                    </div>
+                    <div class="item">
+                        If you are using Zoraxy under another reverse proxy server, 
+                        add <a>http://127.0.0.1:<span class="webserv_port">8081</span></a> to the config of your upper layer reverse proxy server's config file. 
+                    </div>
+                    <div class="item">
+                        Directly access the web server via <a>http://{zoraxy_host_ip}:<span class="webserv_port">8081</span></a> (Not recommended)
+                    </div>
+                    <br>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+    <div class="ui divider"></div>
+
+
+    <script>
+        $(".webservhelp").accordion();
+
+        function updateWebServLinkExample(newport){
+            $(".webserv_port").text(newport);
+        }
+    </script>
+</div>

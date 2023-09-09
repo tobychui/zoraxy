@@ -124,7 +124,7 @@
         <label>Ignore TLS/SSL Verification Error<br><small>E.g. self-signed, expired certificate (Not Recommended)</small></label>
       </div>
     </div>
-    <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Renew Certificate</button>
+    <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Get Certificate</button>
   </div>
   <div class="ui divider"></div>
   <small>First time setting up HTTPS?<br>Try out our <a href="../tools/https.html" target="_blank">wizard</a></small>
@@ -323,7 +323,8 @@
       var filename = $("#filenameInput").val();
       var email = $("#caRegisterEmail").val();
       if (email == ""){
-        parent.msgbox("ACME renew email is not set")
+        parent.msgbox("ACME renew email is not set", false)
+        $("#obtainButton").removeClass("loading").removeClass("disabled");
         return;
       }
       if (filename.trim() == "" && !domains.includes(",")){

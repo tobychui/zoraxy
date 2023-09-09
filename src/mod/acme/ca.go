@@ -32,7 +32,6 @@ func init() {
 	}
 
 	caDef = runtimeCaDef
-
 }
 
 // Get the CA ACME server endpoint and error if not found

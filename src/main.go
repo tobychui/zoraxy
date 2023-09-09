@@ -43,9 +43,9 @@ var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL cert
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var (
 	name        = "Zoraxy"
-	version     = "2.6.6"
+	version     = "2.6.7"
 	nodeUUID    = "generic"
-	development = false //Set this to false to use embedded web fs
+	development = true //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*

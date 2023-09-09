@@ -38,7 +38,7 @@ func initACME() *acme.ACMEHandler {
 		port = getRandomPort(30000)
 	}
 
-	return acme.NewACME("https://acme-staging-v02.api.letsencrypt.org/directory", strconv.Itoa(port))
+	return acme.NewACME("https://acme-v02.api.letsencrypt.org/directory", strconv.Itoa(port))
 }
 
 // create the special routing rule for ACME

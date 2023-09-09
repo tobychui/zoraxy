@@ -303,16 +303,21 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 
 	ca, err := utils.PostPara(r, "ca")
 	if err != nil {
-		log.Println("CA not set. Using default")
+		log.Println("[INFO] CA not set. Using default")
 		ca, caUrl = "", ""
 	}
 
 	if ca == "custom" {
 		caUrl, err = utils.PostPara(r, "caURL")
 		if err != nil {
-			log.Println("Custom CA set but no URL provide, Using default")
+			log.Println("[INFO] Custom CA set but no URL provide, Using default")
 			ca, caUrl = "", ""
 		}
+	}
+
+	if ca == "" {
+		//default. Use Let's Encrypt
+		ca = "Let's Encrypt"
 	}
 
 	var skipTLS bool
