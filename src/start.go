@@ -22,6 +22,7 @@ import (
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/tcpprox"
 	"imuslab.com/zoraxy/mod/tlscert"
+	"imuslab.com/zoraxy/mod/webserv"
 )
 
 /*
@@ -208,6 +209,21 @@ func startupSequence() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	/*
+		Static Web Server
+
+		Start the static web server
+	*/
+
+	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
+		Port:                   "8081",
+		WebRoot:                *staticWebServerRoot,
+		EnableDirectoryListing: true,
+	})
+
+	//TODO: Connect UI element to static web server
+	staticWebServer.Start()
 }
 
 // This sequence start after everything is initialized
