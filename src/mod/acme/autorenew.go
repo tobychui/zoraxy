@@ -40,7 +40,6 @@ type AutoRenewer struct {
 type ExpiredCerts struct {
 	Domains  []string
 	Filepath string
-	CA       string
 }
 
 // Create an auto renew agent, require config filepath and auto scan & renew interval (seconds)
@@ -347,8 +346,14 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 		certInfoFilename := fmt.Sprintf("%s/%s.json", filepath.Dir(expiredCert.Filepath), certName)
 		certInfo, err := loadCertInfoJSON(certInfoFilename)
 		if err != nil {
-			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, using default ACME", certName, err)
-			certInfo = &CertificateInfoJSON{}
+			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, trying org section as ca", certName, err)
+
+			if CAName, extractErr := ExtractIssuerNameFromPEM(expiredCert.Filepath); extractErr != nil {
+				log.Printf("extract issuer name for cert error: %v, using default ca", extractErr)
+				certInfo = &CertificateInfoJSON{}
+			} else {
+				certInfo = &CertificateInfoJSON{AcmeName: CAName}
+			}
 		}
 
 		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS)
