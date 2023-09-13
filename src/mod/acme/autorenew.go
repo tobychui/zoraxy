@@ -280,12 +280,6 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				}
 				if CertExpireSoon(certBytes) || CertIsExpired(certBytes) {
 					//This cert is expired
-					CAName, err := ExtractIssuerName(certBytes)
-					if err != nil {
-						//Maybe self signed. Ignore this
-						log.Println("Unable to extract issuer name for cert " + file.Name())
-						continue
-					}
 
 					DNSName, err := ExtractDomains(certBytes)
 					if err != nil {
@@ -296,7 +290,6 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 
 					expiredCertList = append(expiredCertList, &ExpiredCerts{
 						Filepath: filepath.Join(certFolder, file.Name()),
-						CA:       CAName,
 						Domains:  DNSName,
 					})
 				}
@@ -315,12 +308,6 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				}
 				if CertExpireSoon(certBytes) || CertIsExpired(certBytes) {
 					//This cert is expired
-					CAName, err := ExtractIssuerName(certBytes)
-					if err != nil {
-						//Maybe self signed. Ignore this
-						log.Println("Unable to extract issuer name for cert " + file.Name())
-						continue
-					}
 
 					DNSName, err := ExtractDomains(certBytes)
 					if err != nil {
@@ -331,7 +318,6 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 
 					expiredCertList = append(expiredCertList, &ExpiredCerts{
 						Filepath: filepath.Join(certFolder, file.Name()),
-						CA:       CAName,
 						Domains:  DNSName,
 					})
 				}

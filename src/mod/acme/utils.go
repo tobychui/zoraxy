@@ -53,6 +53,11 @@ func ExtractIssuerName(certBytes []byte) (string, error) {
 		return "", fmt.Errorf("failed to parse certificate: %v", err)
 	}
 
+	// Check if exist incase some acme server didn't have org section
+	if len(cert.Issuer.Organization) == 0 {
+		return "", fmt.Errorf("cert didn't have org section exist")
+	}
+
 	// Extract the issuer name
 	issuer := cert.Issuer.Organization[0]
 
