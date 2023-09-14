@@ -1,6 +1,8 @@
 package webserv
 
 import (
+	"embed"
+	_ "embed"
 	"errors"
 	"fmt"
 	"log"
@@ -9,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -18,11 +21,17 @@ import (
 	This module host a static web server
 */
 
+//go:embed templates/*
+var templates embed.FS
+
 type WebServerOptions struct {
-	Port                   string //Port for listening
-	EnableDirectoryListing bool   //Enable listing of directory
-	WebRoot                string //Folder for stroing the static web folders
+	Port                   string             //Port for listening
+	EnableDirectoryListing bool               //Enable listing of directory
+	WebRoot                string             //Folder for stroing the static web folders
+	EnableWebDirManager    bool               //Enable web file manager to handle files in web directory
+	Sysdb                  *database.Database //Database for storing configs
 }
+
 type WebServer struct {
 	mux       *http.ServeMux
 	server    *http.Server
@@ -31,13 +40,23 @@ type WebServer struct {
 	mu        sync.Mutex
 }
 
-// NewWebServer creates a new WebServer instance.
+// NewWebServer creates a new WebServer instance. One instance only
 func NewWebServer(options *WebServerOptions) *WebServer {
 	if !utils.FileExists(options.WebRoot) {
-		//Web root folder not exists. Create one
+		//Web root folder not exists. Create one with default templates
 		os.MkdirAll(filepath.Join(options.WebRoot, "html"), 0775)
 		os.MkdirAll(filepath.Join(options.WebRoot, "templates"), 0775)
+		indexTemplate, err := templates.ReadFile("templates/index.html")
+		if err != nil {
+			log.Println("Failed to read static wev server template file: ", err.Error())
+		} else {
+			os.WriteFile(filepath.Join(options.WebRoot, "html", "index.html"), indexTemplate, 0775)
+		}
+
 	}
+
+	//Create new table to store the config
+	options.Sysdb.NewTable("webserv")
 	return &WebServer{
 		mux:       http.NewServeMux(),
 		option:    options,
@@ -46,11 +65,31 @@ func NewWebServer(options *WebServerOptions) *WebServer {
 	}
 }
 
+// Restore the configuration to previous config
+func (ws *WebServer) RestorePreviousState() {
+	//Set the port
+	port := ws.option.Port
+	ws.option.Sysdb.Read("webserv", "port", &port)
+	ws.option.Port = port
+
+	//Set the enable directory list
+	enableDirList := ws.option.EnableDirectoryListing
+	ws.option.Sysdb.Read("webserv", "dirlist", &enableDirList)
+	ws.option.EnableDirectoryListing = enableDirList
+
+	//Check the running state
+	webservRunning := false
+	ws.option.Sysdb.Read("webserv", "enabled", &webservRunning)
+	if webservRunning {
+		ws.Start()
+	} else {
+		ws.Stop()
+	}
+
+}
+
 // ChangePort changes the server's port.
 func (ws *WebServer) ChangePort(port string) error {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
 	if ws.isRunning {
 		if err := ws.Stop(); err != nil {
 			return err
@@ -59,6 +98,13 @@ func (ws *WebServer) ChangePort(port string) error {
 
 	ws.option.Port = port
 	ws.server.Addr = ":" + port
+
+	err := ws.Start()
+	if err != nil {
+		return err
+	}
+
+	ws.option.Sysdb.Write("webserv", "port", port)
 
 	return nil
 }
@@ -100,7 +146,7 @@ func (ws *WebServer) Start() error {
 
 	log.Println("Static Web Server started. Listeing on :" + ws.option.Port)
 	ws.isRunning = true
-
+	ws.option.Sysdb.Write("webserv", "enabled", true)
 	return nil
 }
 
@@ -118,17 +164,14 @@ func (ws *WebServer) Stop() error {
 	}
 
 	ws.isRunning = false
-
+	ws.option.Sysdb.Write("webserv", "enabled", false)
 	return nil
 }
 
 // UpdateDirectoryListing enables or disables directory listing.
 func (ws *WebServer) UpdateDirectoryListing(enable bool) {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
 	ws.option.EnableDirectoryListing = enable
-
+	ws.option.Sysdb.Write("webserv", "dirlist", enable)
 }
 
 // Close stops the web server without returning an error.

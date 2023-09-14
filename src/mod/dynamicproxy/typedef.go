@@ -1,6 +1,7 @@
 package dynamicproxy
 
 import (
+	_ "embed"
 	"net"
 	"net/http"
 	"sync"
@@ -31,6 +32,7 @@ type RouterOption struct {
 	RedirectRuleTable  *redirection.RuleTable
 	GeodbStore         *geodb.Store //GeoIP blacklist and whitelist
 	StatisticCollector *statistic.Collector
+	WebDirectory       string //The static web server directory containing the templates folder
 }
 
 type Router struct {
@@ -123,3 +125,11 @@ type SubdOptions struct {
 	BasicAuthCredentials    []*BasicAuthCredentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule
 }
+
+/*
+Web Templates
+*/
+var (
+	//go:embed templates/forbidden.html
+	page_forbidden []byte
+)

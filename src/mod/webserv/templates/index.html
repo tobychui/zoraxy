@@ -1,0 +1,61 @@
+<html>
+    <head>
+        <title>Hello Zoraxy</title>
+        <style>
+            body {
+                font-family: Tahoma, sans-serif;
+                background-color: #f6f6f6;
+                color: #2d2e30;
+            }
+            .sectionHeader{
+                background-color: #c4d0d9;
+                padding: 0.1em;
+            }
+
+            .sectionHeader h3{
+                text-align: center;
+            }
+            .container{
+                margin: 4em;
+                margin-left: 10em;
+                margin-right: 10em;
+                background-color: #fefefe;
+            }
+
+            @media (max-width:960px) {
+                .container{
+                    margin-left: 1em;
+                    margin-right: 1em;
+                }
+
+                .sectionHeader{
+                    padding-left: 1em;
+                    padding-right: 1em;
+                }
+            }
+
+            .textcontainer{
+                padding: 1em;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="sectionHeader">
+                <h3>Welcome to Zoraxy Static Web Server!</h3>
+            </div>
+            <div class="textcontainer">
+                <p>If you see this page, that means your static web server is running.<br> 
+                    By default, all the html files are stored under <code>./web/html/</code> 
+                    relative to the zoraxy runtime directory.<br>
+                    You can upload your html files to your web directory via the <b>Web Directory Manager</b>.
+                </p>
+                <p>
+                    For online documentation, please refer to <a href="//zoraxy.arozos.com">zoraxy.arozos.com</a> or the <a href="https://github.com/tobychui/zoraxy/wiki">project wiki</a>.<br>
+                    Thank you for using Zoraxy!
+                </p>
+            </div>
+           
+        </div>
+    </body>
+</html>

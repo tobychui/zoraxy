@@ -22,7 +22,7 @@ func (ws *WebServer) resolveFileDiskPath(requestPath string) string {
 // File server middleware to handle directory listing (and future expansion)
 func (ws *WebServer) fsMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if ws.option.EnableDirectoryListing {
+		if !ws.option.EnableDirectoryListing {
 			if strings.HasSuffix(r.URL.Path, "/") {
 				//This is a folder. Let check if index exists
 				if utils.FileExists(filepath.Join(ws.resolveFileDiskPath(r.URL.Path), "index.html")) {

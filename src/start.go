@@ -217,13 +217,14 @@ func startupSequence() {
 	*/
 
 	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
-		Port:                   "8081",
+		Sysdb:                  sysdb,
+		Port:                   "8081", //Default Port
 		WebRoot:                *staticWebServerRoot,
 		EnableDirectoryListing: true,
+		EnableWebDirManager:    *allowWebFileManager,
 	})
-
-	//TODO: Connect UI element to static web server
-	staticWebServer.Start()
+	//Restore the web server to previous shutdown state
+	staticWebServer.RestorePreviousState()
 }
 
 // This sequence start after everything is initialized

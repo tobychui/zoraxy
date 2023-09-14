@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -65,7 +65,7 @@ func acmeRegisterSpecialRoutingRule() {
 				return
 			}
 
-			resBody, err := ioutil.ReadAll(res.Body)
+			resBody, err := io.ReadAll(res.Body)
 			defer res.Body.Close()
 			if err != nil {
 				fmt.Printf("error reading: %s\n", err)

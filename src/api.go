@@ -169,6 +169,26 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)
 	authRouter.HandleFunc("/api/acme/wizard", acmewizard.HandleGuidedStepCheck) //ACME Wizard
 
+	//Static Web Server
+	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
+	authRouter.HandleFunc("/api/webserv/start", staticWebServer.HandleStartServer)
+	authRouter.HandleFunc("/api/webserv/stop", staticWebServer.HandleStopServer)
+	authRouter.HandleFunc("/api/webserv/setPort", staticWebServer.HandlePortChange)
+	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
+	if *allowWebFileManager {
+		//Web Directory Manager file operation functions
+		/*
+			authRouter.HandleFunc("/api/fs/list", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/upload", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/download", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/newFolder", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/copy", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/move", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/properties", staticWebServer.HandleGetStatus)
+			authRouter.HandleFunc("/api/fs/del", staticWebServer.HandleGetStatus)
+		*/
+	}
+
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)

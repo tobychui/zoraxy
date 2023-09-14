@@ -4,6 +4,16 @@
         <p>A simple static web server that serve html css and js files</p>
     </div>
     <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h4 class="ui header" id="webservRunningState">
+            <i class="green circle icon"></i>
+            <div class="content">
+                <span class="webserv_status">Running</span>
+                <div class="sub header">Listening on :<span class="webserv_port">8081</span></div>
+            </div>
+        </h4>
+    </div>
+    
     <h3>Web Server Settings</h3>
     <div class="ui form">
         <div class="inline field">
@@ -29,10 +39,11 @@
         </div>
         <div class="field">
             <label>Port Number</label>
-            <input id="webserv_docRoot" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
+            <input id="webserv_listenPort" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
             <small>Use <code>http://127.0.0.1:<span class="webserv_port">8081</span></code> in proxy rules to access the web server</small>
         </div>
     </div>
+    <small><i class="ui blue save icon"></i> Changes are saved automatically</small>
     <br>
     <div class="ui message">
         <div class="ui accordion webservhelp">
@@ -63,10 +74,108 @@
     </div>
     
     <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h2>Web Directory Manager</h2>
+        <p>Manage your files inside your web directory</p>
+    </div>
+    <iframe id="webserv_dirManager" src="tools/fs.html" style="width: 100%; height: 800px; border: 0px; overflow-y: hidden;">
 
+    </iframe>
+    <small>If you do not want to enable web access to your web directory, you can disable this feature with <code>-webfm=false</code> startup paramter</small>
+   
+    
 
     <script>
         $(".webservhelp").accordion();
+        $(".ui.checkbox").checkbox();
+
+        function setWebServerRunningState(running){
+            if (running){
+                $("#webserv_enable").parent().checkbox("set checked");
+                $("#webservRunningState").find("i").attr("class", "green circle icon");
+                $("#webservRunningState").find(".webserv_status").text("Running");
+            }else{
+                $("#webserv_enable").parent().checkbox("set unchecked");
+                $("#webservRunningState").find("i").attr("class", "red circle icon");
+                $("#webservRunningState").find(".webserv_status").text("Stopped");
+            }
+        }
+        function updateWebServState(){
+            $.get("/api/webserv/status", function(data){
+                setWebServerRunningState(data.Running);
+
+                if (data.EnableDirectoryListing){
+                    $("#webserv_enableDirList").parent().checkbox("set checked");
+                }else{
+                    $("#webserv_enableDirList").parent().checkbox("set unchecked");
+                }
+
+                $("#webserv_docRoot").val(data.WebRoot + "/html/");
+
+                if (!data.EnableWebDirManager){
+                    $("#webserv_dirManager").remove();
+                }
+
+                $("#webserv_listenPort").val(data.ListeningPort);
+                updateWebServLinkExample(data.ListeningPort);
+
+                //Bind checkbox events
+                $("#webserv_enable").off("change").on("change", function(){
+                    let enable = $(this)[0].checked;
+                    if (enable){
+                        $.get("/api/webserv/start", function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Static web server started");
+                                setWebServerRunningState(true);
+                            }
+                        });
+                    }else{
+                        $.get("/api/webserv/stop", function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Static web server stopped");
+                                setWebServerRunningState(false);
+                            }
+                        });
+                    }
+                   
+                });
+                $("#webserv_enableDirList").off("change").on("change", function(){
+                    let enable = $(this)[0].checked;
+                    $.ajax({
+                        url: "/api/webserv/setDirList",
+                        method: "POST",
+                        data: {"enable": enable},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Directory listing setting updated");
+                            }
+                        }
+                    })
+                });
+                $("#webserv_listenPort").off("change").on("change", function(){
+                    let newPort = $(this).val();
+                    $.ajax({
+                        url: "/api/webserv/setPort",
+                        method: "POST",
+                        data: {"port": newPort},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Listening port updated");
+                            }
+                        }
+                    })
+                });
+            })
+        }
+        updateWebServState();
 
         function updateWebServLinkExample(newport){
             $(".webserv_port").text(newport);
