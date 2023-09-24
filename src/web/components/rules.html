@@ -188,6 +188,8 @@
                                 msgbox("Requesting certificate via Let's Encrypt...");
                                 console.log("Trying to get a new certificate via ACME");
                                 obtainCertificate(rootname);
+                            }else{
+                                msgbox("Proxy Endpoint Added");
                             }
                         });
                     }else{
@@ -467,7 +469,7 @@
     });
 
    // Obtain certificate from API, only support one domain
-    function obtainCertificate(domains) {
+    function obtainCertificate(domains, usingCa = "Let's Encrypt") {
         let filename = "";
         let email = acmeEmail;
         if (acmeEmail == ""){
@@ -494,7 +496,7 @@
                 domains: domains,
                 filename: filename,
                 email: email,
-                ca: "Let's Encrypt",
+                ca: usingCa,
             },
             success: function(response) {
                 if (response.error) {

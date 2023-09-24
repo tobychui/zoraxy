@@ -177,16 +177,14 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
 	if *allowWebFileManager {
 		//Web Directory Manager file operation functions
-		/*
-			authRouter.HandleFunc("/api/fs/list", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/upload", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/download", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/newFolder", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/copy", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/move", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/properties", staticWebServer.HandleGetStatus)
-			authRouter.HandleFunc("/api/fs/del", staticWebServer.HandleGetStatus)
-		*/
+		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
+		authRouter.HandleFunc("/api/fs/upload", staticWebServer.FileManager.HandleUpload)
+		authRouter.HandleFunc("/api/fs/download", staticWebServer.FileManager.HandleDownload)
+		authRouter.HandleFunc("/api/fs/newFolder", staticWebServer.FileManager.HandleNewFolder)
+		authRouter.HandleFunc("/api/fs/copy", staticWebServer.FileManager.HandleFileCopy)
+		authRouter.HandleFunc("/api/fs/move", staticWebServer.FileManager.HandleFileMove)
+		authRouter.HandleFunc("/api/fs/properties", staticWebServer.FileManager.HandleFileProperties)
+		authRouter.HandleFunc("/api/fs/del", staticWebServer.FileManager.HandleFileDelete)
 	}
 
 	//Others

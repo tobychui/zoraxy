@@ -14,6 +14,13 @@
                     <label>Root require TLS connection <br><small>Check this if your proxy root URL starts with https://</small></label>
                 </div>
             </div>
+            <div class="ui horizontal divider">OR</div>
+            <div class="field">
+                <div class="ui checkbox">
+                    <input type="checkbox" id="useStaticWebServer" onchange="handleUseStaticWebServerAsRoot()">
+                    <label>Use Static Web Server as Root <br><small>Check this if you prefer a more Apache Web Server like experience</small></label>
+                </div>
+            </div>
             <br>
             <button class="ui basic button" onclick="setProxyRoot()"><i class="teal home icon" ></i> Update Proxy Root</button>
             <div class="ui divider"></div>
@@ -58,6 +65,30 @@
 <script>
     $("#advanceRootSettings").accordion();
 
+    function handleUseStaticWebServerAsRoot(){
+        let useStaticWebServer = $("#useStaticWebServer")[0].checked;
+        if (useStaticWebServer){
+            let staticWebServerURL = "127.0.0.1:" + $("#webserv_listenPort").val();
+            $("#proxyRoot").val(staticWebServerURL);
+            $("#proxyRoot").parent().addClass("disabled");
+            $("#rootReqTLS").parent().checkbox("set unchecked");
+            $("#rootReqTLS").parent().addClass("disabled");
+
+            //Check if web server is enabled. If not, ask if the user want to enable it
+            if (!$("#webserv_enable").parent().checkbox("is checked")){
+                confirmBox("Enable static web server now?", function(choice){
+                    if (choice == true){
+                        $("#webserv_enable").parent().checkbox("set checked");
+                    }
+                });
+            }
+        }else{
+            $("#rootReqTLS").parent().removeClass("disabled");
+            $("#proxyRoot").parent().removeClass("disabled");
+            initRootInfo();
+        }
+    }
+    
     function initRootInfo(){
         $.get("/api/proxy/list?type=root", function(data){
             if (data == null){
@@ -67,7 +98,6 @@
                 checkRootRequireTLS(data.Domain);
             }
         });
-
         
     }
     initRootInfo();

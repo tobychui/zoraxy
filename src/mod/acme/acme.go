@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -164,12 +163,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = ioutil.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
+	err = os.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
 	}
-	err = ioutil.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
+	err = os.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err

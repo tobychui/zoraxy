@@ -13,6 +13,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/utils"
+	"imuslab.com/zoraxy/mod/webserv/filemanager"
 )
 
 /*
@@ -33,6 +34,8 @@ type WebServerOptions struct {
 }
 
 type WebServer struct {
+	FileManager *filemanager.FileManager
+
 	mux       *http.ServeMux
 	server    *http.Server
 	option    *WebServerOptions
@@ -55,13 +58,21 @@ func NewWebServer(options *WebServerOptions) *WebServer {
 
 	}
 
+	//Create a new file manager if it is enabled
+	var newDirManager *filemanager.FileManager
+	if options.EnableWebDirManager {
+		fm := filemanager.NewFileManager(filepath.Join(options.WebRoot, "/html"))
+		newDirManager = fm
+	}
+
 	//Create new table to store the config
 	options.Sysdb.NewTable("webserv")
 	return &WebServer{
-		mux:       http.NewServeMux(),
-		option:    options,
-		isRunning: false,
-		mu:        sync.Mutex{},
+		mux:         http.NewServeMux(),
+		FileManager: newDirManager,
+		option:      options,
+		isRunning:   false,
+		mu:          sync.Mutex{},
 	}
 }
 
@@ -90,6 +101,10 @@ func (ws *WebServer) RestorePreviousState() {
 
 // ChangePort changes the server's port.
 func (ws *WebServer) ChangePort(port string) error {
+	if IsPortInUse(port) {
+		return errors.New("Selected port is used by another process")
+	}
+
 	if ws.isRunning {
 		if err := ws.Stop(); err != nil {
 			return err

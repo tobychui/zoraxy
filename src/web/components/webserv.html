@@ -78,6 +78,16 @@
         <h2>Web Directory Manager</h2>
         <p>Manage your files inside your web directory</p>
     </div>
+    <div class="ui basic segment" style="display:none;" id="webdirManDisabledNotice">
+        <h4 class="ui header">
+            <i class="ui red times icon"></i> 
+            <div class="content">
+                Web Directory Manager Disabled
+                <div class="sub header">Web Directory Manager has been disabled by the system administrator</div>
+            </div>
+            
+        </h4>
+    </div>
     <iframe id="webserv_dirManager" src="tools/fs.html" style="width: 100%; height: 800px; border: 0px; overflow-y: hidden;">
 
     </iframe>
@@ -100,8 +110,14 @@
                 $("#webservRunningState").find(".webserv_status").text("Stopped");
             }
         }
+
         function updateWebServState(){
             $.get("/api/webserv/status", function(data){
+                //Clear all event listeners
+                $("#webserv_enableDirList").off("change");
+                $("#webserv_enable").off("change");
+                $("#webserv_listenPort").off("change");
+
                 setWebServerRunningState(data.Running);
 
                 if (data.EnableDirectoryListing){
@@ -113,6 +129,7 @@
                 $("#webserv_docRoot").val(data.WebRoot + "/html/");
 
                 if (!data.EnableWebDirManager){
+                    $("#webdirManDisabledNotice").show();
                     $("#webserv_dirManager").remove();
                 }
 
@@ -141,8 +158,8 @@
                             }
                         });
                     }
-                   
                 });
+
                 $("#webserv_enableDirList").off("change").on("change", function(){
                     let enable = $(this)[0].checked;
                     $.ajax({
@@ -160,18 +177,46 @@
                 });
                 $("#webserv_listenPort").off("change").on("change", function(){
                     let newPort = $(this).val();
-                    $.ajax({
-                        url: "/api/webserv/setPort",
-                        method: "POST",
-                        data: {"port": newPort},
-                        success: function(data){
-                            if (data.error != undefined){
-                                msgbox(data.error, false);
+
+                    //Check if the new value is same as listening port
+                    let rpListeningPort = $("#incomingPort").val();
+                    if (rpListeningPort == newPort){
+                        confirmBox("This setting might cause port conflict. Continue Anyway?", function(choice){
+                            if (choice == true){
+                                //Continue anyway
+                                $.ajax({
+                                    url: "/api/webserv/setPort",
+                                    method: "POST",
+                                    data: {"port": newPort},
+                                    success: function(data){
+                                        if (data.error != undefined){
+                                            msgbox(data.error, false);
+                                        }else{
+                                            msgbox("Listening port updated");
+                                        }
+                                        updateWebServState();
+                                    }
+                                });
                             }else{
-                                msgbox("Listening port updated");
+                                //Cancel. Restore to previous value
+                                updateWebServState();
+                                msgbox("Setting restored");
                             }
-                        }
-                    })
+                        });
+                    }else{
+                        $.ajax({
+                            url: "/api/webserv/setPort",
+                            method: "POST",
+                            data: {"port": newPort},
+                            success: function(data){
+                                if (data.error != undefined){
+                                    msgbox(data.error, false);
+                                }else{
+                                    msgbox("Listening port updated");
+                                }
+                            }
+                        })
+                    }
                 });
             })
         }
