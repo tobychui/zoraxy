@@ -204,6 +204,8 @@ func startupSequence() {
 
 		Obtaining certificates from ACME Server
 	*/
+	//Create a table just to store acme related preferences
+	sysdb.NewTable("acmepref")
 	acmeHandler = initACME()
 	acmeAutoRenewer, err = acme.NewAutoRenewer("./conf/acme_conf.json", "./conf/certs/", int64(*acmeAutoRenewInterval), acmeHandler)
 	if err != nil {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -113,4 +114,24 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
 		}
 	}
+}
+
+// HandleACMEPreferredCA return the user preferred / default CA for new subdomain auto creation
+func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
+	ca, err := utils.PostPara(r, "set")
+	if err != nil {
+		//Return the current ca to user
+		prefCA := "Let's Encrypt"
+		sysdb.Read("acmepref", "prefca", &prefCA)
+		js, _ := json.Marshal(prefCA)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Check if the CA is supported
+		acme.IsSupportedCA(ca)
+		//Set the new config
+		sysdb.Write("acmepref", "prefca", ca)
+		log.Println("Updating prefered ACME CA to " + ca)
+		utils.SendOK(w)
+	}
+
 }

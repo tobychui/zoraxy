@@ -218,6 +218,11 @@
           $("#enableToggleSucc").stop().finish().fadeIn("fast").delay(3000).fadeOut("fast");
         }
       });
+
+      if (parent && parent.setACMEEnableStates){
+        parent.setACMEEnableStates(enabled);
+      }
+      
     }
 
     //Render the domains table that exists in this zoraxy host

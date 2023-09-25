@@ -65,17 +65,20 @@
     </div>
     <br>
     <div>
-        <table class="ui sortable unstackable celled table">
-            <thead>
-            <tr><th>Domain</th>
-            <th>Last Update</th>
-            <th>Expire At</th>
-            <th class="no-sort">Remove</th>
-            </tr></thead>
-        <tbody id="certifiedDomainList">
-
-        </tbody>
-        </table>
+        <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+            <table class="ui sortable unstackable celled table">
+                <thead>
+                <tr><th>Domain</th>
+                <th>Last Update</th>
+                <th>Expire At</th>
+                <th class="no-sort">Remove</th>
+                </tr></thead>
+            <tbody id="certifiedDomainList">
+    
+            </tbody>
+            </table>
+        </div>
+        
         <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
     </div>
     <div class="ui message">
@@ -90,6 +93,7 @@
     <p>The default CA to use when create a new subdomain proxy endpoint with TLS certificate</p>
     <div class="ui fluid form">
         <div class="field">
+            <label>Preferred CA</label>
             <div class="ui selection dropdown" id="defaultCA">
                 <input type="hidden" name="defaultCA">
                 <i class="dropdown icon"></i>
@@ -101,10 +105,22 @@
                 </div>
             </div>
         </div>
+        <div class="field">
+            <label>ACME Email</label>
+            <input id="prefACMEEmail" type="text" placeholder="ACME Email">
+        </div>
         <button class="ui basic icon button" onclick="saveDefaultCA();"><i class="ui blue save icon"></i> Save Settings</button>
     </div><br>
-    
     <h5>Certificate Renew / Generation (ACME) Settings</h5>
+    <div class="ui basic segment">
+        <h4 class="ui header" id="acmeAutoRenewer">
+            <i class="red circle icon"></i>
+            <div class="content">
+                <span id="acmeAutoRenewerStatus">Disabled</span>
+                <div class="sub header">Auto-Renewer Status</div>
+            </div>
+        </h4>
+    </div>
     <p>This tool provide you a graphical interface to setup auto certificate renew on your (sub)domains. You can also manually generate a certificate if one of your domain do not have certificate.</p>
     <button class="ui basic button" onclick="openACMEManager();"><i class="yellow external icon"></i> Open ACME Tool</button>
 </div>
@@ -134,9 +150,60 @@
         
     }
 
+    function initAcmeStatus(){
+        //Initialize the current default CA options
+        $.get("/api/acme/autoRenew/email", function(data){
+            $("#prefACMEEmail").val(data);
+        });
+
+        $.get("/api/acme/autoRenew/ca", function(data){
+            $("#defaultCA").dropdown("set value", data);
+        });
+
+        $.get("/api/acme/autoRenew/enable", function(data){
+            setACMEEnableStates(data);
+        })
+    }
+    //Set the status of the acme enable icon
+    function setACMEEnableStates(enabled){
+        $("#acmeAutoRenewerStatus").text(enabled?"Enabled":"Disabled");
+        $("#acmeAutoRenewer").find("i").attr("class", enabled?"green circle icon":"red circle icon");
+    }
+    initAcmeStatus();
+
     function saveDefaultCA(){
-        //TODO: Add an endpoint to handle default CA set and load
-        alert("WIP");
+        let newDefaultEmail = $("#prefACMEEmail").val().trim();
+        let newDefaultCA = $("#defaultCA").dropdown("get value");
+
+        if (newDefaultEmail == ""){
+            msgbox("Invalid acme email given", false);
+            return;
+        }
+
+        $.ajax({
+            url: "/api/acme/autoRenew/email",
+            method: "POST",
+            data: {"set": newDefaultEmail},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }
+            }
+        });
+
+        $.ajax({
+            url: "/api/acme/autoRenew/ca",
+            data: {"set": newDefaultCA},
+            method: "POST",
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }
+            }
+        });
+
+        msgbox("Settings updated");
+
     }
 
     //List the stored certificates

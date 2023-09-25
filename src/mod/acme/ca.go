@@ -49,3 +49,8 @@ func loadCAApiServerFromName(caName string) (string, error) {
 
 	return val, nil
 }
+
+func IsSupportedCA(caName string) bool {
+	_, err := loadCAApiServerFromName(caName)
+	return err == nil
+}
