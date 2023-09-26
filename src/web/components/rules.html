@@ -184,10 +184,17 @@
                     if (type == "subd" && $("#tls").checkbox("is checked")){
                         confirmBox("Request new SSL Cert for this subdomain?", function(choice){
                             if (choice == true){
+                                //Load the prefer CA from TLS page
+                                let defaultCA = $("#defaultCA").dropdown("get value");
+                                if (defaultCA.trim() == ""){
+                                    defaultCA = "Let's Encrypt";
+                                }
                                 //Get a new cert using ACME
-                                msgbox("Requesting certificate via Let's Encrypt...");
+                                msgbox("Requesting certificate via " + defaultCA  +"...");
                                 console.log("Trying to get a new certificate via ACME");
-                                obtainCertificate(rootname);
+                                obtainCertificate(rootname, defaultCA.trim());
+                            }else{
+                                msgbox("Proxy Endpoint Added");
                             }
                         });
                     }else{
@@ -467,7 +474,7 @@
     });
 
    // Obtain certificate from API, only support one domain
-    function obtainCertificate(domains) {
+    function obtainCertificate(domains, usingCa = "Let's Encrypt") {
         let filename = "";
         let email = acmeEmail;
         if (acmeEmail == ""){
@@ -494,7 +501,7 @@
                 domains: domains,
                 filename: filename,
                 email: email,
-                ca: "Let's Encrypt",
+                ca: usingCa,
             },
             success: function(response) {
                 if (response.error) {

@@ -1,0 +1,229 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Static Web Server</h2>
+        <p>A simple static web server that serve html css and js files</p>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h4 class="ui header" id="webservRunningState">
+            <i class="green circle icon"></i>
+            <div class="content">
+                <span class="webserv_status">Running</span>
+                <div class="sub header">Listen port :<span class="webserv_port">8081</span></div>
+            </div>
+        </h4>
+    </div>
+    
+    <h3>Web Server Settings</h3>
+    <div class="ui form">
+        <div class="inline field">
+            <div class="ui toggle checkbox">
+                <input id="webserv_enable" type="checkbox" class="hidden">
+                <label>Enable Static Web Server</label>
+            </div>
+        </div>
+        <div class="inline field">
+            <div class="ui toggle checkbox">
+                <input id="webserv_enableDirList" type="checkbox" class="hidden">
+                <label>Enable Directory Listing</label>
+                <small>If this folder do not contains any index files, list the directory of this folder.</small>
+            </div>
+        </div>
+        <div class="field">
+            <label>Document Root Folder</label>
+            <input id="webserv_docRoot" type="text" readonly="true">
+            <small>
+                The web server root folder can only be changed via startup flags of zoraxy for security reasons. 
+                See the -webserv flag for more details.
+            </small>
+        </div>
+        <div class="field">
+            <label>Port Number</label>
+            <input id="webserv_listenPort" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
+            <small>Use <code>http://127.0.0.1:<span class="webserv_port">8081</span></code> in proxy rules to access the web server</small>
+        </div>
+    </div>
+    <small><i class="ui blue save icon"></i> Changes are saved automatically</small>
+    <br>
+    <div class="ui message">
+        <div class="ui accordion webservhelp">
+            <div class="title">
+                <i class="dropdown icon"></i>
+                How to access the static web server?
+            </div>
+            <div class="content">
+                There are three ways to access the static web server. <br>
+                <div class="ui ordered list">
+                    <div class="item">
+                        If you are using Zoraxy as your gateway reverse proxy server, 
+                        you can add a new subdomain proxy rule that points to 
+                        <a>http://127.0.0.1:<span class="webserv_port">8081</span></a>
+                    </div>
+                    <div class="item">
+                        If you are using Zoraxy under another reverse proxy server, 
+                        add <a>http://127.0.0.1:<span class="webserv_port">8081</span></a> to the config of your upper layer reverse proxy server's config file. 
+                    </div>
+                    <div class="item">
+                        Directly access the web server via <a>http://{zoraxy_host_ip}:<span class="webserv_port">8081</span></a> (Not recommended)
+                    </div>
+                    <br>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+    <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h2>Web Directory Manager</h2>
+        <p>Manage your files inside your web directory</p>
+    </div>
+    <div class="ui basic segment" style="display:none;" id="webdirManDisabledNotice">
+        <h4 class="ui header">
+            <i class="ui red times icon"></i> 
+            <div class="content">
+                Web Directory Manager Disabled
+                <div class="sub header">Web Directory Manager has been disabled by the system administrator</div>
+            </div>
+            
+        </h4>
+    </div>
+    <iframe id="webserv_dirManager" src="tools/fs.html" style="width: 100%; height: 800px; border: 0px; overflow-y: hidden;">
+
+    </iframe>
+    <small>If you do not want to enable web access to your web directory, you can disable this feature with <code>-webfm=false</code> startup paramter</small>
+   
+    
+
+    <script>
+        $(".webservhelp").accordion();
+        $(".ui.checkbox").checkbox();
+
+        function setWebServerRunningState(running){
+            if (running){
+                $("#webserv_enable").parent().checkbox("set checked");
+                $("#webservRunningState").find("i").attr("class", "green circle icon");
+                $("#webservRunningState").find(".webserv_status").text("Running");
+            }else{
+                $("#webserv_enable").parent().checkbox("set unchecked");
+                $("#webservRunningState").find("i").attr("class", "red circle icon");
+                $("#webservRunningState").find(".webserv_status").text("Stopped");
+            }
+        }
+
+        function updateWebServState(){
+            $.get("/api/webserv/status", function(data){
+                //Clear all event listeners
+                $("#webserv_enableDirList").off("change");
+                $("#webserv_enable").off("change");
+                $("#webserv_listenPort").off("change");
+
+                setWebServerRunningState(data.Running);
+
+                if (data.EnableDirectoryListing){
+                    $("#webserv_enableDirList").parent().checkbox("set checked");
+                }else{
+                    $("#webserv_enableDirList").parent().checkbox("set unchecked");
+                }
+
+                $("#webserv_docRoot").val(data.WebRoot + "/html/");
+
+                if (!data.EnableWebDirManager){
+                    $("#webdirManDisabledNotice").show();
+                    $("#webserv_dirManager").remove();
+                }
+
+                $("#webserv_listenPort").val(data.ListeningPort);
+                updateWebServLinkExample(data.ListeningPort);
+
+                //Bind checkbox events
+                $("#webserv_enable").off("change").on("change", function(){
+                    let enable = $(this)[0].checked;
+                    if (enable){
+                        $.get("/api/webserv/start", function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Static web server started");
+                                setWebServerRunningState(true);
+                            }
+                        });
+                    }else{
+                        $.get("/api/webserv/stop", function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Static web server stopped");
+                                setWebServerRunningState(false);
+                            }
+                        });
+                    }
+                });
+
+                $("#webserv_enableDirList").off("change").on("change", function(){
+                    let enable = $(this)[0].checked;
+                    $.ajax({
+                        url: "/api/webserv/setDirList",
+                        method: "POST",
+                        data: {"enable": enable},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Directory listing setting updated");
+                            }
+                        }
+                    })
+                });
+                $("#webserv_listenPort").off("change").on("change", function(){
+                    let newPort = $(this).val();
+
+                    //Check if the new value is same as listening port
+                    let rpListeningPort = $("#incomingPort").val();
+                    if (rpListeningPort == newPort){
+                        confirmBox("This setting might cause port conflict. Continue Anyway?", function(choice){
+                            if (choice == true){
+                                //Continue anyway
+                                $.ajax({
+                                    url: "/api/webserv/setPort",
+                                    method: "POST",
+                                    data: {"port": newPort},
+                                    success: function(data){
+                                        if (data.error != undefined){
+                                            msgbox(data.error, false);
+                                        }else{
+                                            msgbox("Listening port updated");
+                                        }
+                                        updateWebServState();
+                                    }
+                                });
+                            }else{
+                                //Cancel. Restore to previous value
+                                updateWebServState();
+                                msgbox("Setting restored");
+                            }
+                        });
+                    }else{
+                        $.ajax({
+                            url: "/api/webserv/setPort",
+                            method: "POST",
+                            data: {"port": newPort},
+                            success: function(data){
+                                if (data.error != undefined){
+                                    msgbox(data.error, false);
+                                }else{
+                                    msgbox("Listening port updated");
+                                }
+                            }
+                        })
+                    }
+                });
+            })
+        }
+        updateWebServState();
+
+        function updateWebServLinkExample(newport){
+            $(".webserv_port").text(newport);
+        }
+    </script>
+</div>

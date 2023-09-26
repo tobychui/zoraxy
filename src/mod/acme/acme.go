@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -164,12 +163,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = ioutil.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
+	err = os.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
 	}
-	err = ioutil.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
+	err = os.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err
@@ -303,16 +302,21 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 
 	ca, err := utils.PostPara(r, "ca")
 	if err != nil {
-		log.Println("CA not set. Using default")
+		log.Println("[INFO] CA not set. Using default")
 		ca, caUrl = "", ""
 	}
 
 	if ca == "custom" {
 		caUrl, err = utils.PostPara(r, "caURL")
 		if err != nil {
-			log.Println("Custom CA set but no URL provide, Using default")
+			log.Println("[INFO] Custom CA set but no URL provide, Using default")
 			ca, caUrl = "", ""
 		}
+	}
+
+	if ca == "" {
+		//default. Use Let's Encrypt
+		ca = "Let's Encrypt"
 	}
 
 	var skipTLS bool
@@ -357,8 +361,8 @@ func IsPortInUse(port int) bool {
 
 }
 
+// Load cert information from json file
 func loadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
-
 	certInfoBytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err

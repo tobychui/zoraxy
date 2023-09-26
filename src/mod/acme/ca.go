@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 )
 
 // CA Defination, load from embeded json when startup
@@ -32,14 +33,24 @@ func init() {
 	}
 
 	caDef = runtimeCaDef
-
 }
 
 // Get the CA ACME server endpoint and error if not found
 func loadCAApiServerFromName(caName string) (string, error) {
+	// handle BuyPass cert org section (Buypass AS-983163327)
+	if strings.HasPrefix(caName, "Buypass AS") {
+		caName = "Buypass"
+	}
+
 	val, ok := caDef.Production[caName]
 	if !ok {
 		return "", errors.New("This CA is not supported")
 	}
+
 	return val, nil
+}
+
+func IsSupportedCA(caName string) bool {
+	_, err := loadCAApiServerFromName(caName)
+	return err == nil
 }

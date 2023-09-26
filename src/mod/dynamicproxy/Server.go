@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/geodb"
@@ -192,9 +193,9 @@ func (h *ProxyHandler) handleAccessRouting(w http.ResponseWriter, r *http.Reques
 	if h.Parent.Option.GeodbStore.IsBlacklisted(clientIpAddr) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile("./web/forbidden.html")
+		template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/blacklist.html"))
 		if err != nil {
-			w.Write([]byte("403 - Forbidden"))
+			w.Write(page_forbidden)
 		} else {
 			w.Write(template)
 		}
@@ -206,9 +207,9 @@ func (h *ProxyHandler) handleAccessRouting(w http.ResponseWriter, r *http.Reques
 	if !h.Parent.Option.GeodbStore.IsWhitelisted(clientIpAddr) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile("./web/forbidden.html")
+		template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/whitelist.html"))
 		if err != nil {
-			w.Write([]byte("403 - Forbidden"))
+			w.Write(page_forbidden)
 		} else {
 			w.Write(template)
 		}

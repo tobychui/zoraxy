@@ -19,7 +19,8 @@ clean:
 
 $(PLATFORMS):
 	@echo "Building $(os)/$(arch)"
-	GOROOT_FINAL=Git/ GOOS=$(os) GOARCH=$(arch) GOARM=6 go build -o './dist/zoraxy_$(os)_$(arch)'  -ldflags "-s -w" -trimpath
+	GOROOT_FINAL=Git/ GOOS=$(os) GOARCH=$(arch) $(if $(filter linux/arm,$(os)/$(arch)),GOARM=6,) go build -o './dist/zoraxy_$(os)_$(arch)'  -ldflags "-s -w" -trimpath
+#	GOROOT_FINAL=Git/ GOOS=$(os) GOARCH=$(arch) GOARM=6 go build -o './dist/zoraxy_$(os)_$(arch)'  -ldflags "-s -w" -trimpath
 
 
 fixwindows:

@@ -124,7 +124,7 @@
         <label>Ignore TLS/SSL Verification Error<br><small>E.g. self-signed, expired certificate (Not Recommended)</small></label>
       </div>
     </div>
-    <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Renew Certificate</button>
+    <button id="obtainButton" class="ui basic button" type="submit"><i class="yellow refresh icon"></i> Get Certificate</button>
   </div>
   <div class="ui divider"></div>
   <small>First time setting up HTTPS?<br>Try out our <a href="../tools/https.html" target="_blank">wizard</a></small>
@@ -218,6 +218,11 @@
           $("#enableToggleSucc").stop().finish().fadeIn("fast").delay(3000).fadeOut("fast");
         }
       });
+
+      if (parent && parent.setACMEEnableStates){
+        parent.setACMEEnableStates(enabled);
+      }
+      
     }
 
     //Render the domains table that exists in this zoraxy host
@@ -323,7 +328,8 @@
       var filename = $("#filenameInput").val();
       var email = $("#caRegisterEmail").val();
       if (email == ""){
-        parent.msgbox("ACME renew email is not set")
+        parent.msgbox("ACME renew email is not set", false)
+        $("#obtainButton").removeClass("loading").removeClass("disabled");
         return;
       }
       if (filename.trim() == "" && !domains.includes(",")){
@@ -334,8 +340,9 @@
         //Invalid settings. Force the filename to be same as domain
         //if there are only 1 domain
         filename = domains;
-      }else{
-        parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
+      }else if (filename == "" && domains.includes(",")){
+        parent.msgbox("Filename cannot be empty for certs containing multiple domains.", false, 5000);
+        $("#obtainButton").removeClass("loading").removeClass("disabled");
         return;
       }
       

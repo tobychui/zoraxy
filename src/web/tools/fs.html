@@ -1,0 +1,1057 @@
+<html>
+    <head>
+        <title>File Manager</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+        <link rel="stylesheet" href="fs.css">
+        <script>
+         
+        </script>
+        <style>
+            body{
+                background-color: white;
+            }
+            #uploadProgressBar{
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+            }
+
+            .fileOprBtn.disabled{
+                opacity: 0.5;
+                user-select: none;
+                pointer-events: none;
+            }
+        </style>
+    </head>
+    <body class="whiteTheme">
+        <div id="navibar" class="navibar">
+            <!-- File Opr Group-->
+            <button class="fileOprBtn" title="Open" onclick="openViaButton(event);"><img class="opricon" src="img/opr/open.svg"><p class="oprtxt" locale="fileopr/Open">Open</p></button>
+            <button id="copyButton" class="fileOprBtn" title="Copy" onclick="copy();"><img class="opricon" src="img/opr/copy.svg"><p class="oprtxt" locale="fileopr/Copy">Copy</p></button>
+            <button id="pasteButton" class="fileOprBtn" title="Paste" onclick="paste();"><img class="opricon" src="img/opr/paste.svg"><p class="oprtxt" locale="fileopr/Paste">Paste</p></button>
+            <div class="fileoprGroupDivider" style="display: inline-block; vertical-align: top;">
+                <button class="fileoprSmallBtn" title="Refresh" onclick="refresh();"><i class="green refresh icon"></i> <span locale="fileopr/Refresh">Refresh</span></button><br>
+                <button class="fileoprSmallBtn" title="Cut" onclick="cut();"><i class="blue cut icon"></i> <span locale="fileopr/Cut">Cut</span></button><br>
+                <button class="fileoprSmallBtn" title="Rename" onclick="rename();"><i class="teal i cursor icon"></i> <span locale="fileopr/Rename">Rename</span></button>
+            </div>
+            <button class="fileOprBtn" title="Upload" onclick="upload(); "><img class="opricon" src="img/opr/upload.svg"><p class="oprtxt wideScreenOnly" locale="fileopr/Upload">Upload</p></button>
+            <button class="fileOprBtn" title="Download" onclick="downloadFile(); "><img class="opricon" src="img/opr/download.svg"><p class="oprtxt wideScreenOnly" locale="fileopr/Download">Download</p></button>
+            <div class="fileoprGroupDivider" style="display: inline-block; vertical-align: top;"></div>
+          
+            <div class="fileoprGroupDivider" style="display: inline-block; vertical-align: top;">
+                <button class="fileoprSmallBtn" title="New File" onclick="newFile();"><i style="color: #c7c7c7 !important;" class="file outline icon"></i> <span locale="fileopr/New File">New File</span></button><br>
+                <button class="fileoprSmallBtn" title="New Folder" onclick="newFolder();"><i style="color: #ffe79e !important;" class="yellow folder icon"></i> <span locale="fileopr/New Folder">New Folder</span></button><br>
+                <button class="fileoprSmallBtn" title="Delete" onclick="deleteFile();"><i class="red times icon"></i> <span locale="fileopr/Delete">Delete</span></button><br>
+            </div>
+            
+            <br>
+            <!-- Directoy navigations -->
+            <div class="addressBar">
+                <button id="prevDir" class="navibarBtn" onclick="prevDir();"  title="Back"><i class="left arrow icon"></i></button>
+                <button id="ppbtn" class="navibarBtn" onclick="parentDir();" title="Parent Folder"><i class="up arrow icon"></i></button>
+                <div id="pathDisplayField" class="ui breadcrumb addressText pathDisplay desktopOnly" >
+                  
+                </div>
+                <button id="togglePropertiesViewBtn" style="margin-left: 0.4em;" class="ui icon tiny button videmode propbar" title="Show Properties" onclick="togglePropertiesView(this);"><i class="columns icon"></i></button>
+            </div>
+            
+            <div class="msgbox" style="z-index:999; display:none; padding-bottom: 1em;">
+                <i class="checkmark icon showicon"></i> <span style="word-break: break-all;">No Message</span>
+                <div class="closeMsgButton" onclick="$(this).parent().stop().slideUp('fast');"><i class="caret down icon"></i></div>
+            </div>
+        </div>
+       
+        <div id="mainWindow">
+            <div id="folderView" style="height: 100%;">
+                <div id="folderList" class="fileviewList">
+                    
+                </div>
+                <div id="fileList" class="fileviewList">
+
+                </div>
+                <br>
+            </div>
+            <div id="propertiesView" class="small">
+                <h3 class="ui header" style="margin-top: 0.4em;">
+                    <span class="filename" style="word-break: break-all;" locale="sidebar/default/nofileselected">No File Selected</span>
+                    <div class="sub header vpath"  style="word-break: break-all;" locale="sidebar/default/instruction">Select a file to view file properties</div>
+                </h3>
+                <table class="ui very basic table">
+                    <tbody class="propertiesTable">
+                        
+                    </tbody>
+                </table>
+            </div>
+            <div id="uploadProgressBar">
+                <div class="ui small indicating progress" style="margin-bottom: 0px !important; border-radius: 0 !important;">
+                    <div class="bar" style="background-color: #92cfe7 !important; min-width: 0; border-radius: 0 !important;">
+                      <div class="progress"></div>
+                    </div>
+                    <div class="label">Uploading Files</div>
+                  </div>                  
+            </div>
+        </div>
+
+
+        <script>
+            let currentPath = "/";
+            let listDirInitTime = 0;
+            let propertiesView = true;
+
+            //Uploads
+            let uploadPendingFiles = [];
+            let currentlyUploading = false;
+
+            //File operations
+            let cutMode = false;
+            let cutPendingFilepath = [];
+            let copyPendingFiles = [];
+
+            //History
+            let dirHistory = [];
+
+
+            $(window).on("resize", function(){
+                updateElementSize();
+            })
+
+            $(document).ready(function(){
+                if (window.location.hash.length > 1){
+                    let previousPath = window.location.hash.substr(1);
+                    listDir(previousPath);
+                }else{
+                    listDir("/");
+                }
+                
+                //Add drop events to file view
+                var folderView = document.getElementById('folderView');
+
+                // Add event listeners for dragover and drop events
+                folderView.addEventListener('dragover', handleDragOver, false);
+                folderView.addEventListener('drop', handleFileDrop, false);
+            });
+
+            // Event handler for dragover event
+            function handleDragOver(event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            function handleFileDrop(event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Get the File object from the dataTransfer object
+                var files = event.dataTransfer.files;
+
+                //Push the files into queue
+                for (var i = 0; i < files.length; i++) {
+                    if (files[i].name.indexOf(".") < 0){
+                        msgbox("Folder upload is not supported", false);
+                        if (files.length == 1){
+                            return;
+                        }
+                        continue;
+                    }
+                    let pathToUpload = currentPath;
+                    uploadPendingFiles.push({
+                        "file": files[i],
+                        "dir": pathToUpload
+                    });
+                }
+                
+                //Upload the first file
+                msgbox("File Upload Started")
+
+                if (!currentlyUploading){
+                    uploadFileQueue();
+                }
+                
+            }
+
+            function uploadFileQueue(){
+                if (uploadPendingFiles.length > 0){
+                    currentlyUploading = true;
+                    let nextFileToUpload = uploadPendingFiles.pop();
+                    handleFile(nextFileToUpload.file, nextFileToUpload.dir, function(){
+                        msgbox(nextFileToUpload.file.name + " uploaded");
+                        setTimeout(function(){
+                            uploadFileQueue();
+                        }, 300);
+                    });
+                }else{
+                    msgbox("Upload Queue Completed");
+                    currentlyUploading = false;
+                }
+            }
+
+            function deleteFile(){
+                if ($(".fileObject.selected").length == 0){
+                    return;
+                }
+                if (confirm("Confirm removing " + $(".fileObject.selected").length + " files?")){
+                    let counter = $(".fileObject.selected").length;
+                    $(".fileObject.selected").each(function(){
+                        let thisFilepath = $(this).attr("filepath");
+                        $.ajax({
+                            url: "/api/fs/del?target=" + thisFilepath,
+                            method: "POST",
+                            success: function(data){
+                                if (data.error != undefined){
+                                    msgbox(data.error, false);
+                                }else{
+                                    counter--;
+                                    if (counter == 0){
+                                        //All removed
+                                        msgbox("File(s) Removed");
+                                        refresh();
+                                    }
+                                }
+                            }
+                        })
+                    });
+                }
+             
+            }
+            
+            //Check if a extension is code file, remember to trim the first dot
+            function isCodeFiles(ext){
+                if (ext == "html" || ext == "htm"|| ext == "css"|| ext == "js"|| ext == "json"){
+                    return true;
+                }
+                return false;
+            }
+
+            function openViaButton(evt){
+                if ($(".fileObject.selected").length == 0){
+                    return;
+                }
+
+                let editableCodeFiles = [];
+
+                $(".fileObject.selected").each(function(){
+                    let ftype = $(this).attr('type');
+                    let filepath = $(this).attr("filepath");
+                    let filename = $(this).attr("filename");
+                    if (ftype != "folder"){
+                        let ext = filepath.split(".").pop();
+                        if (isCodeFiles(ext)){
+                            editableCodeFiles.push({
+                                "filename": filename,
+                                "filepath": filepath
+                            });
+                        }else{
+                            openthis($(this), evt);
+                        }
+
+                    }
+                });
+
+                if (editableCodeFiles.length > 0){
+                    let hash = encodeURIComponent(JSON.stringify(editableCodeFiles))
+                    window.open("notepad/index.html#" + hash);
+                }
+            }
+
+            function refresh(){
+                listDir(currentPath);
+            }
+
+            function updatePathDisplay(){
+                $("#pathDisplayField").empty();
+                $("#pathDisplayField").append(`<div class="section selectable" onclick="jumpToDir('/');"><i class="folder icon"></i> Zoraxy</div><div class="divider">:/</div>`);
+                let pathSegments = currentPath;
+                if (pathSegments.startsWith("/")){
+                    pathSegments = pathSegments.substr(1);
+                }
+
+                if (pathSegments.endsWith("/")){
+                    pathSegments = pathSegments.substr(0, pathSegments.length - 1);
+                }
+
+                pathSegments = pathSegments.split("/");
+                let htmlSegments = [];
+                let accumulativeDir = "/";
+                pathSegments.forEach(function(segment){
+                    accumulativeDir = accumulativeDir + segment + "/"
+                    htmlSegments.push(`<div class="section selectable" onclick="jumpToDir('${accumulativeDir}');">${segment}</div>`);
+                });
+                $("#pathDisplayField").append(htmlSegments.join(`<div class="divider">/</div>`));
+            }
+
+            function cut(){
+                if ($(".fileObject.selected").length == 0){
+                    msgbox("No file selected", false);
+                    return;
+                }
+
+                cutMode = true;
+                cutPendingFilepath = [];
+                $(".fileObject.selected").each(function(){
+                    cutPendingFilepath.push({
+                        filename: $(this).attr("filename"),
+                        filepath: $(this).attr("filepath")
+                    });
+                });
+
+                msgbox("File Ready to Paste");
+            }
+
+            function downloadFile(){
+                let selectedFiles = [];
+                let filenames = [];
+                let containsDir = false;
+                $(".fileObject.selected").each(function(){
+                    if ($(this).attr("type") == "folder"){
+                        containsDir = true;
+                    }
+                });
+
+                if (containsDir){
+                    msgbox("Folder download is not supported", false);
+                    return;
+                };
+                if ($(".fileObject.selected").length > 0){
+                    $(".fileObject.selected").each(function(){
+                        selectedFiles.push($(this).attr("filepath"));
+                        filenames.push($(this).attr("filename"))
+                    });
+                }
+
+                
+                if (selectedFiles.length == 1){
+                    //Only one file
+                    //window.open("/api/fs/download?file=" + selectedFiles[0]);
+                    var file_path = "/api/fs/download?file=" + selectedFiles[0];
+                    var a = document.createElement('A');
+                    a.href = file_path;
+                    a.download = file_path.substr(file_path.lastIndexOf('/') + 1);
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                }else{
+                    let urls = [];
+                    selectedFiles.forEach(function(thisFilepath){
+                        urls.push("/api/fs/download?file=" + thisFilepath);
+                    });
+                    msgbox("Zipping might take a few minutes...");
+                    compressFileToZip(urls, filenames);
+                }
+                
+            }
+
+            function compressFileToZip(urls, filenames) {
+                var zip = new JSZip();
+                // Create a function to fetch each image and add it to the zip
+                var addFileToZip = function (url, filename) {
+                    return new Promise(function (resolve, reject) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', url);
+                    xhr.responseType = 'blob';
+
+                    xhr.onload = function () {
+                        if (xhr.status === 200) {
+                        zip.file(filename, xhr.response);
+                        resolve();
+                        } else {
+                        reject(Error('Failed to fetch file: ' + url));
+                        }
+                    };
+
+                    xhr.onerror = function () {
+                        reject(Error('Error fetching file: ' + url));
+                    };
+
+                    xhr.send();
+                    });
+                };
+
+                // Iterate over each image URL and add it to the zip
+                var promises = urls.map(function (url, index) {
+                    var filename = filenames[index]; 
+                    return addFileToZip(url, filename);
+                });
+
+                // When all promises are resolved, generate the zip file
+                Promise.all(promises).then(function () {
+                    zip.generateAsync({ type: 'blob' }).then(function (content) {
+                        // Save the zip file or do something with it
+                        msgbox("Download Zip Created");
+                        saveAs(content, 'dl_' + Math.floor(Date.now() / 1000) +'.zip');
+                    });
+                }).catch(function (error) {
+                    console.error(error);
+                });
+            }
+
+            function saveAs(blob, filename) {
+                if (navigator.msSaveBlob) {
+                    // For IE and Edge browsers
+                    navigator.msSaveBlob(blob, filename);
+                } else {
+                    // For other browsers
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+
+            //Jump to new directory via path input field
+            function jumpToDir(newDir){
+                if (newDir == currentPath){
+                    return;
+                }
+                listDir(newDir);
+            }
+
+            function prevDir(){
+                if (dirHistory.length > 0){
+                    let pathToGo = dirHistory.pop();
+                    if (pathToGo == currentPath && dirHistory.length > 0){
+                        //pop again
+                        pathToGo = dirHistory.pop();
+                        listDir(pathToGo);
+                        return;
+                    }
+                    listDir(pathToGo, false);
+                }
+            }
+
+            function listDir(path, recordHistory = true){
+                if (path.length > 0 && path.substr(0, 1) != "/"){
+                    path = "/" + path;
+                }
+
+                if (!path.endsWith("/")){
+                    path = path + "/";
+                }
+
+                //Update the current path
+                currentPath = path;
+                if (recordHistory && currentPath != dirHistory[dirHistory.length - 1]){
+                    dirHistory.push(currentPath);
+                }
+                window.location.hash = currentPath;
+                updatePathDisplay();
+                listDirInitTime = Date.now();
+                let validationTimestamp = listDirInitTime;
+                $("#folderList").html(`<div class="fileObject item" style="pointer-events: none;">
+                                        <span style="display:inline-block !important;word-break: break-all; width:100%;" class="normal object">
+                                            <i class="loading spinner icon" style="margin-right:12px; color:#grey;"></i>  <span class="filename">Loading</span> 
+                                        </span>
+                                    </div>`);
+                $("#fileList").html("");
+
+                $.ajax({
+                    url: "/api/fs/list?dir=" + path,
+                    success: function(data){
+                        if (validationTimestamp != listDirInitTime){
+                            //Another refresh is in progress. Skip render.
+                            return;
+                        }
+                        $("#folderList").html("");
+                        if (data.error != undefined){
+                            $("#folderList").append(`<div class="ui segment">
+                                        <div class="ui header themed">
+                                            <i class="remove icon" style="display: inline-block;"></i> <span>Error Opening Folder</span>
+                                            <div class="sub header" style="margin-top:12px;">Server return the following error message: <br><code>${data.error.toUpperCase()}</code><br>
+                                                ${new Date().toLocaleString()}</div>
+                                        </div>
+                                    </div>`);
+                            msgbox(data.error, false);
+                        }else{
+                            data.forEach(function(filedata){
+                               let isDir = filedata.isDir;
+                               let filename = filedata.filename;
+                               let filesize = filedata.size;
+                                if (isDir){
+                                    $("#folderList").append(`<div class="fileObject item" draggable="true" filename="${filename}" filepath="${path + filename}" ondblclick="openthis(this,event);" type="folder">
+                                        <span style="display:inline-block !important;word-break: break-all; width:100%;" class="normal object">
+                                            <i class="folder icon" style="margin-right:12px; color:#eab54e;"></i>  <span class="filename">${filename}</span> 
+                                        </span>
+                                    </div>`);
+                                }else{
+                                    let extension = "." + filename.split(".").pop();
+                                    let fileIcon = getFileIcon(extension);
+                                    $("#fileList").append(`<div class="fileObject item" draggable="true" filename="${filename}" filepath="${path + filename}" ondblclick="openthis(this,event);" type="file">
+                                        <span style="display:inline-block !important;word-break: break-all; width:100%;" class="normal object">
+                                            <i class="${fileIcon} icon" style="margin-right:12px; color:grey;"></i>  <span class="filename">${filename} (${humanFileSize(filesize)})</span> 
+                                        </span>
+                                    </div>`);
+                                }
+                            });
+                        }
+
+                        $(".fileObject").off("click").on("click", function(e){
+                            if (!e.ctrlKey) {
+                                $(".fileObject.selected").removeClass("selected");
+                                getFileProperties( $(this).attr("filepath"));
+                                let fileType = $(this).attr('type');
+                                if (fileType == "folder"){
+                                    $("#propertiesView").find(".preview").find("img").attr("src", "img/folder.svg");
+                                }else{
+                                    $("#propertiesView").find(".preview").find("img").attr("src", "img/file.svg");
+                                }
+                            }
+                            $(this).addClass("selected");
+                        });
+
+                        sortFileList();
+
+                    }
+                });
+            }
+
+            function openthis(target, event){
+                let isDir = ($(target).attr("type") == "folder");
+                if (isDir){
+                    let targetPath = $(target).attr("filepath");
+                    listDir(targetPath);
+                }else{
+                    let ext = $(target).attr("filepath").split(".").pop();
+                    window.open("/api/fs/download?file=" + $(target).attr("filepath") + "&preview=true");
+                }
+            }
+
+            function isFilenameValid(filename) {
+                // Split the filename into the name and extension parts
+                var name = filename.slice(0, filename.lastIndexOf('.'));
+                var extension = filename.slice(filename.lastIndexOf('.') + 1);
+
+                // Check if the name and extension lengths are within the limits
+                if (name.length <= 8 && extension.length <= 3) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            function newFile(){
+                var fileName = window.prompt("Name for new file: ", "file.txt");
+                if (fileName.indexOf("/") >= 0){
+                    //Contains /. Reject
+                    msgbox("File name cannot contain path seperator", false);
+                    return;
+                }
+
+                if (fileName.indexOf(".") == -1){
+                    msgbox("Missing file extension")
+                    return
+                }
+
+                let filenameOnly = fileName.split(".");
+                let ext = filenameOnly.pop();
+                filenameOnly = filenameOnly.join(".");
+
+
+                //OK! Create the file
+                const blob = new Blob(["\n"], { type: 'text/plain' });
+                const file = new File([blob], fileName);
+                handleFile(file, currentPath, function(){
+                    msgbox("New File Created");
+                });
+            }
+
+            function newFolder(){
+                var folderName = window.prompt("Name for new folder: ", "Folder");
+                if (folderName.indexOf("/") >= 0){
+                    //Contains /. Reject
+                    msgbox("Folder name cannot contain path seperator", false);
+                    return;
+                }
+
+                $.post("/api/fs/newFolder?path=" + currentPath + folderName, function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false);
+                    }else{
+                        msgbox("Folder Created");
+                        refresh();
+                    }
+                });
+            }
+
+            function rename(){
+                if ($(".fileObject.selected").length > 1){
+                    //Too many objects
+                }else if ($(".fileObject.selected").length == 1){
+                    var oldName = $(".fileObject.selected").attr("filename");
+                    var oldPath = $(".fileObject.selected").attr("filepath");
+                    var newName = window.prompt("Rename " + oldName + " to: ", oldName);
+                    if (newName.indexOf("/") >= 0){
+                        //Contains /. Reject
+                        msgbox("File name cannot contain path seperator", false);
+                        return;
+                    }
+                   
+                    if (newName && newName != oldName) {
+                        // User entered a new name, perform renaming logic here
+                        console.log(oldPath, currentPath + newName);
+                        $.ajax({
+                            url: "/api/fs/move?srcpath=" + oldPath + "&destpath=" + currentPath + newName,
+                            method: "POST",
+                            success: function(data){
+                                if (data.error != undefined){
+                                    msgbox(data.error, false);
+                                }else{
+                                    msgbox("File renamed");
+                                    refresh();
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+
+            function getFileIcon(extension) {
+                const textExtensions = [".md", ".txt"];
+                const codeExtensions = [".js", ".json", ".css", ".html", ".htm"];
+                const musicExtensions = [".mp3", ".aac", ".ogg", ".wav"];
+                const videoExtensions = [".mp4", ".m4v", ".webm"];
+                const photoExtensions = [".png", ".gif", ".jpg", ".ico", ".svg"];
+                
+                if (textExtensions.includes(extension)) {
+                    return "file alternate outline";
+                } else if (codeExtensions.includes(extension)) {
+                    return "black file code outline";
+                } else if (musicExtensions.includes(extension)) {
+                    return "blue music";
+                } else if (videoExtensions.includes(extension)) {
+                    return "red video";
+                } else if (photoExtensions.includes(extension)) {
+                    return "green image outline";
+                } else {
+                    return "file outline";
+                }
+            }
+
+            function isPreviewable(ext){
+                let previeableFiles = [".png", ".gif", ".jpg", ".ico", ".svg"];
+                return previeableFiles.includes(ext);
+            }
+
+            function getFileProperties(filepath){
+                $.get("/api/fs/properties?file=" + filepath, function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false);
+                        return;
+                    }
+
+                    $("#propertiesView").find(".filename").text(data.filename);
+                    $("#propertiesView").find(".vpath").text(data.filepath);
+
+                    let propTable = $("#propertiesView").find(".propertiesTable");
+                    let styleOverwrite = `min-width: 4em;`;
+                    $(propTable).html("");
+                    $(propTable).append(`<tr>
+                        <td style="${styleOverwrite}">
+                            File Size
+                        </td>
+                        <td>
+                            ${bytesToSize(data.size)}
+                        </td>
+                    </tr><tr>
+                        <td style="${styleOverwrite}">
+                            Disk Path
+                        </td>
+                        <td style="word-break: break-all;">
+                            /www${data.filepath}
+                        </td>
+                    </tr><tr>
+                        <td style="${styleOverwrite}">
+                            Folder
+                        </td>
+                        <td style="word-break: break-all;">
+                            ${data.isDir?`<i class="ui green check icon"></i>`:`<i class="ui red times icon"></i>`}
+                        </td>
+                    </tr>`);
+
+                    if (data.isDir){
+                        $(propTable).append(`<tr>
+                            <td style="${styleOverwrite}">
+                                Files #
+                            </td>
+                            <td>
+                                ${data.fileCounts}
+                            </td>
+                        </tr><tr>
+                            <td style="${styleOverwrite}">
+                                Folders #
+                            </td>
+                            <td style="word-break: break-all;">
+                                ${data.folderCounts}
+                            </td>
+                        </tr>`);
+
+                    }
+                })
+            }
+
+            function loadPreview(){
+                let readyToLoadSrc =  $("#propertiesView").find(".preview").find("img").attr("xsrc");
+                if (readyToLoadSrc == undefined || readyToLoadSrc == "" ){
+
+                }else{
+                    let ext = readyToLoadSrc.split(".").pop();
+                    $("#propertiesView").find(".preview").find("img").show();
+                    $("#propertiesView").find(".preview").find("audio").hide();
+                    $("#propertiesView").find(".preview").find("img").attr("src", readyToLoadSrc);
+                }
+            }
+
+            function bytesToSize(bytes) {
+                var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+                if (bytes == 0) return '0 Byte';
+                var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+                return Math.round(bytes / Math.pow(1024, i) * 100, 2) / 100 + ' ' + sizes[i];
+            }
+
+            function getParentDirectory(path) {
+                // Remove any trailing slashes
+                if (path.endsWith("/")){
+                    path = path.substr(0, path.length - 1);
+                }
+
+                // Find the last index of the slash character
+                var lastIndex = path.lastIndexOf('/');
+
+                // Extract the parent directory substring
+                var parentDir = path.substring(0, lastIndex);
+
+                return parentDir;
+            }
+
+            function parentDir(){
+                if (currentPath.indexOf("/") >= 0 && currentPath != "/"){
+                    let parentPath = getParentDirectory(currentPath);
+                    listDir(parentPath);
+                }else{
+                    //already top
+
+                }
+            }
+
+            function humanFileSize(bytes, si=true, dp=1) {
+                const thresh = si ? 1000 : 1024;
+
+                if (Math.abs(bytes) < thresh) {
+                    return bytes + ' B';
+                }
+
+                const units = si 
+                    ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] 
+                    : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+                let u = -1;
+                const r = 10**dp;
+
+                do {
+                    bytes /= thresh;
+                    ++u;
+                } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+
+
+                return bytes.toFixed(dp) + ' ' + units[u];
+            }
+
+
+
+            function updateElementSize(){
+                $("#mainWindow").css("height", window.innerHeight - $("#navibar").height() + "px");
+            }
+            updateElementSize();
+
+            function upload() {
+                // Create a file input element
+                var fileInput = $('<input>').attr('type', 'file');
+
+                // Trigger the file selector dialog
+                fileInput.trigger('click');
+
+                // Handle the selected file using a callback event handler
+                fileInput.change(function(e) {
+                    var file = e.target.files[0];
+
+                    if (currentlyUploading){
+                        //Already tasks uploading in the background. Add it to queue
+                        uploadPendingFiles.push({
+                            "file": file,
+                            "dir": currentPath
+                        });
+                        msgbox("File Added to Upload Queue");
+                        return;
+                    }
+
+                    // Pass the file object to the callback event handler
+                    msgbox("File Upload Started")
+                    handleFile(file, currentPath, function(){
+                        msgbox("Upload Completed");
+                    });
+                });
+            }
+
+            function handleFile(file, dir=currentPath, callback=undefined) {
+                // Perform actions with the selected file
+                $("#pasteButton").addClass("disabled");
+                console.log('Selected file:', file);
+                var formdata = new FormData();
+                formdata.append("file", file);
+                var ajax = new XMLHttpRequest();
+                ajax.upload.addEventListener("progress", progressHandler, false);
+                ajax.addEventListener("load", function(event){
+                    let responseText = event.target.responseText;
+                    try{
+                        responseText = JSON.parse(responseText);
+                        if (responseText.error != undefined){
+                            alert(responseText.error);
+                        }
+                    }catch(ex){
+
+                    }
+                    completeHandler(event, dir==currentPath);
+                    $("#pasteButton").removeClass("disabled");
+                    if (callback != undefined){
+                        callback();
+                    }
+                }, false); // doesnt appear to ever get called even upon success
+                ajax.addEventListener("error", errorHandler, false);
+                ajax.addEventListener("abort", abortHandler, false);
+                ajax.open("POST", "/api/fs/upload?dir=" + dir);
+                ajax.send(formdata);
+            }
+
+            function progressHandler(event) {
+                //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total; // event.total doesnt show accurate total file size
+               
+                var percent = (event.loaded / event.total) * 100;
+                $("#uploadProgressBar").find(".bar").css("width", Math.round(percent) + "%");
+                console.log("Uploaded " + event.loaded + " bytes => " + percent +"%");
+                if (percent >= 100) {
+                    $("#uploadProgressBar").find(".bar").css("width", "100%");
+                    //_("status").innerHTML = "Please wait, writing file to filesystem";
+                }
+            }
+            function completeHandler(event, requireRefresh=true) {
+                $("#uploadProgressBar").find(".bar").css("width", "0%");
+                if(requireRefresh){
+                    refresh();
+                }
+            }
+
+            
+            function errorHandler(event) {
+                msgbox("Upload Failed", false);
+                $("#pasteButton").removeClass("disabled");
+            }
+
+            function abortHandler(event) {
+                msgbox("Upload Aborted", false);
+                $("#pasteButton").removeClass("disabled");
+            }
+
+            function msgbox(message, succ=true){
+                function capitalizeFirstLetter(string) {
+                    return string.charAt(0).toUpperCase() + string.slice(1);
+                }
+
+                message = capitalizeFirstLetter(message);
+                if (succ){
+                    $(".msgbox").find(".showicon").attr("class", "green circle check icon showicon");
+                }else{
+                    $(".msgbox").find(".showicon").attr("class", "red circle times icon showicon");
+                }
+
+                $(".msgbox").find("span").text(message);
+                $(".msgbox").stop().finish().slideDown("fast").delay(3000).slideUp("fast");
+
+            }
+
+            //Copy file
+            function copy(){
+                if ($(".fileObject.selected").length == 0){
+                    //No file selected
+                    msgbox("No file selected", false);
+                    return;
+                }
+
+                let selectedFiles = [];
+                $(".fileObject.selected").each(function(){
+                    let filepath = $(this).attr("filepath");
+                    selectedFiles.push(filepath);
+                    console.log(filepath);
+                });
+
+                copyPendingFiles = selectedFiles;
+                cutMode = false;
+
+                msgbox(`${selectedFiles.length} files ready to paste`, true)
+            }
+
+            function fileExistsInThisFolder(filename){
+                let exists = false;
+                $(".fileObject").each(function(){
+                    if ($(this).attr("filename") == filename){
+                        exists = true;
+                    }
+                });
+                return exists;
+            }
+
+            function paste(){
+                if (cutMode){
+                    let remainingFilesCounter = cutPendingFilepath.length;
+                    console.log("Moving " , cutPendingFilepath);
+                    cutPendingFilepath.forEach(fileToPaste => {
+                        let filename = fileToPaste.filename;
+                        let filepath = fileToPaste.filepath;
+
+                        $.ajax({
+                            url: "/api/fs/move?srcpath=" + filepath + "&destpath=" + currentPath + filename,
+                            method: "POST",
+                            success: function(data){
+                                if (data.error != undefined){
+                                    msgbox(data.error)
+                                }else{
+                                    remainingFilesCounter--;
+                                    if (remainingFilesCounter == 0){
+                                        msgbox("File Move Completed");
+                                        refresh();
+                                    }
+                                }
+                            }
+                        })
+                    });
+                }else{
+                    //Copy and Paste
+                    copyFirstItemInQueueUntilAllCopied();
+                }
+            }
+
+            function copyFirstItemInQueueUntilAllCopied(){
+                let file = copyPendingFiles.shift();
+                let startingDir = currentPath;
+                $.ajax({
+                    url: "/api/fs/copy",
+                    method: "POST",
+                    data: {
+                        "srcpath": file,
+                        "destpath": currentPath
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false);
+                        }else{
+                            if (copyPendingFiles.length > 0){
+                                //Contine to copy and paste the files
+                                copyFirstItemInQueueUntilAllCopied();
+                                if (startingDir == currentPath){
+                                    refresh();
+                                }
+                            }else{
+                                //All copy operation done
+                                msgbox("Files copied");
+                                if (startingDir == currentPath){
+                                    refresh();
+                                }
+                            }
+                        }
+                    }
+                })
+            }
+
+            function sortFileList(){
+                sortFileObjects("folderList");
+                sortFileObjects("fileList");
+            }
+
+            function sortFileObjects(listSelector) {
+                const fileObjects = document.querySelectorAll(`#${listSelector} .fileObject`)
+                // Convert the NodeList to an array for sorting
+                const fileObjectsArray = Array.from(fileObjects);
+
+                // Sort the elements based on their text content
+                fileObjectsArray.sort((a, b) => {
+                    const textA = a.querySelector('.filename').textContent.toLowerCase();
+                    const textB = b.querySelector('.filename').textContent.toLowerCase();
+                    return textA.localeCompare(textB);
+                });
+
+                // Reorder the elements in the DOM
+                const fileList = document.getElementById(listSelector);
+                fileObjectsArray.forEach((fileObject) => {
+                    fileList.appendChild(fileObject);
+                });
+            }
+
+            function togglePropertiesView(object){
+                propertiesView = !propertiesView;
+                if (propertiesView){
+                    $("#propertiesView").show();
+                    $(object).addClass('active');
+                    localStorage.setItem("file_explorer/viewProperties", "true");
+
+                    if ($(".fileObject.selected").length >= 1){
+                        //Load the file properties
+                        let targetFile = getFileObjectFromFID(lastClickedFileID);
+                        if (targetFile == null){
+                            targetFile = $(".fileObject.selected")[0];
+                        }
+                        let filepath = $(targetFile).attr("filepath");
+                        loadFileProperties(filepath);
+                    }
+                }else{
+                    $("#propertiesView").hide();
+                    $(object).removeClass('active');
+                    localStorage.setItem("file_explorer/viewProperties", "false");
+                }
+            }
+
+            // Bind the onDeleteKeyPress() function to the document's keydown event
+            $(document).on("keydown", function(evt){
+                if (event.ctrlKey) {
+                    // Check for Ctrl key combinations
+                    if (event.keyCode == 67) {
+                        // Ctrl + C
+                        evt.preventDefault();
+                        copy();
+                    } else if (event.keyCode == 86) {
+                        // Ctrl + V
+                        evt.preventDefault();
+                        paste();
+                    } else if (event.keyCode == 88) {
+                        // Ctrl + X
+                        evt.preventDefault();
+                        cut();
+                    }
+                } else {
+                    if (event.keyCode == 46) {
+                        //Delete
+                        evt.preventDefault();
+                        deleteFile();
+                    }else if (event.keyCode == 13){
+                        //Enter
+                        evt.preventDefault();
+                        $(".fileObject.selected").each(function(e){
+                            openthis($(this), e);
+                        });
+                    
+                    }
+                }
+                
+                
+            });
+
+
+
+        </script>
+    </body>
+</html>
