@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -74,6 +75,22 @@ func PostBool(r *http.Request, key string) (bool, error) {
 	}
 
 	return false, errors.New("invalid boolean given")
+}
+
+// Get POST paramter as int
+func PostInt(r *http.Request, key string) (int, error) {
+	x, err := PostPara(r, key)
+	if err != nil {
+		return 0, err
+	}
+
+	x = strings.TrimSpace(x)
+	rx, err := strconv.Atoi(x)
+	if err != nil {
+		return 0, err
+	}
+
+	return rx, nil
 }
 
 func FileExists(filename string) bool {

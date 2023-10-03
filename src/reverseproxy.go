@@ -64,6 +64,7 @@ func ReverseProxtInit() {
 		RedirectRuleTable:  redirectTable,
 		GeodbStore:         geodbStore,
 		StatisticCollector: statisticCollector,
+		WebDirectory:       *staticWebServerRoot,
 	})
 	if err != nil {
 		log.Println(err.Error())

@@ -22,6 +22,7 @@ import (
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/tcpprox"
 	"imuslab.com/zoraxy/mod/tlscert"
+	"imuslab.com/zoraxy/mod/webserv"
 )
 
 /*
@@ -203,11 +204,29 @@ func startupSequence() {
 
 		Obtaining certificates from ACME Server
 	*/
+	//Create a table just to store acme related preferences
+	sysdb.NewTable("acmepref")
 	acmeHandler = initACME()
 	acmeAutoRenewer, err = acme.NewAutoRenewer("./conf/acme_conf.json", "./conf/certs/", int64(*acmeAutoRenewInterval), acmeHandler)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	/*
+		Static Web Server
+
+		Start the static web server
+	*/
+
+	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
+		Sysdb:                  sysdb,
+		Port:                   "8081", //Default Port
+		WebRoot:                *staticWebServerRoot,
+		EnableDirectoryListing: true,
+		EnableWebDirManager:    *allowWebFileManager,
+	})
+	//Restore the web server to previous shutdown state
+	staticWebServer.RestorePreviousState()
 }
 
 // This sequence start after everything is initialized

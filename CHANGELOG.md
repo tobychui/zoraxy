@@ -1,3 +1,12 @@
+# v2.6.7 Sep 26 2023
+
++ Added Static Web Server function [#56](https://github.com/tobychui/zoraxy/issues/56)
++ Web Directory Manager (see static webserver tab)
++ Added static web server and black / whitelist template [#38](https://github.com/tobychui/zoraxy/issues/38)
++ Added default / preferred CA features for ACME [#47](https://github.com/tobychui/zoraxy/issues/47)
++ Optimized TLS/SSL page and added dedicated section for ACME related features
++ Bugfixes [#61](https://github.com/tobychui/zoraxy/issues/61) [#58](https://github.com/tobychui/zoraxy/issues/58)
+
 # v2.6.6 Aug 30 2023
 
 + Added basic auth editor custom exception rules 

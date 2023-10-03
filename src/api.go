@@ -162,12 +162,31 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/acme/listExpiredDomains", acmeHandler.HandleGetExpiredDomains)
 	authRouter.HandleFunc("/api/acme/obtainCert", AcmeCheckAndHandleRenewCertificate)
 	authRouter.HandleFunc("/api/acme/autoRenew/enable", acmeAutoRenewer.HandleAutoRenewEnable)
+	authRouter.HandleFunc("/api/acme/autoRenew/ca", HandleACMEPreferredCA)
 	authRouter.HandleFunc("/api/acme/autoRenew/email", acmeAutoRenewer.HandleACMEEmail)
 	authRouter.HandleFunc("/api/acme/autoRenew/setDomains", acmeAutoRenewer.HandleSetAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/listDomains", acmeAutoRenewer.HandleLoadAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewPolicy", acmeAutoRenewer.HandleRenewPolicy)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)
 	authRouter.HandleFunc("/api/acme/wizard", acmewizard.HandleGuidedStepCheck) //ACME Wizard
+
+	//Static Web Server
+	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
+	authRouter.HandleFunc("/api/webserv/start", staticWebServer.HandleStartServer)
+	authRouter.HandleFunc("/api/webserv/stop", staticWebServer.HandleStopServer)
+	authRouter.HandleFunc("/api/webserv/setPort", staticWebServer.HandlePortChange)
+	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
+	if *allowWebFileManager {
+		//Web Directory Manager file operation functions
+		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
+		authRouter.HandleFunc("/api/fs/upload", staticWebServer.FileManager.HandleUpload)
+		authRouter.HandleFunc("/api/fs/download", staticWebServer.FileManager.HandleDownload)
+		authRouter.HandleFunc("/api/fs/newFolder", staticWebServer.FileManager.HandleNewFolder)
+		authRouter.HandleFunc("/api/fs/copy", staticWebServer.FileManager.HandleFileCopy)
+		authRouter.HandleFunc("/api/fs/move", staticWebServer.FileManager.HandleFileMove)
+		authRouter.HandleFunc("/api/fs/properties", staticWebServer.FileManager.HandleFileProperties)
+		authRouter.HandleFunc("/api/fs/del", staticWebServer.FileManager.HandleFileDelete)
+	}
 
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)

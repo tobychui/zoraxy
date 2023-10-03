@@ -1,0 +1,1388 @@
+/*
+    ArozOS File Manager css file
+
+    This file is used to overwrite the default css
+    on segmentic ui (or formantic if it is later upgraded)
+*/
+
+/*
+    Color definations
+*/
+:root{
+    --dark_theme_toggle: #333333;
+    --dark_theme_toggle_text: rgb(218, 218, 218);
+    --white_theme_toggle: #dadada;
+    --white_theme_toggle_text: rgb(27, 27, 27);
+}
+
+body.whiteTheme {
+    --fileopr_btnTxt: rgb(226, 226, 226);
+    --fileopr_oprtxt: rgb(56, 52, 52);
+    --fileopr_btnhover: #f0f0f0;
+    --divider: #f0f0f0;
+    --navi_bgcolor: var(--body_background_secondary, #fcfcfc);
+    --navi_theme: var(--theme_color, #92cfe7);
+    --navi_theme_multiselect: #6c06ba;
+    --navi_txt: rgb(114, 114, 114);
+
+    --dropdown_bg: white;
+    --dropdown_txt: black;
+    
+    --vroot_active_bg: #dadada;
+    --dir_item_color: rgb(78, 78, 78);
+    --text_active: #23cc28;
+
+    --dir_bg: #f5f5f5;
+    --dir_txt: rgb(44, 44, 44);
+    --dir_border: rgba(219, 226, 241, 0.7);
+    --dir_hover_text: #a3a3a3;
+    --dir_hover_background: #f3f3f3;
+    --dir_hover_active: #c9e7f1;
+
+    --normal_object_txt: #303030;
+    --hex_folder_txt: #2b9447;
+    --um_file_txt: #69aaff;
+
+    --folder_view_background: #ffffff;
+    --folder_view_share: #24cc29;
+    --fileobject_background_hover: #f2f2f2;
+    --fileobject_background_selected: #d2f2f7;
+    --fileobject_text_selected: black;
+
+    --address_text_border:#cfcfcf;
+    --address_text_background: white;
+
+    --popup_bg: white;
+    --popup_border: rgb(226, 226, 226);
+    --popup_header_bg: #171719;
+    --popup_header_txt: white;
+    --popup_header_bottom: #34b7eb;
+    --popup_btn_border: #dedede;
+    --popup_btn_hover: rgba(238, 238, 238, 0.932);
+    --popup_btn_primary_bg: #51aded;
+    --popup_btn_primary_txt: white;
+    --popup_btn_primary_bg_hover: #76c0f5;
+    --popup_btn_negative_bg: #ed5151;
+    --popup_btn_negative_txt: white;
+    --popup_btn_negative_bg_hover: #f57676;
+
+    --modulelist_bg: white;
+
+    --contextmenu_background: #ffffff;
+    --contextmenu_hover: #f9f9f9;
+    --contextmenu_textcolor: rgb(78, 78, 78);
+
+    --upload_progressbar: #92cfe7;
+    --upload_progresstext: rgb(255, 255, 255);
+    --upload_progress_succ: #8cd68f;
+    --upload_progress_failed: #d68c8c;
+
+    --open_with_selected: #51aded;
+    --open_with_selected_text: white;
+    --open_with_item_hover_background:rgba(35,35,35,0.14); 
+
+    --popup_wrapper_background: rgba(27,27,27,0.5);
+    --code_bg: #f7f7f9;
+    --code_txt: #bd4147;
+
+    --uploadtab_bg: #f5f5f5;
+    --uploadtab_txt: rgb(78, 78, 78);
+    --upload_bg: #ffffff;
+}
+
+body.darkTheme{
+    --fileopr_btnTxt: rgb(255, 255, 255);
+    --fileopr_oprtxt: rgb(241, 241, 241);
+    --fileopr_btnhover: #353535;
+   
+    --navi_bgcolor: var(--body_background_secondary, #27292d);
+    --navi_theme: var(--theme_color, #6682c4);
+    --navi_theme_multiselect: #6c06ba;
+    --navi_txt: rgb(241, 241, 241);
+
+    --dropdown_bg: #373a42;
+    --dropdown_txt: rgb(231, 231, 231);
+    
+    --vroot_active_bg: #95b5de;
+    --dir_item_color: rgb(228, 228, 228);
+    
+    --text_active: #23cc28;
+
+    --dir_bg: #373a42;
+    --dir_txt: rgb(230, 230, 230);
+    --dir_border: #3b4751;
+    --dir_hover_text: #a3a3a3;
+    --dir_hover_background: #f3f3f3;
+    --dir_hover_active: #7c9cc7;
+
+    --normal_object_txt: rgb(236, 236, 236);;
+    --hex_folder_txt: #44d36a;
+    --um_file_txt: #69aaff;
+
+    --folder_view_background: var(--body_background_active, #3d3f47);
+    --folder_view_share: #24cc29;
+    --fileobject_background_hover: #5a5e6b;
+    --fileobject_background_selected: #95b5de;
+    --fileobject_text_selected: black;
+
+    --address_text_border:#27292d;
+    --address_text_background: rgb(0, 0, 0);
+
+    --popup_bg: black;
+    --popup_border: rgb(226, 226, 226);
+    --popup_header_bg: #171719;
+    --popup_header_txt: white;
+    --popup_header_bottom: #6682c4;
+    --popup_btn_border: #dedede;
+    --popup_btn_hover: rgb(53, 53, 53);
+    --popup_btn_primary_bg: #51aded;
+    --popup_btn_primary_txt: white;
+    --popup_btn_primary_bg_hover: #4391c9;
+    --popup_btn_negative_bg: #ed5151;
+    --popup_btn_negative_txt: white;
+    --popup_btn_negative_bg_hover: #f57676;
+
+    --modulelist_bg: transparent;
+    --modulelist_hover: rgba(240,240,240,0.3);
+
+    --contextmenu_background: #0e0e0e;
+    --contextmenu_hover: #292929;
+    --contextmenu_textcolor: rgb(233, 233, 233);
+
+    --upload_progressbar: #92cfe7;
+    --upload_progresstext: rgb(255, 255, 255);
+    --upload_progress_succ: #8cd68f;
+    --upload_progress_failed: #d68c8c;
+
+    --open_with_selected: #95b5de;
+    --open_with_selected_text: white;
+    --open_with_item_hover_background:rgba(35,35,35,0.14); 
+
+    --popup_wrapper_background: rgba(27,27,27,0.5);
+    --code_bg: rgb(20, 20, 20);
+    --code_txt: #d68c8c;
+
+    --uploadtab_bg: #27292d;
+    --uploadtab_txt: rgb(233, 233, 233);
+    --upload_bg: #373a42;
+}
+
+body{
+    color:var(--body_text);
+    background-color:var(--body_background);
+    height:100%;
+    overflow: hidden;
+}
+
+
+
+h1, h2, h3, p, span, div, input, .dropdown { font-family: "Microsoft JhengHei","SimHei", "Apple LiGothic Medium", "STHeiti"}
+html{
+    height:100%;
+    overflow:hidden;
+}
+
+/* force override of semantic button rule */
+body.darkTheme .ui.icon.button{
+    color: var(--text_color) !important;
+}
+
+/*
+
+    Navigation Bar
+
+    The top bar of the interface
+    see subparts for more detail configs
+*/
+.navibar{
+    width:100%;
+    padding-left:12px;
+    padding-right:12px;
+    padding-top:6px;
+    padding-bottom:3px;
+    z-index: 99;
+    background-color:var(--navi_bgcolor);
+    border-bottom:2px solid var(--navi_theme);
+}
+
+.navibar.ctrl{
+    border-bottom:2px solid var(--navi_theme_multiselect);
+}
+
+.navibar.mobile{
+    padding-top: 0;
+}
+
+.button.standard{
+    box-shadow: 0 1px 1px 0px rgb(190, 190, 190);
+    border: 0px;
+}
+
+.button.standard:hover{
+    background-color:#82c2f0 !important;
+    color:white !important;
+}
+
+/*
+    File operation bar
+*/
+
+.navibar .fileOprBtn{
+    vertical-align: top;
+    border: 1px solid transparent;
+    cursor: pointer;
+    background-color: transparent;
+    text-align: center;
+    padding-bottom: 0.4em;
+    padding-top: 0.5em;
+    border-radius: 0.4em;
+}
+
+.navibar .fileOprBtn:hover{
+    border: 1px solid var(--fileopr_btnhover);
+    opacity: 0.8;
+}
+.navibar .fileOprBtn .opricon{
+    width: 46px;
+}
+.navibar .fileOprBtn .oprtxt{
+    color:var(--fileopr_oprtxt);
+}
+
+.navibar .twolines.fileOprBtn{
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+}
+.navibar .twolines.fileOprBtn .opricon{
+    width: 40px;
+}
+.navibar .twolines.fileOprBtn .oprtxt{
+    font-size: 1em;
+}
+
+.navibar.mobile .fileOprBtn{
+    padding-bottom: 0.4em;
+    padding-top: 0.2em;
+    border-radius: 0.4em;
+}
+.navibar.mobile .fileOprBtn .opricon{
+    width: 36px;
+}
+
+.navibar.mobile .twolines.fileOprBtn .opricon{
+    width: 28px;
+}
+.navibar.mobile .twolines.fileOprBtn .oprtxt{
+    font-size: 0.7em;
+}
+
+.navibar .fileoprSmallBtn{
+    cursor: pointer;
+    border: 1px solid transparent;
+    color:var(--navi_txt);
+    background-color: transparent;
+    padding: 0.3em;
+    width: fit-content;
+    text-align: left;
+}
+
+.navibar .fileoprSmallBtn:hover{
+    opacity: 0.8;
+    border: 1px solid var(--divider);
+    border-radius: 0.4em;
+}
+
+.navibar.mobile .fileoprSmallBtn{
+    font-size: 0.9em;
+    padding: 0.2em;
+}
+
+
+.navibar .fileoprGroupDivider{
+    padding-right: 0.2em;
+    margin-right: 0.2em;
+    border-right: 1px solid var(--divider);
+    height: 80px;
+}
+
+.navibar.mobile .fileoprGroupDivider{
+    height: 64px;
+}
+
+.ui.selection.dropdown{
+    background-color: var(--dropdown_bg) !important;
+    color: var(--dropdown_txt) !important;
+    min-width: 13em !important;
+}
+
+/* special case when using in mobile sidebar */
+#mobileSortDropdown .ui.selection.dropdown{
+    width: 100%;
+    border-radius: 0;
+    padding: 1em;
+}
+
+.ui.selection.dropdown .menu > .item{
+    border-top-color:var(--divider);
+    background-color: var(--dropdown_bg) !important;
+    color: var(--dropdown_txt) !important;
+}
+
+.ui.selection.active.dropdown .menu{
+    border: 1px solid var(--divider) !important;
+}
+
+.ui.selection.visible.dropdown > .text:not(.default){
+    color: var(--text_color_secondary) !important;
+}
+
+/* Mobile interface */
+.fileOprBtnMobile{
+    position: relative;
+    width: 100%;
+    background-color: none;
+    padding: 0.5em;
+    padding-left: 1em;
+    cursor: pointer;
+}
+
+#mobileNaviBar{
+    height: 100vh !important;
+    overflow-y: auto !important;
+}
+#mobileNaviBar .fileoprBtnMobile{
+    border-bottom: 1px solid var(--divider);
+}
+
+.fileOprBtnMobile:hover{
+    background-color: var(--popup_btn_hover) !important;
+}
+
+.fileOprBtnMobile .opricon{
+    width: 30px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.4em;
+}
+
+.fileOprBtnMobile  p{
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.fileoprSmallBtnMobile{
+    cursor: pointer;
+    border: 1px solid transparent;
+    color:var(--navi_txt);
+    background-color: transparent;
+    padding: 0.5em;
+    padding-left: 1em;
+    width: 100%;
+    text-align: left;
+}
+
+#mobileNaviBar .fileoprSmallBtnMobile{
+    border-bottom: 1px solid var(--divider);
+}
+
+.fileoprSmallBtnMobile:hover{
+    background-color: var(--popup_btn_hover) !important;
+}
+
+/*
+    Address and search bar
+*/
+
+.navibarBtn{
+    cursor: pointer;
+    border: 1px solid transparent;
+    color:var(--navi_txt);
+    background-color: transparent;
+    padding: 0.3em;
+    display: inline-block;
+    border-radius: 0.4em;
+    padding-right: 0.1em;
+    padding-bottom: 0.4em;
+    margin-left: 0.2em;
+}
+
+.navibarBtn:hover{
+    opacity: 0.8;
+    border: 1px solid var(--divider);
+}
+
+.navibarBtn.disabled{
+    pointer-events: none;
+    opacity: 0.5;
+    user-select: none;
+}
+
+/* Special button for switching over to dark theme*/
+.navibarBtn.DarkThemeToggle.inverted{
+    color:var(--dark_theme_toggle_text);
+    background-color: var(--dark_theme_toggle);
+}
+
+.navibarBtn.DarkThemeToggle{
+    color: var(--white_theme_toggle_text);
+    background-color: var(--white_theme_toggle);
+}
+
+.navibarBtn.DarkThemeToggle:hover{
+    border: 1px solid transparent;
+}
+
+.navibarBtn:hover{
+    opacity: 0.8;
+}
+
+/* View mode buttons */
+.videmode.button{
+    color:var(--navi_txt) !important;
+    background-color: transparent;
+}
+
+.videmode.button:hover{
+    background-color: transparent;
+    opacity: 0.8;
+}
+.videmode.button:focus:not(#togglePropertiesViewBtn){
+    background-color: transparent !important;
+}
+
+.addressBar{
+    border-top: 1px solid var(--divider);
+    width:100%;
+    padding: 0.4em;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0.6em;
+    min-height: 35px;
+    margin-top:0.4em;
+    vertical-align: top;
+    display: flex;
+    position: relative;
+}
+
+.addressBar .divider{
+    color: var(--text_color_secondary) !important;
+}
+
+#pathDisplayField{
+    margin-left: 0.4em !important;
+}
+
+.addressText{
+    padding:5px;
+    border-radius: 0.4em;
+    border: 1px solid var(--address_text_border);
+    flex-grow: 1;
+    background-color: var(--address_text_background);
+}
+
+#pathInputField{
+    margin-left: 0.4em !important;
+    font-size: 1rem;
+    height: 27px;
+    width: 100%;
+}
+
+#pathInputField input{
+    background-color: var(--address_text_background);
+    color: var(--text_color);
+}
+
+.selectable{
+    cursor:pointer;
+}
+
+.viewportBtns.mobile{
+    order: 2;
+    margin-left: auto !important;
+    height: 30px;
+    border-right: none;
+    margin-top: -10px;
+}
+
+/* Mobile file operation menus */
+.mobileFileOprMenu{
+    position: fixed;
+    top: 0.6em;
+    right: 0.6em;
+    background-color: var(--navi_bgcolor);
+    border: none;
+    color: var(--text_color);
+    cursor: pointer;
+    width: 50px;
+    height: 50px;
+    padding-top: 4px;
+    padding-left: 10px;
+    border-radius: 0.4em;
+}
+
+.mobileFileOprMenu:hover{
+    opacity: 0.8;
+}
+
+.mobileFileOprMenuToggle{
+    padding: 1em;
+    border: 0px solid transparent;
+    color: var(--text_color);
+    border-bottom:2px solid var(--navi_theme);
+    text-align: right;
+    cursor: pointer;
+}
+
+.mobileFileOprMenuToggle .logo{
+    position: absolute;
+    top: 0.8em;
+    left: 0.5em;
+    width: 100px;
+    opacity: 0.6;
+}
+
+/*
+    Search bar
+*/
+.searchbar{
+    width:100%;
+    padding: 0.4em;
+    padding-left: 0;
+    padding-right: 0;
+    min-height: 35px;
+    margin-top:0.4em;
+    vertical-align: top;
+    display: flex;
+    align-items: center;
+}
+
+.searchbar .searInputBar{
+    flex-grow: 1;
+}
+
+.searchbar .navibarBtn.active{
+    color: var(--text_active);
+    font-weight: bold;
+    
+}
+
+/*
+    Main Window scalling 
+*/
+#mainWindow{
+    display: flex;
+    align-items:flex-start;
+}
+
+/*
+    Directory Sidebar
+*/
+#directorySidebar{
+    padding-top:1em;
+    padding-bottom: 1em;
+    overflow-y:auto;
+    padding-bottom:20px;
+    border-right:2px solid var(--dir_border);
+    background-color:var(--dir_bg);
+    color:var(--dir_txt);
+    width: 250px;
+    min-width: 250px;
+    scrollbar-width: thin;
+}
+
+
+.rightmargin.icon{
+    margin-right:8px !important;
+}
+.dir{
+    cursor:pointer;
+}
+.dir:not(.active):hover{
+    color: var(--dir_hover_text) !important;
+}
+.dir.active:hover{
+    background-color:var(--dir_hover_active);
+}
+.dir.item{
+    padding-top: 0.4em !important;
+    padding-bottom: 0.4em !important;
+    padding-left: 1.4em !important;
+    padding-right: 1.4em !important;
+    color:var(--dir_item_color);
+}
+
+.vroot.active{
+    background-color: var(--vroot_active_bg);
+}
+
+#selectInfo{
+    padding-left: 1.2em;
+    padding-right: 1.2em;
+    color: var(--text_color_secondary);
+}
+
+.mobilePathDisplayWrapper{
+    width:100%;
+    margin-bottom:5px;
+    
+}
+
+#mobilePathDisplay .divider{
+    color: var(--text_color_secondary) !important;
+}
+
+.pathDisplay{
+    cursor: text;
+    overflow:hidden;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.measure {
+    position: absolute;
+    visibility: hidden;
+    left: -1000px;
+    top: -1000px;
+}
+
+/*
+    Folder Viewer (Main viewer)
+*/
+#folderView{
+    flex-grow:1;
+    padding-left:2em;
+    padding-right:2em;
+    padding-top:2em;
+    overflow-y:auto;
+    background-color: var(--folder_view_background);
+    scrollbar-width: thin;
+}
+
+#folderview.fixscroll{
+    overflow: hidden;
+    padding-right: calc(2em + 12px);
+}
+
+#folderList{
+    margin-bottom:1em;
+}
+
+.fileviewList{
+    position: relative;
+}
+
+/* Common spacing for list view and grid view */
+.fileviewList .fileObject.item,.fileviewList .fileObject.card{
+    display:block !important;
+    cursor:pointer;
+    overflow-wrap: break-word !important;
+    user-select: none;
+    border: 1px solid var(--divider);
+}
+
+.fileviewList .fileObject.item:hover,.fileviewList .fileObject.card:hover{
+    background-color: var(--fileobject_background_hover) !important;
+}
+
+.fileviewList .fileObject.item.selected, .fileviewList .fileObject.card.selected{
+    background-color: var(--fileobject_background_selected) !important;
+    color: var(--fileobject_text_selected) !important;
+}
+
+/* Filelist in list mode */
+.fileviewList .fileObject.item{
+    padding: 0.8em;
+    padding-left: 1.2em;
+    padding-right: 1em;
+}
+
+.fileviewList .fileObject.item:first-child{
+    border-top-left-radius: 0.4em;
+    border-top-right-radius: 0.4em;
+}
+
+.fileviewList .fileObject.item:last-child{
+    border-bottom-left-radius: 0.4em;
+    border-bottom-right-radius: 0.4em;
+}
+
+.fileviewList .fileObject.item.selected.renaming{
+    padding-top: 0.6em !important;
+    padding-bottom: 0.6em !important;
+}
+
+.fileviewList .fileObject.item:not(:first-child) {
+    border-top: 0;
+}
+
+/* Filelist in grid mode */
+.fileviewList .fileObject.card{
+    border-radius: 0.4em;
+    position: relative;
+    margin-bottom:1em;
+    width: 148px !important;
+}
+
+.fileviewList .fileObject.card img{
+    width: 148px;
+    height: 148px;
+}
+
+.fileviewList .fileObject.card .content{
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 1em;
+    padding-bottom: 0.4em;
+}
+
+/* Share icon overlay for card view */
+.fileviewList .fileObject.card .image{
+    position: relative;
+}
+
+.fileviewList .fileObject.card .shareOverlay.visible{
+    position: absolute;
+    bottom: 0.4em;
+    left: 0.4em;
+    padding-top: 4px;
+    background-color: var(--navi_bgcolor);
+    height: 28px;
+    width: 28px;
+    border-radius: 0.4em;
+    border: 1px solid var(--divider);
+    box-shadow: 3px 1px 5px 1px rgba(158,158,158,0.2);
+    opacity: 0.9;
+}
+
+
+.fileviewList .fileObject.card .content .header{
+    font-size: 1.2em;
+    font-weight: 500;
+    color: var(--text_color);
+}
+
+.fileviewList .fileObject.card .content .meta{
+    font-size: 0.9em;
+    color: var(--text_color_secondary);
+}
+
+.fileviewList .fileObject.card .content .description{
+    font-size: 1em;
+    color: var(--text_color);
+    position: absolute;
+    bottom: 1em;
+    left: 1em;
+}
+
+/* fileview in detail mode */
+.fileviewList .fileObject.details{
+    cursor:pointer;
+    user-select: none;
+    border: 1px solid var(--divider);
+    color: var(--text_color);
+}
+
+.fileviewList .fileObject.details:hover{
+    background-color:var(--fileobject_background_hover) !important;
+}
+
+.fileviewList .fileObject.details.selected{
+    background-color:var(--fileobject_background_selected) !important;
+    
+}
+
+#folderView th{
+    color: var(--text_color);
+}
+
+.fileviewList .fileObject.details.selected.renaming td:first-child{
+    padding: inherit;
+}
+
+.fileviewList .detailTableContent tr td:first-child{
+    padding-left: 1em !important;
+}
+
+.fileviewList .fileObject.details .light-text{
+    color: var(--text_color_secondary);
+}
+
+
+/* Share button */
+.sharebtn{
+    cursor: pointer;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: var(--folder_view_share);
+    margin-left: 4px;
+    margin-top: 1px;
+}
+
+/* Handle specific Chrome bug in rendering the share icon */
+@media screen and (-webkit-min-device-pixel-ratio:0)
+  and (min-resolution:.001dpcm) {
+    .sharebtn{
+        padding: 0 !important;
+    }
+}
+
+.sharebtn:hover{
+    opacity: 0.5;
+}
+
+/*
+
+    Properties View
+
+*/
+
+#propertiesView{
+    width: 300px;
+    min-width: 300px;
+    padding: 1em;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    color: var(--text_color);
+    border-left: 1px solid var(--divider);
+    background-color: var(--folder_view_background);
+}
+
+#propertiesView td, #propertiesView span, #propertiesView div{
+    color: var(--text_color);
+}
+
+/*
+    Context Menu
+
+    This is a complete rewrite / re-implement of the 
+    ts contextmenu after migration
+
+
+*/
+
+.contextmenu{
+    position: fixed;
+    display: none;
+    width: 200px;
+    background-color: var(--contextmenu_background);
+    border: 1px solid var(--divider);
+    -webkit-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.12);
+    -moz-box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.12);
+    box-shadow: 3px 3px 5px 0px rgba(0,0,0,0.12);
+    /*border-radius: 0.4em;*/
+    z-index: 999;
+}
+
+.contextmenu.visible{
+    display: block;
+}
+
+.contextmenu .item{
+    padding: 0.6em;
+    cursor: pointer;
+    padding-left: 1.5em;
+    padding-right: 1.5em;
+    color: var(--contextmenu_textcolor);
+}
+
+.contextmenu .item:hover{
+    background-color: var(--contextmenu_hover);
+}
+
+.contextmenu .description{
+    color: var(--text_color_secondary);
+    float: right;
+    font-size: 0.9em;
+}
+
+.contextmenu .divider{
+    width: 100%;
+    border-bottom: 1px solid var(--divider);
+}
+
+/*
+    Message box and popups
+*/
+
+.msgbox{
+    position: absolute;
+    bottom: 0;
+    left: 3em;
+    width: 20em;
+    padding: 1.2em;
+    padding-right: 2em;
+    background-color: var(--navi_bgcolor);
+    border-top-right-radius: 0.4em;
+    border-top-left-radius: 0.4em;
+    border: 1px solid var(--divider) !important;
+    color: var(--text_color);
+}
+.closeMsgButton{
+    position:absolute;
+    top:8px;
+    right:12px;
+}
+.closeMsgButton{
+    cursor:pointer;
+}
+.popup{
+    position:fixed;
+    top:0;
+    z-index:200;
+    right:0;
+    bottom:30px;
+    padding-bottom:24px;
+    border: 0px solid transparent !important;
+    width: 30em;
+    height: 100%;
+    max-width: 100%;
+    border: 1px solid var(--popup_border);
+    background-color:var(--popup_bg);
+}
+
+.popup.wide{
+    width: 60em;
+}
+
+.popupheader{
+    width:100%;
+    padding:3px;
+    padding-left:12px;
+    border-bottom:2px solid var(--popup_header_bottom);
+    background-color: var(--popup_header_bg);
+    color: var(--popup_header_txt);
+    height:29px;
+}
+
+.popupcontent{
+    height: calc(100% - 29px);
+    overflow:auto;
+}
+
+.popupcloser{
+    position:absolute;
+    top:5px;
+    right:0px;
+    font-size: 120%;
+    cursor:pointer;
+}
+
+.popupbuttons{
+    cursor:pointer;
+    padding:5px;
+    padding-left:12px;
+    margin-bottom:4px;
+    border: 1px solid var(--popup_btn_border);
+    border-radius: 4px;
+}
+
+.popupbuttons.primary{
+    background-color:var(--popup_btn_primary_bg);
+    border: 1px solid transparent;
+    color:var(--popup_btn_primary_txt);
+}
+
+.popupbuttons.negative{
+    background-color:var(--popup_btn_negative_bg);
+    border: 1px solid transparent;
+    color:var(--popup_btn_negative_txt);
+}
+
+.popupbuttons.disabled{
+   opacity: 0.4;
+   pointer-events: none;
+}
+
+.popupbuttons.primary.disabled{
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* Rename dialog */
+.renameinput input{
+    box-shadow: none;
+    border: 1px solid var(--divider);
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    width: 100%;
+}
+
+.renameinput input:focus {
+    outline: none !important;
+    border: 1px solid var(--navi_theme);
+}
+
+.allowHover:hover{
+    background-color:var(--popup_btn_hover);
+}
+
+.allowHover.primary:hover{
+    background-color:var(--popup_btn_primary_bg_hover);
+}
+
+.allowHover.negative:hover{
+    background-color:var(--popup_btn_negative_bg_hover);
+}
+
+.newFileFormat{
+    cursor:pointer;
+}
+
+.popupWrapper{
+    position:fixed;
+    top:0px;
+    left:0px;
+    width:100%;
+    height:100%;
+    z-index:199;
+    background-color: var(--popup_wrapper_background);
+    display:none;
+}
+@supports (backdrop-filter: none) {
+    .popupWrapper {
+        backdrop-filter: blur(5px);
+    }
+}
+
+#openWithModuleList{
+    height:50vh;
+    overflow-y:auto;
+    background-color: var(--modulelist_bg);
+    border: 1px solid var(--divider);
+    border-radius: 0;
+}
+
+#openWithModuleList .ui.avatar.image, #openWithModuleList .ui.avatar.image img, #openWithModuleList .ui.avatar.image svg, #openWithModuleList .ui.avatar.images .image, #openWithModuleList .ui.avatar.images img, #openWithModuleList .ui.avatar.images svg{
+    border-radius: 0;
+}
+
+#openWithModuleList .item{
+    padding:8px;
+    padding-left:22px;
+    border-radius: 2px;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+#openWithModuleList .item:hover{
+    background-color: var(--modulelist_hover) !important;
+}
+
+#openWithModuleList .item.selected{
+    background-color: var(--open_with_selected) !important;
+    color:var(--open_with_selected_text);
+}
+
+#openWithModuleList .item.selectable:hover{
+    background-color:var(--open_with_item_hover_background);
+}
+
+.contextmenu .item{
+    font-size:90% !important;
+}
+
+/*
+    New Item List
+*/
+.newfilelist{
+    border: 1px solid var(--divider);
+    border-radius: 0.4em;
+    margin-bottom: 0.6em;
+}
+
+.newfilelist .item{
+    padding: 0.6em;
+}
+
+.newfilelist .item:not(:last-child){
+    border-bottom: 1px solid var(--divider);
+}
+.newfilelist .item.selected{
+    background-color: var(--open_with_selected) !important;
+    color:var(--open_with_selected_text);
+}
+
+
+/*
+    Upload Related
+*/
+#uploadTab{
+    position:fixed;
+    right:0px;
+    bottom: 0px;
+    width:300px;
+    margin-bottom:0px !important;
+    padding:0px !important;
+    background-color: var(--upload_bg) !important;
+    overflow-x: hidden;
+}
+
+.statusBar{
+    height:32px;
+    background-color:var(--uploadtab_bg);
+    padding:8px;
+}
+
+.statusBar{
+    color:var(--uploadtab_txt);
+}
+
+
+.hideUploadButton{
+    float: right;
+    cursor:pointer;
+}
+
+.uploadList{
+    margin:8px;
+    padding-bottom:3px;
+    margin-bottom:0px;
+    max-height: 250px;
+    overflow-y:auto;
+}
+
+.uploadTask{
+    margin-top:6px;
+    position: relative;
+}
+
+.uploadTaskRemoveIcon{
+    position:absolute;
+    top:0px;
+    right:0px;
+    cursor:pointer;
+}
+
+.saving {
+    -moz-animation: saving 3s ease-out;
+    -moz-animation-iteration-count: infinite;
+
+    -webkit-animation: saving 3s ease-out;
+    -webkit-animation-iteration-count: infinite;
+
+    -ms-animation: saving 3s ease-out;
+    -ms-animation-iteration-count: infinite;
+}
+
+@keyframes saving {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+@-webkit-keyframes saving {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+@-moz-keyframes saving {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+@-ms-keyframes saving {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+.clearallButton{
+    padding:8px;
+    cursor:pointer;
+}
+
+.themed.progress .bar{
+    background-color: var(--upload_progressbar);
+}
+
+.themed.progress .percentage{
+    color: var(--upload_progresstext) !important;
+}
+
+.success.progress .bar{
+    background-color: var(--upload_progress_succ);
+}
+
+.error.progress .bar{
+    background-color: var(--upload_progress_failed);
+}
+
+.ui.progress{
+    margin-bottom: 1em !important;
+}
+
+/*
+    Special message or exceptions 
+*/
+.ui.themed.header{
+    color: var(--text_color);
+}
+
+.ui.themed.header .sub.header{
+    color: var(--text_color_secondary);
+}
+
+code{
+    background-color: var(--code_bg);
+    color: var(--code_txt);
+    line-height: 2.5;
+    padding: 0.1em;
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+    border-radius: 0.2em;
+}
+
+
+/*
+    Legacy supports (Deprecated)
+*/
+.normal.object{
+    color:var(--normal_object_txt);
+}
+
+.hex.foldername{
+    color: var(--hex_folder_txt) !important;
+}
+
+.um.filename{
+    color: var(--um_file_txt) !important;
+}
+
+
+/*
+    Hot Search Related
+*/
+i.blue{
+    color: #345eeb;
+}
+
+.fileObject.hotSearchHighlight{
+    background-color: #d2f2f7 !important;
+}
+
+
+
+/*
+
+    Responsive
+
+*/
+
+@media (max-width:1035px) {
+    .viewportBtns{
+        display: block;
+        float: right;
+    }
+}
+
+@media (max-width:840px) {
+    .viewportBtns{
+        float: none;
+    }
+    
+    .tabletAndDesktopOnly{
+        display:none !important;
+    }
+
+    .mobileFileOprMenu{
+        display:block !important;
+    }
+
+    .navibar.mobile .fileOprBtn{
+        padding-top: 0.1em;
+        padding-bottom: 0em;
+    }
+    .navibar.mobile .twolines.fileOprBtn{
+        padding-top: 0.1em;
+        padding-bottom: 0em;
+    }
+    .navibar.mobile .twolines.fileOprBtn .opricon{
+        width: 36px;
+    }
+    .navibar.mobile .twolines.fileOprBtn .oprtxt{
+        display:none !important;
+    }
+
+    .navibar.mobile .wideScreenOnly{
+        display:none;
+    }
+
+    .navibar.mobile .fileoprGroupDivider{
+        height: 42px;
+    }
+
+    .mobileFileOprMenu{
+        top: 0;
+        right: 0.4em;
+        margin-top: -0.2em;
+    }
+
+}
+
+@media (max-width:620px) {
+    #pathInputField{
+        width: 100%;
+    }
+
+    #pathInputField input{
+        margin-left: 0;
+    }
+
+    .ui.selection.dropdown{
+        min-width: 8em;
+    }
+
+    /*Directory sidebar, full width */
+    #directorySidebar{
+        width: 100%;
+        min-width: 100%;
+    }
+
+    /* grid mode preview */
+    .fileviewList .fileObject.card{
+        border-radius: 0.4em;
+        position: relative;
+        margin-bottom:1em;
+        width: calc(33% - 4px) !important;
+        min-width: 100px;
+        max-width: 148px;
+    }
+    
+    .fileviewList .fileObject.card img{
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Properties view, disable function in small display size*/
+    #propertiesView{
+        display:none !important;
+    }
+
+    #togglePropertiesViewBtn{
+        display:none !important;
+    }
+
+    /* popups */
+    .popup{
+        top: 5em;
+        bottom: 5em;
+        width:100%;
+        height: auto;
+    }
+
+    /* msgbox */
+    .msgbox{
+        left: 0.4em;
+        border: 0px solid transparent;
+    }
+}
+
+@media (max-width:450px) {
+    .viewportBtns{
+        float: right;
+    }
+}

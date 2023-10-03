@@ -1,8 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -38,7 +39,7 @@ func initACME() *acme.ACMEHandler {
 		port = getRandomPort(30000)
 	}
 
-	return acme.NewACME("https://acme-staging-v02.api.letsencrypt.org/directory", strconv.Itoa(port))
+	return acme.NewACME("https://acme-v02.api.letsencrypt.org/directory", strconv.Itoa(port))
 }
 
 // create the special routing rule for ACME
@@ -65,7 +66,7 @@ func acmeRegisterSpecialRoutingRule() {
 				return
 			}
 
-			resBody, err := ioutil.ReadAll(res.Body)
+			resBody, err := io.ReadAll(res.Body)
 			defer res.Body.Close()
 			if err != nil {
 				fmt.Printf("error reading: %s\n", err)
@@ -113,4 +114,24 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
 		}
 	}
+}
+
+// HandleACMEPreferredCA return the user preferred / default CA for new subdomain auto creation
+func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
+	ca, err := utils.PostPara(r, "set")
+	if err != nil {
+		//Return the current ca to user
+		prefCA := "Let's Encrypt"
+		sysdb.Read("acmepref", "prefca", &prefCA)
+		js, _ := json.Marshal(prefCA)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Check if the CA is supported
+		acme.IsSupportedCA(ca)
+		//Set the new config
+		sysdb.Write("acmepref", "prefca", ca)
+		log.Println("Updating prefered ACME CA to " + ca)
+		utils.SendOK(w)
+	}
+
 }
