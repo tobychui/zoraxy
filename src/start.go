@@ -220,7 +220,7 @@ func startupSequence() {
 
 	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
 		Sysdb:                  sysdb,
-		Port:                   "8081", //Default Port
+		Port:                   "5487", //Default Port
 		WebRoot:                *staticWebServerRoot,
 		EnableDirectoryListing: true,
 		EnableWebDirManager:    *allowWebFileManager,

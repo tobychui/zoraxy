@@ -17,7 +17,7 @@
     <h3>Web Server Settings</h3>
     <div class="ui form">
         <div class="inline field">
-            <div class="ui toggle checkbox">
+            <div class="ui toggle checkbox webservRootDisabled">
                 <input id="webserv_enable" type="checkbox" class="hidden">
                 <label>Enable Static Web Server</label>
             </div>
@@ -37,7 +37,7 @@
                 See the -webserv flag for more details.
             </small>
         </div>
-        <div class="field">
+        <div class="field webservRootDisabled">
             <label>Port Number</label>
             <input id="webserv_listenPort" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
             <small>Use <code>http://127.0.0.1:<span class="webserv_port">8081</span></code> in proxy rules to access the web server</small>

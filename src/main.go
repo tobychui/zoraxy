@@ -47,9 +47,9 @@ var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for 
 
 var (
 	name        = "Zoraxy"
-	version     = "2.6.7"
+	version     = "2.6.8"
 	nodeUUID    = "generic"
-	development = false //Set this to false to use embedded web fs
+	development = true //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
