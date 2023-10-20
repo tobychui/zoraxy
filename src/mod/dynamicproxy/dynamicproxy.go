@@ -95,15 +95,21 @@ func (router *Router) StartProxyService() error {
 	}
 
 	if router.Option.UseTls {
-		//Serve with TLS mode
-		ln, err := tls.Listen("tcp", ":"+strconv.Itoa(router.Option.Port), config)
-		if err != nil {
-			log.Println(err)
-			router.Running = false
-			return err
+		/*
+			//Serve with TLS mode
+			ln, err := tls.Listen("tcp", ":"+strconv.Itoa(router.Option.Port), config)
+			if err != nil {
+				log.Println(err)
+				router.Running = false
+				return err
+			}
+			router.tlsListener = ln
+		*/
+		router.server = &http.Server{
+			Addr:      ":" + strconv.Itoa(router.Option.Port),
+			Handler:   router.mux,
+			TLSConfig: config,
 		}
-		router.tlsListener = ln
-		router.server = &http.Server{Addr: ":" + strconv.Itoa(router.Option.Port), Handler: router.mux}
 		router.Running = true
 
 		if router.Option.Port != 80 && router.Option.ForceHttpsRedirect {
@@ -143,7 +149,7 @@ func (router *Router) StartProxyService() error {
 				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					//Unable to startup port 80 listener. Handle shutdown process gracefully
 					stopChan <- true
-					log.Fatalf("Could not start server: %v\n", err)
+					log.Fatalf("Could not start redirection server: %v\n", err)
 				}
 			}()
 			router.tlsRedirectStop = stopChan
@@ -152,8 +158,8 @@ func (router *Router) StartProxyService() error {
 		//Start the TLS server
 		log.Println("Reverse proxy service started in the background (TLS mode)")
 		go func() {
-			if err := router.server.Serve(ln); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("Could not start server: %v\n", err)
+			if err := router.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("Could not start proxy server: %v\n", err)
 			}
 		}()
 	} else {
