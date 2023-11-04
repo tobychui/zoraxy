@@ -36,11 +36,5 @@ jobs:
             --provenance=false \
             --platform linux/amd64,linux/arm64 \
             --tag zoraxydocker/zoraxy:${{ github.event.release.tag_name }} \
-            .
-
-          docker buildx build --push \
-            --build-arg VERSION=${{ github.event.release.tag_name }} \
-            --provenance=false \
-            --platform linux/amd64,linux/arm64 \
             --tag zoraxydocker/zoraxy:latest \
             .
