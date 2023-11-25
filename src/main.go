@@ -20,6 +20,7 @@ import (
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -44,10 +45,11 @@ var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL cert
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
+var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "2.6.7"
+	version     = "2.6.8"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -80,8 +82,9 @@ var (
 	staticWebServer    *webserv.WebServer      //Static web server for hosting simple stuffs
 
 	//Helper modules
-	EmailSender    *email.Sender        //Email sender that handle email sending
-	AnalyticLoader *analytic.DataLoader //Data loader for Zoraxy Analytic
+	EmailSender      *email.Sender        //Email sender that handle email sending
+	AnalyticLoader   *analytic.DataLoader //Data loader for Zoraxy Analytic
+	SystemWideLogger *logger.Logger       //Logger for Zoraxy
 )
 
 // Kill signal handler. Do something before the system the core terminate.
@@ -115,6 +118,9 @@ func ShutdownSeq() {
 	//Remove the tmp folder
 	fmt.Println("- Cleaning up tmp files")
 	os.RemoveAll("./tmp")
+
+	fmt.Println("- Closing system wide logger")
+	SystemWideLogger.Close()
 
 	//Close database, final
 	fmt.Println("- Stopping system database")
@@ -151,7 +157,7 @@ func main() {
 	}
 	uuidBytes, err := os.ReadFile(uuidRecord)
 	if err != nil {
-		log.Println("Unable to read system uuid from file system")
+		SystemWideLogger.PrintAndLog("ZeroTier", "Unable to read system uuid from file system", nil)
 		panic(err)
 	}
 	nodeUUID = string(uuidBytes)
@@ -173,7 +179,7 @@ func main() {
 	//Start the finalize sequences
 	finalSequence()
 
-	log.Println("Zoraxy started. Visit control panel at http://localhost" + handler.Port)
+	SystemWideLogger.Println("Zoraxy started. Visit control panel at http://localhost" + handler.Port)
 	err = http.ListenAndServe(handler.Port, nil)
 
 	if err != nil {

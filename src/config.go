@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,6 +28,7 @@ type Record struct {
 	Rootname                string
 	ProxyTarget             string
 	UseTLS                  bool
+	BypassGlobalTLS         bool
 	SkipTlsValidation       bool
 	RequireBasicAuth        bool
 	BasicAuthCredentials    []*dynamicproxy.BasicAuthCredentials
@@ -61,11 +61,11 @@ func SaveReverseProxyEndpointToFile(proxyEndpoint *dynamicproxy.ProxyEndpoint) e
 func RemoveReverseProxyConfigFile(rootname string) error {
 	filename := getFilenameFromRootName(rootname)
 	removePendingFile := strings.ReplaceAll(filepath.Join("./conf/proxy/", filename), "\\", "/")
-	log.Println("Config Removed: ", removePendingFile)
+	SystemWideLogger.Println("Config Removed: ", removePendingFile)
 	if utils.FileExists(removePendingFile) {
 		err := os.Remove(removePendingFile)
 		if err != nil {
-			log.Println(err.Error())
+			SystemWideLogger.PrintAndLog("Proxy", "Unabel to remove config file", err)
 			return err
 		}
 	}
@@ -81,6 +81,7 @@ func LoadReverseProxyConfig(filename string) (*Record, error) {
 		Rootname:                "",
 		ProxyTarget:             "",
 		UseTLS:                  false,
+		BypassGlobalTLS:         false,
 		SkipTlsValidation:       false,
 		RequireBasicAuth:        false,
 		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
@@ -109,6 +110,7 @@ func ConvertProxyEndpointToRecord(targetProxyEndpoint *dynamicproxy.ProxyEndpoin
 		Rootname:                targetProxyEndpoint.RootOrMatchingDomain,
 		ProxyTarget:             targetProxyEndpoint.Domain,
 		UseTLS:                  targetProxyEndpoint.RequireTLS,
+		BypassGlobalTLS:         targetProxyEndpoint.BypassGlobalTLS,
 		SkipTlsValidation:       targetProxyEndpoint.SkipCertValidations,
 		RequireBasicAuth:        targetProxyEndpoint.RequireBasicAuth,
 		BasicAuthCredentials:    targetProxyEndpoint.BasicAuthCredentials,
@@ -191,14 +193,14 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 		//Also zip in the sysdb
 		zipFile, err := zipWriter.Create("sys.db")
 		if err != nil {
-			log.Println("[Backup] Unable to zip sysdb: " + err.Error())
+			SystemWideLogger.PrintAndLog("Backup", "Unable to zip sysdb", err)
 			return
 		}
 
 		// Open the file on disk
 		file, err := os.Open("sys.db")
 		if err != nil {
-			log.Println("[Backup] Unable to open sysdb: " + err.Error())
+			SystemWideLogger.PrintAndLog("Backup", "Unable to open sysdb", err)
 			return
 		}
 		defer file.Close()
@@ -206,7 +208,7 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 		// Copy the file contents to the zip file
 		_, err = io.Copy(zipFile, file)
 		if err != nil {
-			log.Println(err)
+			SystemWideLogger.Println(err)
 			return
 		}
 
@@ -311,12 +313,12 @@ func ImportConfigFromZip(w http.ResponseWriter, r *http.Request) {
 
 	// Send a success response
 	w.WriteHeader(http.StatusOK)
-	log.Println("Configuration restored")
+	SystemWideLogger.Println("Configuration restored")
 	fmt.Fprintln(w, "Configuration restored")
 
 	if restoreDatabase {
 		go func() {
-			log.Println("Database altered. Restarting in 3 seconds...")
+			SystemWideLogger.Println("Database altered. Restarting in 3 seconds...")
 			time.Sleep(3 * time.Second)
 			os.Exit(0)
 		}()

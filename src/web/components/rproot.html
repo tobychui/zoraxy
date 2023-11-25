@@ -75,13 +75,13 @@
             $("#rootReqTLS").parent().addClass("disabled");
 
             //Check if web server is enabled. If not, ask if the user want to enable it
-            if (!$("#webserv_enable").parent().checkbox("is checked")){
+            /*if (!$("#webserv_enable").parent().checkbox("is checked")){
                 confirmBox("Enable static web server now?", function(choice){
                     if (choice == true){
                         $("#webserv_enable").parent().checkbox("set checked");
                     }
                 });
-            }
+            }*/
         }else{
             $("#rootReqTLS").parent().removeClass("disabled");
             $("#proxyRoot").parent().removeClass("disabled");
@@ -89,7 +89,7 @@
         }
     }
     
-    function initRootInfo(){
+    function initRootInfo(callback=undefined){
         $.get("/api/proxy/list?type=root", function(data){
             if (data == null){
 
@@ -97,11 +97,40 @@
                 $("#proxyRoot").val(data.Domain);
                 checkRootRequireTLS(data.Domain);
             }
+
+            if (callback != undefined){
+                callback();
+            }
+        });
+    }
+    initRootInfo(function(){
+        updateWebServerLinkSettings();
+    });
+
+    //Update the current web server port settings
+    function updateWebServerLinkSettings(){
+        isUsingStaticWebServerAsRoot(function(isUsingWebServ){
+            if (isUsingWebServ){
+                $(".webservRootDisabled").addClass("disabled");
+                $("#useStaticWebServer").parent().checkbox("set checked");
+            }else{
+                $(".webservRootDisabled").removeClass("disabled");
+                $("#useStaticWebServer").parent().checkbox("set unchecked");
+            }
+        })
+    }
+
+    function isUsingStaticWebServerAsRoot(callback){
+        let currentProxyRoot = $("#proxyRoot").val().trim();
+        $.get("/api/webserv/status", function(webservStatus){
+            if (currentProxyRoot == "127.0.0.1:" + webservStatus.ListeningPort || currentProxyRoot == "localhost:" + webservStatus.ListeningPort){
+                return callback(true);
+            }
+            return callback(false);
         });
         
     }
-    initRootInfo();
-
+    
     function updateRootSettingStates(){
         $.get("/api/cert/tls", function(data){
             if (data == true){
@@ -111,6 +140,7 @@
             }
         });
     }
+
     //Bind event to tab switch
     tabSwitchEventBind["setroot"] = function(){
         //On switch over to this page, update root info
@@ -137,11 +167,12 @@
                 let useRedirect = $("#unsetRedirect")[0].checked;
                 updateRedirectionDomainSettingInputBox(useRedirect);
             });
-        })
+        });
        
     }
     checkCustomRedirectForUnsetSubd();
 
+    //Check if the given domain will redirect to https
     function checkRootRequireTLS(targetDomain){
         //Trim off the http or https from the origin
         if (targetDomain.startsWith("http://")){
@@ -168,7 +199,7 @@
        })
     }
 
-
+    //Set the new proxy root option
     function setProxyRoot(){
         var newpr = $("#proxyRoot").val();
         if (newpr.trim() == ""){
@@ -189,8 +220,24 @@
                     msgbox(data.error, false, 5000);
                 }else{
                     //OK
-                    initRootInfo();
-                    msgbox("Proxy Root Updated")
+                    initRootInfo(function(){
+                        //Check if WebServ is enabled
+                        isUsingStaticWebServerAsRoot(function(isUsingWebServ){
+                            if (isUsingWebServ){
+                                //Force enable static web server
+                                //See webserv.html for details
+                                setWebServerRunningState(true);
+                            }
+                            
+                            setTimeout(function(){
+                                 //Update the checkbox
+                                updateWebServerLinkSettings();
+                                msgbox("Proxy Root Updated");
+                            }, 1000);
+                            
+                        })
+                    });
+                    
                 }
             }
         });

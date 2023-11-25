@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -128,7 +127,7 @@ func handleListDomains(w http.ResponseWriter, r *http.Request) {
 		certBtyes, err := os.ReadFile(certFilepath)
 		if err != nil {
 			// Unable to load this file
-			log.Println("Unable to load certificate: " + certFilepath)
+			SystemWideLogger.PrintAndLog("TLS", "Unable to load certificate: "+certFilepath, err)
 			continue
 		} else {
 			// Cert loaded. Check its expiry time
@@ -182,11 +181,11 @@ func handleToggleTLSProxy(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if newState == "true" {
 			sysdb.Write("settings", "usetls", true)
-			log.Println("Enabling TLS mode on reverse proxy")
+			SystemWideLogger.Println("Enabling TLS mode on reverse proxy")
 			dynamicProxyRouter.UpdateTLSSetting(true)
 		} else if newState == "false" {
 			sysdb.Write("settings", "usetls", false)
-			log.Println("Disabling TLS mode on reverse proxy")
+			SystemWideLogger.Println("Disabling TLS mode on reverse proxy")
 			dynamicProxyRouter.UpdateTLSSetting(false)
 		} else {
 			utils.SendErrorResponse(w, "invalid state given. Only support true or false")
@@ -213,11 +212,11 @@ func handleSetTlsRequireLatest(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if newState == "true" {
 			sysdb.Write("settings", "forceLatestTLS", true)
-			log.Println("Updating minimum TLS version to v1.2 or above")
+			SystemWideLogger.Println("Updating minimum TLS version to v1.2 or above")
 			dynamicProxyRouter.UpdateTLSVersion(true)
 		} else if newState == "false" {
 			sysdb.Write("settings", "forceLatestTLS", false)
-			log.Println("Updating minimum TLS version to v1.0 or above")
+			SystemWideLogger.Println("Updating minimum TLS version to v1.0 or above")
 			dynamicProxyRouter.UpdateTLSVersion(false)
 		} else {
 			utils.SendErrorResponse(w, "invalid state given")
