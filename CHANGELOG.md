@@ -1,3 +1,13 @@
+# v2.6.8 Nov 25 2023
+
++ Added opt-out for subdomains for global TLS settings see [release notes](https://github.com/tobychui/zoraxy/releases/tag/2.6.8)
++ Optimized subdomain / vdir editing interface
++ Added system wide logger (Work in progress)
++ Fixed issue for uptime monitor bug [#77](https://github.com/tobychui/zoraxy/issues/77)
++ Changed default static web port to 5487 (prevent already in use)
++ Added automatic HTTP/2 to TLS mode
++ Bug fix for webserver autostart [67](https://github.com/tobychui/zoraxy/issues/67)
+
 # v2.6.7 Sep 26 2023
 
 + Added Static Web Server function [#56](https://github.com/tobychui/zoraxy/issues/56)

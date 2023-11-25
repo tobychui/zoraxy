@@ -60,6 +60,12 @@ func (router *Router) UpdateTLSVersion(requireLatest bool) {
 	router.Restart()
 }
 
+// Update port 80 listener state
+func (router *Router) UpdatePort80ListenerState(useRedirect bool) {
+	router.Option.ListenOnPort80 = useRedirect
+	router.Restart()
+}
+
 // Update https redirect, which will require updates
 func (router *Router) UpdateHttpToHttpsRedirectSetting(useRedirect bool) {
 	router.Option.ForceHttpsRedirect = useRedirect
@@ -95,27 +101,73 @@ func (router *Router) StartProxyService() error {
 	}
 
 	if router.Option.UseTls {
-		//Serve with TLS mode
-		ln, err := tls.Listen("tcp", ":"+strconv.Itoa(router.Option.Port), config)
-		if err != nil {
-			log.Println(err)
-			router.Running = false
-			return err
+		/*
+			//Serve with TLS mode
+			ln, err := tls.Listen("tcp", ":"+strconv.Itoa(router.Option.Port), config)
+			if err != nil {
+				log.Println(err)
+				router.Running = false
+				return err
+			}
+			router.tlsListener = ln
+		*/
+		router.server = &http.Server{
+			Addr:      ":" + strconv.Itoa(router.Option.Port),
+			Handler:   router.mux,
+			TLSConfig: config,
 		}
-		router.tlsListener = ln
-		router.server = &http.Server{Addr: ":" + strconv.Itoa(router.Option.Port), Handler: router.mux}
 		router.Running = true
 
-		if router.Option.Port != 80 && router.Option.ForceHttpsRedirect {
+		if router.Option.Port != 80 && router.Option.ListenOnPort80 {
 			//Add a 80 to 443 redirector
 			httpServer := &http.Server{
 				Addr: ":80",
 				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					protocol := "https://"
-					if router.Option.Port == 443 {
-						http.Redirect(w, r, protocol+r.Host+r.RequestURI, http.StatusTemporaryRedirect)
+					//Check if the domain requesting allow non TLS mode
+					domainOnly := r.Host
+					if strings.Contains(r.Host, ":") {
+						hostPath := strings.Split(r.Host, ":")
+						domainOnly = hostPath[0]
+					}
+					sep := router.getSubdomainProxyEndpointFromHostname(domainOnly)
+					if sep != nil && sep.BypassGlobalTLS {
+						//Allow routing via non-TLS handler
+						originalHostHeader := r.Host
+						if r.URL != nil {
+							r.Host = r.URL.Host
+						} else {
+							//Fallback when the upstream proxy screw something up in the header
+							r.URL, _ = url.Parse(originalHostHeader)
+						}
+
+						sep.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+							ProxyDomain:  sep.Domain,
+							OriginalHost: originalHostHeader,
+							UseTLS:       sep.RequireTLS,
+							PathPrefix:   "",
+						})
+						return
+					}
+
+					if router.Option.ForceHttpsRedirect {
+						//Redirect to https is enabled
+						protocol := "https://"
+						if router.Option.Port == 443 {
+							http.Redirect(w, r, protocol+r.Host+r.RequestURI, http.StatusTemporaryRedirect)
+						} else {
+							http.Redirect(w, r, protocol+r.Host+":"+strconv.Itoa(router.Option.Port)+r.RequestURI, http.StatusTemporaryRedirect)
+						}
 					} else {
-						http.Redirect(w, r, protocol+r.Host+":"+strconv.Itoa(router.Option.Port)+r.RequestURI, http.StatusTemporaryRedirect)
+						//Do not do redirection
+						if sep != nil {
+							//Sub-domain exists but not allow non-TLS access
+							w.WriteHeader(http.StatusBadRequest)
+							w.Write([]byte("400 - Bad Request"))
+						} else {
+							//No defined sub-domain
+							http.NotFound(w, r)
+						}
+
 					}
 
 				}),
@@ -143,7 +195,7 @@ func (router *Router) StartProxyService() error {
 				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					//Unable to startup port 80 listener. Handle shutdown process gracefully
 					stopChan <- true
-					log.Fatalf("Could not start server: %v\n", err)
+					log.Fatalf("Could not start redirection server: %v\n", err)
 				}
 			}()
 			router.tlsRedirectStop = stopChan
@@ -152,8 +204,8 @@ func (router *Router) StartProxyService() error {
 		//Start the TLS server
 		log.Println("Reverse proxy service started in the background (TLS mode)")
 		go func() {
-			if err := router.server.Serve(ln); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("Could not start server: %v\n", err)
+			if err := router.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("Could not start proxy server: %v\n", err)
 			}
 		}()
 	} else {

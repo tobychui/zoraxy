@@ -27,6 +27,7 @@ type RouterOption struct {
 	Port               int    //Incoming port
 	UseTls             bool   //Use TLS to serve incoming requsts
 	ForceTLSLatest     bool   //Force TLS1.2 or above
+	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
 	TlsManager         *tlscert.Manager
 	RedirectRuleTable  *redirection.RuleTable

@@ -9,7 +9,6 @@
                 <tr>
                     <th>Virtual Directory</th>
                     <th>Proxy To</th>
-                    <th>TLS/SSL Verification</th>
                     <th>Basic Auth</th>
                     <th class="no-sort" style="min-width: 7.2em;">Actions</th>
                 </tr>
@@ -43,6 +42,9 @@
                     let vdirData = encodeURIComponent(JSON.stringify(vdir));
                     if (vdir.RequireTLS){
                         tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                        if (vdir.SkipCertValidations){
+                            tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                        }
                     }
 
                     let tlsVerificationField = "";
@@ -55,7 +57,6 @@
                     $("#vdirList").append(`<tr eptuuid="${vdir.RootOrMatchingDomain}" payload="${vdirData}" class="vdirEntry">
                         <td data-label="" editable="false">${vdir.RootOrMatchingDomain}</td>
                         <td data-label="" editable="true" datatype="domain">${vdir.Domain} ${tlsIcon}</td>
-                        <td data-label="" editable="true" datatype="skipver">${tlsVerificationField}</td>
                         <td data-label="" editable="true" datatype="basicauth">${vdir.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
                         <td class="center aligned" editable="true" datatype="action" data-label="">
                             <button class="ui circular mini basic icon button editBtn" onclick='editEndpoint("vdir","${vdir.RootOrMatchingDomain}")'><i class="edit icon"></i></button>

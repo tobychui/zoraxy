@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -104,7 +103,21 @@ func HandleCountryDistrSummary(w http.ResponseWriter, r *http.Request) {
 /*
 	Up Time Monitor
 */
-//Generate uptime monitor targets from reverse proxy rules
+
+// Update uptime monitor targets after rules updated
+// See https://github.com/tobychui/zoraxy/issues/77
+func UpdateUptimeMonitorTargets() {
+	if uptimeMonitor != nil {
+		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
+		go func() {
+			uptimeMonitor.ExecuteUptimeCheck()
+		}()
+
+		SystemWideLogger.PrintAndLog("Uptime", "Uptime monitor config updated", nil)
+	}
+}
+
+// Generate uptime monitor targets from reverse proxy rules
 func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Target {
 	subds := dp.GetSDProxyEndpointsAsMap()
 	vdirs := dp.GetVDProxyEndpointsAsMap()
@@ -263,7 +276,7 @@ func HandleWakeOnLan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Println("[WoL] Sending Wake on LAN magic packet to " + wake)
+		SystemWideLogger.PrintAndLog("WoL", "Sending Wake on LAN magic packet to "+wake, nil)
 		err := wakeonlan.WakeTarget(wake)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())

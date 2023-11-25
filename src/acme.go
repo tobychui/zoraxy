@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -29,7 +28,7 @@ func getRandomPort(minPort int) int {
 
 // init the new ACME instance
 func initACME() *acme.ACMEHandler {
-	log.Println("Starting ACME handler")
+	SystemWideLogger.Println("Starting ACME handler")
 	rand.Seed(time.Now().UnixNano())
 	// Generate a random port above 30000
 	port := getRandomPort(30000)
@@ -44,7 +43,7 @@ func initACME() *acme.ACMEHandler {
 
 // create the special routing rule for ACME
 func acmeRegisterSpecialRoutingRule() {
-	log.Println("Assigned temporary port:" + acmeHandler.Getport())
+	SystemWideLogger.Println("Assigned temporary port:" + acmeHandler.Getport())
 
 	err := dynamicProxyRouter.AddRoutingRules(&dynamicproxy.RoutingRule{
 		ID: "acme-autorenew",
@@ -79,7 +78,7 @@ func acmeRegisterSpecialRoutingRule() {
 	})
 
 	if err != nil {
-		log.Println("[Err] " + err.Error())
+		SystemWideLogger.PrintAndLog("ACME", "Unable register temp port for DNS resolver", err)
 	}
 }
 
@@ -89,7 +88,7 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 	if dynamicProxyRouter.Option.Port == 443 {
 		//Enable port 80 to 443 redirect
 		if !dynamicProxyRouter.Option.ForceHttpsRedirect {
-			log.Println("Temporary enabling HTTP to HTTPS redirect for ACME certificate renew requests")
+			SystemWideLogger.Println("Temporary enabling HTTP to HTTPS redirect for ACME certificate renew requests")
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(true)
 		} else {
 			//Set this to true, so after renew, do not turn it off
@@ -110,7 +109,7 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 	if dynamicProxyRouter.Option.Port == 443 {
 		if !isForceHttpsRedirectEnabledOriginally {
 			//Default is off. Turn the redirection off
-			log.Println("Restoring HTTP to HTTPS redirect settings")
+			SystemWideLogger.PrintAndLog("ACME", "Restoring HTTP to HTTPS redirect settings", nil)
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
 		}
 	}
@@ -130,7 +129,7 @@ func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
 		acme.IsSupportedCA(ca)
 		//Set the new config
 		sysdb.Write("acmepref", "prefca", ca)
-		log.Println("Updating prefered ACME CA to " + ca)
+		SystemWideLogger.Println("Updating prefered ACME CA to " + ca)
 		utils.SendOK(w)
 	}
 
