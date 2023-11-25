@@ -25,7 +25,7 @@ services:
     ports:
       - 80:80
       - 443:443
-      - (external):8000
+      - (external):5487
     volumes:
       - (path to storage directory):/opt/zoraxy/config/
     environment:
@@ -39,12 +39,12 @@ services:
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
 | `-v (path to storage directory):/opt/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
 | `-e ARGS='(your arguments)'` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-noauth=false` but <b>you cannot change the management port.</b> This is required for the healthcheck to work. |
-| `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that I have published. |
+| `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that is published. |
 
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -e ARGS='-noauth=false' zoraxydocker/zoraxy:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 5487:5487/tcp -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -e ARGS='-noauth=false' zoraxydocker/zoraxy:latest
 ```
 
 ### Docker Compose </br>
@@ -57,7 +57,7 @@ services:
     ports:
       - 80:80
       - 443:443
-      - 8005:8000/tcp
+      - 5487:5487/tcp
     volumes:
       - /home/docker/Containers/Zoraxy:/opt/zoraxy/config/
     environment:
