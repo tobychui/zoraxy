@@ -86,7 +86,7 @@
 
         let id = value[0].ID;
         let name = value[0].Name;
-        let url = value[0].URL;
+        let url = value[value.length - 1].URL;
         let protocol = value[0].Protocol;
 
         //Generate the status dot
@@ -111,6 +111,9 @@
             }else{
                 if (thisStatus.StatusCode >= 500 && thisStatus.StatusCode < 600){
                     //Special type of error, cause by downstream reverse proxy
+                    dotType = "error";
+                }else if (thisStatus.StatusCode == 401){
+                    //Unauthorized error
                     dotType = "error";
                 }else{
                     dotType = "offline";
@@ -141,6 +144,28 @@
                 currentOnlineStatus = `<i class="exclamation circle icon"></i> Misconfigured`;
                 onlineStatusCss = `color: #f38020;`;
                 reminderEle = `<small style="${onlineStatusCss}">Downstream proxy server is online with misconfigured settings</small>`;
+            }else if (value[value.length - 1].StatusCode >= 400 && value[value.length - 1].StatusCode <= 405){
+                switch(value[value.length - 1].StatusCode){
+                    case 400:
+                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Bad Request`;
+                        break;
+                    case 401:
+                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Unauthorized`;
+                        break;
+                    case 403:
+                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Forbidden`;
+                        break;
+                    case 404: 
+                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Not Found`;
+                        break; 
+                    case 405: 
+                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Method Not Allowed`;
+                        break;
+                }
+                
+                onlineStatusCss = `color: #f38020;`;
+                reminderEle = `<small style="${onlineStatusCss}">Target online but not accessible</small>`;
+            
             }else{
                 currentOnlineStatus = `<i class="circle icon"></i> Offline`;
                 onlineStatusCss = `color: #df484a;`;

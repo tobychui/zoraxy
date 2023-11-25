@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -25,33 +24,33 @@ func ReverseProxtInit() {
 	inboundPort := 80
 	if sysdb.KeyExists("settings", "inbound") {
 		sysdb.Read("settings", "inbound", &inboundPort)
-		log.Println("Serving inbound port ", inboundPort)
+		SystemWideLogger.Println("Serving inbound port ", inboundPort)
 	} else {
-		log.Println("Inbound port not set. Using default (80)")
+		SystemWideLogger.Println("Inbound port not set. Using default (80)")
 	}
 
 	useTls := false
 	sysdb.Read("settings", "usetls", &useTls)
 	if useTls {
-		log.Println("TLS mode enabled. Serving proxxy request with TLS")
+		SystemWideLogger.Println("TLS mode enabled. Serving proxxy request with TLS")
 	} else {
-		log.Println("TLS mode disabled. Serving proxy request with plain http")
+		SystemWideLogger.Println("TLS mode disabled. Serving proxy request with plain http")
 	}
 
 	forceLatestTLSVersion := false
 	sysdb.Read("settings", "forceLatestTLS", &forceLatestTLSVersion)
 	if forceLatestTLSVersion {
-		log.Println("Force latest TLS mode enabled. Minimum TLS LS version is set to v1.2")
+		SystemWideLogger.Println("Force latest TLS mode enabled. Minimum TLS LS version is set to v1.2")
 	} else {
-		log.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
+		SystemWideLogger.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
 	}
 
 	forceHttpsRedirect := false
 	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
 	if forceHttpsRedirect {
-		log.Println("Force HTTPS mode enabled")
+		SystemWideLogger.Println("Force HTTPS mode enabled")
 	} else {
-		log.Println("Force HTTPS mode disabled")
+		SystemWideLogger.Println("Force HTTPS mode disabled")
 	}
 
 	dprouter, err := dynamicproxy.NewDynamicProxy(dynamicproxy.RouterOption{
@@ -67,7 +66,7 @@ func ReverseProxtInit() {
 		WebDirectory:       *staticWebServerRoot,
 	})
 	if err != nil {
-		log.Println(err.Error())
+		SystemWideLogger.PrintAndLog("Proxy", "Unable to create dynamic proxy router", err)
 		return
 	}
 
@@ -78,7 +77,7 @@ func ReverseProxtInit() {
 	for _, conf := range confs {
 		record, err := LoadReverseProxyConfig(conf)
 		if err != nil {
-			log.Println("Failed to load "+filepath.Base(conf), err.Error())
+			SystemWideLogger.PrintAndLog("Proxy", "Failed to load config file: "+filepath.Base(conf), err)
 			return
 		}
 
@@ -92,6 +91,7 @@ func ReverseProxtInit() {
 				MatchingDomain:          record.Rootname,
 				Domain:                  record.ProxyTarget,
 				RequireTLS:              record.UseTLS,
+				BypassGlobalTLS:         record.BypassGlobalTLS,
 				SkipCertValidations:     record.SkipTlsValidation,
 				RequireBasicAuth:        record.RequireBasicAuth,
 				BasicAuthCredentials:    record.BasicAuthCredentials,
@@ -102,13 +102,14 @@ func ReverseProxtInit() {
 				RootName:                record.Rootname,
 				Domain:                  record.ProxyTarget,
 				RequireTLS:              record.UseTLS,
+				BypassGlobalTLS:         record.BypassGlobalTLS,
 				SkipCertValidations:     record.SkipTlsValidation,
 				RequireBasicAuth:        record.RequireBasicAuth,
 				BasicAuthCredentials:    record.BasicAuthCredentials,
 				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
 			})
 		} else {
-			log.Println("Unsupported endpoint type: " + record.ProxyType + ". Skipping " + filepath.Base(conf))
+			SystemWideLogger.PrintAndLog("Proxy", "Unsupported endpoint type: "+record.ProxyType+". Skipping "+filepath.Base(conf), nil)
 		}
 	}
 
@@ -117,7 +118,7 @@ func ReverseProxtInit() {
 	//reverse proxy server in front of this service
 	time.Sleep(300 * time.Millisecond)
 	dynamicProxyRouter.StartProxyService()
-	log.Println("Dynamic Reverse Proxy service started")
+	SystemWideLogger.Println("Dynamic Reverse Proxy service started")
 
 	//Add all proxy services to uptime monitor
 	//Create a uptime monitor service
@@ -128,7 +129,7 @@ func ReverseProxtInit() {
 			Interval:        300, //5 minutes
 			MaxRecordsStore: 288, //1 day
 		})
-		log.Println("Uptime Monitor background service started")
+		SystemWideLogger.Println("Uptime Monitor background service started")
 	}()
 
 }
@@ -179,6 +180,13 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	useTLS := (tls == "true")
+
+	bypassGlobalTLS, _ := utils.PostPara(r, "bypassGlobalTLS")
+	if bypassGlobalTLS == "" {
+		bypassGlobalTLS = "false"
+	}
+
+	useBypassGlobalTLS := bypassGlobalTLS == "true"
 
 	stv, _ := utils.PostPara(r, "tlsval")
 	if stv == "" {
@@ -240,6 +248,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			RootName:             vdir,
 			Domain:               endpoint,
 			RequireTLS:           useTLS,
+			BypassGlobalTLS:      useBypassGlobalTLS,
 			SkipCertValidations:  skipTlsValidation,
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: basicAuthCredentials,
@@ -257,6 +266,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			MatchingDomain:       subdomain,
 			Domain:               endpoint,
 			RequireTLS:           useTLS,
+			BypassGlobalTLS:      useBypassGlobalTLS,
 			SkipCertValidations:  skipTlsValidation,
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: basicAuthCredentials,
@@ -281,6 +291,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		Rootname:             rootname,
 		ProxyTarget:          endpoint,
 		UseTLS:               useTLS,
+		BypassGlobalTLS:      useBypassGlobalTLS,
 		SkipTlsValidation:    skipTlsValidation,
 		RequireBasicAuth:     requireBasicAuth,
 		BasicAuthCredentials: basicAuthCredentials,
@@ -385,6 +396,10 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
 	}
 	SaveReverseProxyConfigToFile(&thisProxyConfigRecord)
+
+	//Update uptime monitor
+	UpdateUptimeMonitorTargets()
+
 	utils.SendOK(w)
 }
 
@@ -416,6 +431,9 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
 		uptimeMonitor.CleanRecords()
 	}
+
+	//Update uptime monitor
+	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
 }
@@ -751,11 +769,11 @@ func HandleUpdateHttpsRedirect(w http.ResponseWriter, r *http.Request) {
 		}
 		if useRedirect == "true" {
 			sysdb.Write("settings", "redirect", true)
-			log.Println("Updating force HTTPS redirection to true")
+			SystemWideLogger.Println("Updating force HTTPS redirection to true")
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(true)
 		} else if useRedirect == "false" {
 			sysdb.Write("settings", "redirect", false)
-			log.Println("Updating force HTTPS redirection to false")
+			SystemWideLogger.Println("Updating force HTTPS redirection to false")
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
 		}
 

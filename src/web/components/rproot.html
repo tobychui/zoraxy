@@ -112,8 +112,10 @@
         isUsingStaticWebServerAsRoot(function(isUsingWebServ){
             if (isUsingWebServ){
                 $(".webservRootDisabled").addClass("disabled");
+                $("#useStaticWebServer").parent().checkbox("set checked");
             }else{
                 $(".webservRootDisabled").removeClass("disabled");
+                $("#useStaticWebServer").parent().checkbox("set unchecked");
             }
         })
     }

@@ -38,6 +38,7 @@ func (router *Router) AddSubdomainRoutingService(options *SubdOptions) error {
 		Domain:                  domain,
 		RequireTLS:              options.RequireTLS,
 		Proxy:                   proxy,
+		BypassGlobalTLS:         options.BypassGlobalTLS,
 		SkipCertValidations:     options.SkipCertValidations,
 		RequireBasicAuth:        options.RequireBasicAuth,
 		BasicAuthCredentials:    options.BasicAuthCredentials,

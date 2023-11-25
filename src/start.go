@@ -14,6 +14,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -93,10 +94,17 @@ func startupSequence() {
 		panic(err)
 	}
 
+	//Create a system wide logger
+	l, err := logger.NewLogger("zr", "./log", *logOutputToFile)
+	if err == nil {
+		SystemWideLogger = l
+	} else {
+		panic(err)
+	}
 	//Create a netstat buffer
 	netstatBuffers, err = netstat.NewNetStatBuffer(300)
 	if err != nil {
-		log.Println("Failed to load network statistic info")
+		SystemWideLogger.PrintAndLog("Network", "Failed to load network statistic info", err)
 		panic(err)
 	}
 
@@ -134,13 +142,13 @@ func startupSequence() {
 			BuildVersion: version,
 		}, "")
 		if err != nil {
-			log.Println("Unable to startup mDNS service. Disabling mDNS services")
+			SystemWideLogger.Println("Unable to startup mDNS service. Disabling mDNS services")
 		} else {
 			//Start initial scanning
 			go func() {
 				hosts := mdnsScanner.Scan(30, "")
 				previousmdnsScanResults = hosts
-				log.Println("mDNS Startup scan completed")
+				SystemWideLogger.Println("mDNS Startup scan completed")
 			}()
 
 			//Create a ticker to update mDNS results every 5 minutes
@@ -154,7 +162,7 @@ func startupSequence() {
 					case <-ticker.C:
 						hosts := mdnsScanner.Scan(30, "")
 						previousmdnsScanResults = hosts
-						log.Println("mDNS scan result updated")
+						SystemWideLogger.Println("mDNS scan result updated")
 					}
 				}
 			}()
@@ -171,7 +179,7 @@ func startupSequence() {
 	if usingZtAuthToken == "" {
 		usingZtAuthToken, err = ganserv.TryLoadorAskUserForAuthkey()
 		if err != nil {
-			log.Println("Failed to load ZeroTier controller API authtoken")
+			SystemWideLogger.Println("Failed to load ZeroTier controller API authtoken")
 		}
 	}
 	ganManager = ganserv.NewNetworkManager(&ganserv.NetworkManagerOptions{

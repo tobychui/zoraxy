@@ -49,6 +49,12 @@
                                     </div>
                                     <div class="field">
                                         <div class="ui checkbox">
+                                            <input type="checkbox" id="bypassGlobalTLS">
+                                            <label>Bypass Global TLS<br><small>Allow this subdomain / vdir to be connected without TLS</small></label>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <div class="ui checkbox">
                                             <input type="checkbox" id="requireBasicAuth">
                                             <label>Require Basic Auth<br><small>Require client to login in order to view the page</small></label>
                                         </div>
@@ -123,6 +129,7 @@
         var proxyDomain = $("#proxyDomain").val();
         var useTLS = $("#reqTls")[0].checked;
         var skipTLSValidation = $("#skipTLSValidation")[0].checked;
+        var bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
         var requireBasicAuth = $("#requireBasicAuth")[0].checked;
 
         if (type === "vdir") {
@@ -162,6 +169,7 @@
                 tls: useTLS, 
                 ep: proxyDomain,
                 tlsval: skipTLSValidation,
+                bypassGlobalTLS: bypassGlobalTLS,
                 bauth: requireBasicAuth,
                 cred: JSON.stringify(credentials),
             },
