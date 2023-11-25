@@ -51,7 +51,7 @@ var (
 	name        = "Zoraxy"
 	version     = "2.6.8"
 	nodeUUID    = "generic"
-	development = true //Set this to false to use embedded web fs
+	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
