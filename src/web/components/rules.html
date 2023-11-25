@@ -8,7 +8,7 @@
                         <div class="field">
                             <label>Proxy Type</label>
                             <div class="ui selection dropdown">
-                                <input type="hidden" id="ptype" value="subd">
+                                <input type="hidden" id="ptype" value="subd" onchange="handleProxyTypeOptionChange(this.value)">
                                 <i class="dropdown icon"></i>
                                 <div class="default text">Proxy Type</div>
                                 <div class="menu">
@@ -22,7 +22,7 @@
                             <input type="text" id="rootname" placeholder="s1.mydomain.com">
                         </div>
                         <div class="field">
-                            <label>IP Address or Domain Name with port</label>
+                            <label>Target IP Address or Domain Name with port</label>
                             <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
                             <small>E.g. 192.168.0.101:8000 or example.com</small>
                         </div>
@@ -44,13 +44,13 @@
                                     <div class="field">
                                         <div class="ui checkbox">
                                             <input type="checkbox" id="skipTLSValidation">
-                                            <label>Ignore TLS/SSL Verification Error<br><small>E.g. self-signed, expired certificate (Not Recommended)</small></label>
+                                            <label>Ignore TLS/SSL Verification Error<br><small>For targets that is using self-signed, expired certificate (Not Recommended)</small></label>
                                         </div>
                                     </div>
                                     <div class="field">
                                         <div class="ui checkbox">
                                             <input type="checkbox" id="bypassGlobalTLS">
-                                            <label>Bypass Global TLS<br><small>Allow this subdomain / vdir to be connected without TLS</small></label>
+                                            <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
                                         </div>
                                     </div>
                                     <div class="field">
@@ -214,6 +214,14 @@
         
     }
 
+    function handleProxyTypeOptionChange(newType){
+        if (newType == "subd"){
+            $("#bypassGlobalTLS").parent().removeClass("disabled");
+        }else if (newType == "vdir"){
+            $("#bypassGlobalTLS").parent().addClass("disabled");
+        }
+    }
+
     //Generic functions for delete rp endpoints 
     function deleteEndpoint(ptype, epoint){
         if (confirm("Confirm remove proxy for :" + epoint + " (type: " + ptype + ")?")){
@@ -339,7 +347,7 @@
         var columns = row.find('td[data-label]');
         var payload = $(row).attr("payload");
         payload = JSON.parse(decodeURIComponent(payload));
-     
+        console.log(payload);
         //console.log(payload);
         columns.each(function(index) {
             var column = $(this);
@@ -355,34 +363,37 @@
             var datatype = $(this).attr("datatype");
             if (datatype == "domain"){
                 let domain = payload.Domain;
+                //Target require TLS for proxying
                 let tls = payload.RequireTLS;
                 if (tls){
                     tls = "checked";
                 }else{
                     tls = "";
                 }
+
+                //Require TLS validation
+                let skipTLSValidation = payload.SkipCertValidations;
+                let checkstate = "";
+                if (skipTLSValidation){
+                    checkstate = "checked";
+                }
+
                 input = `
                     <div class="ui mini fluid input">
                         <input type="text" class="Domain" value="${domain}">
                     </div>
                     <div class="ui checkbox" style="margin-top: 0.4em;">
                         <input type="checkbox" class="RequireTLS" ${tls}>
-                        <label>Require TLS</label>
+                        <label>Require TLS<br>
+                            <small>Proxy target require HTTPS connection</small></label>
+                    </div><br>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="SkipCertValidations" ${checkstate}>
+                        <label>Skip Verification<br>
+                        <small>Check this if proxy target is using self signed certificates</small></label>
                     </div>
                 `;
                 column.empty().append(input);
-
-            }else if (datatype == "skipver"){
-                let skipTLSValidation = payload.SkipCertValidations;
-                let checkstate = "";
-                if (skipTLSValidation){
-                    checkstate = "checked";
-                }
-                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="SkipCertValidations" ${checkstate}>
-                    <label>Skip Verification</label>
-                    <small>Check this if you are using self signed certificates</small>
-                </div>`);
             }else if (datatype == "basicauth"){
                 let requireBasicAuth = payload.RequireBasicAuth;
                 let checkstate = "";
@@ -399,6 +410,16 @@
                 column.empty().append(`
                 <button title="Cancel" onclick="exitProxyInlineEdit('${endpointType}');" class="ui basic small circular icon button"><i class="ui remove icon"></i></button>
                 <button title="Save" onclick="saveProxyInlineEdit('${uuid}');" class="ui basic small circular icon button"><i class="ui green save icon"></i></button>
+                `);
+            }else if (datatype == "inbound" && payload.ProxyType == 0){
+                let originalContent = $(column).html();
+                column.empty().append(`${originalContent}
+                    <div class="ui divider"></div>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="BypassGlobalTLS" ${payload.BypassGlobalTLS?"checked":""}>
+                        <label>Allow plain HTTP access<br>
+                            <small>Allow inbound connections without TLS/SSL</small></label>
+                    </div><br>
                 `);
             }else{
                 //Unknown field. Leave it untouched
@@ -431,6 +452,7 @@
         let requireTLS = $(row).find(".RequireTLS")[0].checked;
         let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
         let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
+        let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
 
         console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
 
@@ -441,6 +463,7 @@
                 "type": epttype,
                 "rootname": uuid,
                 "ep":newDomain,
+                "bpgtls": bypassGlobalTLS,
                 "tls" :requireTLS,
                 "tlsval": skipCertValidations,
                 "bauth" :requireBasicAuth,

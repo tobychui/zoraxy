@@ -45,10 +45,20 @@ func ReverseProxtInit() {
 		SystemWideLogger.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
 	}
 
+	listenOnPort80 := false
+	sysdb.Read("settings", "listenP80", &listenOnPort80)
+	if listenOnPort80 {
+		SystemWideLogger.Println("Port 80 listener enabled")
+	} else {
+		SystemWideLogger.Println("Port 80 listener disabled")
+	}
+
 	forceHttpsRedirect := false
 	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
 	if forceHttpsRedirect {
 		SystemWideLogger.Println("Force HTTPS mode enabled")
+		//Port 80 listener must be enabled to perform http -> https redirect
+		listenOnPort80 = true
 	} else {
 		SystemWideLogger.Println("Force HTTPS mode disabled")
 	}
@@ -58,6 +68,7 @@ func ReverseProxtInit() {
 		Port:               inboundPort,
 		UseTls:             useTls,
 		ForceTLSLatest:     forceLatestTLSVersion,
+		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
 		TlsManager:         tlsCertManager,
 		RedirectRuleTable:  redirectTable,
@@ -343,8 +354,14 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	if stv == "" {
 		stv = "false"
 	}
-
 	skipTlsValidation := (stv == "true")
+
+	//Load bypass TLS option
+	bpgtls, _ := utils.PostPara(r, "bpgtls")
+	if bpgtls == "" {
+		bpgtls = "false"
+	}
+	bypassGlobalTLS := (bpgtls == "true")
 
 	rba, _ := utils.PostPara(r, "bauth")
 	if rba == "" {
@@ -365,6 +382,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			RootName:             targetProxyEntry.RootOrMatchingDomain,
 			Domain:               endpoint,
 			RequireTLS:           useTLS,
+			BypassGlobalTLS:      false,
 			SkipCertValidations:  skipTlsValidation,
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
@@ -377,6 +395,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			MatchingDomain:       targetProxyEntry.RootOrMatchingDomain,
 			Domain:               endpoint,
 			RequireTLS:           useTLS,
+			BypassGlobalTLS:      bypassGlobalTLS,
 			SkipCertValidations:  skipTlsValidation,
 			RequireBasicAuth:     requireBasicAuth,
 			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
@@ -746,6 +765,35 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSONResponse(w, string(js))
 	} else {
 		utils.SendErrorResponse(w, "Invalid type given")
+	}
+}
+
+// Handle port 80 incoming traffics
+func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
+	enabled, err := utils.GetPara(r, "enable")
+	if err != nil {
+		//Load the current status
+		currentEnabled := false
+		err = sysdb.Read("settings", "listenP80", &currentEnabled)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+		js, _ := json.Marshal(currentEnabled)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		if enabled == "true" {
+			sysdb.Write("settings", "listenP80", true)
+			SystemWideLogger.Println("Enabling port 80 listener")
+			dynamicProxyRouter.UpdatePort80ListenerState(true)
+		} else if enabled == "false" {
+			sysdb.Write("settings", "listenP80", false)
+			SystemWideLogger.Println("Disabling port 80 listener")
+			dynamicProxyRouter.UpdatePort80ListenerState(true)
+		} else {
+			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
+		}
+		utils.SendOK(w)
 	}
 }
 
