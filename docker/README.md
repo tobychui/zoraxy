@@ -39,7 +39,7 @@ services:
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
 | `-v (path to storage directory):/opt/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
 | `-e ARGS='(your arguments)'` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-noauth=false` but <b>you cannot change the management port.</b> This is required for the healthcheck to work. |
-| `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that I have published. |
+| `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that is published. |
 
 ## Examples: </br>
 ### Docker Run </br>
