@@ -36,5 +36,5 @@ ENV ARGS="-noauth=false"
 
 ENTRYPOINT ["/opt/zoraxy/entrypoint.sh"]
 
-HEALTHCHECK --interval=5s --timeout=5s --retries=2 CMD nc -vz 127.0.0.1 5487 || exit 1
+HEALTHCHECK --interval=5s --timeout=5s --retries=2 CMD nc -vz 127.0.0.1 8000 || exit 1
 

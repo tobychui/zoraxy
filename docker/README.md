@@ -25,7 +25,7 @@ services:
     ports:
       - 80:80
       - 443:443
-      - (external):5487
+      - (external):8000
     volumes:
       - (path to storage directory):/opt/zoraxy/config/
     environment:
@@ -44,7 +44,7 @@ services:
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 80:80 -p 443:443 -p 5487:5487/tcp -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -e ARGS='-noauth=false' zoraxydocker/zoraxy:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -e ARGS='-noauth=false' zoraxydocker/zoraxy:latest
 ```
 
 ### Docker Compose </br>
@@ -57,7 +57,7 @@ services:
     ports:
       - 80:80
       - 443:443
-      - 5487:5487/tcp
+      - 8005:8000/tcp
     volumes:
       - /home/docker/Containers/Zoraxy:/opt/zoraxy/config/
     environment:
