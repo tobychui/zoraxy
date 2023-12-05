@@ -8,9 +8,7 @@ General purpose request (reverse) proxy and forwarding tool for low power device
 
 - Simple to use interface with detail in-system instructions
 - Reverse Proxy
-  
   - Subdomain Reverse Proxy
-  
   - Virtual Directory Reverse Proxy
 - Redirection Rules
 - TLS / SSL setup and deploy
@@ -19,7 +17,6 @@ General purpose request (reverse) proxy and forwarding tool for low power device
 - Integrated Up-time Monitor
 - Web-SSH Terminal
 - Utilities
-  
   - CIDR IP converters
   - mDNS Scanner
   - IP Scanner
@@ -42,11 +39,11 @@ sudo ./zoraxy -port=:8000
 
 ## Usage
 
-Zoraxy provide basic authentication system for standalone mode. To use it in standalone mode, follow the instruction below for your desired deployment platform.
+Zoraxy provide basic authentication system for standalone mode. To use it in standalone mode, follow the instructions below for your desired deployment platform.
 
 ### Standalone Mode
 
-Standalone mode is the default mode for Zoraxy. This allow single account to manage your reverse proxy server just like a home router. This mode is suitable for new owners for homelab or makers start growing their web services into multiple servers.
+Standalone mode is the default mode for Zoraxy. This allows a single account to manage your reverse proxy server, just like a home router. This mode is suitable for new owners to homelabs or makers starting growing their web services into multiple servers.
 
 #### Linux
 
@@ -81,7 +78,7 @@ If you already have a up-stream reverse proxy server in place with permission ma
 
 #### Use with ArozOS
 
-[ArozOS ](https://arozos.com)subservice is a build in permission managed reverse proxy server. To use zoraxy with arozos, connect to your arozos host via ssh and use the following command to install zoraxy
+The [ArozOS](https://arozos.com) subservice is a built in permission managed reverse proxy server. To use Zoraxy with ArozOS, connect to your ArozOS host via SSH and use the following command to install Zoraxy:
 
 ```bash
 # cd into your arozos subservice folder. Sometime it is under ~/arozos/src/subservice
@@ -89,24 +86,24 @@ cd ~/arozos/subservices
 mkdir zoraxy
 cd ./zoraxy
 
-# Download the release binary from Github release
+# Download the release binary from Github release.
 wget {binary executable link from release page}
 
-# Set permission. Change this if required
+# Set permission. Change this if required.
 sudo chmod 775 -R ./
 
 # Start zoraxy to see if the downloaded arch is correct.
 ./zoraxy
 
-# After the unzip done, press Ctrl + C to kill it
-# Rename it to valid arozos subservice binary format
+# After unzipping, press Ctrl + C to kill it
+# Rename it to validate the ArozOS subservice binary format.
 mv ./zoraxy zoraxy_linux_amd64
 
-# If you are using SBCs with different CPU arch, use the following names
+# If you are using SBCs with different CPU arch, use the following names:
 # mv ./zoraxy zoraxy_linux_arm
 # mv ./zoraxy zoraxy_linux_arm64
 
-# Restart arozos
+# Restart ArozOS
 sudo systemctl restart arozos
 ```
 
@@ -128,11 +125,11 @@ There is a wikipage with [Frequently-Asked-Questions](https://github.com/tobychu
 
 This project also compatible with [ZeroTier](https://www.zerotier.com/). However, due to licensing issues, ZeroTier is not included in the binary. 
 
-Assuming you already have a valid license, to use Zoraxy with ZeroTier, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken at correct location in your host.
+To use Zoraxy with ZeroTier, assuming you already have a valid license, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken in the correct location on your host.
 
-If you prefer not to run Zoraxy in sudo mode or you have some weird installation profile, you can also pass in the ZeroTier auth token using the following flags
+If you prefer not to run Zoraxy in sudo mode or you have some weird installation profile, you can also pass in the ZeroTier auth token using the following flags:
 
-```
+```bash
 ./zoraxy -ztauth="your_zerotier_authtoken" -ztport=9993
 ```
 
@@ -142,8 +139,7 @@ This allows you to have infinite number of network members in your Global Area N
 
 ## Web.SSH
 
-Web SSH currently only support Linux based OS. The following platforms are supported
-
+Web SSH currently only supports Linux based OSes. The following platforms are supported:
 - linux/amd64
 - linux/arm64
 - linux/armv6 (experimental)
@@ -151,9 +147,9 @@ Web SSH currently only support Linux based OS. The following platforms are suppo
 
 ### Loopback Connection 
 
-Loopback web ssh connection, by default, is disabled. This means that if you are trying to connect to address like 127.0.0.1 or localhost, the system will reject your connection due to security issues. To enable loopback for testing or development purpose, use the following flags to override the loopback checking.
+Loopback web SSH connection, by default, is disabled. This means that if you are trying to connect to an address like 127.0.0.1 or localhost, the system will reject your connection for security reasons. To enable loopback for testing or development purpose, use the following flags to override the loopback checking:
 
-```
+```bash
 ./zoraxy -sshlb=true
 ```
 
@@ -165,5 +161,5 @@ If you like the project and want to support us, please consider a donation. You 
 
 ## License
 
-This project is open source under AGPL. I open source this project so everyone can check for security issues and benefit all users. **If your plans to use this project in commercial environment which violate the AGPL terms, please contact toby@imuslab.com for an alternative commercial license.** 
+This project is open source under AGPL. I open-source this project so everyone can check for security issues and benefit all users. **If your plans to use this project in a scommercial environment which violate the AGPL terms, please contact toby@imuslab.com for an alternative commercial license.** 
 
