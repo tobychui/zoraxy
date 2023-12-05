@@ -44,7 +44,6 @@ Zoraxy provides basic authentication system for standalone mode. To use it in st
 ### Standalone Mode
 
 Standalone mode is the default mode for Zoraxy. This allows a single account to manage your reverse proxy server, just like a home router. This mode is suitable for new owners to homelabs or makers starting growing their web services into multiple servers.
-Standalone mode is the default mode for Zoraxy. This allows a single account to manage your reverse proxy server, just like a home router. This mode is suitable for new owners to homelabs or makers starting growing their web services into multiple servers.
 
 #### Linux
 
@@ -88,10 +87,8 @@ mkdir zoraxy
 cd ./zoraxy
 
 # Download the release binary from Github release.
-# Download the release binary from Github release.
 wget {binary executable link from release page}
 
-# Set permission. Change this if required.
 # Set permission. Change this if required.
 sudo chmod 775 -R ./
 
@@ -106,7 +103,6 @@ mv ./zoraxy zoraxy_linux_amd64
 # mv ./zoraxy zoraxy_linux_arm
 # mv ./zoraxy zoraxy_linux_arm64
 
-# Restart ArozOS
 # Restart ArozOS
 sudo systemctl restart arozos
 ```
@@ -130,11 +126,10 @@ There is a wikipage with [Frequently-Asked-Questions](https://github.com/tobychu
 This project also compatible with [ZeroTier](https://www.zerotier.com/). However, due to licensing issues, ZeroTier is not included in the binary. 
 
 To use Zoraxy with ZeroTier, assuming you already have a valid license, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken in the correct location on your host.
-To use Zoraxy with ZeroTier, assuming you already have a valid license, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken in the correct location on your host.
 
 If you prefer not to run Zoraxy in sudo mode or you have some weird installation profile, you can also pass in the ZeroTier auth token using the following flags::
 
-```bashbash
+```bash
 ./zoraxy -ztauth="your_zerotier_authtoken" -ztport=9993
 ```
 
@@ -145,7 +140,6 @@ This allows you to have an infinite number of network members in your Global Are
 ## Web SSH
 
 Web SSH currently only supports Linux based OSes. The following platforms are supported:
-Web SSH currently only supports Linux based OSes. The following platforms are supported:
 - linux/amd64
 - linux/arm64
 - linux/armv6 (experimental)
@@ -154,9 +148,8 @@ Web SSH currently only supports Linux based OSes. The following platforms are su
 ### Loopback Connection 
 
 Loopback web SSH connection, by default, is disabled. This means that if you are trying to connect to an address like 127.0.0.1 or localhost, the system will reject your connection for security reasons. To enable loopback for testing or development purpose, use the following flags to override the loopback checking:
-Loopback web SSH connection, by default, is disabled. This means that if you are trying to connect to an address like 127.0.0.1 or localhost, the system will reject your connection for security reasons. To enable loopback for testing or development purpose, use the following flags to override the loopback checking:
 
-```bashbash
+```bash
 ./zoraxy -sshlb=true
 ```
 
