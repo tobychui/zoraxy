@@ -1,8 +1,8 @@
 # v2.6.8 Nov 25 2023
 
-+ Added opt-out for subdomains for global TLS settings see [release notes](https://github.com/tobychui/zoraxy/releases/tag/2.6.8)
++ Added opt-out for subdomains for global TLS settings: See [release notes](https://github.com/tobychui/zoraxy/releases/tag/2.6.8)
 + Optimized subdomain / vdir editing interface
-+ Added system wide logger (Work in progress)
++ Added system-wide logger (Work in progress)
 + Fixed issue for uptime monitor bug [#77](https://github.com/tobychui/zoraxy/issues/77)
 + Changed default static web port to 5487 (prevent already in use)
 + Added automatic HTTP/2 to TLS mode
@@ -24,20 +24,20 @@
 + Optimized memory usage (from 1.2GB to 61MB for low speed geoip lookup) [#52](https://github.com/tobychui/zoraxy/issues/52)
 + Added unset subdomain custom redirection feature [#46](https://github.com/tobychui/zoraxy/issues/46)
 + Fixed potential security issue in satori/go.uuid [#55](https://github.com/tobychui/zoraxy/issues/55)
-+ Added custom acme feature in back-end, thx [@daluntw](https://github.com/daluntw)
++ Added custom ACME feature in backend, thx [@daluntw](https://github.com/daluntw)
 + Added bypass TLS check for custom acme server, thx [@daluntw](https://github.com/daluntw)
-+ Introduce new startparameter `-fastgeoip=true`, see [Releases](https://github.com/tobychui/zoraxy/releases/tag/2.6.6)
++ Introduce new start parameter `-fastgeoip=true`: see [release notes](https://github.com/tobychui/zoraxy/releases/tag/2.6.6)
 
 # v2.6.5.1 Jul 26 2023
 
 + Patch on memory leaking for Windows netstat module (do not effect any of the previous non Windows builds)
-+ Fixed potential memory leak in acme handler logic
-+ Added "Do you want to get a TLS certificate for this subdomain?" dialog when a new subdomain proxy rule is created
++ Fixed potential memory leak in ACME handler logic
++ Added "Do you want to get a TLS certificate for this subdomain?" dialogue when a new subdomain proxy rule is created
 
 # v2.6.5 Jul 19 2023
 
 + Added Import / Export-Feature 
-+ Moved configurationfiles to a separate folder [#26](https://github.com/tobychui/zoraxy/issues/26)
++ Moved configuration files to a separate folder [#26](https://github.com/tobychui/zoraxy/issues/26)
 + Added auto-renew with ACME [#6](https://github.com/tobychui/zoraxy/issues/6)
 + Fixed Whitelistbug [#18](https://github.com/tobychui/zoraxy/issues/18)
 + Added Whois
@@ -47,7 +47,7 @@
 + Added force TLS v1.2 above toggle
 + Added trace route
 + Added ICMP ping
-+ Added special routing rules module for up-coming acme integration
++ Added special routing rules module for up-coming ACME integration
 + Fixed IPv6 check bug in black/whitelist
 + Optimized UI for TCP Proxy
 
@@ -57,7 +57,7 @@
 + Split blacklist and whitelist from geodb script file
 + Optimized compile binary size
 + Added access control to TCP proxy
-+ Added "invalid config detect" in up time monitor for isse [#7](https://github.com/tobychui/zoraxy/issues/7)
++ Added "invalid config detect" in up time monitor for issue [#7](https://github.com/tobychui/zoraxy/issues/7)
 + Fixed minor bugs in advance stats panel
 + Reduced file size of embedded materials
 
@@ -84,6 +84,6 @@
 + Basic auth
 + Support TLS verification skip (for self signed certs)
 + Added trend analysis
-+ Added referer and file type analysis
++ Added referrer and file type analysis
 + Added cert expire day display
 + Moved subdomain proxy logic to dpcore
