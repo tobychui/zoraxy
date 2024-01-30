@@ -66,6 +66,39 @@ The installation method is same as Linux. For other ARM SBCs, please refer to yo
 #### Docker
 See the [/docker](https://github.com/tobychui/zoraxy/tree/main/docker) folder for more details.
 
+### Start Paramters
+```
+Usage of zoraxy:
+  -autorenew int
+        ACME auto TLS/SSL certificate renew check interval (seconds) (default 86400)
+  -fastgeoip
+        Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
+  -info
+        Show information about this program in JSON
+  -log
+        Log terminal output to file (default true)
+  -mdns
+        Enable mDNS scanner and transponder (default true)
+  -noauth
+        Disable authentication for management interface
+  -port string
+        Management web interface listening port (default ":8000")
+  -rpt string
+        Reserved
+  -sshlb
+        Allow loopback web ssh connection (DANGER)
+  -version
+        Show version of this server
+  -webfm
+        Enable web file manager for static web server root folder (default true)
+  -webroot string
+        Static web server root folder. Only allow chnage in start paramters (default "./www")
+  -ztauth string
+        ZeroTier authtoken for the local node
+  -ztport int
+        ZeroTier controller API port (default 9993)
+```
+
 ### External Permission Management Mode
 
 If you already have an upstream reverse proxy server in place with permission management, you can use Zoraxy in noauth mode. To enable noauth mode, start Zoraxy with the following flag:
