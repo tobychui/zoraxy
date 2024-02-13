@@ -1,92 +1,119 @@
 <div class="standardContainer">
     <div class="ui basic segment">
-        <h2>Set Proxy Root</h2>
-        <p>The default routing point for all incoming traffics. For all routing not found in the proxy rules, request will be redirected to the proxy root server.</p>
+        <h2>Default Site</h2>
+        <p>Default routing options for inbound traffic (previously called Proxy Root)</p>
         <div class="ui form">
-            <div class="field">
-                <label>Proxy Root</label>
-                <input type="text" id="proxyRoot" onchange="checkRootRequireTLS(this.value);">
-                <small>E.g. localhost:8080</small>
-            </div>
-            <div class="field">
-                <div class="ui checkbox">
-                    <input type="checkbox" id="rootReqTLS">
-                    <label>Root require TLS connection <br><small>Check this if your proxy root URL starts with https://</small></label>
+            <div class="grouped fields">
+                <label>What to show when Zoraxy is hit with an unknown Host?</label>
+                <div class="field">
+                    <div class="ui radio defaultsite checkbox">
+                        <input type="radio" name="defaultsiteOption" checked="checked" value="webserver">
+                        <label>Internal Static Web Server<br>
+                            <small>Check this if you prefer a more Apache / Nginx like experience</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="ui radio defaultsite checkbox">
+                        <input type="radio" name="defaultsiteOption" value="proxy">
+                        <label>Reverse Proxy Target<br>
+                            <small>Proxy the request to a target IP / domain</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="ui radio defaultsite checkbox">
+                        <input type="radio" name="defaultsiteOption" value="redirect">
+                        <label>Redirect<br>
+                            <small>Redirect the user to a new location</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="ui radio defaultsite checkbox">
+                        <input type="radio" name="defaultsiteOption" value="notfound">
+                        <label>Show 404 NOT FOUND<br>
+                            <small>Respond to request with a 404 page</small>
+                        </label>
+                    </div>
                 </div>
             </div>
-            <div class="ui horizontal divider">OR</div>
-            <div class="field">
-                <div class="ui checkbox">
-                    <input type="checkbox" id="useStaticWebServer" onchange="handleUseStaticWebServerAsRoot()">
-                    <label>Use Static Web Server as Root <br><small>Check this if you prefer a more Apache Web Server like experience</small></label>
-                </div>
-            </div>
-            <br>
-            <button class="ui basic button" onclick="setProxyRoot()"><i class="teal home icon" ></i> Update Proxy Root</button>
-            <div class="ui divider"></div>
-            <div class="field">
-                <h4>Root Routing Options</h4>
-            </div>
-            <div class="field">
-                <div class="ui checkbox">
-                    <input type="checkbox" id="unsetRedirect">
-                    <label>Enable redirect for unset subdomains <br><small>Redirect subdomain that is not found to custom domain</small></label>
-                </div>
-            </div>
-            <div class="ui basic segment" id="unsetRedirectDomainWrapper" style="background-color: #f7f7f7; border-radius: 1em; margin-left: 2em; padding-left: 2em; display:none;">
-                <div style="
-                    position: absolute;
-                    top:0;
-                    left: 1em;
-                    width: 0px;
-                    height: 0px;
-                    margin-top: -10px;
-                    border-left: 10px solid transparent;
-                    border-right: 10px solid transparent;
-                    border-bottom: 10px solid #f7f7f7;">
+        </div>
 
+        <!-- Reverse Proxy as Default Site Options -->
+        <div id="defaultSiteProxyOptions" class="ui basic segment advanceoptions defaultSiteOptionDetails" style="display:none; ">
+            <div class="ui form">
+                <div class="field">
+                        <label>Reverse Proxy Target</label>
+                        <input type="text" id="proxyRoot" onchange="checkRootRequireTLS(this.value);">
+                        <small>e.g. localhost:8080 / 192.168.0.100:80 / example.com</small>
                 </div>
+                <div class="field">
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="rootReqTLS">
+                        <label>Reverse proxy target require TLS connection <br><small>Check this if your proxy target URL require connection with https://</small></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Redirect as default site Options-->
+        <div id="defaultSiteRedirectOptions" class="ui basic segment advanceoptions defaultSiteOptionDetails" style="display:none;"">
+            <div class="ui form">
                 <div class="field">
                     <label>Redirect target domain</label>
                     <div class="ui input">
-                        <input id="unsetRedirectDomain" type="text" placeholder="http://example.com">
+                        <input id="redirectDomain" type="text" placeholder="http://example.com">
                     </div>
-                    <small>Unset subdomain will be redirected to the link above. Remember to include the protocol (e.g. http:// or https://)<br>
-                    Leave empty for redirecting to upper level domain (e.g. notfound.example.com <i class="right arrow icon"></i> example.com)</small>
+                    <small>Unset subdomain will be redirected to the link above. Remember to include the protocol (e.g. http:// or https://)</small>
                 </div>
             </div>
-            <br>
-            <button class="ui basic button" onclick="updateRootOptions()"><i class="blue save icon" ></i> Save Root Options</button>
         </div>
+
+        <button class="ui basic button" onclick="setProxyRoot(this)"><i class="green checkmark icon" ></i> Apply Changes</button>
+        <button class="ui basic button" onclick="initRootInfo()"><i class="refresh icon" ></i> Reset</button>
         <br>
-        
     </div>
 </div>
 <script>
+    var currentDefaultSiteOption = 0; //For enum see typedef.go
     $("#advanceRootSettings").accordion();
 
-    function handleUseStaticWebServerAsRoot(){
-        let useStaticWebServer = $("#useStaticWebServer")[0].checked;
-        if (useStaticWebServer){
+    //Handle toggle events of option radio boxes
+    function updateAvaibleDefaultSiteOptions(){
+        let selectedDefaultSite = $('input[name="defaultsiteOption"]:checked').val();
+
+        $(".defaultSiteOptionDetails").hide();
+        if (selectedDefaultSite == "webserver"){
+            //Use build in web server as target
             let staticWebServerURL = "127.0.0.1:" + $("#webserv_listenPort").val();
             $("#proxyRoot").val(staticWebServerURL);
             $("#proxyRoot").parent().addClass("disabled");
             $("#rootReqTLS").parent().checkbox("set unchecked");
             $("#rootReqTLS").parent().addClass("disabled");
-
-            //Check if web server is enabled. If not, ask if the user want to enable it
-            /*if (!$("#webserv_enable").parent().checkbox("is checked")){
-                confirmBox("Enable static web server now?", function(choice){
-                    if (choice == true){
-                        $("#webserv_enable").parent().checkbox("set checked");
-                    }
-                });
-            }*/
-        }else{
+            currentDefaultSiteOption = 0;
+        }else if (selectedDefaultSite == "proxy"){
+            $("#defaultSiteProxyOptions").show();
             $("#rootReqTLS").parent().removeClass("disabled");
             $("#proxyRoot").parent().removeClass("disabled");
-            initRootInfo();
+            currentDefaultSiteOption = 1;
+        }else if (selectedDefaultSite == "redirect"){
+            $("#defaultSiteRedirectOptions").show();
+            currentDefaultSiteOption = 2;
+        }else if (selectedDefaultSite == "notfound"){
+            currentDefaultSiteOption = 3;
+        }else{
+            //Unknown option
+            return;
         }
+
+    }
+
+    //Bind events to the radio boxes
+    function bindDefaultSiteRadioCheckboxEvents(){
+        $('input[type=radio][name=defaultsiteOption]').off("change").on("change", function() {
+            updateAvaibleDefaultSiteOptions();
+        });
     }
     
     function initRootInfo(callback=undefined){
@@ -94,6 +121,22 @@
             if (data == null){
 
             }else{
+                var $radios = $('input:radio[name=defaultsiteOption]');
+                let proxyType = data.DefaultSiteOption;
+                //See typedef.go for enum conversion
+                if (proxyType == 0){
+                    $radios.filter('[value=webserver]').prop('checked', true);
+                }else if (proxyType == 1){
+                    $radios.filter('[value=proxy]').prop('checked', true);
+                    $("#proxyRoot").val(data.DefaultSiteValue);
+                }else if (proxyType == 2){
+                    $radios.filter('[value=redirect]').prop('checked', true);
+                    $("#redirectDomain").val(data.DefaultSiteValue);
+                }else if (proxyType == 3){
+                    $radios.filter('[value=notfound]').prop('checked', true);
+                }
+                updateAvaibleDefaultSiteOptions();
+                
                 $("#proxyRoot").val(data.Domain);
                 checkRootRequireTLS(data.Domain);
             }
@@ -104,21 +147,9 @@
         });
     }
     initRootInfo(function(){
-        updateWebServerLinkSettings();
+        bindDefaultSiteRadioCheckboxEvents();
     });
 
-    //Update the current web server port settings
-    function updateWebServerLinkSettings(){
-        isUsingStaticWebServerAsRoot(function(isUsingWebServ){
-            if (isUsingWebServ){
-                $(".webservRootDisabled").addClass("disabled");
-                $("#useStaticWebServer").parent().checkbox("set checked");
-            }else{
-                $(".webservRootDisabled").removeClass("disabled");
-                $("#useStaticWebServer").parent().checkbox("set unchecked");
-            }
-        })
-    }
 
     function isUsingStaticWebServerAsRoot(callback){
         let currentProxyRoot = $("#proxyRoot").val().trim();
@@ -131,46 +162,11 @@
         
     }
     
-    function updateRootSettingStates(){
-        $.get("/api/cert/tls", function(data){
-            if (data == true){
-                $("#disableRootTLS").parent().removeClass('disabled').attr("title", "");
-            }else{
-                $("#disableRootTLS").parent().addClass('disabled').attr("title", "TLS listener is not enabled");
-            }
-        });
-    }
 
     //Bind event to tab switch
     tabSwitchEventBind["setroot"] = function(){
-        //On switch over to this page, update root info
-        updateRootSettingStates();
+        
     }
-
-    //Toggle the display status of the input box for domain setting
-    function updateRedirectionDomainSettingInputBox(useRedirect){
-        if(useRedirect){
-            $("#unsetRedirectDomainWrapper").stop().finish().slideDown("fast");
-        }else{
-            $("#unsetRedirectDomainWrapper").stop().finish().slideUp("fast");
-        }
-    }
-
-    function checkCustomRedirectForUnsetSubd(){
-        $.get("/api/proxy/root/listOptions", function(data){
-            $("#unsetRedirect")[0].checked = data.EnableRedirectForUnsetRules || false;
-            $("#unsetRedirectDomain").val(data.UnsetRuleRedirectTarget);
-            updateRedirectionDomainSettingInputBox(data.EnableRedirectForUnsetRules);
-
-            //Bind event to the checkbox
-            $("#unsetRedirect").off("change").on("change", function(){
-                let useRedirect = $("#unsetRedirect")[0].checked;
-                updateRedirectionDomainSettingInputBox(useRedirect);
-            });
-        });
-       
-    }
-    checkCustomRedirectForUnsetSubd();
 
     //Check if the given domain will redirect to https
     function checkRootRequireTLS(targetDomain){
@@ -193,14 +189,15 @@
                 }else if (data == "http"){
                     $("#rootReqTLS").parent().checkbox("set unchecked");
                 }
-
-                
             }
        })
     }
 
     //Set the new proxy root option
-    function setProxyRoot(){
+    function setProxyRoot(btn=undefined){
+        if (btn != undefined){
+            $(btn).addClass("disabled");
+        }
         var newpr = $("#proxyRoot").val();
         if (newpr.trim() == ""){
             $("#proxyRoot").parent().addClass('error');
@@ -211,10 +208,36 @@
 
         var rootReqTls = $("#rootReqTLS")[0].checked;
 
+        //proxy mode or redirect mode, check for input values
+        var defaultSiteValue = "";
+        if (currentDefaultSiteOption == 1){
+            if ($("#proxyRoot").val().trim() == ""){
+                $("#proxyRoot").parent().addClass("error");
+                return;
+            }
+            defaultSiteValue = $("#proxyRoot").val().trim();
+            $("#proxyRoot").parent().removeClass("error");
+
+        }else if (currentDefaultSiteOption == 2){
+            if ($("#redirectDomain").val().trim() == ""){
+                $("#redirectDomain").parent().addClass("error");
+                return;
+            }
+            defaultSiteValue = $("#redirectDomain").val().trim();
+            $("#redirectDomain").parent().removeClass("error");
+        }
+
         //Create the endpoint by calling add
         $.ajax({
             url: "/api/proxy/add",
-            data: {"type": "root", tls: rootReqTls, ep: newpr},
+            data: {
+                "type": "root", 
+                "tls": rootReqTls, 
+                "ep": newpr,
+                "defaultSiteOpt": currentDefaultSiteOption,
+                "defaultSiteVal":defaultSiteValue,
+            },
+            method: "POST",
             success: function(data){
                 if (data.error != undefined){
                     msgbox(data.error, false, 5000);
@@ -231,37 +254,20 @@
                             
                             setTimeout(function(){
                                  //Update the checkbox
-                                updateWebServerLinkSettings();
                                 msgbox("Proxy Root Updated");
-                            }, 1000);
+                            }, 100);
                             
                         })
                     });
                     
+                }
+
+                if (btn != undefined){
+                    $(btn).removeClass("disabled");
                 }
             }
         });
 
     }
 
-    function updateRootOptions(){
-        $.ajax({
-            type: "POST",
-            url: "/api/proxy/root/updateOptions",
-            data: {
-                unsetRedirect: $("#unsetRedirect")[0].checked,
-                unsetRedirectTarget: $("#unsetRedirectDomain").val().trim(),
-            },
-            success: function(data) {
-               if (data.error != undefined){
-                    msgbox(data.error, false);
-               }else{
-                    msgbox("Root Routing Options updated");
-               }
-            },
-            error: function(error) {
-                console.log("Error:", error);
-            }
-        });
-    }
 </script>

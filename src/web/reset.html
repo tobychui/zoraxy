@@ -7,12 +7,14 @@
     <link rel="icon" type="image/png" href="./favicon.png" />
     <title>Account Reset | Zoraxy</title>
     <link rel="stylesheet" href="script/semantic/semantic.min.css">
+    <link href="script/aos.css" rel="stylesheet">
+    <script src="script/aos.js"></script>
     <script type="application/javascript" src="script/jquery-3.6.0.min.js"></script>
     <script type="application/javascript" src="script/semantic/semantic.min.js"></script>
     <style>
         body {
-            background: rgb(245,245,245);
-            background: linear-gradient(28deg, rgba(245,245,245,1) 63%, rgba(255,255,255,1) 100%); 
+            background: rgb(38,60,71);
+            background: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%); 
         }
 
         .background{
@@ -34,23 +36,6 @@
             margin:auto;
         }
 
-        #loginForm{
-            height: 100%;
-            background-color: white;
-            width: 25em;
-            margin-left: 10em;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-
-        @media all and (max-width: 550px) {
-            /* CSS rules here for screens lower than 750px */
-            #loginForm{
-                width: calc(100% - 4em);
-                margin-left: 2em;
-            }
-        }
-
         #errmsg{
             color: #9f3a38;
             margin-top: 1em;
@@ -61,18 +46,102 @@
         .backBtn{
             position: absolute;
             top: 0em;
-            left: 1em;
-            margin-top: -4em;
+            left: 2em;
+            transition: opacity 0.3s linear;
+        }
+
+        .backBtn:hover{
+            opacity: 0.8;
+        }
+
+        #loginForm {
+                border-radius: 1em;
+                width: 25em;
+                height: 550px;
+                position: absolute; /*Can also be `fixed`*/
+                left: 0;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                margin: auto;
+                /*Solves a problem in which the content is being cut when the div is smaller than its' wrapper:*/
+                max-width: 100%;
+                max-height: 100%;
+                overflow: auto;
+                background-color: white;
+        }
+
+        .wavebase {
+            position:fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height:5vh;
+            text-align:center;
+            padding-top: 1em;
+            background-color: white;
+        }
+
+        /* 
+            Waves CSS 
+        */
+
+        #wavesWrapper{
+            position: fixed;
+            bottom: 5vh;
+            width: 100%;
+            left: 0;
+        }
+        
+        .waves {
+            position:relative;
+            width: 100%;
+            height:15vh;
+            margin-bottom:-7px; /*Fix for safari gap*/
+            min-height:100px;
+            max-height:150px;
+        }
+
+        
+        .parallax > use {
+            animation: move-forever 25s cubic-bezier(.55,.5,.45,.5)     infinite;
+        }
+        .parallax > use:nth-child(1) {
+            animation-delay: -8s;
+            animation-duration: 28s;
+        }
+        .parallax > use:nth-child(2) {
+            animation-delay: -12s;
+            animation-duration: 40s;
+        }
+        .parallax > use:nth-child(3) {
+            animation-delay: -16s;
+            animation-duration: 52s;
+        }
+        .parallax > use:nth-child(4) {
+            animation-delay: -20s;
+            animation-duration: 80s;
+        }
+        @keyframes move-forever {
+            0% {
+                transform: translate3d(-90px,0,0);
+            }
+            100% { 
+                transform: translate3d(85px,0,0);
+            }
+        }
+        /*Shrinking for mobile*/
+        @media (max-width: 768px) {
+            .waves {
+                height:40px;
+                min-height:40px;
+            }
         }
     </style>
     </head>
     <body>
-        <div class="background"></div>
-        <div id="loginForm" class="ui middle aligned center aligned grid">
+        <div id="loginForm" class="ui middle aligned center aligned grid"  data-aos="fade-up">
             <div class="column">
-                <a class="backBtn" href="/">
-                    <i class="huge black chevron circle left icon"></i>
-                </a>
                 <form class="ui large form">
                     <div class="ui basic segment">
                         <img class="ui fluid image" src="img/public/logo.svg" style="pointer-events:none;">
@@ -95,7 +164,7 @@
                                 <input id="magic" type="password" name="New password" placeholder="New Password">
                             </div>
                         </div>
-                        <div id="resetBtn" class="ui fluid basic green button">Set New Password</div>
+                        <div id="resetBtn" class="ui fluid basic button"><i class="ui green lock open icon"></i> Reset Password</div>
                         <div id="errmsg" class="ui red message" style="display: none;">
                             <i class="red remove icon"></i> Unknown Error Occured
                         </div>
@@ -107,12 +176,36 @@
                             <a href="#" id="resendEmailLink" onclick="sendResetAccountEmail();">Resend Email</a>
                         </div>
                     </div>
-                    <div class="ui divider"></div>
-                    <small>Proudly powered by Zoraxy</small>
                 </form>
+                <a class="backBtn" href="/">
+                    <i class="big chevron circle left icon" style="color: #121d37;"></i>
+                </a>
             </div>
+            
+        </div>
+        
+        <div id="wavesWrapper">
+            <!-- CSS waves-->
+            <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+            viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                <defs>
+                <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                </defs>
+                <g class="parallax">
+                <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7" />
+                <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)" />
+                <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
+                <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff" />
+                </g>
+            </svg>
+        </div>
+        <div class="wavebase">
+            <p>Proudly powered by <a href="https://zoraxy.arozos.com" target="_blank">Zoraxy</a></p>
         </div>
     <script>
+        AOS.init();
+
+        
         var redirectionAddress = "/";
         var loginAddress = "/api/auth/login";
         $(".checkbox").checkbox();
@@ -154,6 +247,12 @@
             var username = $('#username').val();
             var token = $('#token').val();
             var newPassword = $('#magic').val();
+
+            if (token.trim() == ""){
+                $("#errmsg").html(`<i class="red circle times icon"></i> Token cannot be empty!`);
+                $("#errmsg").show();
+                return;
+            }
 
             // Send POST request with input values as data
             $.post('/api/account/new', { username: username, token: token, newpw: newPassword })

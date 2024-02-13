@@ -119,11 +119,10 @@ func UpdateUptimeMonitorTargets() {
 
 // Generate uptime monitor targets from reverse proxy rules
 func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Target {
-	subds := dp.GetSDProxyEndpointsAsMap()
-	vdirs := dp.GetVDProxyEndpointsAsMap()
+	hosts := dp.GetProxyEndpointsAsMap()
 
 	UptimeTargets := []*uptime.Target{}
-	for subd, target := range subds {
+	for subd, target := range hosts {
 		url := "http://" + target.Domain
 		protocol := "http"
 		if target.RequireTLS {
@@ -134,21 +133,6 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 		UptimeTargets = append(UptimeTargets, &uptime.Target{
 			ID:       subd,
 			Name:     subd,
-			URL:      url,
-			Protocol: protocol,
-		})
-	}
-
-	for vdir, target := range vdirs {
-		url := "http://" + target.Domain
-		protocol := "http"
-		if target.RequireTLS {
-			url = "https://" + target.Domain
-			protocol = "https"
-		}
-		UptimeTargets = append(UptimeTargets, &uptime.Target{
-			ID:       vdir,
-			Name:     "*" + vdir,
 			URL:      url,
 			Protocol: protocol,
 		})

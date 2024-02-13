@@ -1,14 +1,15 @@
 <div class="standardContainer">
     <div class="ui basic segment">
-        <h2>Subdomain</h2>
-        <p>Subdomains are a way to organize and identify different sections of a website or domain. They are essentially a prefix to the main domain name, separated by a dot. <br>For example, in the domain "blog.example.com," "blog" is the subdomain.</p>
+        <h2>HTTP Proxy</h2>
+        <p>Proxy HTTP server with HTTP or HTTPS. Sometime subdomain contain a prefix to the main domain name, separated by a dot. <br>For example, in the domain "blog.example.com," "blog" is the subdomain.</p>
     </div>
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
         <table class="ui celled sortable unstackable compact table">
             <thead>
                 <tr>
-                    <th>Matching Domain</th>
-                    <th>Proxy To</th>
+                    <th>Host</th>
+                    <th>Destination</th>
+                    <th>Virtual Directory</th>
                     <th>Basic Auth</th>
                     <th class="no-sort" style="min-width: 7.2em;">Actions</th>
                 </tr>
@@ -18,13 +19,13 @@
             </tbody>
         </table>
     </div>
-    <button class="ui icon right floated basic button" onclick="listSubd();"><i class="green refresh icon"></i> Refresh</button>
+    <button class="ui icon right floated basic button" onclick="listProxyEndpoints();"><i class="green refresh icon"></i> Refresh</button>
     <br><br>
 </div>
 
 <script>
-    function listSubd(){
-        $.get("/api/proxy/list?type=subd", function(data){
+    function listProxyEndpoints(){
+        $.get("/api/proxy/list?type=host", function(data){
             $("#subdList").html(``);
             if (data.error !== undefined){
                     $("#subdList").append(`<tr>
@@ -32,7 +33,7 @@
                 </tr>`);
             }else if (data.length == 0){
                 $("#subdList").append(`<tr>
-                    <td data-label="" colspan="3"><i class="checkmark icon"></i> No Subdomain Proxy Record</td>
+                    <td data-label="" colspan="3"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
                 </tr>`);
             }else{
                 data.forEach(subd => {
@@ -45,9 +46,21 @@
                         }
                     }
 
+                    let inboundTlsIcon = "";
+                    if ($("#tls").checkbox("is checked")){
+                        inboundTlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                        if (subd.BypassGlobalTLS){
+                            inboundTlsIcon = `<i class="grey lock icon" title="TLS Bypass Enabled"></i>`;
+                        }
+                    }else{
+                        inboundTlsIcon = `<i class="yellow lock open icon" title="Plain Text Mode"></i>`;
+                    }
+                    
+
                     $("#subdList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
-                        <td data-label="" editable="true" datatype="inbound"><a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a></td>
+                        <td data-label="" editable="true" datatype="inbound"><a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}</td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
+                        <td data-label="" editable="true" datatype="vdir">WIP</td>
                         <td data-label="" editable="true" datatype="basicauth">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
                         <td class="center aligned" editable="true" datatype="action" data-label="">
                             <button class="ui circular mini basic icon button editBtn" onclick='editEndpoint("subd","${subd.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
@@ -61,6 +74,6 @@
 
     //Bind on tab switch events
     tabSwitchEventBind["subd"] = function(){
-        listSubd();
+        listProxyEndpoints();
     }
 </script>

@@ -3,7 +3,6 @@ package dynamicproxy
 import (
 	_ "embed"
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -80,38 +79,26 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	/*
-		Subdomain Routing
+		Host Routing
 	*/
-	if strings.Contains(r.Host, ".") {
-		//This might be a subdomain. See if there are any subdomain proxy router for this
-		sep := h.Parent.getSubdomainProxyEndpointFromHostname(domainOnly)
-		if sep != nil {
-			if sep.RequireBasicAuth {
-				err := h.handleBasicAuthRouting(w, r, sep)
-				if err != nil {
-					return
-				}
-			}
-			h.subdomainRequest(w, r, sep)
-			return
-		}
-	}
-
-	/*
-		Virtual Directory Routing
-	*/
-	//Clean up the request URI
-	proxyingPath := strings.TrimSpace(r.RequestURI)
-	targetProxyEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath)
-	if targetProxyEndpoint != nil {
-		if targetProxyEndpoint.RequireBasicAuth {
-			err := h.handleBasicAuthRouting(w, r, targetProxyEndpoint)
+	sep := h.Parent.getProxyEndpointFromHostname(domainOnly)
+	if sep != nil {
+		if sep.RequireBasicAuth {
+			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
 				return
 			}
 		}
-		h.proxyRequest(w, r, targetProxyEndpoint)
-	} else if !strings.HasSuffix(proxyingPath, "/") {
+		h.hostRequest(w, r, sep)
+		return
+	}
+
+	/*
+		Root Router Handling
+	*/
+	//Clean up the request URI
+	proxyingPath := strings.TrimSpace(r.RequestURI)
+	if !strings.HasSuffix(proxyingPath, "/") {
 		potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/")
 		if potentialProxtEndpoint != nil {
 			//Missing tailing slash. Redirect to target proxy endpoint
@@ -136,52 +123,45 @@ Once entered this routing segment, the root routing options will take over
 for the routing logic.
 */
 func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request) {
+
 	domainOnly := r.Host
 	if strings.Contains(r.Host, ":") {
 		hostPath := strings.Split(r.Host, ":")
 		domainOnly = hostPath[0]
 	}
 
-	if h.Parent.RootRoutingOptions.EnableRedirectForUnsetRules {
-		//Route to custom domain
-		if h.Parent.RootRoutingOptions.UnsetRuleRedirectTarget == "" {
-			//Not set. Redirect to first level of domain redirectable
-			fld, err := h.getTopLevelRedirectableDomain(domainOnly)
-			if err != nil {
-				//Redirect to proxy root
-				h.proxyRequest(w, r, h.Parent.Root)
-			} else {
-				log.Println("[Router] Redirecting request from " + domainOnly + " to " + fld)
-				h.logRequest(r, false, 307, "root-redirect", domainOnly)
-				http.Redirect(w, r, fld, http.StatusTemporaryRedirect)
-			}
-			return
-		} else if h.isTopLevelRedirectableDomain(domainOnly) {
-			//This is requesting a top level private domain that should be serving root
-			h.proxyRequest(w, r, h.Parent.Root)
-		} else {
-			//Validate the redirection target URL
-			parsedURL, err := url.Parse(h.Parent.RootRoutingOptions.UnsetRuleRedirectTarget)
-			if err != nil {
-				//Error when parsing target. Send to root
-				h.proxyRequest(w, r, h.Parent.Root)
-				return
-			}
-			hostname := parsedURL.Hostname()
-			if domainOnly != hostname {
-				//Redirect to target
-				h.logRequest(r, false, 307, "root-redirect", domainOnly)
-				http.Redirect(w, r, h.Parent.RootRoutingOptions.UnsetRuleRedirectTarget, http.StatusTemporaryRedirect)
-				return
-			} else {
-				//Loopback request due to bad settings (Shd leave it empty)
-				//Forward it to root proxy
-				h.proxyRequest(w, r, h.Parent.Root)
-			}
+	//Get the proxy root config
+	proot := h.Parent.Root
+	switch proot.DefaultSiteOption {
+	case DefaultSite_InternalStaticWebServer:
+		fallthrough
+	case DefaultSite_ReverseProxy:
+		//They both share the same behavior
+		h.vdirRequest(w, r, h.Parent.Root)
+	case DefaultSite_Redirect:
+		redirectTarget := strings.TrimSpace(proot.DefaultSiteValue)
+		if redirectTarget == "" {
+			redirectTarget = "about:blank"
 		}
-	} else {
-		//Route to root
-		h.proxyRequest(w, r, h.Parent.Root)
+
+		//Check if it is an infinite loopback redirect
+		parsedURL, err := url.Parse(proot.DefaultSiteValue)
+		if err != nil {
+			//Error when parsing target. Send to root
+			h.vdirRequest(w, r, h.Parent.Root)
+			return
+		}
+		hostname := parsedURL.Hostname()
+		if hostname == domainOnly {
+			h.logRequest(r, false, 500, "root-redirect", domainOnly)
+			http.Error(w, "Loopback redirects due to invalid settings", 500)
+			return
+		}
+
+		h.logRequest(r, false, 307, "root-redirect", domainOnly)
+		http.Redirect(w, r, redirectTarget, http.StatusTemporaryRedirect)
+	case DefaultSite_NotFoundPage:
+		http.NotFound(w, r)
 	}
 }
 

@@ -89,7 +89,7 @@ func (ws *WebServer) RestorePreviousState() {
 	ws.option.EnableDirectoryListing = enableDirList
 
 	//Check the running state
-	webservRunning := false
+	webservRunning := true
 	ws.option.Sysdb.Read("webserv", "enabled", &webservRunning)
 	if webservRunning {
 		ws.Start()
@@ -122,6 +122,11 @@ func (ws *WebServer) ChangePort(port string) error {
 	ws.option.Sysdb.Write("webserv", "port", port)
 
 	return nil
+}
+
+// Get current using port in options
+func (ws *WebServer) GetListeningPort() string {
+	return ws.option.Port
 }
 
 // Start starts the web server.

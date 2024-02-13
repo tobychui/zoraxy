@@ -57,8 +57,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/listenPort80", HandleUpdatePort80Listener)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	//Reverse proxy root related APIs
-	authRouter.HandleFunc("/api/proxy/root/listOptions", HandleRootRouteOptionList)
-	authRouter.HandleFunc("/api/proxy/root/updateOptions", HandleRootRouteOptionsUpdate)
+	//authRouter.HandleFunc("/api/proxy/root/listOptions", HandleRootRouteOptionList)
+	//authRouter.HandleFunc("/api/proxy/root/updateOptions", HandleRootRouteOptionsUpdate)
 	//Reverse proxy auth related APIs
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)

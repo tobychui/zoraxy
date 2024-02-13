@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
@@ -28,12 +29,27 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 	return targetProxyEndpoint
 }
 
-func (router *Router) getSubdomainProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
+func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
 	var targetSubdomainEndpoint *ProxyEndpoint = nil
-	ep, ok := router.SubdomainEndpoint.Load(hostname)
+	ep, ok := router.ProxyEndpoints.Load(hostname)
 	if ok {
 		targetSubdomainEndpoint = ep.(*ProxyEndpoint)
 	}
+
+	//No hit. Try with wildcard
+	router.ProxyEndpoints.Range(func(k, v interface{}) bool {
+		ep := v.(*ProxyEndpoint)
+		match, err := filepath.Match(ep.RootOrMatchingDomain, hostname)
+		if err != nil {
+			//Continue
+			return true
+		}
+		if match {
+			targetSubdomainEndpoint = ep
+			return false
+		}
+		return true
+	})
 
 	return targetSubdomainEndpoint
 }
@@ -54,8 +70,8 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	return rewrittenURL
 }
 
-// Handle subdomain request
-func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
+// Handle host request
+func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
 	requestURL := r.URL.String()
@@ -89,7 +105,7 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
-	err := target.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:  target.Domain,
 		OriginalHost: originalHostHeader,
 		UseTLS:       target.RequireTLS,
@@ -113,7 +129,7 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 }
 
 // Handle vdir type request
-func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
+func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	rewriteURL := h.Parent.rewriteURL(target.RootOrMatchingDomain, r.RequestURI)
 	r.URL, _ = url.Parse(rewriteURL)
 
@@ -144,7 +160,7 @@ func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, targ
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
-	err := target.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:  target.Domain,
 		OriginalHost: originalHostHeader,
 		UseTLS:       target.RequireTLS,

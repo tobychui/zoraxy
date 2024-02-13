@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -35,97 +36,119 @@ type Record struct {
 	BasicAuthExceptionRules []*dynamicproxy.BasicAuthExceptionRule
 }
 
-// Save a reverse proxy config record to file
-func SaveReverseProxyConfigToFile(proxyConfigRecord *Record) error {
-	//TODO: Make this accept new def types
-	os.MkdirAll("./conf/proxy/", 0775)
-	filename := getFilenameFromRootName(proxyConfigRecord.Rootname)
-
-	//Generate record
-	thisRecord := proxyConfigRecord
-
-	//Write to file
-	js, _ := json.MarshalIndent(thisRecord, "", " ")
-	return os.WriteFile(filepath.Join("./conf/proxy/", filename), js, 0775)
-}
-
-// Save a running reverse proxy endpoint to file (with automatic endpoint to record conversion)
-func SaveReverseProxyEndpointToFile(proxyEndpoint *dynamicproxy.ProxyEndpoint) error {
-	recordToSave, err := ConvertProxyEndpointToRecord(proxyEndpoint)
+/*
+Load Reverse Proxy Config from file and append it to current runtime proxy router
+*/
+func LoadReverseProxyConfig(configFilepath string) error {
+	//Load the config file from disk
+	endpointConfig, err := os.ReadFile(configFilepath)
 	if err != nil {
 		return err
 	}
-	return SaveReverseProxyConfigToFile(recordToSave)
-}
 
-func RemoveReverseProxyConfigFile(rootname string) error {
-	filename := getFilenameFromRootName(rootname)
-	removePendingFile := strings.ReplaceAll(filepath.Join("./conf/proxy/", filename), "\\", "/")
-	SystemWideLogger.Println("Config Removed: ", removePendingFile)
-	if utils.FileExists(removePendingFile) {
-		err := os.Remove(removePendingFile)
-		if err != nil {
-			SystemWideLogger.PrintAndLog("Proxy", "Unabel to remove config file", err)
-			return err
-		}
+	//Parse it into dynamic proxy endpoint
+	thisConfigEndpoint := dynamicproxy.ProxyEndpoint{}
+	err = json.Unmarshal(endpointConfig, &thisConfigEndpoint)
+	if err != nil {
+		return err
 	}
 
-	//File already gone
+	//Matching domain not set. Assume root
+	if thisConfigEndpoint.RootOrMatchingDomain == "" {
+		thisConfigEndpoint.RootOrMatchingDomain = "/"
+	}
+
+	if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyType_Root {
+		//This is a root config file
+		rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
+		if err != nil {
+			return err
+		}
+
+		dynamicProxyRouter.SetProxyRouteAsRoot(rootProxyEndpoint)
+
+	} else if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyType_Host {
+		//This is a host config file
+		readyProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
+		if err != nil {
+			return err
+		}
+
+		dynamicProxyRouter.AddProxyRouteToRuntime(readyProxyEndpoint)
+	} else {
+		return errors.New("not supported proxy type")
+	}
+
+	SystemWideLogger.PrintAndLog("Proxy", thisConfigEndpoint.RootOrMatchingDomain+" -> "+thisConfigEndpoint.Domain+" routing rule loaded", nil)
 	return nil
 }
 
-// Return ptype, rootname and proxyTarget, error if any
-func LoadReverseProxyConfig(filename string) (*Record, error) {
-	thisRecord := Record{
-		ProxyType:               "",
-		Rootname:                "",
-		ProxyTarget:             "",
-		UseTLS:                  false,
+func filterProxyConfigFilename(filename string) string {
+	//Filter out wildcard characters
+	filename = strings.ReplaceAll(filename, "*", "(ST)")
+	filename = strings.ReplaceAll(filename, "?", "(QM)")
+	filename = strings.ReplaceAll(filename, "[", "(OB)")
+	filename = strings.ReplaceAll(filename, "]", "(CB)")
+	filename = strings.ReplaceAll(filename, "#", "(HT)")
+	return filepath.ToSlash(filename)
+}
+
+func SaveReverseProxyConfig(endpoint *dynamicproxy.ProxyEndpoint) error {
+	//Get filename for saving
+	filename := filepath.Join("./conf/proxy/", endpoint.RootOrMatchingDomain+".config")
+	if endpoint.ProxyType == dynamicproxy.ProxyType_Root {
+		filename = "./conf/proxy/root.config"
+	}
+
+	filename = filterProxyConfigFilename(filename)
+
+	//Save config to file
+	js, err := json.MarshalIndent(endpoint, "", " ")
+	if err != nil {
+		return err
+	}
+
+	os.WriteFile(filename, js, 0775)
+	return nil
+}
+
+func RemoveReverseProxyConfig(endpoint string) error {
+	filename := filepath.Join("./conf/proxy/", endpoint+".config")
+	if endpoint == "/" {
+		filename = "./conf/proxy/root.config"
+	}
+
+	filename = filterProxyConfigFilename(filename)
+
+	if !utils.FileExists(filename) {
+		return errors.New("target endpoint not exists")
+	}
+	return os.Remove(filename)
+}
+
+// Get the default root config that point to the internal static web server
+// this will be used if root config is not found (new deployment / missing root.config file)
+func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
+	//Default settings
+	rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&dynamicproxy.ProxyEndpoint{
+		ProxyType:               dynamicproxy.ProxyType_Root,
+		RootOrMatchingDomain:    "/",
+		Domain:                  "127.0.0.1:" + staticWebServer.GetListeningPort(),
+		RequireTLS:              false,
 		BypassGlobalTLS:         false,
-		SkipTlsValidation:       false,
+		SkipCertValidations:     false,
+		VirtualDirectories:      []*dynamicproxy.ProxyEndpoint{},
 		RequireBasicAuth:        false,
 		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
 		BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
-	}
-
-	configContent, err := os.ReadFile(filename)
+		DefaultSiteOption:       dynamicproxy.DefaultSite_InternalStaticWebServer,
+		DefaultSiteValue:        "",
+	})
 	if err != nil {
-		return &thisRecord, err
+		return nil, err
 	}
 
-	//Unmarshal the content into config
-	err = json.Unmarshal(configContent, &thisRecord)
-	if err != nil {
-		return &thisRecord, err
-	}
-
-	//Return it
-	return &thisRecord, nil
-}
-
-// Convert a running proxy endpoint object into a save-able record struct
-func ConvertProxyEndpointToRecord(targetProxyEndpoint *dynamicproxy.ProxyEndpoint) (*Record, error) {
-	thisProxyConfigRecord := Record{
-		ProxyType:               targetProxyEndpoint.GetProxyTypeString(),
-		Rootname:                targetProxyEndpoint.RootOrMatchingDomain,
-		ProxyTarget:             targetProxyEndpoint.Domain,
-		UseTLS:                  targetProxyEndpoint.RequireTLS,
-		BypassGlobalTLS:         targetProxyEndpoint.BypassGlobalTLS,
-		SkipTlsValidation:       targetProxyEndpoint.SkipCertValidations,
-		RequireBasicAuth:        targetProxyEndpoint.RequireBasicAuth,
-		BasicAuthCredentials:    targetProxyEndpoint.BasicAuthCredentials,
-		BasicAuthExceptionRules: targetProxyEndpoint.BasicAuthExceptionRules,
-	}
-
-	return &thisProxyConfigRecord, nil
-}
-
-func getFilenameFromRootName(rootname string) string {
-	//Generate a filename for this rootname
-	filename := strings.ReplaceAll(rootname, ".", "_")
-	filename = strings.ReplaceAll(filename, "/", "-")
-	filename = filename + ".config"
-	return filename
+	return rootProxyEndpoint, nil
 }
 
 /*

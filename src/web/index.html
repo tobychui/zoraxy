@@ -36,18 +36,24 @@
                     <a class="item active" tag="status">
                         <i class="simplistic info circle icon"></i>Status
                     </a>
+                    <a class="item" tag="setroot">
+                        <i class="simplistic home icon"></i> Default Site
+                    </a>
+                    <div class="ui divider menudivider">Reverse Proxy</div>
+                    <a class="item" tag="subd">
+                        <i class="simplistic sitemap icon"></i> HTTP Proxy
+                    </a>
                     <a class="item" tag="vdir">
                         <i class="simplistic folder icon"></i> Virtual Directory
-                    </a>
-                    <a class="item" tag="subd">
-                        <i class="simplistic sitemap icon"></i> Subdomain Proxy
                     </a>
                     <a class="item" tag="rules">
                         <i class="simplistic plus square icon"></i> Create Proxy Rules
                     </a>
-                    <a class="item" tag="setroot">
-                        <i class="simplistic home icon"></i> Set Proxy Root
+                    <a class="item" tag="tcpprox">
+                        <i class="simplistic exchange icon"></i> TCP Proxy
                     </a>
+                   
+                   
                     <div class="ui divider menudivider">Access & Connections</div>
                     <a class="item" tag="cert">
                         <i class="simplistic lock icon"></i> TLS / SSL certificates
@@ -65,16 +71,14 @@
                     <a class="item" tag="zgrok">
                         <i class="simplistic podcast icon"></i> Service Expose Proxy
                     </a>
-                    <a class="item" tag="tcpprox">
-                        <i class="simplistic exchange icon"></i> TCP Proxy
-                    </a>
-                    <div class="ui divider menudivider">Others</div>
+                    
+                    <div class="ui divider menudivider">Hosting</div>
                     <a class="item" tag="webserv">
                         <i class="simplistic globe icon"></i> Static Web Server
                     </a>
-                    <a class="item" tag="utm">
-                        <i class="simplistic time icon"></i> Uptime Monitor
-                    </a>
+
+                    <div class="ui divider menudivider">Others</div>
+                 
                     <a class="item" tag="networktool">
                         <i class="simplistic terminal icon"></i> Network Tools
                     </a>
@@ -235,7 +239,7 @@
                 $.get("/api/auth/logout", function(response) {
                     if (response === "OK") {
                         setTimeout(function(){
-                            window.location.href = "/";
+                            window.location.href = "/login.html";
                         }, 300);
                     }
                 });

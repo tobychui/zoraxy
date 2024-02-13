@@ -7,6 +7,7 @@
     --theme_green: #3c9c63;
     --theme_fcolor: #979797;
     --theme_advance: #f8f8f9;
+    --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
 }
 body{
     background-color:#f6f6f6;
@@ -31,14 +32,14 @@ body{
     padding: 0.4em;
     padding-left: 1.2em;
     padding-right: 1.2em;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
     margin-bottom: 1em;
-
+    border-bottom: 1px solid rgb(226, 226, 226);
     position: fixed;
     top: 0;
     width: 100%;
     z-index: 10;
-    box-shadow: 0px 1px 5px 0px rgba(38,38,38,0.26);
+    
 }
 
 .menubar .logo{
@@ -82,12 +83,20 @@ body{
 }
 
 .serverstatusWrapper{
-    padding-right: 0 !important;
+   padding-right: 0 !important;
 }
 
 .statisticWrapper{
+    margin-top: 1em;
     padding-left: 0 !important;
+    padding-bottom: 0 !important;
+    padding-right: 1em !important;
 }
+
+.statisticWrapper .statustab{
+    margin-right: 1em;
+}
+
 
 /* Message Box */
 #messageBox{
@@ -204,14 +213,6 @@ body{
 
 
 @media screen and (min-width: 750px) {
-    #serverstatus{
-        border-top-left-radius: 1em !important;
-    }
-
-    .greybackground.statustab{
-        border-top-right-radius: 1em !important;
-    }
-
     .standardContainer{
         padding-left: 2.4em;
         padding-right: 2.4em;
@@ -221,7 +222,18 @@ body{
 
 }
 
-@media screen and (max-width: 750px) {
+@media screen and (max-width: 748px) {
+    #serverstatus{
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+
+    .statisticWrapper .statustab{
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
     .toolbar {
         position: fixed;
         display: inline-block;
@@ -257,17 +269,8 @@ body{
         padding: 0em;
     }
 
-    .ui.grid > .stackable.stackable.row > .column, .ui.stackable.grid > .column.grid > .column, .ui.stackable.grid > .column.row > .column, .ui.stackable.grid > .column:not(.row), .ui.stackable.grid > .row > .column, .ui.stackable.grid > .row > .wide.column, .ui.stackable.grid > .wide.column.serverstatusWrapper {
-        padding: 0rem 0rem !important;
-    }
-
     #serverstatus.green{
         border-bottom: 0px solid transparent !important;
-    }
-
-    .greybackground.statustab{
-        border-top-right-radius: 0em !important;
-        padding: 2em 2em !important;
     }
 
     .standardContainer{
@@ -301,8 +304,12 @@ body{
     color: #5e5d5d;
 }
 
+.ui.segment{
+    box-shadow: none !important;
+}
+
 .ui.secondary.vertical.menu .active.item{
-    background-color: #414141;
+    background: var(--theme_background);
     font-weight: 600;
     color: white;
 }
@@ -311,10 +318,19 @@ body{
     animation: blinker 3s ease-in-out infinite;
 }
 
+.ui.important.basic.segment{
+    background: linear-gradient(217deg, rgba(234,238,175,1) 16%, rgba(254,255,242,1) 78%);
+    border-radius: 1em;
+}
+
+.basic.segment.advanceoptions{
+    background-color: #f7f7f7; 
+    border-radius: 1em;
+}
+
 .bluefont{
     color: #417ac1 !important;
 }
-
 
 @keyframes blinker {
     50% {
@@ -327,52 +343,26 @@ body{
 */
 #serverstatus{
     height: 100%;
+    border-radius: 1em;
+    margin: 1em;
 }
 
 #statusTitle{
     font-weight: 300;
 }
 
-.statustab{
-    border-radius: 0 !important;
-}
-
-.greybackground.statustab{
-    background-color: #414141 !important;
-    color: white;
-    
-}
-
-.greybackground.statustab .ui.header:not(:first-child){
-    margin-top: 1em;
-}
-
-.greybackground.statustab span,
-.greybackground.statustab h1,
-.greybackground.statustab h2,
-.greybackground.statustab h3,
-.greybackground.statustab h4,
-.greybackground.statustab h5 {
-    color: white !important;
-}
-
-.greybackground.statustab .header{
-    color: #b7b7b7 !important;
-}
-
 #serverstatus.green{
-    background-color: #fefefe !important;
-    border-right: 5px solid #3d9c64; 
+    background: linear-gradient(60deg, #27e7ff, #00ca52);
 }
 #serverstatus.green .sub.header{
     color: rgb(224, 224, 224);
 }
 #serverstatus.green i,
 #serverstatus.green #statusTitle{
-    color: #3d9c64;
+    color: rgb(255, 255, 255);
 }
 #serverstatus.green #statusText{
-    color: #2c583d;
+    color: rgb(255, 255, 255);
 }
 
 
@@ -381,22 +371,20 @@ body{
 }
 
 #serverstatus:not(.green){
-    background-color: white !important;
-    background-image: url("img/plant.png");
-    background-position: right;
-    background-repeat: no-repeat;
-    background-size: auto 100%;
+    background: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
 }
 
 #serverstatus:not(.green) #statusTitle,
 #serverstatus:not(.green) i,
 #serverstatus:not(.green) .sub.header{
-    color: #4c4c4c;
+    color: white;
 }
 
 
 .statustab{
     min-height: 5.5em;
+    margin: 1em;
+    border-radius: 1em !important;
 }
 
 #summaryTotalCount{
@@ -467,7 +455,7 @@ body{
       transform: scale(1);
     }
     50% {
-      background-color: #3d9c64;
+      background-color: white;
       transform: scale(1.5);
     }
     100% {

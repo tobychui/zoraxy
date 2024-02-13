@@ -22,15 +22,13 @@ import (
 
 func NewDynamicProxy(option RouterOption) (*Router, error) {
 	proxyMap := sync.Map{}
-	domainMap := sync.Map{}
 	thisRouter := Router{
-		Option:            &option,
-		ProxyEndpoints:    &proxyMap,
-		SubdomainEndpoint: &domainMap,
-		Running:           false,
-		server:            nil,
-		routingRules:      []*RoutingRule{},
-		tldMap:            map[string]int{},
+		Option:         &option,
+		ProxyEndpoints: &proxyMap,
+		Running:        false,
+		server:         nil,
+		routingRules:   []*RoutingRule{},
+		tldMap:         map[string]int{},
 	}
 
 	thisRouter.mux = &ProxyHandler{
@@ -84,13 +82,6 @@ func (router *Router) StartProxyService() error {
 		return errors.New("Reverse proxy router root not set")
 	}
 
-	//Load root options from file
-	loadedRootOption, err := loadRootRoutingOptionsFromFile()
-	if err != nil {
-		return err
-	}
-	router.RootRoutingOptions = loadedRootOption
-
 	minVersion := tls.VersionTLS10
 	if router.Option.ForceTLSLatest {
 		minVersion = tls.VersionTLS12
@@ -129,7 +120,7 @@ func (router *Router) StartProxyService() error {
 						hostPath := strings.Split(r.Host, ":")
 						domainOnly = hostPath[0]
 					}
-					sep := router.getSubdomainProxyEndpointFromHostname(domainOnly)
+					sep := router.getProxyEndpointFromHostname(domainOnly)
 					if sep != nil && sep.BypassGlobalTLS {
 						//Allow routing via non-TLS handler
 						originalHostHeader := r.Host
@@ -140,7 +131,7 @@ func (router *Router) StartProxyService() error {
 							r.URL, _ = url.Parse(originalHostHeader)
 						}
 
-						sep.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+						sep.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 							ProxyDomain:  sep.Domain,
 							OriginalHost: originalHostHeader,
 							UseTLS:       sep.RequireTLS,
@@ -280,128 +271,17 @@ func (router *Router) IsProxiedSubdomain(r *http.Request) bool {
 		hostname = r.Host
 	}
 	hostname = strings.Split(hostname, ":")[0]
-	subdEndpoint := router.getSubdomainProxyEndpointFromHostname(hostname)
+	subdEndpoint := router.getProxyEndpointFromHostname(hostname)
 	return subdEndpoint != nil
-}
-
-/*
-Add an URL into a custom proxy services
-*/
-func (router *Router) AddVirtualDirectoryProxyService(options *VdirOptions) error {
-	domain := options.Domain
-	if domain[len(domain)-1:] == "/" {
-		domain = domain[:len(domain)-1]
-	}
-
-	/*
-		if rootname[len(rootname)-1:] == "/" {
-			rootname = rootname[:len(rootname)-1]
-		}
-	*/
-
-	webProxyEndpoint := domain
-	if options.RequireTLS {
-		webProxyEndpoint = "https://" + webProxyEndpoint
-	} else {
-		webProxyEndpoint = "http://" + webProxyEndpoint
-	}
-	//Create a new proxy agent for this root
-	path, err := url.Parse(webProxyEndpoint)
-	if err != nil {
-		return err
-	}
-
-	proxy := dpcore.NewDynamicProxyCore(path, options.RootName, options.SkipCertValidations)
-
-	endpointObject := ProxyEndpoint{
-		ProxyType:               ProxyType_Vdir,
-		RootOrMatchingDomain:    options.RootName,
-		Domain:                  domain,
-		RequireTLS:              options.RequireTLS,
-		SkipCertValidations:     options.SkipCertValidations,
-		RequireBasicAuth:        options.RequireBasicAuth,
-		BasicAuthCredentials:    options.BasicAuthCredentials,
-		BasicAuthExceptionRules: options.BasicAuthExceptionRules,
-		Proxy:                   proxy,
-	}
-
-	router.ProxyEndpoints.Store(options.RootName, &endpointObject)
-
-	log.Println("Registered Proxy Rule: ", options.RootName+" to "+domain)
-	return nil
 }
 
 /*
 Load routing from RP
 */
-func (router *Router) LoadProxy(ptype string, key string) (*ProxyEndpoint, error) {
-	if ptype == "vdir" {
-		proxy, ok := router.ProxyEndpoints.Load(key)
-		if !ok {
-			return nil, errors.New("target proxy not found")
-		}
-
-		targetProxy := proxy.(*ProxyEndpoint)
-		targetProxy.parent = router
-		return targetProxy, nil
-	} else if ptype == "subd" {
-		proxy, ok := router.SubdomainEndpoint.Load(key)
-		if !ok {
-			return nil, errors.New("target proxy not found")
-		}
-
-		targetProxy := proxy.(*ProxyEndpoint)
-		targetProxy.parent = router
-		return targetProxy, nil
-	}
-
-	return nil, errors.New("unsupported ptype")
-}
-
-/*
-Add an default router for the proxy server
-*/
-func (router *Router) SetRootProxy(options *RootOptions) error {
-	proxyLocation := options.ProxyLocation
-	if proxyLocation[len(proxyLocation)-1:] == "/" {
-		proxyLocation = proxyLocation[:len(proxyLocation)-1]
-	}
-
-	webProxyEndpoint := proxyLocation
-	if options.RequireTLS {
-		webProxyEndpoint = "https://" + webProxyEndpoint
-	} else {
-		webProxyEndpoint = "http://" + webProxyEndpoint
-	}
-	//Create a new proxy agent for this root
-	path, err := url.Parse(webProxyEndpoint)
-	if err != nil {
-		return err
-	}
-
-	proxy := dpcore.NewDynamicProxyCore(path, "", options.SkipCertValidations)
-
-	rootEndpoint := ProxyEndpoint{
-		ProxyType:               ProxyType_Vdir,
-		RootOrMatchingDomain:    "/",
-		Domain:                  proxyLocation,
-		RequireTLS:              options.RequireTLS,
-		SkipCertValidations:     options.SkipCertValidations,
-		RequireBasicAuth:        options.RequireBasicAuth,
-		BasicAuthCredentials:    options.BasicAuthCredentials,
-		BasicAuthExceptionRules: options.BasicAuthExceptionRules,
-		Proxy:                   proxy,
-	}
-
-	router.Root = &rootEndpoint
-	return nil
-}
-
-// Helpers to export the syncmap for easier processing
-func (r *Router) GetSDProxyEndpointsAsMap() map[string]*ProxyEndpoint {
-	m := make(map[string]*ProxyEndpoint)
-	r.SubdomainEndpoint.Range(func(key, value interface{}) bool {
-		k, ok := key.(string)
+func (router *Router) LoadProxy(matchingDomain string) (*ProxyEndpoint, error) {
+	var targetProxyEndpoint *ProxyEndpoint
+	router.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		key, ok := key.(string)
 		if !ok {
 			return true
 		}
@@ -409,13 +289,32 @@ func (r *Router) GetSDProxyEndpointsAsMap() map[string]*ProxyEndpoint {
 		if !ok {
 			return true
 		}
-		m[k] = v
+
+		if key == matchingDomain {
+			targetProxyEndpoint = v
+		}
 		return true
 	})
-	return m
+
+	if targetProxyEndpoint == nil {
+		return nil, errors.New("target routing rule not found")
+	}
+
+	return targetProxyEndpoint, nil
 }
 
-func (r *Router) GetVDProxyEndpointsAsMap() map[string]*ProxyEndpoint {
+// Deep copy a proxy endpoint, excluding runtime paramters
+func CopyEndpoint(endpoint *ProxyEndpoint) *ProxyEndpoint {
+	js, _ := json.Marshal(endpoint)
+	newProxyEndpoint := ProxyEndpoint{}
+	err := json.Unmarshal(js, &newProxyEndpoint)
+	if err != nil {
+		return nil
+	}
+	return &newProxyEndpoint
+}
+
+func (r *Router) GetProxyEndpointsAsMap() map[string]*ProxyEndpoint {
 	m := make(map[string]*ProxyEndpoint)
 	r.ProxyEndpoints.Range(func(key, value interface{}) bool {
 		k, ok := key.(string)
