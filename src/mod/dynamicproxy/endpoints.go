@@ -1,65 +1,89 @@
 package dynamicproxy
 
 import (
+	"encoding/json"
 	"errors"
-	"net/url"
 	"strings"
-
-	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
 
-// Prepare proxy route generate a proxy handler service object for your endpoint
-func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint, error) {
-	//Filter the tailing slash if any
-	domain := endpoint.Domain
-	if domain[len(domain)-1:] == "/" {
-		domain = domain[:len(domain)-1]
-	}
-	endpoint.Domain = domain
+/*
+	Endpoint Functions
+*/
 
-	//Parse the web proxy endpoint
-	webProxyEndpoint := domain
-	if !strings.HasPrefix("http://", domain) && !strings.HasPrefix("https://", domain) {
-		//TLS is not hardcoded in proxy target domain
-		if endpoint.RequireTLS {
-			webProxyEndpoint = "https://" + webProxyEndpoint
+// Get virtual directory handler from given URI
+func (ep *ProxyEndpoint) GetVirtualDirectoryHandlerFromRequestURI(requestURI string) *VirtualDirectoryEndpoint {
+	for _, vdir := range ep.VirtualDirectories {
+		if strings.HasPrefix(requestURI, vdir.MatchingPath) {
+			return vdir
+		}
+	}
+	return nil
+}
+
+// Get virtual directory handler by matching path (exact match required)
+func (ep *ProxyEndpoint) GetVirtualDirectoryRuleByMatchingPath(matchingPath string) *VirtualDirectoryEndpoint {
+	for _, vdir := range ep.VirtualDirectories {
+		if vdir.MatchingPath == matchingPath {
+			return vdir
+		}
+	}
+	return nil
+}
+
+// Delete a vdir rule by its matching path
+func (ep *ProxyEndpoint) RemoveVirtualDirectoryRuleByMatchingPath(matchingPath string) error {
+	entryFound := false
+	newVirtualDirectoryList := []*VirtualDirectoryEndpoint{}
+	for _, vdir := range ep.VirtualDirectories {
+		if vdir.MatchingPath == matchingPath {
+			entryFound = true
 		} else {
-			webProxyEndpoint = "http://" + webProxyEndpoint
+			newVirtualDirectoryList = append(newVirtualDirectoryList, vdir)
 		}
 	}
 
-	//Create a new proxy agent for this root
-	path, err := url.Parse(webProxyEndpoint)
+	if entryFound {
+		//Update the list of vdirs
+		ep.VirtualDirectories = newVirtualDirectoryList
+		return nil
+	}
+	return errors.New("target virtual directory routing rule not found")
+}
+
+// Delete a vdir rule by its matching path
+func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint) (*ProxyEndpoint, error) {
+	//Check for matching path duplicate
+	if ep.GetVirtualDirectoryRuleByMatchingPath(vdir.MatchingPath) != nil {
+		return nil, errors.New("rule with same matching path already exists")
+	}
+
+	//Append it to the list of virtual directory
+	ep.VirtualDirectories = append(ep.VirtualDirectories, vdir)
+
+	//Prepare to replace the current routing rule
+	parentRouter := ep.parent
+	readyRoutingRule, err := parentRouter.PrepareProxyRoute(ep)
 	if err != nil {
 		return nil, err
 	}
 
-	//Create the proxy routing handler
-	proxy := dpcore.NewDynamicProxyCore(path, "", endpoint.SkipCertValidations)
-	endpoint.proxy = proxy
-	endpoint.parent = router
+	if ep.ProxyType == ProxyType_Root {
+		parentRouter.Root = readyRoutingRule
+	} else if ep.ProxyType == ProxyType_Host {
+		ep.Remove()
+		parentRouter.AddProxyRouteToRuntime(readyRoutingRule)
+	} else {
+		return nil, errors.New("unsupported proxy type")
+	}
 
-	return endpoint, nil
+	return readyRoutingRule, nil
 }
 
-// Add Proxy Route to current runtime. Call to PrepareProxyRoute before adding to runtime
-func (router *Router) AddProxyRouteToRuntime(endpoint *ProxyEndpoint) error {
-	if endpoint.proxy == nil {
-		//This endpoint is not prepared
-		return errors.New("proxy endpoint not ready. Use PrepareProxyRoute before adding to runtime")
-	}
-	// Push record into running subdomain endpoints
-	router.ProxyEndpoints.Store(endpoint.RootOrMatchingDomain, endpoint)
-	return nil
-}
-
-// Set given Proxy Route as Root. Call to PrepareProxyRoute before adding to runtime
-func (router *Router) SetProxyRouteAsRoot(endpoint *ProxyEndpoint) error {
-	if endpoint.proxy == nil {
-		//This endpoint is not prepared
-		return errors.New("proxy endpoint not ready. Use PrepareProxyRoute before adding to runtime")
-	}
-	// Push record into running root endpoints
-	router.Root = endpoint
-	return nil
+// Create a deep clone object of the proxy endpoint
+// Note the returned object is not activated. Call to prepare function before pushing into runtime
+func (ep *ProxyEndpoint) Clone() *ProxyEndpoint {
+	clonedProxyEndpoint := ProxyEndpoint{}
+	js, _ := json.Marshal(ep)
+	json.Unmarshal(js, &clonedProxyEndpoint)
+	return &clonedProxyEndpoint
 }

@@ -465,6 +465,23 @@ body{
   }
 
 /*
+  HTTP Proxy & Virtual Directory
+*/
+
+#currentVirtualDirectoryAttachingHost{
+    background: var(--theme_background); 
+    color: white;
+    border-radius: 1em;
+    font-weight: bolder;
+}
+
+.section.disabled{
+    opacity: 0.5;
+    user-select: none;
+    pointer-events: none;
+}
+
+/*
     Access Control
 */
 
@@ -494,11 +511,11 @@ body{
 }
 
 .tcproxConfig.running td:first-child{
-    border-left: 0.6em solid #21ba45 !important;
+    border-left: 0.6em solid #02cb59 !important;
 }
 
 .tcproxConfig.stopped td:first-child{
-    border-left: 0.6em solid #414141 !important;
+    border-left: 0.6em solid #02032a !important;
 }
 
 .tcproxConfig td:first-child .statusText{

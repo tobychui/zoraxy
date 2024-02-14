@@ -82,13 +82,31 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Host Routing
 	*/
 	sep := h.Parent.getProxyEndpointFromHostname(domainOnly)
-	if sep != nil {
+	if sep != nil && !sep.Disabled {
 		if sep.RequireBasicAuth {
 			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
 				return
 			}
 		}
+
+		//Check if any virtual directory rules matches
+		proxyingPath := strings.TrimSpace(r.RequestURI)
+		targetProxyEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
+		if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
+			//Virtual directory routing rule found. Route via vdir mode
+			h.vdirRequest(w, r, targetProxyEndpoint)
+			return
+		} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyType_Root {
+			potentialProxtEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
+			if potentialProxtEndpoint != nil && !targetProxyEndpoint.Disabled {
+				//Missing tailing slash. Redirect to target proxy endpoint
+				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+				return
+			}
+		}
+
+		//Fallback to handle by the host proxy forwarder
 		h.hostRequest(w, r, sep)
 		return
 	}
@@ -137,7 +155,25 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		fallthrough
 	case DefaultSite_ReverseProxy:
 		//They both share the same behavior
-		h.vdirRequest(w, r, h.Parent.Root)
+
+		//Check if any virtual directory rules matches
+		proxyingPath := strings.TrimSpace(r.RequestURI)
+		targetProxyEndpoint := proot.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
+		if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
+			//Virtual directory routing rule found. Route via vdir mode
+			h.vdirRequest(w, r, targetProxyEndpoint)
+			return
+		} else if !strings.HasSuffix(proxyingPath, "/") && proot.ProxyType != ProxyType_Root {
+			potentialProxtEndpoint := proot.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
+			if potentialProxtEndpoint != nil && !targetProxyEndpoint.Disabled {
+				//Missing tailing slash. Redirect to target proxy endpoint
+				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+				return
+			}
+		}
+
+		//No vdir match. Route via root router
+		h.hostRequest(w, r, h.Parent.Root)
 	case DefaultSite_Redirect:
 		redirectTarget := strings.TrimSpace(proot.DefaultSiteValue)
 		if redirectTarget == "" {
@@ -148,7 +184,7 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		parsedURL, err := url.Parse(proot.DefaultSiteValue)
 		if err != nil {
 			//Error when parsing target. Send to root
-			h.vdirRequest(w, r, h.Parent.Root)
+			h.hostRequest(w, r, h.Parent.Root)
 			return
 		}
 		hostname := parsedURL.Hostname()

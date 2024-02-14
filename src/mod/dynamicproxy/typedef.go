@@ -68,10 +68,21 @@ type BasicAuthExceptionRule struct {
 	PathPrefix string
 }
 
+// A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better
+// program structure than directly using ProxyEndpoint
+type VirtualDirectoryEndpoint struct {
+	MatchingPath        string               //Matching prefix of the request path, also act as key
+	Domain              string               //Domain or IP to proxy to
+	RequireTLS          bool                 //Target domain require TLS
+	SkipCertValidations bool                 //Set to true to accept self signed certs
+	Disabled            bool                 //If the rule is enabled
+	proxy               *dpcore.ReverseProxy `json:"-"`
+}
+
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
 	ProxyType            int    //The type of this proxy, see const def
-	RootOrMatchingDomain string //Root for vdir or Matching domain for subd, also act as key
+	RootOrMatchingDomain string //Matching domain for host, also act as key
 	Domain               string //Domain or IP to proxy to
 
 	//TLS/SSL Related
@@ -80,7 +91,7 @@ type ProxyEndpoint struct {
 	SkipCertValidations bool //Set to true to accept self signed certs
 
 	//Virtual Directories
-	VirtualDirectories []*ProxyEndpoint
+	VirtualDirectories []*VirtualDirectoryEndpoint
 
 	//Authentication
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
@@ -91,6 +102,7 @@ type ProxyEndpoint struct {
 	DefaultSiteOption int    //Fallback routing logic options
 	DefaultSiteValue  string //Fallback routing target, optional
 
+	Disabled bool //If the rule is disabled
 	//Internal Logic Elements
 	parent *Router
 	proxy  *dpcore.ReverseProxy `json:"-"`

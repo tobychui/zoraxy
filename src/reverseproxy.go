@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -251,7 +250,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BypassGlobalTLS:     useBypassGlobalTLS,
 			SkipCertValidations: skipTlsValidation,
 			//VDir
-			VirtualDirectories: []*dynamicproxy.ProxyEndpoint{},
+			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Auth
 			RequireBasicAuth:        requireBasicAuth,
 			BasicAuthCredentials:    basicAuthCredentials,
@@ -428,7 +427,6 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Remove the config from file
-	fmt.Println(ep)
 	err = RemoveReverseProxyConfig(ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())

@@ -84,6 +84,7 @@
         let selectedDefaultSite = $('input[name="defaultsiteOption"]:checked').val();
 
         $(".defaultSiteOptionDetails").hide();
+        $("#useRootProxyRouterForVdir").parent().addClass("disabled");
         if (selectedDefaultSite == "webserver"){
             //Use build in web server as target
             let staticWebServerURL = "127.0.0.1:" + $("#webserv_listenPort").val();
@@ -91,11 +92,13 @@
             $("#proxyRoot").parent().addClass("disabled");
             $("#rootReqTLS").parent().checkbox("set unchecked");
             $("#rootReqTLS").parent().addClass("disabled");
+            $("#useRootProxyRouterForVdir").parent().removeClass("disabled");
             currentDefaultSiteOption = 0;
         }else if (selectedDefaultSite == "proxy"){
             $("#defaultSiteProxyOptions").show();
             $("#rootReqTLS").parent().removeClass("disabled");
             $("#proxyRoot").parent().removeClass("disabled");
+            $("#useRootProxyRouterForVdir").parent().removeClass("disabled");
             currentDefaultSiteOption = 1;
         }else if (selectedDefaultSite == "redirect"){
             $("#defaultSiteRedirectOptions").show();

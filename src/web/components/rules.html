@@ -87,7 +87,7 @@
                         </div>
                     </div>
                     <br>
-                    <button class="ui basic button" onclick="newProxyEndpoint();"><i class="blue add icon"></i> Create Endpoint</button>
+                    <button class="ui basic button" onclick="newProxyEndpoint();"><i class="green add icon"></i> Create Endpoint</button>
                     <br><br>
                 </div>
             </div>
@@ -116,6 +116,8 @@
 </div>
 <script>
     $("#advanceProxyRules").accordion();
+
+   
 
     //New Proxy Endpoint
     function newProxyEndpoint(){
@@ -157,9 +159,6 @@
                 if (data.error != undefined){
                     msgbox(data.error, false, 5000);
                 }else{
-                    //OK
-                   
-
                     //Clear old data
                     $("#rootname").val("");
                     $("#proxyDomain").val("");
@@ -193,13 +192,15 @@
     }
 
     //Generic functions for delete rp endpoints 
-    function deleteEndpoint(ptype, epoint){
+    function deleteEndpoint(epoint){
+        epoint = decodeURIComponent(epoint);
         if (confirm("Confirm remove proxy for :" + epoint + "?")){
             $.ajax({
                 url: "/api/proxy/del",
                 data: {ep: epoint, },
                 success: function(){
                     listProxyEndpoints();
+                    msgbox("Proxy Rule Deleted", true);
                 }
             })
         }
@@ -300,149 +301,6 @@
     }
 
     /*
-        Inline editor for subd.html and vdir.html
-    */
-
-    function editEndpoint(endpointType, uuid) {
-        var row = $('tr[eptuuid="' + uuid + '"]');
-        var columns = row.find('td[data-label]');
-        var payload = $(row).attr("payload");
-        payload = JSON.parse(decodeURIComponent(payload));
-        console.log(payload);
-        //console.log(payload);
-        columns.each(function(index) {
-            var column = $(this);
-            var oldValue = column.text().trim();
-
-            if ($(this).attr("editable") == "false"){
-                //This col do not allow edit. Skip
-                return;
-            }
-
-            // Create an input element based on the column content
-            var input;
-            var datatype = $(this).attr("datatype");
-            if (datatype == "domain"){
-                let domain = payload.Domain;
-                //Target require TLS for proxying
-                let tls = payload.RequireTLS;
-                if (tls){
-                    tls = "checked";
-                }else{
-                    tls = "";
-                }
-
-                //Require TLS validation
-                let skipTLSValidation = payload.SkipCertValidations;
-                let checkstate = "";
-                if (skipTLSValidation){
-                    checkstate = "checked";
-                }
-
-                input = `
-                    <div class="ui mini fluid input">
-                        <input type="text" class="Domain" value="${domain}">
-                    </div>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="RequireTLS" ${tls}>
-                        <label>Require TLS<br>
-                            <small>Proxy target require HTTPS connection</small></label>
-                    </div><br>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="SkipCertValidations" ${checkstate}>
-                        <label>Skip Verification<br>
-                        <small>Check this if proxy target is using self signed certificates</small></label>
-                    </div>
-                `;
-                column.empty().append(input);
-            }else if (datatype == "basicauth"){
-                let requireBasicAuth = payload.RequireBasicAuth;
-                let checkstate = "";
-                if (requireBasicAuth){
-                    checkstate = "checked";
-                }
-                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
-                    <label>Require Basic Auth</label>
-                    </div>
-                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${endpointType}','${uuid}');"><i class="ui blue lock icon"></i> Edit Settings</button>`);
-
-            }else if (datatype == 'action'){
-                column.empty().append(`
-                <button title="Cancel" onclick="exitProxyInlineEdit('${endpointType}');" class="ui basic small circular icon button"><i class="ui remove icon"></i></button>
-                <button title="Save" onclick="saveProxyInlineEdit('${uuid}');" class="ui basic small circular icon button"><i class="ui green save icon"></i></button>
-                `);
-            }else if (datatype == "inbound"){
-                let originalContent = $(column).html();
-                column.empty().append(`${originalContent}
-                    <div class="ui divider"></div>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="BypassGlobalTLS" ${payload.BypassGlobalTLS?"checked":""}>
-                        <label>Allow plain HTTP access<br>
-                            <small>Allow inbound connections without TLS/SSL</small></label>
-                    </div><br>
-                `);
-            }else{
-                //Unknown field. Leave it untouched
-            }
-        });
-
-        $("#" + endpointType).find(".editBtn").addClass("disabled");
-    }
-
-    function exitProxyInlineEdit(endpointType){
-        listProxyEndpoints();
-        $("#" + endpointType).find(".editBtn").removeClass("disabled");
-    }
-
-    function saveProxyInlineEdit(uuid){
-        var row = $('tr[eptuuid="' + uuid + '"]');
-        if (row.length == 0){
-            return;
-        }
-        
-        var epttype = "host";
-        let newDomain =  $(row).find(".Domain").val();
-        let requireTLS = $(row).find(".RequireTLS")[0].checked;
-        let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
-        let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
-        let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
-
-        console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
-
-        $.ajax({
-            url: "/api/proxy/edit",
-            method: "POST",
-            data: {
-                "type": epttype,
-                "rootname": uuid,
-                "ep":newDomain,
-                "bpgtls": bypassGlobalTLS,
-                "tls" :requireTLS,
-                "tlsval": skipCertValidations,
-                "bauth" :requireBasicAuth,
-            },
-            success: function(data){
-                if (data.error !== undefined){
-                    msgbox(data.error, false, 6000);
-                }else{
-                    msgbox("Proxy endpoint updated");
-                    listProxyEndpoints();
-                }
-            }
-        })
-    }
-    
-    function editBasicAuthCredentials(endpointType, uuid){
-        let payload = encodeURIComponent(JSON.stringify({
-            ept: endpointType,
-            ep: uuid
-        }));
-        showSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
-    }
-
-
-    /*
         Obtain Certificate via ACME
     */
 
@@ -503,4 +361,32 @@
             }
         });
     }
+
+    //Update v3.0.0
+    //Since some proxy rules now contains wildcard characters
+    //all uuid are converted to hex code before use in DOM selector
+
+    String.prototype.hexEncode = function(){
+        var hex, i;
+
+        var result = "";
+        for (i=0; i<this.length; i++) {
+            hex = this.charCodeAt(i).toString(16);
+            result += ("000"+hex).slice(-4);
+        }
+
+        return result
+    }
+
+    String.prototype.hexDecode = function(){
+        var j;
+        var hexes = this.match(/.{1,4}/g) || [];
+        var back = "";
+        for(j = 0; j<hexes.length; j++) {
+            back += String.fromCharCode(parseInt(hexes[j], 16));
+        }
+
+        return back;
+    }
+
 </script>

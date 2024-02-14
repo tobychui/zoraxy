@@ -108,8 +108,7 @@ func SaveReverseProxyConfig(endpoint *dynamicproxy.ProxyEndpoint) error {
 		return err
 	}
 
-	os.WriteFile(filename, js, 0775)
-	return nil
+	return os.WriteFile(filename, js, 0775)
 }
 
 func RemoveReverseProxyConfig(endpoint string) error {
@@ -137,7 +136,7 @@ func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
 		RequireTLS:              false,
 		BypassGlobalTLS:         false,
 		SkipCertValidations:     false,
-		VirtualDirectories:      []*dynamicproxy.ProxyEndpoint{},
+		VirtualDirectories:      []*dynamicproxy.VirtualDirectoryEndpoint{},
 		RequireBasicAuth:        false,
 		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
 		BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},

@@ -129,8 +129,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 }
 
 // Handle vdir type request
-func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
-	rewriteURL := h.Parent.rewriteURL(target.RootOrMatchingDomain, r.RequestURI)
+func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, target *VirtualDirectoryEndpoint) {
+	rewriteURL := h.Parent.rewriteURL(target.MatchingPath, r.RequestURI)
 	r.URL, _ = url.Parse(rewriteURL)
 
 	r.Header.Set("X-Forwarded-Host", r.Host)
@@ -164,7 +164,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ProxyDomain:  target.Domain,
 		OriginalHost: originalHostHeader,
 		UseTLS:       target.RequireTLS,
-		PathPrefix:   target.RootOrMatchingDomain,
+		PathPrefix:   target.MatchingPath,
 	})
 
 	var dnsError *net.DNSError
