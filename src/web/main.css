@@ -61,7 +61,6 @@ body.darkTheme #themeColorButton{
 
 body{
     background-color:var(--theme_bg);
-    color: var(--text_color);
 }
 
 .functiontab{
@@ -127,6 +126,9 @@ body{
     display: none !important;
 }
 
+.rulesInstructions, .rulesInstructions span{
+    color: white !important;
+}
 
 .ui.divider{
     font-weight: 300;
