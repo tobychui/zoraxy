@@ -51,7 +51,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 		results := []*CertInfo{}
 
 		for _, filename := range filenames {
-			certFilepath := filepath.Join(tlsCertManager.CertStore, filename+".crt")
+			certFilepath := filepath.Join(tlsCertManager.CertStore, filename+".pem")
 			//keyFilepath := filepath.Join(tlsCertManager.CertStore, filename+".key")
 			fileInfo, err := os.Stat(certFilepath)
 			if err != nil {
@@ -248,7 +248,7 @@ func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if keytype == "pub" {
-		overWriteFilename = domain + ".crt"
+		overWriteFilename = domain + ".pem"
 	} else if keytype == "pri" {
 		overWriteFilename = domain + ".key"
 	} else {
@@ -286,6 +286,9 @@ func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return
 	}
+
+	//Update cert list
+	tlsCertManager.UpdateLoadedCertList()
 
 	// send response
 	fmt.Fprintln(w, "File upload successful!")

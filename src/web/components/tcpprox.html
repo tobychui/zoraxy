@@ -3,11 +3,33 @@
         <h2>TCP Proxy</h2>
         <p>Proxy traffic flow on layer 3 via TCP/IP</p>
     </div>
-    <button class="ui basic orange button" id="addProxyConfigButton"><i class="ui add icon"></i> Add Proxy Config</button>
-    <button class="ui basic circular right floated icon button" onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i></button>
     <div class="ui divider"></div>
-    <div class="ui basic segment" id="addproxyConfig"  style="display:none;">
-        <h3>TCP Proxy Config</h3>
+    <div class="ui basic segment" style="margin-top: 0;">
+        <h4>TCP Proxy Rules</h4>
+        <p>A list of TCP proxy rules created on this host. To enable them, use the toggle button on the right.</p>
+        <div style="overflow-x: auto; min-height: 400px;">
+            <table id="proxyTable" class="ui celled unstackable table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Port/Addr A</th>
+                        <th>Port/Addr B</th>
+                        <th>Mode</th>
+                        <th>Timeout (s)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+        <button class="ui basic right floated button" onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i>Refresh</button>
+        <br><br>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment" id="addproxyConfig">
+        <h4>Add or Edit TCP Proxy</h4>
         <p>Create or edit a new proxy instance</p>
         <form id="tcpProxyForm" class="ui form">
             <div class="field" style="display:none;">
@@ -39,11 +61,10 @@
                     <option value="starter">Starter</option>
                 </select>
             </div>
-            <button id="addTcpProxyButton" class="ui basic button" type="submit"><i class="ui blue add icon"></i> Create</button>  
-            <button id="editTcpProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);"><i class="ui blue save icon"></i> Update</button>  
+            <button id="addTcpProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
+            <button id="editTcpProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
             <button class="ui basic red button" onclick="event.preventDefault(); cancelTCPProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>  
-            <div class="ui basic inverted segment" style="background-color: #414141; border-radius: 0.6em;">
-                <h3>Proxy Mode Instructions</h3>
+            <div class="ui basic inverted segment" style="background: var(--theme_background_inverted); border-radius: 0.6em;">
                 <p>TCP Proxy support the following TCP sockets proxy modes</p>
                 <table class="ui celled padded inverted basic table">
                     <thead>
@@ -108,28 +129,6 @@
                   </table>
                 </div>
         </form>
-        <div class="ui divider"></div>
-    </div>
-    <div class="ui basic segment" style="margin-top: 0;">
-        <h3>TCP Proxy Configs</h3>
-        <p>A list of TCP proxy configs created on this host. To enable them, use the toggle button on the right.</p>
-        <div style="overflow-x: auto; min-height: 400px;">
-            <table id="proxyTable" class="ui celled unstackable table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Port/Addr A</th>
-                        <th>Port/Addr B</th>
-                        <th>Mode</th>
-                        <th>Timeout (s)</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
     <script>
@@ -138,6 +137,13 @@
         $("#tcpProxyForm .dropdown").dropdown();
         $('#tcpProxyForm').on('submit', function(event) {
             event.preventDefault();
+
+            //Check if update mode
+            if ($("#editTcpProxyButton").is(":visible")){
+                confirmEditTCPProxyConfig(event);
+                return;
+            }
+
             var form = $(this);
 
             var formValid = validateTCPProxyConfig(form);
@@ -165,23 +171,16 @@
                 }
             });
         });
-
-        //Add proxy button pressed. Show add TCP proxy menu
-        $("#addProxyConfigButton").on("click", function(){
-            $('#addproxyConfig').slideToggle('fast');
-            $("#addTcpProxyButton").show();
-            $("#editTcpProxyButton").hide();
-        });
-
             
         function clearTCPProxyAddEditForm(){
             $('#tcpProxyForm input, #tcpProxyForm select').val('');
             $('#tcpProxyForm select').dropdown('clear');
         }
 
-        function cancelTCPProxyEdit(event) {
+        function cancelTCPProxyEdit(event=undefined) {
             clearTCPProxyAddEditForm();
-            $('#addproxyConfig').slideUp('fast');
+            $("#addTcpProxyButton").show();
+            $("#editTcpProxyButton").hide();
         }
 
         function validateTCPProxyConfig(form){
@@ -231,7 +230,7 @@
                 proxyConfigs.forEach(function(config) {
                     var runningLogo = 'Stopped';
                     var runningClass = "stopped";
-                    var startButton = `<button onclick="startTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="play icon"></i> Start Proxy</button>`;
+                    var startButton = `<button onclick="startTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="green play icon"></i> Start Proxy</button>`;
                     if (config.Running){
                         runningLogo = 'Running';
                         startButton = `<button onclick="stopTcpProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="red stop icon"></i> Stop Proxy</button>`;
@@ -354,8 +353,8 @@
                         msgbox("Config Updated");
                     }
                     initProxyConfigList();
-                    clearTCPProxyAddEditForm();
-                    $("#addproxyConfig").slideUp("fast");
+                    cancelTCPProxyEdit();
+                    
                 },
                 error: function() {
                     msgbox('An error occurred while processing the request', false);

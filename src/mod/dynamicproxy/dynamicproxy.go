@@ -35,12 +35,6 @@ func NewDynamicProxy(option RouterOption) (*Router, error) {
 		Parent: &thisRouter,
 	}
 
-	//Prase the tld map for tld redirection in main router
-	//See Server.go declarations
-	if len(rawTldMap) > 0 {
-		json.Unmarshal(rawTldMap, &thisRouter.tldMap)
-	}
-
 	return &thisRouter, nil
 }
 
@@ -74,12 +68,12 @@ func (router *Router) UpdateHttpToHttpsRedirectSetting(useRedirect bool) {
 func (router *Router) StartProxyService() error {
 	//Create a new server object
 	if router.server != nil {
-		return errors.New("Reverse proxy server already running")
+		return errors.New("reverse proxy server already running")
 	}
 
 	//Check if root route is set
 	if router.Root == nil {
-		return errors.New("Reverse proxy router root not set")
+		return errors.New("reverse proxy router root not set")
 	}
 
 	minVersion := tls.VersionTLS10
@@ -92,16 +86,6 @@ func (router *Router) StartProxyService() error {
 	}
 
 	if router.Option.UseTls {
-		/*
-			//Serve with TLS mode
-			ln, err := tls.Listen("tcp", ":"+strconv.Itoa(router.Option.Port), config)
-			if err != nil {
-				log.Println(err)
-				router.Running = false
-				return err
-			}
-			router.tlsListener = ln
-		*/
 		router.server = &http.Server{
 			Addr:      ":" + strconv.Itoa(router.Option.Port),
 			Handler:   router.mux,
@@ -216,7 +200,7 @@ func (router *Router) StartProxyService() error {
 
 func (router *Router) StopProxyService() error {
 	if router.server == nil {
-		return errors.New("Reverse proxy server already stopped")
+		return errors.New("reverse proxy server already stopped")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -251,6 +235,7 @@ func (router *Router) Restart() error {
 			return err
 		}
 
+		time.Sleep(300 * time.Millisecond)
 		// Start the server
 		err = router.StartProxyService()
 		if err != nil {

@@ -2,16 +2,66 @@
     index.html style overwrite
 */
 :root{
-    --theme_grey: #414141;
-    --theme_lgrey: #f6f6f6;
-    --theme_green: #3c9c63;
-    --theme_fcolor: #979797;
-    --theme_advance: #f8f8f9;
+   
+
+
     --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
+    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
+    --theme_green: linear-gradient(270deg, #27e7ff, #00ca52);
+    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
 }
+
+/* Theme Color Definations */
+body:not(.darkTheme){
+    --theme_bg: #f6f6f6;
+    --theme_bg_primary: #ffffff;
+    --theme_bg_secondary: #ffffff;
+    --theme_bg_active: #ececec;
+    --theme_highlight: #a9d1f3;
+    --theme_bg_inverted: #27292d;
+    --theme_advance: #f8f8f9;
+    --item_color: #5e5d5d;
+    --item_color_select: rgba(0,0,0,.87);
+    --text_color: #414141;
+    --input_color: white;
+    --divider_color: #cacaca;
+    --text_color_inverted: #fcfcfc;
+    --button_text_color: #878787;
+    --button_border_color: #dedede;
+}
+
+body.darkTheme{
+    --theme_bg: #27292d;
+    --theme_bg_primary: #3d3f47;
+    --theme_bg_secondary: #373a42;
+    --theme_highlight: #6682c4;
+    --theme_bg_active: #292929;
+    --theme_bg_inverted: #f8f8f9;
+    --theme_advance: #333333;
+    --item_color: #cacaca;
+    --text_color: #fcfcfc;
+    --text_color_secondary: #dfdfdf;
+    --input_color: black;
+    --divider_color: #3b3b3b;
+    --item_color_select: rgba(255, 255, 255, 0.87);
+    --text_color_inverted: #414141;
+    --button_text_color: #e9e9e9;
+    --button_border_color: #646464;
+}
+
+/* Theme Toggle Css */
+#themeColorButton{
+    background-color: black;
+    color: var(--text_color_inverted);
+}
+
+body.darkTheme #themeColorButton{
+    background-color: white;
+}
+
 body{
-    background-color:#f6f6f6;
-    color: #414141;
+    background-color:var(--theme_bg);
+    color: var(--text_color);
 }
 
 .functiontab{
@@ -32,9 +82,9 @@ body{
     padding: 0.4em;
     padding-left: 1.2em;
     padding-right: 1.2em;
-    background-color: #ffffff;
+    background-color: var(--theme_bg_secondary);
     margin-bottom: 1em;
-    border-bottom: 1px solid rgb(226, 226, 226);
+    border-bottom: 1px solid var(--theme_highlight);
     position: fixed;
     top: 0;
     width: 100%;
@@ -68,7 +118,7 @@ body{
     display: inline-block;
     width: calc(100% - 240px);
     vertical-align: top;
-    background-color: white;
+    background-color: var(--theme_bg_primary);
     border-radius: 1em;
     margin-right: 2em;
 }
@@ -301,12 +351,17 @@ body{
 }
 
 .ui.menu .item{
-    color: #5e5d5d;
+    color: var(--item_color);
+}
+
+.ui.menu .item:hover{
+	color: var(--item_color_select) !important;
 }
 
 .ui.segment{
     box-shadow: none !important;
 }
+
 
 .ui.secondary.vertical.menu .active.item{
     background: var(--theme_background);
@@ -316,11 +371,6 @@ body{
 
 .ui.secondary.vertical.menu .active.item .icon{
     animation: blinker 3s ease-in-out infinite;
-}
-
-.ui.important.basic.segment{
-    background: linear-gradient(217deg, rgba(234,238,175,1) 16%, rgba(254,255,242,1) 78%);
-    border-radius: 1em;
 }
 
 .basic.segment.advanceoptions{
@@ -522,12 +572,58 @@ body{
     position: absolute;
     bottom: 0.3em;
     left: 0.2em;
-    font-size: 2em;
+    font-size: 1.4em;
     color:rgb(224, 224, 224);
     opacity: 0.7;
     pointer-events: none;
     user-select: none;
 }
+
+/*
+    ACME Renewer Status Panel
+*/
+
+.acmeRenewStateWrapper{
+    padding: 1em;
+    border-radius: 1em !important;
+}
+
+
+.acmeRenewStateWrapper .ui.header, .acmeRenewStateWrapper .sub.header{
+    color: white !important;
+}
+
+.acmeRenewStateWrapper:not(.enabled){
+    background: var(--theme_red) !important;
+}
+
+
+.acmeRenewStateWrapper.enabled{
+    background: var(--theme_green) !important;
+}
+
+/*
+    Static Web Server
+*/
+
+.webservRunningStateWrapper{
+    padding: 1em;
+    border-radius: 1em !important;
+}
+
+
+.webservRunningStateWrapper .ui.header, .webservRunningStateWrapper .sub.header{
+    color: white !important;
+}
+
+.webservRunningStateWrapper:not(.enabled){
+    background: var(--theme_red) !important;
+}
+
+.webservRunningStateWrapper.enabled{
+    background: var(--theme_green) !important;
+}
+
 
 /*
     Uptime Monitor

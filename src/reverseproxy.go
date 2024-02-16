@@ -48,6 +48,14 @@ func ReverseProxtInit() {
 		SystemWideLogger.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
 	}
 
+	developmentMode := false
+	sysdb.Read("settings", "devMode", &developmentMode)
+	if useTls {
+		SystemWideLogger.Println("Development mode enabled. Using no-store Cache Control policy")
+	} else {
+		SystemWideLogger.Println("Development mode disabled. Proxying with default Cache Control policy")
+	}
+
 	listenOnPort80 := false
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if listenOnPort80 {
@@ -74,9 +82,11 @@ func ReverseProxtInit() {
 
 	dprouter, err := dynamicproxy.NewDynamicProxy(dynamicproxy.RouterOption{
 		HostUUID:           nodeUUID,
+		HostVersion:        version,
 		Port:               inboundPort,
 		UseTls:             useTls,
 		ForceTLSLatest:     forceLatestTLSVersion,
+		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
 		TlsManager:         tlsCertManager,
@@ -325,10 +335,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Update utm if exists
-	if uptimeMonitor != nil {
-		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
-		uptimeMonitor.CleanRecords()
-	}
+	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
 }
@@ -741,7 +748,7 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 		} else if enabled == "false" {
 			sysdb.Write("settings", "listenP80", false)
 			SystemWideLogger.Println("Disabling port 80 listener")
-			dynamicProxyRouter.UpdatePort80ListenerState(true)
+			dynamicProxyRouter.UpdatePort80ListenerState(false)
 		} else {
 			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
 		}
@@ -787,6 +794,30 @@ func HandleManagementProxyCheck(w http.ResponseWriter, r *http.Request) {
 	isProxied := dynamicProxyRouter.IsProxiedSubdomain(r)
 	js, _ := json.Marshal(isProxied)
 	utils.SendJSONResponse(w, string(js))
+}
+
+func HandleDevelopmentModeChange(w http.ResponseWriter, r *http.Request) {
+	enableDevelopmentModeStr, err := utils.GetPara(r, "enable")
+	if err != nil {
+		//Load the current development mode toggle state
+		js, _ := json.Marshal(dynamicProxyRouter.Option.NoCache)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Write changes to runtime
+		enableDevelopmentMode := false
+		if enableDevelopmentModeStr == "true" {
+			enableDevelopmentMode = true
+		}
+
+		//Write changes to runtime
+		dynamicProxyRouter.Option.NoCache = enableDevelopmentMode
+
+		//Write changes to database
+		sysdb.Write("settings", "devMode", enableDevelopmentMode)
+
+		utils.SendOK(w)
+	}
+
 }
 
 // Handle incoming port set. Change the current proxy incoming port

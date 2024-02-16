@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -150,6 +151,48 @@ func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+/*
+	Static Web Server
+*/
+
+// Handle port change, if root router is using internal static web server
+// update the root router as well
+func HandleStaticWebServerPortChange(w http.ResponseWriter, r *http.Request) {
+	newPort, err := utils.PostInt(r, "port")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
+	if dynamicProxyRouter.Root.DefaultSiteOption == dynamicproxy.DefaultSite_InternalStaticWebServer {
+		//Update the root site as well
+		newDraftingRoot := dynamicProxyRouter.Root.Clone()
+		newDraftingRoot.Domain = "127.0.0.1:" + strconv.Itoa(newPort)
+		activatedNewRoot, err := dynamicProxyRouter.PrepareProxyRoute(newDraftingRoot)
+		if err != nil {
+			utils.SendErrorResponse(w, "unable to update root routing rule")
+			return
+		}
+
+		//Replace the root
+		dynamicProxyRouter.Root = activatedNewRoot
+
+		SaveReverseProxyConfig(newDraftingRoot)
+	}
+
+	err = staticWebServer.ChangePort(strconv.Itoa(newPort))
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+/*
+	mDNS Scanning
+*/
 
 // Handle listing current registered mdns nodes
 func HandleMdnsListing(w http.ResponseWriter, r *http.Request) {

@@ -97,3 +97,13 @@ func (router *Router) SetProxyRouteAsRoot(endpoint *ProxyEndpoint) error {
 	router.Root = endpoint
 	return nil
 }
+
+// ProxyEndpoint remove provide global access by key
+func (router *Router) RemoveProxyEndpointByRootname(rootnameOrMatchingDomain string) error {
+	targetEpt, err := router.LoadProxy(rootnameOrMatchingDomain)
+	if err != nil {
+		return err
+	}
+
+	return targetEpt.Remove()
+}

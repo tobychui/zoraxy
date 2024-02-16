@@ -25,9 +25,11 @@ type ProxyHandler struct {
 
 type RouterOption struct {
 	HostUUID           string //The UUID of Zoraxy, use for heading mod
+	HostVersion        string //The version of Zoraxy, use for heading mod
 	Port               int    //Incoming port
 	UseTls             bool   //Use TLS to serve incoming requsts
 	ForceTLSLatest     bool   //Force TLS1.2 or above
+	NoCache            bool   //Force set Cache-Control: no-store
 	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
 	TlsManager         *tlscert.Manager

@@ -1,8 +1,6 @@
 package dynamicproxy
 
 import (
-	_ "embed"
-	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,11 +22,6 @@ import (
 	- Subdomain Routing
 	- Vitrual Directory Routing
 */
-
-var (
-	//go:embed tld.json
-	rawTldMap []byte
-)
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
@@ -52,10 +45,12 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Inject debug headers
+	w.Header().Set("x-proxy-by", "zoraxy/"+h.Parent.Option.HostVersion)
+
 	/*
 		General Access Check
 	*/
-
 	respWritten := h.handleAccessRouting(w, r)
 	if respWritten {
 		return
@@ -81,6 +76,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		Host Routing
 	*/
+
 	sep := h.Parent.getProxyEndpointFromHostname(domainOnly)
 	if sep != nil && !sep.Disabled {
 		if sep.RequireBasicAuth {
@@ -234,45 +230,4 @@ func (h *ProxyHandler) handleAccessRouting(w http.ResponseWriter, r *http.Reques
 	}
 
 	return false
-}
-
-// Return if the given host is already topped (e.g. example.com or example.co.uk) instead of
-// a host with subdomain (e.g. test.example.com)
-func (h *ProxyHandler) isTopLevelRedirectableDomain(requestHost string) bool {
-	parts := strings.Split(requestHost, ".")
-	if len(parts) > 2 {
-		//Cases where strange tld is used like .co.uk or .com.hk
-		_, ok := h.Parent.tldMap[strings.Join(parts[1:], ".")]
-		if ok {
-			//Already topped
-			return true
-		}
-	} else {
-		//Already topped
-		return true
-	}
-
-	return false
-}
-
-// GetTopLevelRedirectableDomain returns the toppest level of domain
-// that is redirectable. E.g. a.b.c.example.co.uk will return example.co.uk
-func (h *ProxyHandler) getTopLevelRedirectableDomain(unsetSubdomainHost string) (string, error) {
-	parts := strings.Split(unsetSubdomainHost, ".")
-	if h.isTopLevelRedirectableDomain(unsetSubdomainHost) {
-		//Already topped
-		return "", errors.New("already at top level domain")
-	}
-
-	for i := 0; i < len(parts); i++ {
-		possibleTld := parts[i:]
-		_, ok := h.Parent.tldMap[strings.Join(possibleTld, ".")]
-		if ok {
-			//This is tld length
-			tld := strings.Join(parts[i-1:], ".")
-			return "//" + tld, nil
-		}
-	}
-
-	return "", errors.New("unsupported top level domain given")
 }

@@ -30,7 +30,7 @@
             <h4>Edit Virtual Directory Routing Rules</h4>
             <p>The following are the list of Virtual Directories currently handled by the host router above</p>
             <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
-                <table class="ui celled sortable basic unstackable compact table">
+                <table class="ui celled sortable unstackable compact table">
                     <thead>
                         <tr>
                             <th>Virtual Directory</th>
@@ -162,6 +162,7 @@
                     //List the vdirs
                     console.log(data);
                     data.forEach(vdir => {
+                        var tlsIcon = "";
                         if (vdir.RequireTLS){
                             tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
                             if (vdir.SkipCertValidations){

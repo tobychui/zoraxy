@@ -3,15 +3,15 @@
         <h2>HTTP Proxy</h2>
         <p>Proxy HTTP server with HTTP or HTTPS for multiple hosts. If you are only proxying for one host / domain, use Default Site instead.</p>
     </div>
-    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-width: 400px;">
-        <table class="ui celled sortable unstackable basic compact table">
+    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+        <table class="ui celled sortable unstackable compact table">
             <thead>
                 <tr>
                     <th>Host</th>
                     <th>Destination</th>
                     <!-- <th>Virtual Directory</th> -->
                     <th>Basic Auth</th>
-                    <th class="no-sort" style="min-width: 7.2em;">Actions</th>
+                    <th class="no-sort" style="min-width:100px;">Actions</th>
                 </tr>
             </thead>
             <tbody id="httpProxyList">
@@ -19,6 +19,7 @@
             </tbody>
         </table>
     </div>
+
     <button class="ui icon right floated basic button" onclick="listProxyEndpoints();"><i class="green refresh icon"></i> Refresh</button>
     <br><br>
 </div>

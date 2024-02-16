@@ -198,18 +198,19 @@
 
     //Set the new proxy root option
     function setProxyRoot(btn=undefined){
-        if (btn != undefined){
-            $(btn).addClass("disabled");
-        }
         var newpr = $("#proxyRoot").val();
-        if (newpr.trim() == ""){
-            $("#proxyRoot").parent().addClass('error');
-            return
-        }else{
-            $("#proxyRoot").parent().removeClass('error');
+        if (newpr.trim() == "" && currentDefaultSiteOption == 0){
+            //Fill in the web server info
+            newpr = "127.0.0.1:" +  $("#webserv_listenPort").val();
+            $("#proxyRoot").val(newpr);
+            
         }
 
         var rootReqTls = $("#rootReqTLS")[0].checked;
+
+        if (btn != undefined){
+            $(btn).addClass("disabled");
+        }
 
         //proxy mode or redirect mode, check for input values
         var defaultSiteValue = "";

@@ -56,6 +56,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/useHttpsRedirect", HandleUpdateHttpsRedirect)
 	authRouter.HandleFunc("/api/proxy/listenPort80", HandleUpdatePort80Listener)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
+	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
 	//Reverse proxy virtual directory APIs
 	authRouter.HandleFunc("/api/proxy/vdir/list", ReverseProxyListVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
@@ -178,7 +179,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
 	authRouter.HandleFunc("/api/webserv/start", staticWebServer.HandleStartServer)
 	authRouter.HandleFunc("/api/webserv/stop", staticWebServer.HandleStopServer)
-	authRouter.HandleFunc("/api/webserv/setPort", staticWebServer.HandlePortChange)
+	authRouter.HandleFunc("/api/webserv/setPort", HandleStaticWebServerPortChange)
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
 	if *allowWebFileManager {
 		//Web Directory Manager file operation functions

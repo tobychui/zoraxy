@@ -7,7 +7,13 @@ import (
 )
 
 /*
-	Endpoint Functions
+	endpoint.go
+	author: tobychui
+
+	This script handle the proxy endpoint object actions
+	so proxyEndpoint can be handled like a proper oop object
+
+	Most of the functions are implemented in dynamicproxy.go
 */
 
 // Get virtual directory handler from given URI
@@ -86,4 +92,17 @@ func (ep *ProxyEndpoint) Clone() *ProxyEndpoint {
 	js, _ := json.Marshal(ep)
 	json.Unmarshal(js, &clonedProxyEndpoint)
 	return &clonedProxyEndpoint
+}
+
+// Remove this proxy endpoint from running proxy endpoint list
+func (ep *ProxyEndpoint) Remove() error {
+	ep.parent.ProxyEndpoints.Delete(ep.RootOrMatchingDomain)
+	return nil
+}
+
+// Write changes to runtime without respawning the proxy handler
+// use prepare -> remove -> add if you change anything in the endpoint
+// that effects the proxy routing src / dest
+func (ep *ProxyEndpoint) UpdateToRuntime() {
+	ep.parent.ProxyEndpoints.Store(ep.RootOrMatchingDomain, ep)
 }

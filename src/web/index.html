@@ -26,9 +26,12 @@
             <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
                 <button class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
             </div>
-            <div class="ui right floated buttons" style="padding-top: 2px;">
-                <button class="ui basic icon button" onclick="logout();"><i class="sign-out icon"></i></button>
+            <div class="ui right floated buttons" style="padding-top: 2px; padding-right: 0.4em;">
+                <button class="ui basic white icon button" onclick="logout();"><i class="sign-out icon"></i></button>
             </div>
+            <!-- <div class="ui right floated buttons" style="padding-top: 2px;">
+                <button id="themeColorButton" class="ui icon button" onclick="toggleTheme();"><i class="sun icon"></i></button>
+            </div> -->
         </div>
         <div class="wrapper">
             <div class="toolbar">
@@ -52,8 +55,6 @@
                     <a class="item" tag="tcpprox">
                         <i class="simplistic exchange icon"></i> TCP Proxy
                     </a>
-                   
-                   
                     <div class="ui divider menudivider">Access & Connections</div>
                     <a class="item" tag="cert">
                         <i class="simplistic lock icon"></i> TLS / SSL certificates
@@ -71,14 +72,13 @@
                     <a class="item" tag="zgrok">
                         <i class="simplistic podcast icon"></i> Service Expose Proxy
                     </a>
-                    
-                    <div class="ui divider menudivider">Hosting</div>
+                    <div class="ui divider menudivider">Others</div>
                     <a class="item" tag="webserv">
                         <i class="simplistic globe icon"></i> Static Web Server
                     </a>
-
-                    <div class="ui divider menudivider">Others</div>
-                 
+                    <a class="item" tag="utm">
+                        <i class="simplistic time icon"></i> Uptime Monitor
+                    </a>
                     <a class="item" tag="networktool">
                         <i class="simplistic terminal icon"></i> Network Tools
                     </a>
@@ -243,6 +243,16 @@
                         }, 300);
                     }
                 });
+            }
+
+            function toggleTheme(){
+                if ($("body").hasClass("darkTheme")){
+                    $("body").removeClass("darkTheme")
+                    $("#themeColorButton").html(`<i class="ui moon icon"></i>`);
+                }else{
+                    $("body").addClass("darkTheme");
+                    $("#themeColorButton").html(`<i class="ui sun icon"></i>`);
+                }
             }
 
             function getTabButtonById(targetTabId){

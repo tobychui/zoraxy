@@ -117,7 +117,6 @@
 <script>
     $("#advanceProxyRules").accordion();
 
-   
 
     //New Proxy Endpoint
     function newProxyEndpoint(){
@@ -164,7 +163,7 @@
                     $("#proxyDomain").val("");
                     credentials = [];
                     updateTable();
-
+                    reloadUptimeList();
                     //Check if it is a new subdomain and TLS enabled
                     if ($("#tls").checkbox("is checked")){
                         confirmBox("Request new SSL Cert for this subdomain?", function(choice){
@@ -177,7 +176,12 @@
                                 //Get a new cert using ACME
                                 msgbox("Requesting certificate via " + defaultCA  +"...");
                                 console.log("Trying to get a new certificate via ACME");
-                                obtainCertificate(rootname, defaultCA.trim());
+
+                                //Request ACME for certificate, see cert.html component
+                                obtainCertificate(rootname, defaultCA.trim(), function(){
+                                     // Renew the parent certificate list
+                                    initManagedDomainCertificateList();
+                                });
                             }else{
                                 msgbox("Proxy Endpoint Added");
                             }
@@ -193,7 +197,7 @@
 
     //Generic functions for delete rp endpoints 
     function deleteEndpoint(epoint){
-        epoint = decodeURIComponent(epoint);
+        epoint = decodeURIComponent(epoint).hexDecode();
         if (confirm("Confirm remove proxy for :" + epoint + "?")){
             $.ajax({
                 url: "/api/proxy/del",
@@ -201,6 +205,7 @@
                 success: function(){
                     listProxyEndpoints();
                     msgbox("Proxy Rule Deleted", true);
+                    reloadUptimeList();
                 }
             })
         }
@@ -300,67 +305,7 @@
         updateTable();
     }
 
-    /*
-        Obtain Certificate via ACME
-    */
-
-    //Load the ACME email from server side
-    let acmeEmail = "";
-    $.get("/api/acme/autoRenew/email", function(data){
-        if (data != "" && data != undefined && data != null){
-            acmeEmail = data;
-        }
-    });
-
-   // Obtain certificate from API, only support one domain
-    function obtainCertificate(domains, usingCa = "Let's Encrypt") {
-        let filename = "";
-        let email = acmeEmail;
-        if (acmeEmail == ""){
-            let rootDomain = domains.split(".").pop();
-            email = "admin@" + rootDomain;
-        }
-        if (filename.trim() == "" && !domains.includes(",")){
-            //Zoraxy filename are the matching name for domains.
-            //Use the same as domains
-            filename = domains;
-        }else if (filename != "" && !domains.includes(",")){
-            //Invalid settings. Force the filename to be same as domain
-            //if there are only 1 domain
-            filename = domains;
-        }else{
-            parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
-            return;
-        }
-
-        $.ajax({
-            url: "/api/acme/obtainCert",
-            method: "GET",
-            data: {
-                domains: domains,
-                filename: filename,
-                email: email,
-                ca: usingCa,
-            },
-            success: function(response) {
-                if (response.error) {
-                    console.log("Error:", response.error);
-                    // Show error message
-                    msgbox(response.error, false, 12000);
-                } else {
-                    console.log("Certificate installed successfully");
-                    // Show success message
-                    msgbox("Certificate installed successfully");
-                    
-                    // Renew the parent certificate list
-                    initManagedDomainCertificateList();
-                }
-            },
-            error: function(error) {
-                console.log("Failed to install certificate:", error);
-            }
-        });
-    }
+    
 
     //Update v3.0.0
     //Since some proxy rules now contains wildcard characters

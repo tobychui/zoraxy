@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/grandcat/zeroconf v1.0.0
+	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
 	github.com/likexian/whois v1.15.1
 	github.com/microcosm-cc/bluemonday v1.0.25
 	golang.org/x/net v0.14.0

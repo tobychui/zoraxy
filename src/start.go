@@ -238,4 +238,7 @@ func startupSequence() {
 func finalSequence() {
 	//Start ACME renew agent
 	acmeRegisterSpecialRoutingRule()
+
+	//Inject routing rules
+	registerBuildInRoutingRules()
 }
