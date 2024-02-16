@@ -140,7 +140,7 @@ func startupSequence() {
 	*/
 
 	if *allowMdnsScanning {
-		portInt, err := strconv.Atoi(strings.Split(handler.Port, ":")[1])
+		portInt, err := strconv.Atoi(strings.Split(*webUIPort, ":")[1])
 		if err != nil {
 			portInt = 8000
 		}

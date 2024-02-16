@@ -119,6 +119,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/gan/network/name", ganManager.HandleNetworkNaming)
 	//authRouter.HandleFunc("/api/gan/network/detail", ganManager.HandleNetworkDetails)
 	authRouter.HandleFunc("/api/gan/network/setRange", ganManager.HandleSetRanges)
+	authRouter.HandleFunc("/api/gan/network/join", ganManager.HandleServerJoinNetwork)
+	authRouter.HandleFunc("/api/gan/network/leave", ganManager.HandleServerLeaveNetwork)
 	authRouter.HandleFunc("/api/gan/members/list", ganManager.HandleMemberList)
 	authRouter.HandleFunc("/api/gan/members/ip", ganManager.HandleMemberIP)
 	authRouter.HandleFunc("/api/gan/members/name", ganManager.HandleMemberNaming)

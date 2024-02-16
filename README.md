@@ -83,8 +83,6 @@ Usage of zoraxy:
         Disable authentication for management interface
   -port string
         Management web interface listening port (default ":8000")
-  -rpt string
-        Reserved
   -sshlb
         Allow loopback web ssh connection (DANGER)
   -version
@@ -108,39 +106,6 @@ If you already have an upstream reverse proxy server in place with permission ma
 ```
 
 *Note: For security reaons, you should only enable no-auth if you are running Zoraxy in a trusted environment or with another authentication management proxy in front.*
-
-#### Use with ArozOS
-
-The [ArozOS](https://arozos.com) subservice is a built-in, permission-managed, reverse proxy server. To use Zoraxy with ArozOS, connect to your ArozOS host via SSH and use the following command to install Zoraxy:
-
-```bash
-# cd into your ArozOS subservice folder. Sometimes it is under ~/arozos/src/subservice.
-cd ~/arozos/subservices
-mkdir zoraxy
-cd ./zoraxy
-
-# Download the release binary from Github release.
-wget {binary executable link from release page}
-
-# Set permission. Change this if required.
-sudo chmod 775 -R ./
-
-# Start zoraxy to see if the downloaded arch is correct.
-./zoraxy
-
-# After unzipping, press Ctrl + C to kill it.
-# Rename it to validate the ArozOS subservice binary format.
-mv ./zoraxy zoraxy_linux_amd64
-
-# If you are using SBCs with a different CPU arch, use the following names:
-# mv ./zoraxy zoraxy_linux_arm
-# mv ./zoraxy zoraxy_linux_arm64
-
-# Restart ArozOS
-sudo systemctl restart arozos
-```
-
-To start the module, go to System Settings > Modules > Subservice and enable it in the menu. You should be able to see a new module named "Zoraxy" pop up in the start menu.
 
 ## Screenshots
 

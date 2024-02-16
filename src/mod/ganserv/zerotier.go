@@ -117,7 +117,7 @@ type MemberInfo struct {
 	VRev                         int           `json:"vRev"`
 }
 
-//Get the zerotier node info from local service
+// Get the zerotier node info from local service
 func getControllerInfo(token string, apiPort int) (*NodeInfo, error) {
 	url := "http://localhost:" + strconv.Itoa(apiPort) + "/status"
 
@@ -187,7 +187,7 @@ func (m *NetworkManager) createNetwork() (*NetworkInfo, error) {
 	return &networkInfo, nil
 }
 
-//List network details
+// List network details
 func (m *NetworkManager) getNetworkInfoById(networkId string) (*NetworkInfo, error) {
 	req, err := http.NewRequest("GET", os.ExpandEnv("http://localhost:"+strconv.Itoa(m.apiPort)+"/controller/network/"+networkId+"/"), nil)
 	if err != nil {
@@ -249,7 +249,7 @@ func (m *NetworkManager) setNetworkInfoByID(networkId string, newNetworkInfo *Ne
 	return nil
 }
 
-//List network IDs
+// List network IDs
 func (m *NetworkManager) listNetworkIds() ([]string, error) {
 	req, err := http.NewRequest("GET", "http://localhost:"+strconv.Itoa(m.apiPort)+"/controller/network/", nil)
 	if err != nil {
@@ -281,7 +281,7 @@ func (m *NetworkManager) listNetworkIds() ([]string, error) {
 	return networkIds, nil
 }
 
-//wrapper for checking if a network id exists
+// wrapper for checking if a network id exists
 func (m *NetworkManager) networkExists(networkId string) bool {
 	networkIds, err := m.listNetworkIds()
 	if err != nil {
@@ -297,7 +297,7 @@ func (m *NetworkManager) networkExists(networkId string) bool {
 	return false
 }
 
-//delete a network
+// delete a network
 func (m *NetworkManager) deleteNetwork(networkID string) error {
 	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + networkID + "/"
 	client := &http.Client{}
@@ -330,8 +330,8 @@ func (m *NetworkManager) deleteNetwork(networkID string) error {
 	return nil
 }
 
-//Configure network
-//Example: configureNetwork(netid, "192.168.192.1", "192.168.192.254", "192.168.192.0/24")
+// Configure network
+// Example: configureNetwork(netid, "192.168.192.1", "192.168.192.254", "192.168.192.0/24")
 func (m *NetworkManager) configureNetwork(networkID string, ipRangeStart string, ipRangeEnd string, routeTarget string) error {
 	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + networkID + "/"
 	data := map[string]interface{}{
@@ -545,7 +545,7 @@ func (m *NetworkManager) memberExistsInNetwork(netid string, memid string) bool 
 	return false
 }
 
-//Get a network memeber info by netid and memberid
+// Get a network memeber info by netid and memberid
 func (m *NetworkManager) getNetworkMemberInfo(netid string, memberid string) (*MemberInfo, error) {
 	req, err := http.NewRequest("GET", "http://localhost:"+strconv.Itoa(m.apiPort)+"/controller/network/"+netid+"/member/"+memberid, nil)
 	if err != nil {
@@ -573,7 +573,7 @@ func (m *NetworkManager) getNetworkMemberInfo(netid string, memberid string) (*M
 	return thisMemeberInfo, nil
 }
 
-//Set the authorization state of a member
+// Set the authorization state of a member
 func (m *NetworkManager) AuthorizeMember(netid string, memberid string, setAuthorized bool) error {
 	url := "http://localhost:" + strconv.Itoa(m.apiPort) + "/controller/network/" + netid + "/member/" + memberid
 	payload := []byte(`{"authorized": true}`)
@@ -600,9 +600,51 @@ func (m *NetworkManager) AuthorizeMember(netid string, memberid string, setAutho
 	return nil
 }
 
-//Delete a member from the network
+// Delete a member from the network
 func (m *NetworkManager) deleteMember(netid string, memid string) error {
 	req, err := http.NewRequest("DELETE", "http://localhost:"+strconv.Itoa(m.apiPort)+"/controller/network/"+netid+"/member/"+memid, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Zt1-Auth", os.ExpandEnv(m.authToken))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return errors.New("network error. Status code: " + strconv.Itoa(resp.StatusCode))
+	}
+
+	return nil
+}
+
+// Make the host to join a given network
+func (m *NetworkManager) joinNetwork(netid string) error {
+	req, err := http.NewRequest("POST", "http://localhost:"+strconv.Itoa(m.apiPort)+"/network/"+netid, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Zt1-Auth", os.ExpandEnv(m.authToken))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return errors.New("network error. Status code: " + strconv.Itoa(resp.StatusCode))
+	}
+
+	return nil
+}
+
+// Make the host to leave a given network
+func (m *NetworkManager) leaveNetwork(netid string) error {
+	req, err := http.NewRequest("DELETE", "http://localhost:"+strconv.Itoa(m.apiPort)+"/network/"+netid, nil)
 	if err != nil {
 		return err
 	}

@@ -356,10 +356,6 @@ body{
     color: var(--item_color);
 }
 
-.ui.menu .item:hover{
-	color: var(--item_color_select) !important;
-}
-
 .ui.segment{
     box-shadow: none !important;
 }

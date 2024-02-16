@@ -207,7 +207,7 @@ func (m *NetworkManager) HandleSetRanges(w http.ResponseWriter, r *http.Request)
 	utils.SendOK(w)
 }
 
-//Handle listing of network members. Set details=true for listing all details
+// Handle listing of network members. Set details=true for listing all details
 func (m *NetworkManager) HandleMemberList(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.GetPara(r, "netid")
 	if err != nil {
@@ -241,7 +241,7 @@ func (m *NetworkManager) HandleMemberList(w http.ResponseWriter, r *http.Request
 	}
 }
 
-//Handle Authorization of members
+// Handle Authorization of members
 func (m *NetworkManager) HandleMemberAuthorization(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -281,7 +281,7 @@ func (m *NetworkManager) HandleMemberAuthorization(w http.ResponseWriter, r *htt
 	}
 }
 
-//Handle Delete or Add IP for a member in a network
+// Handle Delete or Add IP for a member in a network
 func (m *NetworkManager) HandleMemberIP(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -356,7 +356,7 @@ func (m *NetworkManager) HandleMemberIP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-//Handle naming for members
+// Handle naming for members
 func (m *NetworkManager) HandleMemberNaming(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -391,7 +391,7 @@ func (m *NetworkManager) HandleMemberNaming(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-//Handle delete of a given memver
+// Handle delete of a given memver
 func (m *NetworkManager) HandleMemberDelete(w http.ResponseWriter, r *http.Request) {
 	netid, err := utils.PostPara(r, "netid")
 	if err != nil {
@@ -419,6 +419,82 @@ func (m *NetworkManager) HandleMemberDelete(w http.ResponseWriter, r *http.Reque
 
 	//Remove the memeber
 	err = m.deleteMember(netid, memberid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// Check if a given network id is a network hosted on this zoraxy node
+func (m *NetworkManager) IsLocalGAN(networkId string) bool {
+	networks, err := m.listNetworkIds()
+	if err != nil {
+		return false
+	}
+
+	for _, network := range networks {
+		if network == networkId {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Handle server instant joining a given network
+func (m *NetworkManager) HandleServerJoinNetwork(w http.ResponseWriter, r *http.Request) {
+	netid, err := utils.PostPara(r, "netid")
+	if err != nil {
+		utils.SendErrorResponse(w, "net id not set")
+		return
+	}
+
+	//Check if the target network is a network hosted on this server
+	if !m.IsLocalGAN(netid) {
+		utils.SendErrorResponse(w, "given network is not a GAN hosted on this node")
+		return
+	}
+
+	if m.memberExistsInNetwork(netid, m.ControllerID) {
+		utils.SendErrorResponse(w, "controller already inside network")
+		return
+	}
+
+	//Join the network
+	err = m.joinNetwork(netid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// Handle server instant leaving a given network
+func (m *NetworkManager) HandleServerLeaveNetwork(w http.ResponseWriter, r *http.Request) {
+	netid, err := utils.PostPara(r, "netid")
+	if err != nil {
+		utils.SendErrorResponse(w, "net id not set")
+		return
+	}
+
+	//Check if the target network is a network hosted on this server
+	if !m.IsLocalGAN(netid) {
+		utils.SendErrorResponse(w, "given network is not a GAN hosted on this node")
+		return
+	}
+
+	//Leave the network
+	err = m.leaveNetwork(netid)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	//Remove it from target network if it is authorized
+	err = m.deleteMember(netid, m.ControllerID)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return

@@ -61,7 +61,7 @@
     <h2>Members</h2>
     <p>To join this network using command line, type <code>sudo zerotier-cli join <span class="ganetID"></span></code> on your device terminal</p>
     <div class="ui checkbox" style="margin-bottom: 1em;">
-        <input id="showUnauthorizedMembers" type="checkbox" onchange="changeUnauthorizedVisibility(this.checked);">
+        <input id="showUnauthorizedMembers" type="checkbox" onchange="changeUnauthorizedVisibility(this.checked);" checked>
         <label>Show Unauthorized Members</label>
     </div>
     <div class="" style="overflow-x: auto;">
@@ -84,6 +84,11 @@
             </tbody>
         </table>
     </div>
+    <div class="ui divider"></div>
+    <h4>Add Controller as Member</h4>
+    <p>Optionally you can add the network controller (ZeroTier running on the Zoraxy node) as member for cross GAN reverse proxy to bypass NAT limitations.</p>
+    <button class="ui basic small button addControllerToNetworkBtn" onclick="ganAddControllerToNetwork(this);"><i class="green add icon"></i> Add Controller as Member</button>
+    <button class="ui basic small button removeControllerFromNetworkBtn" onclick="ganRemoveControllerFromNetwork(this);"><i class="red sign-out icon"></i> Remove Controller from Member</button>
     <br><br>
 </div>
 <script>
@@ -355,7 +360,10 @@
             url: '/api/gan/members/list?netid=' + currentGANetID + '&detail=true',
             type: 'GET',
             success: function(data) {
-                const tableBody = $('#networkMemeberTable');
+                let tableBody = $('#networkMemeberTable');
+                if (tableBody.length == 0){
+                    return;
+                }
                 data.sort((a, b) => a.address.localeCompare(b.address));
                 //Check if the new object equal to the old one
                 if (objectEqual(currentGANMemberList, data) && !forceUpdate){
@@ -592,6 +600,55 @@
        
     }
 
+    //Add and remove this controller node to network as member
+    function ganAddControllerToNetwork(){
+        $(".addControllerToNetworkBtn").addClass("disabled");
+        $(".addControllerToNetworkBtn").addClass("loading");
+    
+        $.ajax({
+            url: "/api/gan/network/join",
+            method: "POST",
+            data: {
+                netid:currentGANetID, 
+            },
+            success: function(data){
+                $(".addControllerToNetworkBtn").removeClass("disabled");
+                $(".addControllerToNetworkBtn").removeClass("loading");
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    msgbox("Controller joint " + currentGANetID);
+                }
+                setTimeout(function(){
+                    renderMemeberTable(true);
+                }, 3000)
+            }
+        });
+    }
+
+    function ganRemoveControllerFromNetwork(){
+        $(".removeControllerFromNetworkBtn").addClass("disabled");
+        $(".removeControllerFromNetworkBtn").addClass("loading");
+        
+        $.ajax({
+            url: "/api/gan/network/leave",
+            method: "POST",
+            data: {
+                netid:currentGANetID, 
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    msgbox("Controller left " + currentGANetID);
+                }
+                renderMemeberTable(true);
+                $(".removeControllerFromNetworkBtn").removeClass("disabled");
+                $(".removeControllerFromNetworkBtn").removeClass("loading");
+            }
+        });
+    }
+
     //Entry points
     function initGanetDetails(ganetId){
         currentGANetID = ganetId;
@@ -610,6 +667,11 @@
             }, 3000);
         }
         
+    }
+
+    //Switch from other tabs back to this, exit to GAN list
+    tabSwitchEventBind["gan"] = function(){
+        exitToGanList();
     }
 
     //Exit point
