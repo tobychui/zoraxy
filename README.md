@@ -2,18 +2,25 @@
 
 # Zoraxy
 
-General purpose request (reverse) proxy and forwarding tool for low power devices. Now written in Go!
+General purpose request (reverse) proxy and forwarding tool for networking noobs. Now written in Go!
+
+*Zoraxy v3 HTTP proxy config is not compatible with the older v2. If you are looking for the legacy version of Zoraxy, take a look at the [v2 branch](https://github.com/tobychui/zoraxy/tree/v2)*
 
 ### Features
 
 - Simple to use interface with detail in-system instructions
 - Reverse Proxy
-  - Subdomain Reverse Proxy
-  - Virtual Directory Reverse Proxy
+  - Virtual Directory
+  - Basic Auth
+  - Custom Headers
 - Redirection Rules
 - TLS / SSL setup and deploy
-- Blacklist by country or IP address (single IP, CIDR or wildcard for beginners)
+  - ACME features like auto-renew to serve your sites in http**s**
+  - SNI support (one certificate contains multiple host names)
+
+- Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
 - Global Area Network Controller Web UI (ZeroTier not included)
+- TCP Tunneling / Proxy
 - Integrated Up-time Monitor
 - Web-SSH Terminal
 - Utilities
@@ -159,5 +166,5 @@ If you like the project and want to support us, please consider a donation. You 
 
 ## License
 
-This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **If you plan to use this project in a commercial environment (which violate the AGPL terms), please contact toby@imuslab.com for an alternative commercial license.** 
+This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **If you plan to use this project in a commercial environment (which violate the AGPL terms), please contact toby@imuslab.com for an alternative license.** 
 
