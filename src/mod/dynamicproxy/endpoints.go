@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 /*
@@ -14,6 +17,53 @@ import (
 	so proxyEndpoint can be handled like a proper oop object
 
 	Most of the functions are implemented in dynamicproxy.go
+*/
+
+/*
+	User Defined Header Functions
+*/
+
+// Check if a user define header exists in this endpoint, ignore case
+func (ep *ProxyEndpoint) UserDefinedHeaderExists(key string) bool {
+	for _, header := range ep.UserDefinedHeaders {
+		if strings.EqualFold(header.Key, key) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Remvoe a user defined header from the list
+func (ep *ProxyEndpoint) RemoveUserDefinedHeader(key string) error {
+	newHeaderList := []*UserDefinedHeader{}
+	for _, header := range ep.UserDefinedHeaders {
+		if !strings.EqualFold(header.Key, key) {
+			newHeaderList = append(newHeaderList, header)
+		}
+	}
+
+	ep.UserDefinedHeaders = newHeaderList
+
+	return nil
+}
+
+// Add a user defined header to the list, duplicates will be automatically removed
+func (ep *ProxyEndpoint) AddUserDefinedHeader(key string, value string) error {
+	if ep.UserDefinedHeaderExists(key) {
+		ep.RemoveUserDefinedHeader(key)
+	}
+
+	ep.UserDefinedHeaders = append(ep.UserDefinedHeaders, &UserDefinedHeader{
+		Key:   cases.Title(language.Und, cases.NoLower).String(key), //e.g. x-proxy-by -> X-Proxy-By
+		Value: value,
+	})
+
+	return nil
+}
+
+/*
+	Virtual Directory Functions
 */
 
 // Get virtual directory handler from given URI

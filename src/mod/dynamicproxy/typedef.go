@@ -70,6 +70,12 @@ type BasicAuthExceptionRule struct {
 	PathPrefix string
 }
 
+// User defined headers to add into a proxy endpoint
+type UserDefinedHeader struct {
+	Key   string
+	Value string
+}
+
 // A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better
 // program structure than directly using ProxyEndpoint
 type VirtualDirectoryEndpoint struct {
@@ -79,6 +85,7 @@ type VirtualDirectoryEndpoint struct {
 	SkipCertValidations bool                 //Set to true to accept self signed certs
 	Disabled            bool                 //If the rule is enabled
 	proxy               *dpcore.ReverseProxy `json:"-"`
+	parent              *ProxyEndpoint       `json:"-"`
 }
 
 // A proxy endpoint record, a general interface for handling inbound routing
@@ -94,6 +101,9 @@ type ProxyEndpoint struct {
 
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint
+
+	//Custom Headers
+	UserDefinedHeaders []*UserDefinedHeader //Custom headers to append when proxying requests from this endpoint
 
 	//Authentication
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy

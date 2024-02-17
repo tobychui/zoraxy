@@ -62,7 +62,10 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/del", ReverseProxyDeleteVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/edit", ReverseProxyEditVdir)
-
+	//Reverse proxy user define header apis
+	authRouter.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
+	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
+	authRouter.HandleFunc("/api/proxy/header/remove", HandleCustomHeaderRemove)
 	//Reverse proxy auth related APIs
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)

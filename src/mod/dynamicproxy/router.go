@@ -71,6 +71,7 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 
 		proxy := dpcore.NewDynamicProxyCore(path, vdir.MatchingPath, vdir.SkipCertValidations)
 		vdir.proxy = proxy
+		vdir.parent = endpoint
 	}
 
 	return endpoint, nil

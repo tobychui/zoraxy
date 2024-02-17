@@ -107,6 +107,10 @@
 		asc: 'sorted ascending',
 		desc: 'sorted descending',
 		compare: function(a, b) {
+			if (!isNaN(parseInt(a.trim())) && !isNaN(parseInt(b.trim())) ){
+				a = parseInt(a);
+				b = parseInt(b);
+			}
 			if (a > b) {
 				return 1;
 			} else if (a < b) {

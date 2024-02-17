@@ -284,11 +284,12 @@
                 $("#mainmenu").find(".item").removeClass("active");
                 $(targetBtn).addClass("active");
                 $(".functiontab").hide();
-                if (tabSwitchEventBind[tabID]){
-                    tabSwitchEventBind[tabID]();
-                }
                 $("#" + tabID).fadeIn('fast', function(){
-                    
+                    setTimeout(function(){
+                        if (tabSwitchEventBind[tabID]){
+                            tabSwitchEventBind[tabID]();
+                        }
+                    },100)
                 });
                 $('html,body').animate({scrollTop: 0}, 'fast');
                 window.location.hash = tabID;

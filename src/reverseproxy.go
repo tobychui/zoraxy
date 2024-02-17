@@ -261,6 +261,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			SkipCertValidations: skipTlsValidation,
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
+			//Custom headers
+			UserDefinedHeaders: []*dynamicproxy.UserDefinedHeader{},
 			//Auth
 			RequireBasicAuth:        requireBasicAuth,
 			BasicAuthCredentials:    basicAuthCredentials,
@@ -863,4 +865,140 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	sysdb.Write("settings", "inbound", newIncomingPortInt)
 
 	utils.SendOK(w)
+}
+
+/* Handle Custom Header Rules */
+//List all the custom header defined in this proxy rule
+
+func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
+	epType, err := utils.PostPara(r, "type")
+	if err != nil {
+		utils.SendErrorResponse(w, "endpoint type not defined")
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
+	}
+
+	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
+	if epType == "root" {
+		targetProxyEndpoint = dynamicProxyRouter.Root
+	} else {
+		ep, err := dynamicProxyRouter.LoadProxy(domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "target endpoint not exists")
+			return
+		}
+
+		targetProxyEndpoint = ep
+	}
+
+	//List all custom headers
+	customHeaderList := targetProxyEndpoint.UserDefinedHeaders
+	if customHeaderList == nil {
+		customHeaderList = []*dynamicproxy.UserDefinedHeader{}
+	}
+	js, _ := json.Marshal(customHeaderList)
+	utils.SendJSONResponse(w, string(js))
+
+}
+
+// Add a new header to the target endpoint
+func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
+	epType, err := utils.PostPara(r, "type")
+	if err != nil {
+		utils.SendErrorResponse(w, "endpoint type not defined")
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
+	}
+
+	name, err := utils.PostPara(r, "name")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP header name not set")
+		return
+	}
+
+	value, err := utils.PostPara(r, "value")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP header value not set")
+		return
+	}
+
+	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
+	if epType == "root" {
+		targetProxyEndpoint = dynamicProxyRouter.Root
+	} else {
+		ep, err := dynamicProxyRouter.LoadProxy(domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "target endpoint not exists")
+			return
+		}
+
+		targetProxyEndpoint = ep
+	}
+
+	//Create a new custom header object
+	targetProxyEndpoint.AddUserDefinedHeader(name, value)
+
+	//Save it (no need reload as header are not handled by dpcore)
+	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save update")
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// Remove a header from the target endpoint
+func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
+	epType, err := utils.PostPara(r, "type")
+	if err != nil {
+		utils.SendErrorResponse(w, "endpoint type not defined")
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
+	}
+
+	name, err := utils.PostPara(r, "name")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP header name not set")
+		return
+	}
+
+	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
+	if epType == "root" {
+		targetProxyEndpoint = dynamicProxyRouter.Root
+	} else {
+		ep, err := dynamicProxyRouter.LoadProxy(domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "target endpoint not exists")
+			return
+		}
+
+		targetProxyEndpoint = ep
+	}
+
+	targetProxyEndpoint.RemoveUserDefinedHeader(name)
+
+	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save update")
+		return
+	}
+
+	utils.SendOK(w)
+
 }

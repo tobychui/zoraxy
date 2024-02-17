@@ -228,7 +228,6 @@ func (router *Router) StopProxyService() error {
 // Restart the current router if it is running.
 func (router *Router) Restart() error {
 	//Stop the router if it is already running
-	var err error = nil
 	if router.Running {
 		err := router.StopProxyService()
 		if err != nil {
@@ -243,7 +242,7 @@ func (router *Router) Restart() error {
 		}
 	}
 
-	return err
+	return nil
 }
 
 /*

@@ -207,6 +207,7 @@
     }
 
     function reloadVdirList(){
+        $("#vdirList").find(".editBtn").removeClass("disabled");
         if ($("#useRootProxyRouterForVdir")[0].checked){
             loadVdirList("root");
             return;
@@ -314,7 +315,8 @@
     }
 
     function editVdir(matchingPath, ept){
-        let targetDOM = $(".vdirEntry[vdirid='" + matchingPath.hexEncode() + "']") 
+        let targetDOM = $(".vdirEntry[vdirid='" + matchingPath.hexEncode() + "']");
+        $("#vdirList").find(".editBtn").addClass("disabled");
         let payload = $(targetDOM).attr("payload").hexDecode();
         payload = JSON.parse(payload);
         console.log(payload);

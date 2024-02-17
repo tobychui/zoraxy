@@ -88,6 +88,14 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
+
+	//Inject custom headers
+	if len(target.UserDefinedHeaders) > 0 {
+		for _, customHeader := range target.UserDefinedHeaders {
+			r.Header.Set(customHeader.Key, customHeader.Value)
+		}
+	}
+
 	requestURL := r.URL.String()
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
@@ -150,6 +158,14 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
+
+	//Inject custom headers
+	if len(target.parent.UserDefinedHeaders) > 0 {
+		for _, customHeader := range target.parent.UserDefinedHeaders {
+			r.Header.Set(customHeader.Key, customHeader.Value)
+		}
+	}
+
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
 		r.Header.Set("Zr-Origin-Upgrade", "websocket")

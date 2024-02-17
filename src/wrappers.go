@@ -123,7 +123,7 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 	hosts := dp.GetProxyEndpointsAsMap()
 
 	UptimeTargets := []*uptime.Target{}
-	for subd, target := range hosts {
+	for hostid, target := range hosts {
 		url := "http://" + target.Domain
 		protocol := "http"
 		if target.RequireTLS {
@@ -131,12 +131,31 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 			protocol = "https"
 		}
 
+		//Add the root url
 		UptimeTargets = append(UptimeTargets, &uptime.Target{
-			ID:       subd,
-			Name:     subd,
+			ID:       hostid,
+			Name:     hostid,
 			URL:      url,
 			Protocol: protocol,
 		})
+
+		//Add each virtual directory into the list
+		for _, vdir := range target.VirtualDirectories {
+			url := "http://" + vdir.Domain
+			protocol := "http"
+			if target.RequireTLS {
+				url = "https://" + vdir.Domain
+				protocol = "https"
+			}
+			//Add the root url
+			UptimeTargets = append(UptimeTargets, &uptime.Target{
+				ID:       hostid + vdir.MatchingPath,
+				Name:     hostid + vdir.MatchingPath,
+				URL:      url,
+				Protocol: protocol,
+			})
+
+		}
 	}
 
 	return UptimeTargets

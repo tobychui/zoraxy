@@ -9,7 +9,7 @@
                 <tr>
                     <th>Host</th>
                     <th>Destination</th>
-                    <!-- <th>Virtual Directory</th> -->
+                    <th>Virtual Directory</th>
                     <th>Basic Auth</th>
                     <th class="no-sort" style="min-width:100px;">Actions</th>
                 </tr>
@@ -30,11 +30,11 @@
             $("#httpProxyList").html(``);
             if (data.error !== undefined){
                     $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="4"><i class="remove icon"></i> ${data.error}</td>
+                    <td data-label="" colspan="5"><i class="remove icon"></i> ${data.error}</td>
                 </tr>`);
             }else if (data.length == 0){
                 $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="4"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
+                    <td data-label="" colspan="5"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
                 </tr>`);
             }else{
                 data.forEach(subd => {
@@ -65,12 +65,13 @@
                     vdList += `</div>`;
 
                     if (subd.VirtualDirectories.length == 0){
-                        vdList = `<i class="ui green circle check icon"></i> No Virtual Directory Rule`;
+                        vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;"><i class="check icon"></i> No Virtual Directory</small>`;
                     }
 
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td data-label="" editable="true" datatype="inbound"><a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}</td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
+                        <td data-label="" editable="true" datatype="vdir">${vdList}</td>
                         <td data-label="" editable="true" datatype="basicauth">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
                         <td class="center aligned" editable="true" datatype="action" data-label="">
                             <button class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
@@ -140,6 +141,12 @@
                     </div>
                 `;
                 column.empty().append(input);
+            }else if (datatype == "vdir"){
+                //Append a quick access button for vdir page
+                column.append(`<button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="quickEditVdir('${uuid}');">
+                    <i class="ui yellow folder icon"></i> Edit Virtual Directories
+                </button>`);
+
             }else if (datatype == "basicauth"){
                 let requireBasicAuth = payload.RequireBasicAuth;
                 let checkstate = "";
@@ -150,7 +157,20 @@
                     <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
                     <label>Require Basic Auth</label>
                     </div>
-                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');">Edit Credentials</button>`);
+                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
+                    <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
+                        <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Advance Configs
+                            </div>
+                            <div class="content">
+                                <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
+                                <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
+                            </div>
+                        </div>
+                    <div>
+                `);
 
             }else if (datatype == 'action'){
                 column.empty().append(`
@@ -173,6 +193,7 @@
             }
         });
 
+        $(".endpointAdvanceConfig").accordion();
         $("#httpProxyList").find(".editBtn").addClass("disabled");
     }
 
@@ -220,12 +241,30 @@
         })
     }
     
+    /* button events */
     function editBasicAuthCredentials(uuid){
         let payload = encodeURIComponent(JSON.stringify({
             ept: "host",
             ep: uuid
         }));
         showSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function quickEditVdir(uuid){
+        openTabById("vdir");
+        $("#vdirBaseRoutingRule").parent().dropdown("set selected", uuid);
+    }
+
+    function editCustomHeaders(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/customHeaders.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function editLoadBalanceOptions(uuid){
+        alert(uuid);
     }
     
 
