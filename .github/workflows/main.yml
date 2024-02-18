@@ -22,7 +22,6 @@ jobs:
       - name: Login to Docker & GHCR
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          #echo "${{ secrets.GHCR_PASSWORD }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
       
       - name: Setup building file structure
         run: |
@@ -39,7 +38,4 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --tag zoraxydocker/zoraxy:${{ github.event.release.tag_name }} \
             --tag zoraxydocker/zoraxy:latest \
-            # Since this is still undetermined, I will leave it commented
-            #--tag ghcr.io/zoraxydocker/zoraxy:${{ steps.get_latest_release_tag.outputs.latest_tag }} \
-            #--tag ghcr.io/zoraxydocker/zoraxy:latest \
             .
