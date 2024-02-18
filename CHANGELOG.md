@@ -1,3 +1,27 @@
+# v3.0.0 Feb 18 2024
+
+## IMPORTANT: V3 is a big rewrite and it is incompatible with V2! There is NO migration, if you want to stay on V2, please use V2 branch!
+
++ Added comments for whitelist [#97](https://github.com/tobychui/zoraxy/issues/97)
++ Added force-renew for certificates [#92](https://github.com/tobychui/zoraxy/issues/92)
++ Added automatic cert pick for multi-host certs (SNI)
++ Renamed .crt to .pem for cert store
++ Added best-fit selection for wildcard matching rules
++ Added x-proxy-by header / Added X-real-Ip header [#93](https://github.com/tobychui/zoraxy/issues/93)
++ Added Development Mode (Cache-Control: no-store)
++ Updated utm timeout to 10 seconds instead of 90
++ Added "Add controller as member" feature to Global Area Network editor
++ Added custom header
++ Deprecated aroz subservice support
++ Updated visuals, improving logical structure, less depressing colors [#95](https://github.com/tobychui/zoraxy/issues/95)
++ Added virtual directory into host routing object (each host now got its own sets of virtual directories)
++ Added support for wildcard host names (e.g. *.example.com)
++ Added best-fit selection for wildcard matching rules (e.g. *.a.example.com > *.example.com in routing)
++ Generalized root and hosts routing struct (no more conversion between runtime & save record object
++ Added "Default Site" to replace "Proxy Root" interface
++ Added Redirect & 404 page for "Default Site"
+
+
 # v2.6.8 Nov 25 2023
 
 + Added opt-out for subdomains for global TLS settings: See [release notes](https://github.com/tobychui/zoraxy/releases/tag/2.6.8)
