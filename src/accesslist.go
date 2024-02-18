@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	strip "github.com/grokify/html-strip-tags-go"
+	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -115,7 +117,7 @@ func handleListWhitelisted(w http.ResponseWriter, r *http.Request) {
 		bltype = "country"
 	}
 
-	resulst := []string{}
+	resulst := []*geodb.WhitelistEntry{}
 	if bltype == "country" {
 		resulst = geodbStore.GetAllWhitelistedCountryCode()
 	} else if bltype == "ip" {
@@ -134,7 +136,10 @@ func handleCountryWhitelistAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	geodbStore.AddCountryCodeToWhitelist(countryCode)
+	comment, _ := utils.PostPara(r, "comment")
+	comment = strip.StripTags(comment)
+
+	geodbStore.AddCountryCodeToWhitelist(countryCode, comment)
 
 	utils.SendOK(w)
 }
@@ -158,7 +163,10 @@ func handleIpWhitelistAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	geodbStore.AddIPToWhiteList(ipAddr)
+	comment, _ := utils.PostPara(r, "comment")
+	comment = strip.StripTags(comment)
+
+	geodbStore.AddIPToWhiteList(ipAddr, comment)
 }
 
 func handleIpWhitelistRemove(w http.ResponseWriter, r *http.Request) {

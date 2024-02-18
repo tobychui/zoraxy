@@ -103,6 +103,9 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 		utils.SendErrorResponse(w, "ACME renew only support web server listening on port 80 (http) or 443 (https)")
 	}
 
+	//Add a 3 second delay to make sure everything is settle down
+	time.Sleep(3 * time.Second)
+
 	// Pass over to the acmeHandler to deal with the communication
 	acmeHandler.HandleRenewCertificate(w, r)
 

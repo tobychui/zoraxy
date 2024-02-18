@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/acme"
-	"imuslab.com/zoraxy/mod/aroz"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
@@ -35,6 +34,7 @@ import (
 )
 
 // General flags
+var webUIPort = flag.String("port", ":8000", "Management web interface listening port")
 var noauth = flag.Bool("noauth", false, "Disable authentication for management interface")
 var showver = flag.Bool("version", false, "Show version of this server")
 var allowSshLoopback = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
@@ -49,7 +49,7 @@ var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "2.6.8"
+	version     = "3.0.0"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -63,7 +63,6 @@ var (
 	/*
 		Handler Modules
 	*/
-	handler            *aroz.ArozHandler       //Handle arozos managed permission system
 	sysdb              *database.Database      //System database
 	authAgent          *auth.AuthAgent         //Authentication agent
 	tlsCertManager     *tlscert.Manager        //TLS / SSL management
@@ -128,20 +127,8 @@ func ShutdownSeq() {
 }
 
 func main() {
-	//Start the aoModule pipeline (which will parse the flags as well). Pass in the module launch information
-	handler = aroz.HandleFlagParse(aroz.ServiceInfo{
-		Name:        name,
-		Desc:        "Dynamic Reverse Proxy Server",
-		Group:       "Network",
-		IconPath:    "zoraxy/img/small_icon.png",
-		Version:     version,
-		StartDir:    "zoraxy/index.html",
-		SupportFW:   true,
-		LaunchFWDir: "zoraxy/index.html",
-		SupportEmb:  false,
-		InitFWSize:  []int{1080, 580},
-	})
-
+	//Parse startup flags
+	flag.Parse()
 	if *showver {
 		fmt.Println(name + " - Version " + version)
 		os.Exit(0)
@@ -166,7 +153,7 @@ func main() {
 	startupSequence()
 
 	//Initiate management interface APIs
-	requireAuth = !(*noauth || handler.IsUsingExternalPermissionManager())
+	requireAuth = !(*noauth)
 	initAPIs()
 
 	//Start the reverse proxy server in go routine
@@ -179,8 +166,8 @@ func main() {
 	//Start the finalize sequences
 	finalSequence()
 
-	SystemWideLogger.Println("Zoraxy started. Visit control panel at http://localhost" + handler.Port)
-	err = http.ListenAndServe(handler.Port, nil)
+	SystemWideLogger.Println("Zoraxy started. Visit control panel at http://localhost" + *webUIPort)
+	err = http.ListenAndServe(*webUIPort, nil)
 
 	if err != nil {
 		log.Fatal(err)

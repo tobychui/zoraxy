@@ -17,7 +17,7 @@
         </div>
     </div>
     <div class="six wide column statisticWrapper">
-        <div class="ui greybackground statustab segment">
+        <div class="ui statustab segment">
             <h5 class="ui header">
                 <i class="exchange icon"></i>
                 <div class="content">
@@ -29,7 +29,7 @@
                 </div>
             </h5>
             <div class="ui divider"></div>
-            <h5 class="ui header">
+            <h5 class="ui header" style="margin-top: 0px;">
                 <i class="arrows alternate horizontal icon"></i>
                 <div class="content">
                     <span id="forwardtype"></span>
@@ -39,32 +39,39 @@
                 </div>
             </h5>
             <div class="ui divider"></div>
-            <h5 class="ui header">
+            <h5 class="ui header"  style="margin-top: 0px;">
                 <i class="map marker alternate icon"></i>
                 <div class="content">
                     <span id="country"></span>
                     <div class="sub header" id="countryList">
-
+                        <i class="ui loading circle notch icon"></i> Resolving GeoIP
                     </div>
                 </div>
             </h5>
         </div>
     </div>
 </div>
-
-<div id="networkActWrapper" class="standardContainer" style="position: relative; margin-top: 1em;">
+<div class="standardContainer" style="padding-bottom: 0 !important;">
+    <!-- Power Buttons-->
+    <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
+    <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
+    <div class="ui divider"></div>
+    <h4>Network Status</h4>
+    <p>Overall Network I/O in Current Host Server</p>
+</div>
+<div id="networkActWrapper" class="standardContainer" style="position: relative;">
     <canvas id="networkActivity"></canvas>
 </div>
 <div id="networkActivityPlaceHolder">
-    <p style="opacity: 0.5;"><i class="ui pause icon"></i> Graph Render Paused</p>
+    <p style="opacity: 0.5;"> Graph Render Paused</p>
 </div>
-<br>
 <div class="standardContainer">
-    <h4>Basic Settings</h4>
+    <div class="ui divider"></div>
+    <h4>Global Settings</h4>
     <p>Inbound Port (Port to be proxied)</p>
     <div class="ui action fluid notloopbackOnly input">
         <input type="text" id="incomingPort" placeholder="Incoming Port" value="80">
-        <button class="ui basic green notloopbackOnly button" onclick="handlePortChange();">Apply</button>
+        <button class="ui basic notloopbackOnly button" onclick="handlePortChange();"><i class="ui green checkmark icon"></i> Apply</button>
     </div>
     <br>
     <div id="tls" class="ui toggle notloopbackOnly checkbox">
@@ -89,21 +96,22 @@
                 Advance Settings
             </div>
             <div class="content">
-                <p>If you have no idea what are these, you can leave them as default :)</p>
                 <div id="tlsMinVer" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
                     <input type="checkbox">
                     <label>Force TLS v1.2 or above<br>
                     <small>(Enhance security, but not compatible with legacy browsers)</small></label>
                 </div>
                 <br>
+                <div id="developmentMode" class="ui toggle checkbox" style="margin-top: 0.6em;">
+                    <input type="checkbox">
+                    <label>Development Mode<br>
+                    <small>(Set Cache-Control to no-store so browser will always fetch new contents from your sites)</small></label>
+                </div>
+                <br>
             </div>
         </div>
     </div>
-    
-    
-    <br><br>
-    <button id="startbtn" class="ui teal button" onclick="startService();">Start Service</button>
-    <button id="stopbtn" class="ui red notloopbackOnly disabled button" onclick="stopService();">Stop Service</button>
+   
     <div id="rploopbackWarning" class="ui segment" style="display:none;">
         <b><i class="yellow warning icon"></i> Loopback Routing Warning</b><br>
         <small>This management interface is a loopback proxied service. <br>If you want to shutdown the reverse proxy server, please remove the proxy rule for the management interface and refresh.</small>
@@ -114,7 +122,7 @@
     <div class="ui two column stackable grid">
         <div class="column">
         <p>Visitor Counts</p>
-        <table class="ui unstackable inverted celled table">
+        <table class="ui unstackable very basic celled table">
             <thead>
             <tr>
                 <th>Country ISO Code</th>
@@ -130,7 +138,7 @@
         </div>
         <div class="column">
         <p>Proxy Request Types</p>
-        <table class="ui unstackable inverted celled table">
+        <table class="ui unstackable very basic celled table">
             <thead>
             <tr>
                 <th>Proxy Type</th>
@@ -175,13 +183,13 @@
                 }
                 $("#serverstatus").addClass("green");
                 $("#statusTitle").text("Online");
-                $("#rpStatusIcon").attr("class", "green circle check icon");
+                $("#rpStatusIcon").attr("class", "white circle check icon");
                 $("#statusText").text("Serving request on port: " + data.Option.Port);
             }else{
                 $("#startbtn").removeClass("disabled");
                 $("#stopbtn").addClass("disabled");
                 $("#statusTitle").text("Offline");
-                $("#rpStatusIcon").attr("class", "black circle times icon")
+                $("#rpStatusIcon").attr("class", "yellow moon icon")
                 $("#statusText").text("Reverse proxy server is offline");
                 $("#serverstatus").removeClass("green");
             }
@@ -433,6 +441,30 @@
     }
     initTlsVersionSetting();
 
+    function initDevelopmentMode(){
+        $.get("/api/proxy/developmentMode", function(data){
+            if (data === true){
+                $("#developmentMode").checkbox("set checked")
+            }else{
+                $("#developmentMode").checkbox("set unchecked")
+            }
+            
+            //Bind change events
+            $("#developmentMode").off("change").on("change", function(data){
+                let enableDevMode = ($(this).find("input[type='checkbox']")[0].checked);
+                $.get("/api/proxy/developmentMode?enable=" + enableDevMode, function(data){
+                    if (enableDevMode){
+                        msgbox("Development mode enabled");
+                    }else{
+                        msgbox("Development mode disabled");
+                    }
+                    
+                });
+            });
+        });
+    }
+    initDevelopmentMode();
+
     function initTlsSetting(){
         $.get("/api/cert/tls", function(data){
             if (data == true){
@@ -561,10 +593,11 @@
                 {
                     type: 'line',
                     responsive: true,
-                    resizeDelay: 100,
+                    resizeDelay: 300,
                     options: {
                         animation: false,
                         maintainAspectRatio: false,
+                        bezierCurve: true,
                         tooltips: {enabled: false},
                         hover: {mode: null},
                         //stepped: 'middle',
@@ -606,18 +639,18 @@
                             {
                                 label: 'Inbound',
                                 data: rxValues,
-                                borderColor: "#4d9dd9",
-                                borderWidth: 2,
-                                backgroundColor: 'rgba(77, 157, 217, 0.2)',
+                                borderColor: "#484bb8",
+                                borderWidth: 1,
+                                backgroundColor: 'rgba(72, 75, 184, 0.2)',
                                 fill: true,
                                 pointStyle: false,
                             },
                             {
                                 label: 'Outbound',
                                 data: txValues,
-                                borderColor: '#ffe32b',
-                                borderWidth: 2,
-                                backgroundColor: 'rgba(255, 227, 43, 0.2)',
+                                borderColor: '#02a9c1',
+                                borderWidth: 1,
+                                backgroundColor: 'rgba(2, 169, 193, 0.2)',
                                 fill: true,
                                 pointStyle: false,
                             }

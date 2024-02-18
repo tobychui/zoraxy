@@ -163,7 +163,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = os.WriteFile("./conf/certs/"+certificateName+".crt", certificates.Certificate, 0777)
+	err = os.WriteFile("./conf/certs/"+certificateName+".pem", certificates.Certificate, 0777)
 	if err != nil {
 		log.Println(err)
 		return false, err

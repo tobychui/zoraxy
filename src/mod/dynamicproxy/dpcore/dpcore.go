@@ -60,6 +60,7 @@ type ResponseRewriteRuleSet struct {
 	ProxyDomain  string
 	OriginalHost string
 	UseTLS       bool
+	NoCache      bool
 	PathPrefix   string //Vdir prefix for root, / will be rewrite to this
 }
 
@@ -243,7 +244,7 @@ func (p *ReverseProxy) logf(format string, args ...interface{}) {
 	}
 }
 
-func removeHeaders(header http.Header) {
+func removeHeaders(header http.Header, noCache bool) {
 	// Remove hop-by-hop headers listed in the "Connection" header.
 	if c := header.Get("Connection"); c != "" {
 		for _, f := range strings.Split(c, ",") {
@@ -260,9 +261,16 @@ func removeHeaders(header http.Header) {
 		}
 	}
 
-	if header.Get("A-Upgrade") != "" {
-		header.Set("Upgrade", header.Get("A-Upgrade"))
-		header.Del("A-Upgrade")
+	//Restore the Upgrade header if any
+	if header.Get("Zr-Origin-Upgrade") != "" {
+		header.Set("Upgrade", header.Get("Zr-Origin-Upgrade"))
+		header.Del("Zr-Origin-Upgrade")
+	}
+
+	//Disable cache if nocache is set
+	if noCache {
+		header.Del("Cache-Control")
+		header.Set("Cache-Control", "no-store")
 	}
 }
 
@@ -279,6 +287,11 @@ func addXForwardedForHeader(req *http.Request) {
 			req.Header.Set("X-Forwarded-Proto", "https")
 		} else {
 			req.Header.Set("X-Forwarded-Proto", "http")
+		}
+
+		if req.Header.Get("X-Real-Ip") == "" {
+			//Not exists. Fill it in with client IP
+			req.Header.Set("X-Real-Ip", clientIP)
 		}
 
 	}
@@ -323,7 +336,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	copyHeader(outreq.Header, req.Header)
 
 	// Remove hop-by-hop headers listed in the "Connection" header, Remove hop-by-hop headers.
-	removeHeaders(outreq.Header)
+	removeHeaders(outreq.Header, rrr.NoCache)
 
 	// Add X-Forwarded-For Header.
 	addXForwardedForHeader(outreq)
@@ -339,7 +352,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
-	removeHeaders(res.Header)
+	removeHeaders(res.Header, rrr.NoCache)
 
 	if p.ModifyResponse != nil {
 		if err := p.ModifyResponse(res); err != nil {

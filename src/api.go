@@ -56,9 +56,16 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/useHttpsRedirect", HandleUpdateHttpsRedirect)
 	authRouter.HandleFunc("/api/proxy/listenPort80", HandleUpdatePort80Listener)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
-	//Reverse proxy root related APIs
-	authRouter.HandleFunc("/api/proxy/root/listOptions", HandleRootRouteOptionList)
-	authRouter.HandleFunc("/api/proxy/root/updateOptions", HandleRootRouteOptionsUpdate)
+	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
+	//Reverse proxy virtual directory APIs
+	authRouter.HandleFunc("/api/proxy/vdir/list", ReverseProxyListVdir)
+	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
+	authRouter.HandleFunc("/api/proxy/vdir/del", ReverseProxyDeleteVdir)
+	authRouter.HandleFunc("/api/proxy/vdir/edit", ReverseProxyEditVdir)
+	//Reverse proxy user define header apis
+	authRouter.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
+	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
+	authRouter.HandleFunc("/api/proxy/header/remove", HandleCustomHeaderRemove)
 	//Reverse proxy auth related APIs
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
@@ -115,6 +122,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/gan/network/name", ganManager.HandleNetworkNaming)
 	//authRouter.HandleFunc("/api/gan/network/detail", ganManager.HandleNetworkDetails)
 	authRouter.HandleFunc("/api/gan/network/setRange", ganManager.HandleSetRanges)
+	authRouter.HandleFunc("/api/gan/network/join", ganManager.HandleServerJoinNetwork)
+	authRouter.HandleFunc("/api/gan/network/leave", ganManager.HandleServerLeaveNetwork)
 	authRouter.HandleFunc("/api/gan/members/list", ganManager.HandleMemberList)
 	authRouter.HandleFunc("/api/gan/members/ip", ganManager.HandleMemberIP)
 	authRouter.HandleFunc("/api/gan/members/name", ganManager.HandleMemberNaming)
@@ -175,7 +184,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
 	authRouter.HandleFunc("/api/webserv/start", staticWebServer.HandleStartServer)
 	authRouter.HandleFunc("/api/webserv/stop", staticWebServer.HandleStopServer)
-	authRouter.HandleFunc("/api/webserv/setPort", staticWebServer.HandlePortChange)
+	authRouter.HandleFunc("/api/webserv/setPort", HandleStaticWebServerPortChange)
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
 	if *allowWebFileManager {
 		//Web Directory Manager file operation functions

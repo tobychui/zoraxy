@@ -1,6 +1,9 @@
 package geodb
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 /*
 	Whitelist.go
@@ -8,11 +11,29 @@ import "strings"
 	This script handles whitelist related functions
 */
 
+const (
+	EntryType_CountryCode int = 0
+	EntryType_IP          int = 1
+)
+
+type WhitelistEntry struct {
+	EntryType int    //Entry type of whitelist, Country Code or IP
+	CC        string //ISO Country Code
+	IP        string //IP address or range
+	Comment   string //Comment for this entry
+}
+
 //Geo Whitelist
 
-func (s *Store) AddCountryCodeToWhitelist(countryCode string) {
+func (s *Store) AddCountryCodeToWhitelist(countryCode string, comment string) {
 	countryCode = strings.ToLower(countryCode)
-	s.sysdb.Write("whitelist-cn", countryCode, true)
+	entry := WhitelistEntry{
+		EntryType: EntryType_CountryCode,
+		CC:        countryCode,
+		Comment:   comment,
+	}
+
+	s.sysdb.Write("whitelist-cn", countryCode, entry)
 }
 
 func (s *Store) RemoveCountryCodeFromWhitelist(countryCode string) {
@@ -22,20 +43,19 @@ func (s *Store) RemoveCountryCodeFromWhitelist(countryCode string) {
 
 func (s *Store) IsCountryCodeWhitelisted(countryCode string) bool {
 	countryCode = strings.ToLower(countryCode)
-	var isWhitelisted bool = false
-	s.sysdb.Read("whitelist-cn", countryCode, &isWhitelisted)
-	return isWhitelisted
+	return s.sysdb.KeyExists("whitelist-cn", countryCode)
 }
 
-func (s *Store) GetAllWhitelistedCountryCode() []string {
-	whitelistedCountryCode := []string{}
+func (s *Store) GetAllWhitelistedCountryCode() []*WhitelistEntry {
+	whitelistedCountryCode := []*WhitelistEntry{}
 	entries, err := s.sysdb.ListTable("whitelist-cn")
 	if err != nil {
 		return whitelistedCountryCode
 	}
 	for _, keypairs := range entries {
-		ip := string(keypairs[0])
-		whitelistedCountryCode = append(whitelistedCountryCode, ip)
+		thisWhitelistEntry := WhitelistEntry{}
+		json.Unmarshal(keypairs[1], &thisWhitelistEntry)
+		whitelistedCountryCode = append(whitelistedCountryCode, &thisWhitelistEntry)
 	}
 
 	return whitelistedCountryCode
@@ -43,8 +63,14 @@ func (s *Store) GetAllWhitelistedCountryCode() []string {
 
 //IP Whitelist
 
-func (s *Store) AddIPToWhiteList(ipAddr string) {
-	s.sysdb.Write("whitelist-ip", ipAddr, true)
+func (s *Store) AddIPToWhiteList(ipAddr string, comment string) {
+	thisIpEntry := WhitelistEntry{
+		EntryType: EntryType_IP,
+		IP:        ipAddr,
+		Comment:   comment,
+	}
+
+	s.sysdb.Write("whitelist-ip", ipAddr, thisIpEntry)
 }
 
 func (s *Store) RemoveIPFromWhiteList(ipAddr string) {
@@ -52,14 +78,14 @@ func (s *Store) RemoveIPFromWhiteList(ipAddr string) {
 }
 
 func (s *Store) IsIPWhitelisted(ipAddr string) bool {
-	var isWhitelisted bool = false
-	s.sysdb.Read("whitelist-ip", ipAddr, &isWhitelisted)
+	isWhitelisted := s.sysdb.KeyExists("whitelist-ip", ipAddr)
 	if isWhitelisted {
+		//single IP whitelist entry
 		return true
 	}
 
 	//Check for IP wildcard and CIRD rules
-	AllWhitelistedIps := s.GetAllWhitelistedIp()
+	AllWhitelistedIps := s.GetAllWhitelistedIpAsStringSlice()
 	for _, whitelistRules := range AllWhitelistedIps {
 		wildcardMatch := MatchIpWildcard(ipAddr, whitelistRules)
 		if wildcardMatch {
@@ -75,17 +101,29 @@ func (s *Store) IsIPWhitelisted(ipAddr string) bool {
 	return false
 }
 
-func (s *Store) GetAllWhitelistedIp() []string {
-	whitelistedIp := []string{}
+func (s *Store) GetAllWhitelistedIp() []*WhitelistEntry {
+	whitelistedIp := []*WhitelistEntry{}
 	entries, err := s.sysdb.ListTable("whitelist-ip")
 	if err != nil {
 		return whitelistedIp
 	}
 
 	for _, keypairs := range entries {
-		ip := string(keypairs[0])
-		whitelistedIp = append(whitelistedIp, ip)
+		//ip := string(keypairs[0])
+		thisEntry := WhitelistEntry{}
+		json.Unmarshal(keypairs[1], &thisEntry)
+		whitelistedIp = append(whitelistedIp, &thisEntry)
 	}
 
 	return whitelistedIp
+}
+
+func (s *Store) GetAllWhitelistedIpAsStringSlice() []string {
+	allWhitelistedIPs := []string{}
+	entries := s.GetAllWhitelistedIp()
+	for _, entry := range entries {
+		allWhitelistedIPs = append(allWhitelistedIPs, entry.IP)
+	}
+
+	return allWhitelistedIPs
 }

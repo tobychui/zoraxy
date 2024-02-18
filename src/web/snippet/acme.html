@@ -191,6 +191,7 @@
         success: function(data){
           if (data.error != undefined){
             parent.msgbox(data.error, false, 5000);
+
           }else{
             parent.msgbox("Email updated");
             $(btn).html(`<i class="green check icon"></i>`);
@@ -214,14 +215,18 @@
             $("#enableCertAutoRenew").parent().checkbox("set unchecked");
             enableTrigerOnChangeEvent = true;
           }
+          if (parent && parent.setACMEEnableStates){
+            parent.setACMEEnableStates(!enabled);
+          }
         }else{
           $("#enableToggleSucc").stop().finish().fadeIn("fast").delay(3000).fadeOut("fast");
+          if (parent && parent.setACMEEnableStates){
+            parent.setACMEEnableStates(enabled);
+          }
         }
       });
 
-      if (parent && parent.setACMEEnableStates){
-        parent.setACMEEnableStates(enabled);
-      }
+      
       
     }
 

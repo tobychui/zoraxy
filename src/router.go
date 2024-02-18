@@ -15,6 +15,8 @@ import (
 
 	This script holds the static resources router
 	for the reverse proxy service
+
+	If you are looking for reverse proxy handler, see Server.go in mod/dynamicproxy/
 */
 
 func FSHandler(handler http.Handler) http.Handler {

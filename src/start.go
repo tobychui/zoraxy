@@ -101,6 +101,18 @@ func startupSequence() {
 	} else {
 		panic(err)
 	}
+
+	//Start the static web server
+	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
+		Sysdb:                  sysdb,
+		Port:                   "5487", //Default Port
+		WebRoot:                *staticWebServerRoot,
+		EnableDirectoryListing: true,
+		EnableWebDirManager:    *allowWebFileManager,
+	})
+	//Restore the web server to previous shutdown state
+	staticWebServer.RestorePreviousState()
+
 	//Create a netstat buffer
 	netstatBuffers, err = netstat.NewNetStatBuffer(300)
 	if err != nil {
@@ -128,7 +140,7 @@ func startupSequence() {
 	*/
 
 	if *allowMdnsScanning {
-		portInt, err := strconv.Atoi(strings.Split(handler.Port, ":")[1])
+		portInt, err := strconv.Atoi(strings.Split(*webUIPort, ":")[1])
 		if err != nil {
 			portInt = 8000
 		}
@@ -220,25 +232,13 @@ func startupSequence() {
 		log.Fatal(err)
 	}
 
-	/*
-		Static Web Server
-
-		Start the static web server
-	*/
-
-	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
-		Sysdb:                  sysdb,
-		Port:                   "5487", //Default Port
-		WebRoot:                *staticWebServerRoot,
-		EnableDirectoryListing: true,
-		EnableWebDirManager:    *allowWebFileManager,
-	})
-	//Restore the web server to previous shutdown state
-	staticWebServer.RestorePreviousState()
 }
 
 // This sequence start after everything is initialized
 func finalSequence() {
 	//Start ACME renew agent
 	acmeRegisterSpecialRoutingRule()
+
+	//Inject routing rules
+	registerBuildInRoutingRules()
 }

@@ -26,9 +26,12 @@
             <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
                 <button class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
             </div>
-            <div class="ui right floated buttons" style="padding-top: 2px;">
-                <button class="ui basic icon button" onclick="logout();"><i class="sign-out icon"></i></button>
+            <div class="ui right floated buttons" style="padding-top: 2px; padding-right: 0.4em;">
+                <button class="ui basic white icon button" onclick="logout();"><i class="sign-out icon"></i></button>
             </div>
+            <!-- <div class="ui right floated buttons" style="padding-top: 2px;">
+                <button id="themeColorButton" class="ui icon button" onclick="toggleTheme();"><i class="sun icon"></i></button>
+            </div> -->
         </div>
         <div class="wrapper">
             <div class="toolbar">
@@ -36,17 +39,21 @@
                     <a class="item active" tag="status">
                         <i class="simplistic info circle icon"></i>Status
                     </a>
+                    <a class="item" tag="setroot">
+                        <i class="simplistic home icon"></i> Default Site
+                    </a>
+                    <div class="ui divider menudivider">Reverse Proxy</div>
+                    <a class="item" tag="httprp">
+                        <i class="simplistic sitemap icon"></i> HTTP Proxy
+                    </a>
                     <a class="item" tag="vdir">
                         <i class="simplistic folder icon"></i> Virtual Directory
-                    </a>
-                    <a class="item" tag="subd">
-                        <i class="simplistic sitemap icon"></i> Subdomain Proxy
                     </a>
                     <a class="item" tag="rules">
                         <i class="simplistic plus square icon"></i> Create Proxy Rules
                     </a>
-                    <a class="item" tag="setroot">
-                        <i class="simplistic home icon"></i> Set Proxy Root
+                    <a class="item" tag="tcpprox">
+                        <i class="simplistic exchange icon"></i> TCP Proxy
                     </a>
                     <div class="ui divider menudivider">Access & Connections</div>
                     <a class="item" tag="cert">
@@ -64,9 +71,6 @@
                     </a>
                     <a class="item" tag="zgrok">
                         <i class="simplistic podcast icon"></i> Service Expose Proxy
-                    </a>
-                    <a class="item" tag="tcpprox">
-                        <i class="simplistic exchange icon"></i> TCP Proxy
                     </a>
                     <div class="ui divider menudivider">Others</div>
                     <a class="item" tag="webserv">
@@ -97,7 +101,7 @@
                 <div id="vdir" class="functiontab" target="vdir.html"></div>
 
                 <!-- Subdomain Proxy -->
-                <div id="subd" class="functiontab" target="subd.html"></div>
+                <div id="httprp" class="functiontab" target="httprp.html"></div>
 
                 <!-- Create Rules -->
                 <div id="rules" class="functiontab" target="rules.html"></div>
@@ -235,10 +239,20 @@
                 $.get("/api/auth/logout", function(response) {
                     if (response === "OK") {
                         setTimeout(function(){
-                            window.location.href = "/";
+                            window.location.href = "/login.html";
                         }, 300);
                     }
                 });
+            }
+
+            function toggleTheme(){
+                if ($("body").hasClass("darkTheme")){
+                    $("body").removeClass("darkTheme")
+                    $("#themeColorButton").html(`<i class="ui moon icon"></i>`);
+                }else{
+                    $("body").addClass("darkTheme");
+                    $("#themeColorButton").html(`<i class="ui sun icon"></i>`);
+                }
             }
 
             function getTabButtonById(targetTabId){
@@ -271,9 +285,11 @@
                 $(targetBtn).addClass("active");
                 $(".functiontab").hide();
                 $("#" + tabID).fadeIn('fast', function(){
-                    if (tabSwitchEventBind[tabID]){
-                        tabSwitchEventBind[tabID]();
-                    }
+                    setTimeout(function(){
+                        if (tabSwitchEventBind[tabID]){
+                            tabSwitchEventBind[tabID]();
+                        }
+                    },100)
                 });
                 $('html,body').animate({scrollTop: 0}, 'fast');
                 window.location.hash = tabID;

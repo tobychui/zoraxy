@@ -211,9 +211,9 @@ func removeHeaders(header http.Header) {
 		}
 	}
 
-	if header.Get("A-Upgrade") != "" {
-		header.Set("Upgrade", header.Get("A-Upgrade"))
-		header.Del("A-Upgrade")
+	if header.Get("Zr-Origin-Upgrade") != "" {
+		header.Set("Upgrade", header.Get("Zr-Origin-Upgrade"))
+		header.Del("Zr-Origin-Upgrade")
 	}
 }
 

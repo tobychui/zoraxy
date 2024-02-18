@@ -615,8 +615,12 @@
     <p>Whitelist a certain IP or IP range</p>
     <div class="ui form">
         <div class="field">
-        <label>IP Address</label>
-        <input id="ipAddressInputWhitelist" type="text" placeholder="IP Address">
+            <label>IP Address</label>
+            <input id="ipAddressInputWhitelist" type="text" placeholder="IP Address">
+        </div>
+        <div class="field">
+            <label>Remarks (Optional)</label>
+            <input id="ipAddressCommentsWhitelist" type="text" placeholder="Comments or remarks for this IP range">
         </div>
         <button id="addIpButton" onclick="addIpWhitelist();" class="ui basic green button">
             <i class="green add icon"></i> Whitelist IP
@@ -634,6 +638,7 @@
         <thead>
         <tr>
             <th>IP Address</th>
+            <th>Remarks</th>
             <th>Remove</th>
         </tr>
         </thead>
@@ -793,11 +798,12 @@
             if (data.length === 0) {
                 $('#whitelistIpTable').append(`
                 <tr>
-                    <td colspan="2"><i class="green check circle icon"></i>There are no whitelisted IP addresses</td>
+                    <td colspan="3"><i class="green check circle icon"></i>There are no whitelisted IP addresses</td>
                 </tr>
                 `);
             } else {
-                $.each(data, function(index, ip) {
+                $.each(data, function(index, ipEntry) {
+                    let ip = ipEntry.IP;
                     let icon = "globe icon";
                     if (isLAN(ip)){
                         icon = "desktop icon";
@@ -807,6 +813,7 @@
                     $('#whitelistIpTable').append(`
                         <tr class="whitelistItem" ip="${encodeURIComponent(ip)}">
                             <td><i class="${icon}"></i> ${ip}</td>
+                            <td>${ipEntry.Comment}</td>
                             <td><button class="ui icon basic mini red button" onclick="removeIpWhitelist('${ip}');"><i class="trash alternate icon"></i></button></td>
                         </tr>
                     `);
@@ -1003,6 +1010,7 @@
 
     function addIpWhitelist(){
         let targetIp = $("#ipAddressInputWhitelist").val().trim();
+        let remarks = $("#ipAddressCommentsWhitelist").val().trim();
         if (targetIp == ""){
             alert("IP address is empty")
             return
@@ -1016,7 +1024,7 @@
         $.ajax({
             url: "/api/whitelist/ip/add",
             type: "POST",
-            data: {ip: targetIp.toLowerCase()},
+            data: {ip: targetIp.toLowerCase(), "comment": remarks},
             success: function(response) {
                 if (response.error !== undefined) {
                     msgbox(response.error, false, 6000);
@@ -1025,6 +1033,7 @@
                 }
 
                 $("#ipAddressInputWhitelist").val("");
+                $("#ipAddressCommentsWhitelist").val("");
                 $("#ipAddressInputWhitelist").parent().remvoeClass("error");
             },
             error: function() {

@@ -21,6 +21,9 @@ var (
 
 // Add user customizable reverse proxy
 func ReverseProxtInit() {
+	/*
+		Load Reverse Proxy Global Settings
+	*/
 	inboundPort := 80
 	if sysdb.KeyExists("settings", "inbound") {
 		sysdb.Read("settings", "inbound", &inboundPort)
@@ -45,6 +48,14 @@ func ReverseProxtInit() {
 		SystemWideLogger.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
 	}
 
+	developmentMode := false
+	sysdb.Read("settings", "devMode", &developmentMode)
+	if useTls {
+		SystemWideLogger.Println("Development mode enabled. Using no-store Cache Control policy")
+	} else {
+		SystemWideLogger.Println("Development mode disabled. Proxying with default Cache Control policy")
+	}
+
 	listenOnPort80 := false
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if listenOnPort80 {
@@ -63,11 +74,19 @@ func ReverseProxtInit() {
 		SystemWideLogger.Println("Force HTTPS mode disabled")
 	}
 
+	/*
+		Create a new proxy object
+		The DynamicProxy is the parent of all reverse proxy handlers,
+		use for managemening and provide functions to access proxy handlers
+	*/
+
 	dprouter, err := dynamicproxy.NewDynamicProxy(dynamicproxy.RouterOption{
 		HostUUID:           nodeUUID,
+		HostVersion:        version,
 		Port:               inboundPort,
 		UseTls:             useTls,
 		ForceTLSLatest:     forceLatestTLSVersion,
+		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
 		TlsManager:         tlsCertManager,
@@ -83,45 +102,28 @@ func ReverseProxtInit() {
 
 	dynamicProxyRouter = dprouter
 
-	//Load all conf from files
+	/*
+
+		Load all conf from files
+
+	*/
 	confs, _ := filepath.Glob("./conf/proxy/*.config")
 	for _, conf := range confs {
-		record, err := LoadReverseProxyConfig(conf)
+		err := LoadReverseProxyConfig(conf)
 		if err != nil {
 			SystemWideLogger.PrintAndLog("Proxy", "Failed to load config file: "+filepath.Base(conf), err)
 			return
 		}
+	}
 
-		if record.ProxyType == "root" {
-			dynamicProxyRouter.SetRootProxy(&dynamicproxy.RootOptions{
-				ProxyLocation: record.ProxyTarget,
-				RequireTLS:    record.UseTLS,
-			})
-		} else if record.ProxyType == "subd" {
-			dynamicProxyRouter.AddSubdomainRoutingService(&dynamicproxy.SubdOptions{
-				MatchingDomain:          record.Rootname,
-				Domain:                  record.ProxyTarget,
-				RequireTLS:              record.UseTLS,
-				BypassGlobalTLS:         record.BypassGlobalTLS,
-				SkipCertValidations:     record.SkipTlsValidation,
-				RequireBasicAuth:        record.RequireBasicAuth,
-				BasicAuthCredentials:    record.BasicAuthCredentials,
-				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
-			})
-		} else if record.ProxyType == "vdir" {
-			dynamicProxyRouter.AddVirtualDirectoryProxyService(&dynamicproxy.VdirOptions{
-				RootName:                record.Rootname,
-				Domain:                  record.ProxyTarget,
-				RequireTLS:              record.UseTLS,
-				BypassGlobalTLS:         record.BypassGlobalTLS,
-				SkipCertValidations:     record.SkipTlsValidation,
-				RequireBasicAuth:        record.RequireBasicAuth,
-				BasicAuthCredentials:    record.BasicAuthCredentials,
-				BasicAuthExceptionRules: record.BasicAuthExceptionRules,
-			})
-		} else {
-			SystemWideLogger.PrintAndLog("Proxy", "Unsupported endpoint type: "+record.ProxyType+". Skipping "+filepath.Base(conf), nil)
+	if dynamicProxyRouter.Root == nil {
+		//Root config not set (new deployment?), use internal static web server as root
+		defaultRootRouter, err := GetDefaultRootConfig()
+		if err != nil {
+			SystemWideLogger.PrintAndLog("Proxy", "Failed to generate default root routing", err)
+			return
 		}
+		dynamicProxyRouter.SetProxyRouteAsRoot(defaultRootRouter)
 	}
 
 	//Start Service
@@ -173,7 +175,7 @@ func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
-	eptype, err := utils.PostPara(r, "type") //Support root, vdir and subd
+	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
 		utils.SendErrorResponse(w, "type not defined")
 		return
@@ -241,96 +243,112 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rootname := ""
-	if eptype == "vdir" {
-		vdir, err := utils.PostPara(r, "rootname")
-		if err != nil {
-			utils.SendErrorResponse(w, "vdir not defined")
-			return
-		}
-
-		//Vdir must start with /
-		if !strings.HasPrefix(vdir, "/") {
-			vdir = "/" + vdir
-		}
-		rootname = vdir
-
-		thisOption := dynamicproxy.VdirOptions{
-			RootName:             vdir,
-			Domain:               endpoint,
-			RequireTLS:           useTLS,
-			BypassGlobalTLS:      useBypassGlobalTLS,
-			SkipCertValidations:  skipTlsValidation,
-			RequireBasicAuth:     requireBasicAuth,
-			BasicAuthCredentials: basicAuthCredentials,
-		}
-		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
-
-	} else if eptype == "subd" {
-		subdomain, err := utils.PostPara(r, "rootname")
+	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
+	if eptype == "host" {
+		rootOrMatchingDomain, err := utils.PostPara(r, "rootname")
 		if err != nil {
 			utils.SendErrorResponse(w, "subdomain not defined")
 			return
 		}
-		rootname = subdomain
-		thisOption := dynamicproxy.SubdOptions{
-			MatchingDomain:       subdomain,
+		thisProxyEndpoint := dynamicproxy.ProxyEndpoint{
+			//I/O
+			ProxyType:            dynamicproxy.ProxyType_Host,
+			RootOrMatchingDomain: rootOrMatchingDomain,
+			Domain:               endpoint,
+			//TLS
+			RequireTLS:          useTLS,
+			BypassGlobalTLS:     useBypassGlobalTLS,
+			SkipCertValidations: skipTlsValidation,
+			//VDir
+			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
+			//Custom headers
+			UserDefinedHeaders: []*dynamicproxy.UserDefinedHeader{},
+			//Auth
+			RequireBasicAuth:        requireBasicAuth,
+			BasicAuthCredentials:    basicAuthCredentials,
+			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
+			DefaultSiteOption:       0,
+			DefaultSiteValue:        "",
+		}
+
+		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, "unable to prepare proxy route to target endpoint: "+err.Error())
+			return
+		}
+
+		dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
+		proxyEndpointCreated = &thisProxyEndpoint
+	} else if eptype == "root" {
+		//Get the default site options and target
+		dsOptString, err := utils.PostPara(r, "defaultSiteOpt")
+		if err != nil {
+			utils.SendErrorResponse(w, "default site action not defined")
+			return
+		}
+
+		var defaultSiteOption int = 1
+		opt, err := strconv.Atoi(dsOptString)
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid default site option")
+			return
+		}
+
+		defaultSiteOption = opt
+
+		dsVal, err := utils.PostPara(r, "defaultSiteVal")
+		if err != nil && (defaultSiteOption == 1 || defaultSiteOption == 2) {
+			//Reverse proxy or redirect, must require value to be set
+			utils.SendErrorResponse(w, "target not defined")
+			return
+		}
+
+		//Write the root options to file
+		rootRoutingEndpoint := dynamicproxy.ProxyEndpoint{
+			ProxyType:            dynamicproxy.ProxyType_Root,
+			RootOrMatchingDomain: "/",
 			Domain:               endpoint,
 			RequireTLS:           useTLS,
-			BypassGlobalTLS:      useBypassGlobalTLS,
-			SkipCertValidations:  skipTlsValidation,
-			RequireBasicAuth:     requireBasicAuth,
-			BasicAuthCredentials: basicAuthCredentials,
+			BypassGlobalTLS:      false,
+			SkipCertValidations:  false,
+
+			DefaultSiteOption: defaultSiteOption,
+			DefaultSiteValue:  dsVal,
 		}
-		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
-	} else if eptype == "root" {
-		rootname = "root"
-		thisOption := dynamicproxy.RootOptions{
-			ProxyLocation: endpoint,
-			RequireTLS:    useTLS,
+		preparedRootProxyRoute, err := dynamicProxyRouter.PrepareProxyRoute(&rootRoutingEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, "unable to prepare root routing: "+err.Error())
+			return
 		}
-		dynamicProxyRouter.SetRootProxy(&thisOption)
+
+		dynamicProxyRouter.SetProxyRouteAsRoot(preparedRootProxyRoute)
+		proxyEndpointCreated = &rootRoutingEndpoint
 	} else {
 		//Invalid eptype
-		utils.SendErrorResponse(w, "Invalid endpoint type")
+		utils.SendErrorResponse(w, "invalid endpoint type")
 		return
 	}
 
-	//Save it
-	thisProxyConfigRecord := Record{
-		ProxyType:            eptype,
-		Rootname:             rootname,
-		ProxyTarget:          endpoint,
-		UseTLS:               useTLS,
-		BypassGlobalTLS:      useBypassGlobalTLS,
-		SkipTlsValidation:    skipTlsValidation,
-		RequireBasicAuth:     requireBasicAuth,
-		BasicAuthCredentials: basicAuthCredentials,
+	//Save the config to file
+	err = SaveReverseProxyConfig(proxyEndpointCreated)
+	if err != nil {
+		SystemWideLogger.PrintAndLog("Proxy", "Unable to save new proxy rule to file", err)
+		return
 	}
-	SaveReverseProxyConfigToFile(&thisProxyConfigRecord)
 
 	//Update utm if exists
-	if uptimeMonitor != nil {
-		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
-		uptimeMonitor.CleanRecords()
-	}
+	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
 }
 
 /*
 ReverseProxyHandleEditEndpoint handles proxy endpoint edit
-This endpoint do not handle
-basic auth credential update. The credential
-will be loaded from old config and reused
+(host only, for root use Default Site page to edit)
+This endpoint do not handle basic auth credential update.
+The credential will be loaded from old config and reused
 */
 func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
-	eptype, err := utils.PostPara(r, "type") //Support root, vdir and subd
-	if err != nil {
-		utils.SendErrorResponse(w, "type not defined")
-		return
-	}
-
 	rootNameOrMatchingDomain, err := utils.PostPara(r, "rootname")
 	if err != nil {
 		utils.SendErrorResponse(w, "Target proxy rule not defined")
@@ -371,50 +389,31 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	requireBasicAuth := (rba == "true")
 
 	//Load the previous basic auth credentials from current proxy rules
-	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(eptype, rootNameOrMatchingDomain)
+	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
 		utils.SendErrorResponse(w, "Target proxy config not found or could not be loaded")
 		return
 	}
 
-	if eptype == "vdir" {
-		thisOption := dynamicproxy.VdirOptions{
-			RootName:             targetProxyEntry.RootOrMatchingDomain,
-			Domain:               endpoint,
-			RequireTLS:           useTLS,
-			BypassGlobalTLS:      false,
-			SkipCertValidations:  skipTlsValidation,
-			RequireBasicAuth:     requireBasicAuth,
-			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
-		}
-		targetProxyEntry.Remove()
-		dynamicProxyRouter.AddVirtualDirectoryProxyService(&thisOption)
+	//Generate a new proxyEndpoint from the new config
+	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
+	newProxyEndpoint.Domain = endpoint
+	newProxyEndpoint.RequireTLS = useTLS
+	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
+	newProxyEndpoint.SkipCertValidations = skipTlsValidation
+	newProxyEndpoint.RequireBasicAuth = requireBasicAuth
 
-	} else if eptype == "subd" {
-		thisOption := dynamicproxy.SubdOptions{
-			MatchingDomain:       targetProxyEntry.RootOrMatchingDomain,
-			Domain:               endpoint,
-			RequireTLS:           useTLS,
-			BypassGlobalTLS:      bypassGlobalTLS,
-			SkipCertValidations:  skipTlsValidation,
-			RequireBasicAuth:     requireBasicAuth,
-			BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
-		}
-		targetProxyEntry.Remove()
-		dynamicProxyRouter.AddSubdomainRoutingService(&thisOption)
+	//Prepare to replace the current routing rule
+	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
 	}
+	targetProxyEntry.Remove()
+	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
 
 	//Save it to file
-	thisProxyConfigRecord := Record{
-		ProxyType:            eptype,
-		Rootname:             targetProxyEntry.RootOrMatchingDomain,
-		ProxyTarget:          endpoint,
-		UseTLS:               useTLS,
-		SkipTlsValidation:    skipTlsValidation,
-		RequireBasicAuth:     requireBasicAuth,
-		BasicAuthCredentials: targetProxyEntry.BasicAuthCredentials,
-	}
-	SaveReverseProxyConfigToFile(&thisProxyConfigRecord)
+	SaveReverseProxyConfig(newProxyEndpoint)
 
 	//Update uptime monitor
 	UpdateUptimeMonitorTargets()
@@ -429,21 +428,19 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ptype, err := utils.PostPara(r, "ptype")
-	if err != nil {
-		utils.SendErrorResponse(w, "Invalid ptype given")
-		return
-	}
-
 	//Remove the config from runtime
-	err = dynamicProxyRouter.RemoveProxyEndpointByRootname(ptype, ep)
+	err = dynamicProxyRouter.RemoveProxyEndpointByRootname(ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
 
 	//Remove the config from file
-	RemoveReverseProxyConfigFile(ep)
+	err = RemoveReverseProxyConfig(ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
 
 	//Update utm if exists
 	if uptimeMonitor != nil {
@@ -473,14 +470,8 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ptype, err := utils.GetPara(r, "ptype")
-		if err != nil {
-			utils.SendErrorResponse(w, "Invalid ptype given")
-			return
-		}
-
 		//Load the target proxy object from router
-		targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+		targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -502,17 +493,6 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ptype, err := utils.PostPara(r, "ptype")
-		if err != nil {
-			utils.SendErrorResponse(w, "Invalid ptype given")
-			return
-		}
-
-		if ptype != "vdir" && ptype != "subd" {
-			utils.SendErrorResponse(w, "Invalid ptype given")
-			return
-		}
-
 		creds, err := utils.PostPara(r, "creds")
 		if err != nil {
 			utils.SendErrorResponse(w, "Invalid ptype given")
@@ -520,7 +500,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//Load the target proxy object from router
-		targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+		targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -570,7 +550,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 		targetProxy.BasicAuthCredentials = mergedCredentials
 
 		//Save it to file
-		SaveReverseProxyEndpointToFile(targetProxy)
+		SaveReverseProxyConfig(targetProxy)
 
 		//Replace runtime configuration
 		targetProxy.UpdateToRuntime()
@@ -593,14 +573,8 @@ func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ptype, err := utils.GetPara(r, "ptype")
-	if err != nil {
-		utils.SendErrorResponse(w, "Invalid ptype given")
-		return
-	}
-
 	//Load the target proxy object from router
-	targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -624,12 +598,6 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ptype, err := utils.PostPara(r, "ptype")
-	if err != nil {
-		utils.SendErrorResponse(w, "Invalid ptype given")
-		return
-	}
-
 	matchingPrefix, err := utils.PostPara(r, "prefix")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid matching prefix given")
@@ -637,7 +605,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Load the target proxy object from router
-	targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -666,7 +634,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 
 	//Save configs to runtime and file
 	targetProxy.UpdateToRuntime()
-	SaveReverseProxyEndpointToFile(targetProxy)
+	SaveReverseProxyConfig(targetProxy)
 
 	utils.SendOK(w)
 }
@@ -679,12 +647,6 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ptype, err := utils.PostPara(r, "ptype")
-	if err != nil {
-		utils.SendErrorResponse(w, "Invalid ptype given")
-		return
-	}
-
 	matchingPrefix, err := utils.PostPara(r, "prefix")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid matching prefix given")
@@ -692,7 +654,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Load the target proxy object from router
-	targetProxy, err := dynamicProxyRouter.LoadProxy(ptype, ep)
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -717,7 +679,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 	// Save configs to runtime and file
 	targetProxy.UpdateToRuntime()
-	SaveReverseProxyEndpointToFile(targetProxy)
+	SaveReverseProxyConfig(targetProxy)
 
 	utils.SendOK(w)
 }
@@ -728,34 +690,33 @@ func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
-	eptype, err := utils.PostPara(r, "type") //Support root, vdir and subd
+	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
 		utils.SendErrorResponse(w, "type not defined")
 		return
 	}
 
-	if eptype == "vdir" {
+	if eptype == "host" {
 		results := []*dynamicproxy.ProxyEndpoint{}
 		dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
-			results = append(results, value.(*dynamicproxy.ProxyEndpoint))
+			thisEndpoint := dynamicproxy.CopyEndpoint(value.(*dynamicproxy.ProxyEndpoint))
+
+			//Clear the auth passwords before showing to front-end
+			cleanedCredentials := []*dynamicproxy.BasicAuthCredentials{}
+			for _, user := range thisEndpoint.BasicAuthCredentials {
+				cleanedCredentials = append(cleanedCredentials, &dynamicproxy.BasicAuthCredentials{
+					Username:     user.Username,
+					PasswordHash: "",
+				})
+			}
+
+			thisEndpoint.BasicAuthCredentials = cleanedCredentials
+			results = append(results, thisEndpoint)
 			return true
 		})
 
 		sort.Slice(results, func(i, j int) bool {
 			return results[i].Domain < results[j].Domain
-		})
-
-		js, _ := json.Marshal(results)
-		utils.SendJSONResponse(w, string(js))
-	} else if eptype == "subd" {
-		results := []*dynamicproxy.ProxyEndpoint{}
-		dynamicProxyRouter.SubdomainEndpoint.Range(func(key, value interface{}) bool {
-			results = append(results, value.(*dynamicproxy.ProxyEndpoint))
-			return true
-		})
-
-		sort.Slice(results, func(i, j int) bool {
-			return results[i].RootOrMatchingDomain < results[j].RootOrMatchingDomain
 		})
 
 		js, _ := json.Marshal(results)
@@ -789,7 +750,7 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 		} else if enabled == "false" {
 			sysdb.Write("settings", "listenP80", false)
 			SystemWideLogger.Println("Disabling port 80 listener")
-			dynamicProxyRouter.UpdatePort80ListenerState(true)
+			dynamicProxyRouter.UpdatePort80ListenerState(false)
 		} else {
 			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
 		}
@@ -837,6 +798,30 @@ func HandleManagementProxyCheck(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+func HandleDevelopmentModeChange(w http.ResponseWriter, r *http.Request) {
+	enableDevelopmentModeStr, err := utils.GetPara(r, "enable")
+	if err != nil {
+		//Load the current development mode toggle state
+		js, _ := json.Marshal(dynamicProxyRouter.Option.NoCache)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Write changes to runtime
+		enableDevelopmentMode := false
+		if enableDevelopmentModeStr == "true" {
+			enableDevelopmentMode = true
+		}
+
+		//Write changes to runtime
+		dynamicProxyRouter.Option.NoCache = enableDevelopmentMode
+
+		//Write changes to database
+		sysdb.Write("settings", "devMode", enableDevelopmentMode)
+
+		utils.SendOK(w)
+	}
+
+}
+
 // Handle incoming port set. Change the current proxy incoming port
 func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	newIncomingPort, err := utils.PostPara(r, "incoming")
@@ -882,33 +867,138 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
-// Handle list of root route options
-func HandleRootRouteOptionList(w http.ResponseWriter, r *http.Request) {
-	js, _ := json.Marshal(dynamicProxyRouter.RootRoutingOptions)
-	utils.SendJSONResponse(w, string(js))
-}
+/* Handle Custom Header Rules */
+//List all the custom header defined in this proxy rule
 
-// Handle update of the root route edge case options. See dynamicproxy/rootRoute.go
-func HandleRootRouteOptionsUpdate(w http.ResponseWriter, r *http.Request) {
-	enableUnsetSubdomainRedirect, err := utils.PostBool(r, "unsetRedirect")
+func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
+	epType, err := utils.PostPara(r, "type")
 	if err != nil {
-		utils.SendErrorResponse(w, err.Error())
+		utils.SendErrorResponse(w, "endpoint type not defined")
 		return
 	}
 
-	unsetRedirectTarget, _ := utils.PostPara(r, "unsetRedirectTarget")
-
-	newRootOption := dynamicproxy.RootRoutingOptions{
-		EnableRedirectForUnsetRules: enableUnsetSubdomainRedirect,
-		UnsetRuleRedirectTarget:     unsetRedirectTarget,
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
 	}
 
-	dynamicProxyRouter.RootRoutingOptions = &newRootOption
-	err = newRootOption.SaveToFile()
+	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
+	if epType == "root" {
+		targetProxyEndpoint = dynamicProxyRouter.Root
+	} else {
+		ep, err := dynamicProxyRouter.LoadProxy(domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "target endpoint not exists")
+			return
+		}
+
+		targetProxyEndpoint = ep
+	}
+
+	//List all custom headers
+	customHeaderList := targetProxyEndpoint.UserDefinedHeaders
+	if customHeaderList == nil {
+		customHeaderList = []*dynamicproxy.UserDefinedHeader{}
+	}
+	js, _ := json.Marshal(customHeaderList)
+	utils.SendJSONResponse(w, string(js))
+
+}
+
+// Add a new header to the target endpoint
+func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
+	epType, err := utils.PostPara(r, "type")
 	if err != nil {
-		utils.SendErrorResponse(w, err.Error())
+		utils.SendErrorResponse(w, "endpoint type not defined")
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
+	}
+
+	name, err := utils.PostPara(r, "name")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP header name not set")
+		return
+	}
+
+	value, err := utils.PostPara(r, "value")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP header value not set")
+		return
+	}
+
+	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
+	if epType == "root" {
+		targetProxyEndpoint = dynamicProxyRouter.Root
+	} else {
+		ep, err := dynamicProxyRouter.LoadProxy(domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "target endpoint not exists")
+			return
+		}
+
+		targetProxyEndpoint = ep
+	}
+
+	//Create a new custom header object
+	targetProxyEndpoint.AddUserDefinedHeader(name, value)
+
+	//Save it (no need reload as header are not handled by dpcore)
+	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save update")
 		return
 	}
 
 	utils.SendOK(w)
+}
+
+// Remove a header from the target endpoint
+func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
+	epType, err := utils.PostPara(r, "type")
+	if err != nil {
+		utils.SendErrorResponse(w, "endpoint type not defined")
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
+	}
+
+	name, err := utils.PostPara(r, "name")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP header name not set")
+		return
+	}
+
+	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
+	if epType == "root" {
+		targetProxyEndpoint = dynamicProxyRouter.Root
+	} else {
+		ep, err := dynamicProxyRouter.LoadProxy(domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "target endpoint not exists")
+			return
+		}
+
+		targetProxyEndpoint = ep
+	}
+
+	targetProxyEndpoint.RemoveUserDefinedHeader(name)
+
+	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save update")
+		return
+	}
+
+	utils.SendOK(w)
+
 }

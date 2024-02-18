@@ -72,6 +72,7 @@ func (ws *WebServer) HandlePortChange(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
+
 	utils.SendOK(w)
 }
 

@@ -1,119 +1,114 @@
-<div class="ui stackable grid">
+<!-- Proxy Create Form-->
+<style>
+    .rulesInstructions{
+        background: var(--theme_background) !important; 
+        color: var(--theme_lgrey);
+        border-radius: 1em !important;
+    }
+</style>
+<div class="standardContainer">
+    <div class="ui stackable grid">
         <div class="ten wide column">
-            <div class="standardContainer">
-                <div class="ui basic segment" style="margin-top: 1em;">
-                    <h2>New Proxy Rule</h2>
-                    <p>You can create a proxy endpoing by subdomain or virtual directories</p>
-                    <div class="ui form">
-                        <div class="field">
-                            <label>Proxy Type</label>
-                            <div class="ui selection dropdown">
-                                <input type="hidden" id="ptype" value="subd" onchange="handleProxyTypeOptionChange(this.value)">
-                                <i class="dropdown icon"></i>
-                                <div class="default text">Proxy Type</div>
-                                <div class="menu">
-                                    <div class="item" data-value="subd">Sub-domain</div>
-                                    <div class="item" data-value="vdir">Virtual Directory</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <label>Subdomain Matching Keyword / Virtual Directory Name</label>
-                            <input type="text" id="rootname" placeholder="s1.mydomain.com">
-                        </div>
-                        <div class="field">
-                            <label>Target IP Address or Domain Name with port</label>
-                            <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
-                            <small>E.g. 192.168.0.101:8000 or example.com</small>
-                        </div>
-                        <div class="field">
-                            <div class="ui checkbox">
-                                <input type="checkbox" id="reqTls">
-                                <label>Proxy Target require TLS Connection <br><small>(i.e. Your proxy target starts with https://)</small></label>
-                            </div>
-                        </div>
-                        <!-- Advance configs -->
-                        <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
-                            <div id="advanceProxyRules" class="ui fluid accordion">
-                                <div class="title">
-                                <i class="dropdown icon"></i>
-                                Advance Settings
-                                </div>
-                                <div class="content">
-                                    <p></p>
-                                    <div class="field">
-                                        <div class="ui checkbox">
-                                            <input type="checkbox" id="skipTLSValidation">
-                                            <label>Ignore TLS/SSL Verification Error<br><small>For targets that is using self-signed, expired certificate (Not Recommended)</small></label>
-                                        </div>
-                                    </div>
-                                    <div class="field">
-                                        <div class="ui checkbox">
-                                            <input type="checkbox" id="bypassGlobalTLS">
-                                            <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
-                                        </div>
-                                    </div>
-                                    <div class="field">
-                                        <div class="ui checkbox">
-                                            <input type="checkbox" id="requireBasicAuth">
-                                            <label>Require Basic Auth<br><small>Require client to login in order to view the page</small></label>
-                                        </div>
-                                    </div>
-                                    <div id="basicAuthCredentials" class="field">
-                                        <p>Enter the username and password for allowing them to access this proxy endpoint</p>
-                                        <table class="ui very basic celled table">
-                                            <thead>
-                                            <tr>
-                                                <th>Username</th>
-                                                <th>Password</th>
-                                                <th>Remove</th>
-                                            </tr></thead>
-                                            <tbody id="basicAuthCredentialTable">
-                                            <tr>
-                                                <td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td>
-                                            </tr>
-                                            </tbody>
-                                        </table>
-                                        <div class="three small fields credentialEntry">
-                                            <div class="field">
-                                                <input id="basicAuthCredUsername" type="text" placeholder="Username" autocomplete="off">
-                                            </div>
-                                            <div class="field">
-                                                <input id="basicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
-                                            </div>
-                                            <div class="field">
-                                                <button class="ui basic button" onclick="addCredentials();"><i class="blue add icon"></i> Add Credential</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <br>
-                        <button class="ui basic button" onclick="newProxyEndpoint();"><i class="blue add icon"></i> Create Endpoint</button>
-                        <br><br>
+            <div class="ui basic segment" style="border-radius: 1em; padding: 1em !important;">
+                <h2>New Proxy Rule</h2>
+                <p>You can add more proxy rules to support more site via domain / subdomains</p>
+                <div class="ui form">
+                    <div class="field">
+                        <label>Matching Keyword / Domain</label>
+                        <input type="text" id="rootname" placeholder="mydomain.com">
+                        <small>Support subdomain and wildcard, e.g. s1.mydomain.com or *.test.mydomain.com</small>
                     </div>
+                    <div class="field">
+                        <label>Target IP Address or Domain Name with port</label>
+                        <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
+                        <small>E.g. 192.168.0.101:8000 or example.com</small>
+                    </div>
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="reqTls">
+                            <label>Proxy Target require TLS Connection <br><small>(i.e. Your proxy target starts with https://)</small></label>
+                        </div>
+                    </div>
+                    <!-- Advance configs -->
+                    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+                        <div id="advanceProxyRules" class="ui fluid accordion">
+                            <div class="title">
+                            <i class="dropdown icon"></i>
+                            Advance Settings
+                            </div>
+                            <div class="content">
+                                <p></p>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="skipTLSValidation">
+                                        <label>Ignore TLS/SSL Verification Error<br><small>For targets that is using self-signed, expired certificate (Not Recommended)</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="bypassGlobalTLS">
+                                        <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="requireBasicAuth">
+                                        <label>Require Basic Auth<br><small>Require client to login in order to view the page</small></label>
+                                    </div>
+                                </div>
+                                <div id="basicAuthCredentials" class="field">
+                                    <p>Enter the username and password for allowing them to access this proxy endpoint</p>
+                                    <table class="ui very basic celled table">
+                                        <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Password</th>
+                                            <th>Remove</th>
+                                        </tr></thead>
+                                        <tbody id="basicAuthCredentialTable">
+                                        <tr>
+                                            <td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="three small fields credentialEntry">
+                                        <div class="field">
+                                            <input id="basicAuthCredUsername" type="text" placeholder="Username" autocomplete="off">
+                                        </div>
+                                        <div class="field">
+                                            <input id="basicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
+                                        </div>
+                                        <div class="field">
+                                            <button class="ui basic button" onclick="addCredentials();"><i class="blue add icon"></i> Add Credential</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <button class="ui basic button" onclick="newProxyEndpoint();"><i class="green add icon"></i> Create Endpoint</button>
+                    <br><br>
                 </div>
             </div>
         </div>
         <div class="six wide column">
-            <div class="ui basic segment" style="height: 100%; background-color: var(--theme_grey); color: var(--theme_lgrey);">
-                <br>
-                <span style="font-size: 1.2em; font-weight: 300;">Subdomain</span><br>
-                Example of subdomain matching keyword:<br>
-                <code>s1.arozos.com</code> <br>(Any access starting with s1.arozos.com will be proxy to the IP address below)<br>
+            <div class="ui basic segment rulesInstructions">
+                <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Domain</span><br>
+                Example of domain matching keyword:<br>
+                <code>arozos.com</code> <br>Any acess requesting arozos.com will be proxy to the IP address below<br>
                 <div class="ui divider"></div>
-                <span style="font-size: 1.2em; font-weight: 300;">Virtual Directory</span><br>
-                Example of virtual directory name: <br>
-                <code>/s1/home/</code> <br>(Any access to {this_server}/s1/home/ will be proxy to the IP address below)<br>
-                You can also ignore the tailing slash for wildcard like usage.<br>
-                <code>/s1/room-</code> <br>Any access to {this_server}/s1/classroom_* will be proxied, for example: <br>
+                <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Subdomain</span><br>
+                Example of subdomain matching keyword:<br>
+                <code>s1.arozos.com</code> <br>Any request starting with s1.arozos.com will be proxy to the IP address below<br>
+                <div class="ui divider"></div>
+                <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Wildcard</span><br>
+                Example of wildcard matching keyword:<br>
+                <code>*.arozos.com</code> <br>Any request with a host name matching *.arozos.com will be proxy to the IP address below. Here are some examples.<br>
                 <div class="ui list">
-                    <div class="item"><code>/s1/room-101</code></div>
-                    <div class="item"><code>/s1/room-102/</code></div>
-                    <div class="item"><code>/s1/room-103/map.txt</code></div>
-                </div><br>
-                
+                    <div class="item"><code>www.arozos.com</code></div>
+                    <div class="item"><code>foo.bar.arozos.com</code></div>
+                </div>
                 <br>
             </div>
         </div>
@@ -122,29 +117,15 @@
 <script>
     $("#advanceProxyRules").accordion();
 
+
     //New Proxy Endpoint
     function newProxyEndpoint(){
-        var type = $("#ptype").val();
         var rootname = $("#rootname").val();
         var proxyDomain = $("#proxyDomain").val();
         var useTLS = $("#reqTls")[0].checked;
         var skipTLSValidation = $("#skipTLSValidation")[0].checked;
         var bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
         var requireBasicAuth = $("#requireBasicAuth")[0].checked;
-
-        if (type === "vdir") {
-            if (!rootname.startsWith("/")) {
-                rootname = "/" + rootname
-                $("#rootname").val(rootname);
-            }
-        }else{
-            if (!isSubdomainDomain(rootname)){
-                //This doesn't seems like a subdomain
-                if (!confirm(rootname + " does not looks like a subdomain. Continue anyway?")){
-                    return;
-                }   
-            }
-        }
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -164,7 +145,7 @@
         $.ajax({
             url: "/api/proxy/add",
             data: {
-                type: type, 
+                type: "host",
                 rootname: rootname, 
                 tls: useTLS, 
                 ep: proxyDomain,
@@ -177,19 +158,14 @@
                 if (data.error != undefined){
                     msgbox(data.error, false, 5000);
                 }else{
-                    //OK
-                    listVdirs();
-                    listSubd();
-                   
-
                     //Clear old data
                     $("#rootname").val("");
                     $("#proxyDomain").val("");
                     credentials = [];
                     updateTable();
-
+                    reloadUptimeList();
                     //Check if it is a new subdomain and TLS enabled
-                    if (type == "subd" && $("#tls").checkbox("is checked")){
+                    if ($("#tls").checkbox("is checked")){
                         confirmBox("Request new SSL Cert for this subdomain?", function(choice){
                             if (choice == true){
                                 //Load the prefer CA from TLS page
@@ -200,7 +176,12 @@
                                 //Get a new cert using ACME
                                 msgbox("Requesting certificate via " + defaultCA  +"...");
                                 console.log("Trying to get a new certificate via ACME");
-                                obtainCertificate(rootname, defaultCA.trim());
+
+                                //Request ACME for certificate, see cert.html component
+                                obtainCertificate(rootname, defaultCA.trim(), function(){
+                                     // Renew the parent certificate list
+                                    initManagedDomainCertificateList();
+                                });
                             }else{
                                 msgbox("Proxy Endpoint Added");
                             }
@@ -214,23 +195,17 @@
         
     }
 
-    function handleProxyTypeOptionChange(newType){
-        if (newType == "subd"){
-            $("#bypassGlobalTLS").parent().removeClass("disabled");
-        }else if (newType == "vdir"){
-            $("#bypassGlobalTLS").parent().addClass("disabled");
-        }
-    }
-
     //Generic functions for delete rp endpoints 
-    function deleteEndpoint(ptype, epoint){
-        if (confirm("Confirm remove proxy for :" + epoint + " (type: " + ptype + ")?")){
+    function deleteEndpoint(epoint){
+        epoint = decodeURIComponent(epoint).hexDecode();
+        if (confirm("Confirm remove proxy for :" + epoint + "?")){
             $.ajax({
                 url: "/api/proxy/del",
-                data: {ep: epoint, ptype: ptype},
+                data: {ep: epoint, },
                 success: function(){
-                    listVdirs();
-                    listSubd();
+                    listProxyEndpoints();
+                    msgbox("Proxy Rule Deleted", true);
+                    reloadUptimeList();
                 }
             })
         }
@@ -330,227 +305,33 @@
         updateTable();
     }
 
-
-    //Check if a string is a valid subdomain 
-    function isSubdomainDomain(str) {
-        const regex = /^(localhost|[a-z0-9]+([\-.]{1}[a-z0-9]+)*\.[a-z]{2,}|[a-z0-9]+([\-.]{1}[a-z0-9]+)*\.[a-z]{2,}\.)$/i;
-        return regex.test(str);
-    } 
-
-
-    /*
-        Inline editor for subd.html and vdir.html
-    */
-
-    function editEndpoint(endpointType, uuid) {
-        var row = $('tr[eptuuid="' + uuid + '"]');
-        var columns = row.find('td[data-label]');
-        var payload = $(row).attr("payload");
-        payload = JSON.parse(decodeURIComponent(payload));
-        console.log(payload);
-        //console.log(payload);
-        columns.each(function(index) {
-            var column = $(this);
-            var oldValue = column.text().trim();
-
-            if ($(this).attr("editable") == "false"){
-                //This col do not allow edit. Skip
-                return;
-            }
-
-            // Create an input element based on the column content
-            var input;
-            var datatype = $(this).attr("datatype");
-            if (datatype == "domain"){
-                let domain = payload.Domain;
-                //Target require TLS for proxying
-                let tls = payload.RequireTLS;
-                if (tls){
-                    tls = "checked";
-                }else{
-                    tls = "";
-                }
-
-                //Require TLS validation
-                let skipTLSValidation = payload.SkipCertValidations;
-                let checkstate = "";
-                if (skipTLSValidation){
-                    checkstate = "checked";
-                }
-
-                input = `
-                    <div class="ui mini fluid input">
-                        <input type="text" class="Domain" value="${domain}">
-                    </div>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="RequireTLS" ${tls}>
-                        <label>Require TLS<br>
-                            <small>Proxy target require HTTPS connection</small></label>
-                    </div><br>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="SkipCertValidations" ${checkstate}>
-                        <label>Skip Verification<br>
-                        <small>Check this if proxy target is using self signed certificates</small></label>
-                    </div>
-                `;
-                column.empty().append(input);
-            }else if (datatype == "basicauth"){
-                let requireBasicAuth = payload.RequireBasicAuth;
-                let checkstate = "";
-                if (requireBasicAuth){
-                    checkstate = "checked";
-                }
-                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
-                    <label>Require Basic Auth</label>
-                    </div>
-                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${endpointType}','${uuid}');"><i class="ui blue lock icon"></i> Edit Settings</button>`);
-
-            }else if (datatype == 'action'){
-                column.empty().append(`
-                <button title="Cancel" onclick="exitProxyInlineEdit('${endpointType}');" class="ui basic small circular icon button"><i class="ui remove icon"></i></button>
-                <button title="Save" onclick="saveProxyInlineEdit('${uuid}');" class="ui basic small circular icon button"><i class="ui green save icon"></i></button>
-                `);
-            }else if (datatype == "inbound" && payload.ProxyType == 0){
-                let originalContent = $(column).html();
-                column.empty().append(`${originalContent}
-                    <div class="ui divider"></div>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="BypassGlobalTLS" ${payload.BypassGlobalTLS?"checked":""}>
-                        <label>Allow plain HTTP access<br>
-                            <small>Allow inbound connections without TLS/SSL</small></label>
-                    </div><br>
-                `);
-            }else{
-                //Unknown field. Leave it untouched
-            }
-        });
-
-        $("#" + endpointType).find(".editBtn").addClass("disabled");
-    }
-
-    function exitProxyInlineEdit(){
-        listSubd();
-        listVdirs();
-        $("#" + endpointType).find(".editBtn").removeClass("disabled");
-    }
-
-    function saveProxyInlineEdit(uuid){
-        var row = $('tr[eptuuid="' + uuid + '"]');
-        if (row.length == 0){
-            return;
-        }
-
-        var epttype = $(row).attr("class");
-        if (epttype == "subdEntry"){
-            epttype = "subd";
-        }else if (epttype == "vdirEntry"){
-            epttype = "vdir";
-        }
-
-        let newDomain =  $(row).find(".Domain").val();
-        let requireTLS = $(row).find(".RequireTLS")[0].checked;
-        let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
-        let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
-        let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
-
-        console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
-
-        $.ajax({
-            url: "/api/proxy/edit",
-            method: "POST",
-            data: {
-                "type": epttype,
-                "rootname": uuid,
-                "ep":newDomain,
-                "bpgtls": bypassGlobalTLS,
-                "tls" :requireTLS,
-                "tlsval": skipCertValidations,
-                "bauth" :requireBasicAuth,
-            },
-            success: function(data){
-                if (data.error !== undefined){
-                    msgbox(data.error, false, 6000);
-                }else{
-                    msgbox("Proxy endpoint updated");
-                    if (epttype == "subd"){
-                        listSubd();
-                    }else if (epttype == "vdir"){
-                        listVdirs();
-                    }
-                }
-            }
-        })
-    }
     
-    function editBasicAuthCredentials(endpointType, uuid){
-        let payload = encodeURIComponent(JSON.stringify({
-            ept: endpointType,
-            ep: uuid
-        }));
-        showSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+
+    //Update v3.0.0
+    //Since some proxy rules now contains wildcard characters
+    //all uuid are converted to hex code before use in DOM selector
+
+    String.prototype.hexEncode = function(){
+        var hex, i;
+
+        var result = "";
+        for (i=0; i<this.length; i++) {
+            hex = this.charCodeAt(i).toString(16);
+            result += ("000"+hex).slice(-4);
+        }
+
+        return result
     }
 
-
-    /*
-        Obtain Certificate via ACME
-    */
-
-    //Load the ACME email from server side
-    let acmeEmail = "";
-    $.get("/api/acme/autoRenew/email", function(data){
-        if (data != "" && data != undefined && data != null){
-            acmeEmail = data;
-        }
-    });
-
-   // Obtain certificate from API, only support one domain
-    function obtainCertificate(domains, usingCa = "Let's Encrypt") {
-        let filename = "";
-        let email = acmeEmail;
-        if (acmeEmail == ""){
-            let rootDomain = domains.split(".").pop();
-            email = "admin@" + rootDomain;
-        }
-        if (filename.trim() == "" && !domains.includes(",")){
-            //Zoraxy filename are the matching name for domains.
-            //Use the same as domains
-            filename = domains;
-        }else if (filename != "" && !domains.includes(",")){
-            //Invalid settings. Force the filename to be same as domain
-            //if there are only 1 domain
-            filename = domains;
-        }else{
-            parent.msgbox("Filename cannot be empty for certs containing multiple domains.")
-            return;
+    String.prototype.hexDecode = function(){
+        var j;
+        var hexes = this.match(/.{1,4}/g) || [];
+        var back = "";
+        for(j = 0; j<hexes.length; j++) {
+            back += String.fromCharCode(parseInt(hexes[j], 16));
         }
 
-        $.ajax({
-            url: "/api/acme/obtainCert",
-            method: "GET",
-            data: {
-                domains: domains,
-                filename: filename,
-                email: email,
-                ca: usingCa,
-            },
-            success: function(response) {
-                if (response.error) {
-                    console.log("Error:", response.error);
-                    // Show error message
-                    msgbox(response.error, false, 12000);
-                } else {
-                    console.log("Certificate installed successfully");
-                    // Show success message
-                    msgbox("Certificate installed successfully");
-                    
-                    // Renew the parent certificate list
-                    initManagedDomainCertificateList();
-                }
-            },
-            error: function(error) {
-                console.log("Failed to install certificate:", error);
-            }
-        });
+        return back;
     }
+
 </script>

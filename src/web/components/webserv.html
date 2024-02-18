@@ -4,7 +4,7 @@
         <p>A simple static web server that serve html css and js files</p>
     </div>
     <div class="ui divider"></div>
-    <div class="ui basic segment">
+    <div class="ui basic segment webservRunningStateWrapper">
         <h4 class="ui header" id="webservRunningState">
             <i class="green circle icon"></i>
             <div class="content">
@@ -102,12 +102,14 @@
         function setWebServerRunningState(running){
             if (running){
                 $("#webserv_enable").parent().checkbox("set checked");
-                $("#webservRunningState").find("i").attr("class", "green circle icon");
+                $("#webservRunningState").find("i").attr("class", "white circle check icon");
                 $("#webservRunningState").find(".webserv_status").text("Running");
+                $(".webservRunningStateWrapper").addClass("enabled")
             }else{
                 $("#webserv_enable").parent().checkbox("set unchecked");
-                $("#webservRunningState").find("i").attr("class", "red circle icon");
+                $("#webservRunningState").find("i").attr("class", "white circle times icon");
                 $("#webservRunningState").find(".webserv_status").text("Stopped");
+                $(".webservRunningStateWrapper").removeClass("enabled")
             }
         }
 

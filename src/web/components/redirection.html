@@ -72,25 +72,10 @@
           <i class="ui green checkmark icon"></i> Redirection Rules Added
         </div>
         <br><br>
-
-        <div class="advancezone ui basic segment">
-          <div class="ui accordion advanceSettings">
-            <div class="title">
-              <i class="dropdown icon"></i>
-              Advance Options
-            </div>
-            <div class="content">
-              <p>If you need custom header, content or status code other than basic redirects, you can use the advance path rules editor.</p>
-              <button class="ui black basic button" onclick="createAdvanceRules();"><i class="ui black external icon"></i> Open Advance Rules Editor</button>
-            </div>
-          </div>
-        </div>
-
     </div>
   </div>
 </div>
 <script>
-    $(".advanceSettings").accordion();
     
   /*
     Redirection functions
@@ -125,6 +110,7 @@
                   $("#ruleAddSucc").stop().finish().slideDown("fast").delay(3000).slideUp("fast");
                 }
                 initRedirectionRuleList();
+                resetForm();
             }
         });
     }
@@ -151,16 +137,12 @@
         }
     }
 
-    function createAdvanceRules(){
-      showSideWrapper("snippet/advancePathRules.html?t=" + Date.now(), true);
-    }
-
     function initRedirectionRuleList(){
         $("#redirectionRuleList").html("");
         $.get("/api/redirect/list", function(data){
             data.forEach(function(entry){
                 $("#redirectionRuleList").append(`<tr>
-                    <td>${entry.RedirectURL} </td>
+                    <td><a href="${entry.RedirectURL}" target="_blank">${entry.RedirectURL}</a></td>
                     <td>${entry.TargetURL}</td>
                     <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                     <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
@@ -169,7 +151,7 @@
             });
 
             if (data.length == 0){
-              $("#redirectionRuleList").append(`<tr colspan="4"><td><i class="checkmark icon"></i> No redirection rule</td></tr>`);
+              $("#redirectionRuleList").append(`<tr colspan="4"><td><i class="green check circle icon"></i> No redirection rule</td></tr>`);
             }
             
         });

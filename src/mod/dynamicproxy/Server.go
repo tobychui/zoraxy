@@ -1,9 +1,6 @@
 package dynamicproxy
 
 import (
-	_ "embed"
-	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,11 +22,6 @@ import (
 	- Subdomain Routing
 	- Vitrual Directory Routing
 */
-
-var (
-	//go:embed tld.json
-	rawTldMap []byte
-)
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
@@ -53,10 +45,12 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Inject headers
+	w.Header().Set("x-proxy-by", "zoraxy/"+h.Parent.Option.HostVersion)
+
 	/*
 		General Access Check
 	*/
-
 	respWritten := h.handleAccessRouting(w, r)
 	if respWritten {
 		return
@@ -80,38 +74,45 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	/*
-		Subdomain Routing
+		Host Routing
 	*/
-	if strings.Contains(r.Host, ".") {
-		//This might be a subdomain. See if there are any subdomain proxy router for this
-		sep := h.Parent.getSubdomainProxyEndpointFromHostname(domainOnly)
-		if sep != nil {
-			if sep.RequireBasicAuth {
-				err := h.handleBasicAuthRouting(w, r, sep)
-				if err != nil {
-					return
-				}
-			}
-			h.subdomainRequest(w, r, sep)
-			return
-		}
-	}
 
-	/*
-		Virtual Directory Routing
-	*/
-	//Clean up the request URI
-	proxyingPath := strings.TrimSpace(r.RequestURI)
-	targetProxyEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath)
-	if targetProxyEndpoint != nil {
-		if targetProxyEndpoint.RequireBasicAuth {
-			err := h.handleBasicAuthRouting(w, r, targetProxyEndpoint)
+	sep := h.Parent.getProxyEndpointFromHostname(domainOnly)
+	if sep != nil && !sep.Disabled {
+		if sep.RequireBasicAuth {
+			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
 				return
 			}
 		}
-		h.proxyRequest(w, r, targetProxyEndpoint)
-	} else if !strings.HasSuffix(proxyingPath, "/") {
+
+		//Check if any virtual directory rules matches
+		proxyingPath := strings.TrimSpace(r.RequestURI)
+		targetProxyEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
+		if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
+			//Virtual directory routing rule found. Route via vdir mode
+			h.vdirRequest(w, r, targetProxyEndpoint)
+			return
+		} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyType_Root {
+			potentialProxtEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
+			if potentialProxtEndpoint != nil && !targetProxyEndpoint.Disabled {
+				//Missing tailing slash. Redirect to target proxy endpoint
+				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+				return
+			}
+		}
+
+		//Fallback to handle by the host proxy forwarder
+		h.hostRequest(w, r, sep)
+		return
+	}
+
+	/*
+		Root Router Handling
+	*/
+	//Clean up the request URI
+	proxyingPath := strings.TrimSpace(r.RequestURI)
+	if !strings.HasSuffix(proxyingPath, "/") {
 		potentialProxtEndpoint := h.Parent.getTargetProxyEndpointFromRequestURI(proxyingPath + "/")
 		if potentialProxtEndpoint != nil {
 			//Missing tailing slash. Redirect to target proxy endpoint
@@ -136,52 +137,63 @@ Once entered this routing segment, the root routing options will take over
 for the routing logic.
 */
 func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request) {
+
 	domainOnly := r.Host
 	if strings.Contains(r.Host, ":") {
 		hostPath := strings.Split(r.Host, ":")
 		domainOnly = hostPath[0]
 	}
 
-	if h.Parent.RootRoutingOptions.EnableRedirectForUnsetRules {
-		//Route to custom domain
-		if h.Parent.RootRoutingOptions.UnsetRuleRedirectTarget == "" {
-			//Not set. Redirect to first level of domain redirectable
-			fld, err := h.getTopLevelRedirectableDomain(domainOnly)
-			if err != nil {
-				//Redirect to proxy root
-				h.proxyRequest(w, r, h.Parent.Root)
-			} else {
-				log.Println("[Router] Redirecting request from " + domainOnly + " to " + fld)
-				h.logRequest(r, false, 307, "root-redirect", domainOnly)
-				http.Redirect(w, r, fld, http.StatusTemporaryRedirect)
-			}
+	//Get the proxy root config
+	proot := h.Parent.Root
+	switch proot.DefaultSiteOption {
+	case DefaultSite_InternalStaticWebServer:
+		fallthrough
+	case DefaultSite_ReverseProxy:
+		//They both share the same behavior
+
+		//Check if any virtual directory rules matches
+		proxyingPath := strings.TrimSpace(r.RequestURI)
+		targetProxyEndpoint := proot.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
+		if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
+			//Virtual directory routing rule found. Route via vdir mode
+			h.vdirRequest(w, r, targetProxyEndpoint)
 			return
-		} else if h.isTopLevelRedirectableDomain(domainOnly) {
-			//This is requesting a top level private domain that should be serving root
-			h.proxyRequest(w, r, h.Parent.Root)
-		} else {
-			//Validate the redirection target URL
-			parsedURL, err := url.Parse(h.Parent.RootRoutingOptions.UnsetRuleRedirectTarget)
-			if err != nil {
-				//Error when parsing target. Send to root
-				h.proxyRequest(w, r, h.Parent.Root)
+		} else if !strings.HasSuffix(proxyingPath, "/") && proot.ProxyType != ProxyType_Root {
+			potentialProxtEndpoint := proot.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
+			if potentialProxtEndpoint != nil && !targetProxyEndpoint.Disabled {
+				//Missing tailing slash. Redirect to target proxy endpoint
+				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
 				return
-			}
-			hostname := parsedURL.Hostname()
-			if domainOnly != hostname {
-				//Redirect to target
-				h.logRequest(r, false, 307, "root-redirect", domainOnly)
-				http.Redirect(w, r, h.Parent.RootRoutingOptions.UnsetRuleRedirectTarget, http.StatusTemporaryRedirect)
-				return
-			} else {
-				//Loopback request due to bad settings (Shd leave it empty)
-				//Forward it to root proxy
-				h.proxyRequest(w, r, h.Parent.Root)
 			}
 		}
-	} else {
-		//Route to root
-		h.proxyRequest(w, r, h.Parent.Root)
+
+		//No vdir match. Route via root router
+		h.hostRequest(w, r, h.Parent.Root)
+	case DefaultSite_Redirect:
+		redirectTarget := strings.TrimSpace(proot.DefaultSiteValue)
+		if redirectTarget == "" {
+			redirectTarget = "about:blank"
+		}
+
+		//Check if it is an infinite loopback redirect
+		parsedURL, err := url.Parse(proot.DefaultSiteValue)
+		if err != nil {
+			//Error when parsing target. Send to root
+			h.hostRequest(w, r, h.Parent.Root)
+			return
+		}
+		hostname := parsedURL.Hostname()
+		if hostname == domainOnly {
+			h.logRequest(r, false, 500, "root-redirect", domainOnly)
+			http.Error(w, "Loopback redirects due to invalid settings", 500)
+			return
+		}
+
+		h.logRequest(r, false, 307, "root-redirect", domainOnly)
+		http.Redirect(w, r, redirectTarget, http.StatusTemporaryRedirect)
+	case DefaultSite_NotFoundPage:
+		http.NotFound(w, r)
 	}
 }
 
@@ -218,45 +230,4 @@ func (h *ProxyHandler) handleAccessRouting(w http.ResponseWriter, r *http.Reques
 	}
 
 	return false
-}
-
-// Return if the given host is already topped (e.g. example.com or example.co.uk) instead of
-// a host with subdomain (e.g. test.example.com)
-func (h *ProxyHandler) isTopLevelRedirectableDomain(requestHost string) bool {
-	parts := strings.Split(requestHost, ".")
-	if len(parts) > 2 {
-		//Cases where strange tld is used like .co.uk or .com.hk
-		_, ok := h.Parent.tldMap[strings.Join(parts[1:], ".")]
-		if ok {
-			//Already topped
-			return true
-		}
-	} else {
-		//Already topped
-		return true
-	}
-
-	return false
-}
-
-// GetTopLevelRedirectableDomain returns the toppest level of domain
-// that is redirectable. E.g. a.b.c.example.co.uk will return example.co.uk
-func (h *ProxyHandler) getTopLevelRedirectableDomain(unsetSubdomainHost string) (string, error) {
-	parts := strings.Split(unsetSubdomainHost, ".")
-	if h.isTopLevelRedirectableDomain(unsetSubdomainHost) {
-		//Already topped
-		return "", errors.New("already at top level domain")
-	}
-
-	for i := 0; i < len(parts); i++ {
-		possibleTld := parts[i:]
-		_, ok := h.Parent.tldMap[strings.Join(possibleTld, ".")]
-		if ok {
-			//This is tld length
-			tld := strings.Join(parts[i-1:], ".")
-			return "//" + tld, nil
-		}
-	}
-
-	return "", errors.New("unsupported top level domain given")
 }

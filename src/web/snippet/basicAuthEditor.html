@@ -41,8 +41,7 @@
                             <input id="inlineEditBasicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
                         </div>
                         <div class="field" >
-                            <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="blue add icon"></i> Add Credential</button>
-                            <button class="ui basic button"  style="float: right;" onclick="saveCredentials();"><i class="green save icon"></i> Save Credential</button>
+                            <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="green add icon"></i> Add Credential</button>
                         </div>
                         <div class="ui divider"></div>
                     </div>
@@ -69,7 +68,7 @@
                     <small>Make sure you add the tailing slash for only selecting the files / folder inside that path.</small>
                 </div>
                 <div class="field" >
-                    <button class="ui basic button" onclick="addExceptionPath();"><i class="blue add icon"></i> Add Exception</button>
+                    <button class="ui basic button" onclick="addExceptionPath();"><i class="yellow add icon"></i> Add Exception</button>
                 </div>
                 <div class="field">
                     <div class="ui basic message">
@@ -99,7 +98,7 @@
                 let payloadHash = window.location.hash.substr(1);
                 try{
                     payloadHash = JSON.parse(decodeURIComponent(payloadHash));
-                    loadBasicAuthCredentials(payloadHash.ept, payloadHash.ep);
+                    loadBasicAuthCredentials(payloadHash.ep);
                     $("#epname").text(payloadHash.ep);
                     editingEndpoint = payloadHash;
                 }catch(ex){
@@ -107,13 +106,12 @@
                 }
             }
 
-            function loadBasicAuthCredentials(endpointType, uuid){
+            function loadBasicAuthCredentials(uuid){
                 $.ajax({
                     url: "/api/proxy/updateCredentials",
                     method: "GET",
                     data: {
                         ep: uuid,
-                        ptype: endpointType
                     },
                     success: function(data){
                         //Push the existing account to list
@@ -163,6 +161,9 @@
 
                 // Update the table body with the credentials
                 updateEditingCredentialList();
+
+                //Save the table
+                saveCredentials();
             }
 
             function addExceptionPath(){
@@ -175,7 +176,6 @@
                 $.ajax({
                     url: "/api/proxy/auth/exceptions/add",
                     data:{
-                        ptype: editingEndpoint.ept,
                         ep: editingEndpoint.ep,
                         prefix: newExclusionPathMatchingPrefix
                     },
@@ -197,7 +197,6 @@
                 $.ajax({
                     url: "/api/proxy/auth/exceptions/delete",
                     data:{
-                        ptype: editingEndpoint.ept,
                         ep: editingEndpoint.ep,
                         prefix: matchingPrefix
                     },
@@ -271,6 +270,8 @@
 
                 // Update the table body
                 updateEditingCredentialList();
+                
+                saveCredentials();
             }
 
             function alreadyExists(username){
@@ -293,7 +294,6 @@
                     method: "POST",
                     data: {
                         ep: editingEndpoint.ep, 
-                        ptype: editingEndpoint.ept,
                         creds: JSON.stringify(editingCredentials)
                     },
                     success: function(data){

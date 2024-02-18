@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
@@ -28,11 +30,39 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 	return targetProxyEndpoint
 }
 
-func (router *Router) getSubdomainProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
+func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
 	var targetSubdomainEndpoint *ProxyEndpoint = nil
-	ep, ok := router.SubdomainEndpoint.Load(hostname)
+	ep, ok := router.ProxyEndpoints.Load(hostname)
 	if ok {
 		targetSubdomainEndpoint = ep.(*ProxyEndpoint)
+	}
+
+	//No hit. Try with wildcard
+	matchProxyEndpoints := []*ProxyEndpoint{}
+	router.ProxyEndpoints.Range(func(k, v interface{}) bool {
+		ep := v.(*ProxyEndpoint)
+		match, err := filepath.Match(ep.RootOrMatchingDomain, hostname)
+		if err != nil {
+			//Continue
+			return true
+		}
+		if match {
+			//targetSubdomainEndpoint = ep
+			matchProxyEndpoints = append(matchProxyEndpoints, ep)
+			return true
+		}
+		return true
+	})
+
+	if len(matchProxyEndpoints) == 1 {
+		//Only 1 match
+		return matchProxyEndpoints[0]
+	} else if len(matchProxyEndpoints) > 1 {
+		//More than one match. Get the best match one
+		sort.Slice(matchProxyEndpoints, func(i, j int) bool {
+			return matchProxyEndpoints[i].RootOrMatchingDomain < matchProxyEndpoints[j].RootOrMatchingDomain
+		})
+		return matchProxyEndpoints[0]
 	}
 
 	return targetSubdomainEndpoint
@@ -54,14 +84,22 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	return rewrittenURL
 }
 
-// Handle subdomain request
-func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
+// Handle host request
+func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
+
+	//Inject custom headers
+	if len(target.UserDefinedHeaders) > 0 {
+		for _, customHeader := range target.UserDefinedHeaders {
+			r.Header.Set(customHeader.Key, customHeader.Value)
+		}
+	}
+
 	requestURL := r.URL.String()
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
-		r.Header.Set("A-Upgrade", "websocket")
+		r.Header.Set("Zr-Origin-Upgrade", "websocket")
 		wsRedirectionEndpoint := target.Domain
 		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
 			//Append / to the end of the redirection endpoint if not exists
@@ -89,10 +127,11 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
-	err := target.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:  target.Domain,
 		OriginalHost: originalHostHeader,
 		UseTLS:       target.RequireTLS,
+		NoCache:      h.Parent.Option.NoCache,
 		PathPrefix:   "",
 	})
 
@@ -113,15 +152,23 @@ func (h *ProxyHandler) subdomainRequest(w http.ResponseWriter, r *http.Request, 
 }
 
 // Handle vdir type request
-func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
-	rewriteURL := h.Parent.rewriteURL(target.RootOrMatchingDomain, r.RequestURI)
+func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, target *VirtualDirectoryEndpoint) {
+	rewriteURL := h.Parent.rewriteURL(target.MatchingPath, r.RequestURI)
 	r.URL, _ = url.Parse(rewriteURL)
 
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
+
+	//Inject custom headers
+	if len(target.parent.UserDefinedHeaders) > 0 {
+		for _, customHeader := range target.parent.UserDefinedHeaders {
+			r.Header.Set(customHeader.Key, customHeader.Value)
+		}
+	}
+
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
-		r.Header.Set("A-Upgrade", "websocket")
+		r.Header.Set("Zr-Origin-Upgrade", "websocket")
 		wsRedirectionEndpoint := target.Domain
 		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
 			wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
@@ -144,11 +191,11 @@ func (h *ProxyHandler) proxyRequest(w http.ResponseWriter, r *http.Request, targ
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
-	err := target.Proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:  target.Domain,
 		OriginalHost: originalHostHeader,
 		UseTLS:       target.RequireTLS,
-		PathPrefix:   target.RootOrMatchingDomain,
+		PathPrefix:   target.MatchingPath,
 	})
 
 	var dnsError *net.DNSError

@@ -3,73 +3,420 @@
         <h2>Virtual Directory</h2>
         <p>A virtual directory is a consolidated view of multiple directories that provides a unified entry point for users to access disparate sources.</p>
     </div>
-    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
-        <table class="ui celled sortable unstackable compact table">
-            <thead>
-                <tr>
-                    <th>Virtual Directory</th>
-                    <th>Proxy To</th>
-                    <th>Basic Auth</th>
-                    <th class="no-sort" style="min-width: 7.2em;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="vdirList">
-                <tr>
-                    <td data-label=""><button class="ui circular mini red basic button"><i class="remove icon"></i> Remove Proxy</button></td>
-                </tr>
-            </tbody>
-        </table>
+    <div id="currentVirtualDirectoryAttachingHost" class="ui basic segment">
+        Select a host / routing rule to start editing Virtual Directory
+    </div>  
+    <div class="ui stackable grid">
+        <div class="six wide column">
+            <h4>Select a Target Host / Site</h4>
+            <p>Attach Virtual Directory routing rule to root proxy router</p>
+            <div class="ui checkbox">
+                <input type="checkbox" id="useRootProxyRouterForVdir" onchange="handleVdirAttachTargetChange(this);">
+                <label>Root Proxy Router<br>
+                <small>Only applicable when Default Site is set to "Reverse Proxy" mode</small></label>
+            </div>
+            <div class="ui horizontal divider">OR</div>
+            <p>Create Virtual Directory routing in existing host / routing rule entries</p>
+            <div class="ui fluid search selection dropdown">
+                <input type="hidden" id="vdirBaseRoutingRule" name="vdirBaseRoutingRule" onchange="handleVdirAttachTargetChange();">
+                <i class="dropdown icon"></i>
+                <div class="default text">Select a host to edit</div>
+                <div class="menu" id="hostDomainList">
+                    
+                </div>
+            </div>
+        </div>
+        <div class="ten wide column">
+            <h4>Edit Virtual Directory Routing Rules</h4>
+            <p>The following are the list of Virtual Directories currently handled by the host router above</p>
+            <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+                <table class="ui celled sortable unstackable compact table">
+                    <thead>
+                        <tr>
+                            <th>Virtual Directory</th>
+                            <th>Destination</th>
+                            <th class="no-sort" style="min-width: 7.2em;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vdirList">
+                        <tr>
+                            <td data-label="" colspan="3">No Selected Host</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="ui icon right floated basic button" onclick="reloadVdirList();"><i class="green refresh icon"></i> Refresh</button>
+            <br><br>
+            <div class="ui divider"></div>
+            <div id="newVDSection" class="disabled section">
+                <h4>New Virtual Directory Rule</h4>
+                <form class="ui form">
+                    <div class="field">
+                        <label>Matching Path Prefix</label>
+                        <input type="text" id="virtualDirectoryPath" placeholder="/mysite/">
+                        <small>Path that follows your select host / domain, e.g. <code>/mysite/</code> as path prefix will forward all request that matches <code>mydomain.com/mysite/*</code></small>
+                    </div>
+                    <div class="field">
+                        <label>Target IP Address or Domain Name with port</label>
+                        <input type="text" id="virtualDirectoryDomain" onchange="updateVDTargetTLSState();">
+                        <small>E.g. 192.168.0.101:8000 or example.com</small>
+                    </div>
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="vdReqTls">
+                            <label>Proxy Target require TLS Connection <br><small>(i.e. Your proxy target starts with https://)</small></label>
+                        </div>
+                    </div>
+
+                    <!-- Advance configs -->
+                    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+                        <div id="advanceProxyRules" class="ui fluid accordion">
+                            <div class="title">
+                            <i class="dropdown icon"></i>
+                            Advance Settings
+                            </div>
+                            <div class="content">
+                                <p></p>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="vdSkipTLSValidation">
+                                        <label>Ignore TLS/SSL Verification Error<br><small>For targets that is using self-signed, expired certificate (Not Recommended)</small></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="ui basic button" onclick="addVdirToHost(); event.preventDefault();"><i class="green add icon"></i> Create Virtual Directory</button>
+                </form>
+            </div>
+        </div>
     </div>
-    <button class="ui icon right floated basic button" onclick="listVdirs();"><i class="green refresh icon"></i> Refresh</button>
     <br><br>
 </div>
 <script>
     //Virtual directories functions
-    function listVdirs(){
-        $.get("/api/proxy/list?type=vdir", function(data){
-            $("#vdirList").html(``);
-            if (data.error !== undefined){
-                $("#vdirList").append(`<tr>
-                    <td data-label="" colspan="3"><i class="remove icon"></i> ${data.error}</td>
-                </tr>`);
-            }else if (data.length == 0){
-                $("#vdirList").append(`<tr>
-                    <td data-label="" colspan="3"><i class="checkmark icon"></i> No Virtual Directory Record</td>
-                </tr>`);
+
+    //Initialize the list of hosts that can be used to attach vdirs config
+    function initVdirList(){
+        //Load the hosts into the dropdown
+        $("#hostDomainList").html("");
+        $.get("/api/proxy/list?type=host", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
             }else{
-                data.forEach(vdir => {
-                    let tlsIcon = "";
-                    let vdirData = encodeURIComponent(JSON.stringify(vdir));
-                    if (vdir.RequireTLS){
-                        tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
-                        if (vdir.SkipCertValidations){
-                            tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
-                        }
-                    }
+                if (data.length == 0){
+                    //No hosts found
+                }else{
+                    data.forEach(proxyEndpoint => {
+                        let domain = proxyEndpoint.RootOrMatchingDomain;
+                        $("#hostDomainList").append(`<div class="item" data-value="${domain}">${domain}</div>`);
+                    });
 
-                    let tlsVerificationField = "";
-                    if (vdir.RequireTLS){
-                        tlsVerificationField = !vdir.SkipCertValidations?`<i class="ui green check icon"></i>`:`<i class="ui yellow exclamation circle icon" title="TLS/SSL Verification will be skipped on this host"></i>`
-                    }else{
-                        tlsVerificationField = "N/A"
-                    }
-
-                    $("#vdirList").append(`<tr eptuuid="${vdir.RootOrMatchingDomain}" payload="${vdirData}" class="vdirEntry">
-                        <td data-label="" editable="false">${vdir.RootOrMatchingDomain}</td>
-                        <td data-label="" editable="true" datatype="domain">${vdir.Domain} ${tlsIcon}</td>
-                        <td data-label="" editable="true" datatype="basicauth">${vdir.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
-                        <td class="center aligned" editable="true" datatype="action" data-label="">
-                            <button class="ui circular mini basic icon button editBtn" onclick='editEndpoint("vdir","${vdir.RootOrMatchingDomain}")'><i class="edit icon"></i></button>
-                            <button class="ui circular mini red basic icon button"  onclick='deleteEndpoint("vdir","${vdir.RootOrMatchingDomain}")'><i class="trash icon"></i></button>
-                        </td>
-                    </tr>`);
-                });
+                    //Update the dropdown events
+                    $("#vdirBaseRoutingRule").parent().dropdown();
+                }
             }
         });
     }
 
+    
+    function handleVdirAttachTargetChange(targetCheckbox=undefined){
+        if (targetCheckbox != undefined && targetCheckbox.checked){
+            $("#vdirBaseRoutingRule").parent().addClass("disabled");
+
+            //Load the vdir list for root
+            loadVdirList("root");
+            $("#newVDSection").removeClass("disabled");
+        }else{
+            $("#vdirBaseRoutingRule").parent().removeClass("disabled");
+            let selectedEndpointRule = $("#vdirBaseRoutingRule").val();
+            if (selectedEndpointRule != ""){
+                loadVdirList(selectedEndpointRule);
+                $("#newVDSection").removeClass("disabled");
+            }else{
+                $("#newVDSection").addClass("disabled");
+            }
+        }
+    }
+
+    //List the Vdir of the given endpoint, use "root" for root router
+    function loadVdirList(endpoint){
+        $("#currentVirtualDirectoryAttachingHost").html(`Editing Host: ${endpoint}`);
+        let reqURL = "/api/proxy/vdir/list?type=host&ep=" + endpoint;
+        if (endpoint == "root"){
+            //Load root endpoint vdir list
+            reqURL = "/api/proxy/vdir/list?type=root";
+        }
+        
+        $.get(reqURL, function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+            }else{
+                $("#vdirList").html("");
+                if (data.length == 0){
+                    //No virtual directory for this host
+                    $("#vdirList").append(`<tr>
+                        <td data-label="" colspan="3"><i class="green check circle icon"></i> No Virtual Directory Routing Rule</td>
+                    </tr>`);
+                }else{
+                    //List the vdirs
+                    console.log(data);
+                    data.forEach(vdir => {
+                        var tlsIcon = "";
+                        if (vdir.RequireTLS){
+                            tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                            if (vdir.SkipCertValidations){
+                                tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                            }
+                        }
+
+                        let payload = JSON.stringify(vdir).hexEncode();
+
+                        $("#vdirList").append(`<tr vdirid="${vdir.MatchingPath.hexEncode()}" class="vdirEntry" payload="${payload}">
+                            <td data-label="" editable="false" >${vdir.MatchingPath}</td>
+                            <td data-label="" editable="true" datatype="domain">${vdir.Domain} ${tlsIcon}</td>
+                            <td class="center aligned" editable="true" datatype="action" data-label="">
+                                <button class="ui circular mini basic icon button editBtn" onclick='editVdir("${vdir.MatchingPath}", "${endpoint}")'><i class="edit icon"></i></button>
+                                <button class="ui circular mini red basic icon button"  onclick='deleteVdir("${vdir.MatchingPath}", "${endpoint}")'><i class="trash icon"></i></button>
+                            </td>
+                        </tr>`);
+                    })
+                }
+            }
+        });
+    }
+
+    //Check if the entered domain require TLS
+    function updateVDTargetTLSState(){
+        var targetDomain = $("#virtualDirectoryDomain").val().trim();
+        if (targetDomain != ""){
+            $.ajax({
+                url: "/api/proxy/tlscheck",
+                data: {url: targetDomain},
+                success: function(data){
+                    if (data.error != undefined){
+
+                    }else if (data == "https"){
+                        $("#vdReqTls").parent().checkbox("set checked");
+                    }else if (data == "http"){
+                        $("#vdReqTls").parent().checkbox("set unchecked");
+                    }
+                }
+            });
+        }
+    }
+
+    function reloadVdirList(){
+        $("#vdirList").find(".editBtn").removeClass("disabled");
+        if ($("#useRootProxyRouterForVdir")[0].checked){
+            loadVdirList("root");
+            return;
+        }
+        let endpoint = $("#vdirBaseRoutingRule").val().trim();
+        if (endpoint != ""){
+            loadVdirList(endpoint);
+        }
+    }
+
+    //Create a virtual directory routing rule and attach to this endpoint
+    function addVdirToHost(){
+        var matchingPath = $("#virtualDirectoryPath").val().trim();
+        var targetDomain = $("#virtualDirectoryDomain").val().trim();
+        var reqTLS = $("#vdReqTls")[0].checked;
+        var skipTLSValidation = $("#vdSkipTLSValidation")[0].checked;
+
+        //Validate the input data
+        if (matchingPath == ""){
+            $("#virtualDirectoryPath").parent().addClass('error');
+            return;
+        }else{
+            $("#virtualDirectoryPath").parent().removeClass('error');
+        }
+
+        if (targetDomain == ""){
+            $("#virtualDirectoryDomain").parent().addClass('error');
+            return;
+        }else{
+            $("#virtualDirectoryDomain").parent().removeClass('error');
+        }
+
+        //Check if we are editing host
+        let epType = "host";
+        let endpoint = "root";
+        if ($("#useRootProxyRouterForVdir")[0].checked){
+            //Editing root virtual directory
+            epType = "root";
+        }else{
+            //Editing hosts virtual directory
+            endpoint = $("#vdirBaseRoutingRule").val().trim();
+        }
+
+        //Create a virtual directory endpoint
+        $.ajax({
+            url: "/api/proxy/vdir/add",
+            method: "POST",
+            data: {
+                "type": epType,
+                "endpoint": endpoint,
+                "path": matchingPath,
+                "domain":targetDomain,
+                "reqTLS":reqTLS,
+                "skipValid":skipTLSValidation,
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }else{
+                    msgbox("New Virtual Directory rule added");
+                    reloadVdirList();
+                    resetVdirForm();
+                }
+            }, 
+            error: function(){
+                msgbox("Add Virtual Directory failed due to unknown reasons", false);
+            }
+        })
+        
+    }
+
+    //Reset the vdir form
+    function resetVdirForm(){
+        $("#virtualDirectoryPath").val("");
+        $("#virtualDirectoryDomain").val("");
+        $("#vdReqTls").parent().checkbox("set unchecked");
+        $("#vdSkipTLSValidation").parent().checkbox("set unchecked");
+    }
+
+    //Remove Vdir 
+    function deleteVdir(matchingPath, endpoint){
+        var epType = "host";
+        var path = $("#vdirBaseRoutingRule").val().trim();
+        if (endpoint.trim() == "root"){
+            epType = "root";
+            path = "";
+        }
+        $.ajax({
+            url: "/api/proxy/vdir/del",
+            method: "POST",
+            data: {
+                "type":epType,
+                "vdir": matchingPath,
+                "path": path
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }else{
+                    msgbox("Virtual Directory rule removed", true);
+                    reloadVdirList();
+                }
+            }
+        })
+    }
+
+    function editVdir(matchingPath, ept){
+        let targetDOM = $(".vdirEntry[vdirid='" + matchingPath.hexEncode() + "']");
+        $("#vdirList").find(".editBtn").addClass("disabled");
+        let payload = $(targetDOM).attr("payload").hexDecode();
+        payload = JSON.parse(payload);
+        console.log(payload);
+        $(targetDOM).find("td[editable='true']").each(function(){
+            let datatype = $(this).attr("datatype");
+            let column = $(this);
+
+            if (datatype == "domain"){
+                let domain = payload.Domain;
+                //Target require TLS for proxying
+                let tls = payload.RequireTLS;
+                if (tls){
+                    tls = "checked";
+                }else{
+                    tls = "";
+                }
+
+                //Require TLS validation
+                let skipTLSValidation = payload.SkipCertValidations;
+                let checkstate = "";
+                if (skipTLSValidation){
+                    checkstate = "checked";
+                }
+
+                input = `
+                    <div class="ui mini fluid input">
+                        <input type="text" class="Domain" value="${domain}">
+                    </div>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="RequireTLS" ${tls}>
+                        <label>Require TLS<br>
+                            <small>Proxy target require HTTPS connection</small></label>
+                    </div><br>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="SkipCertValidations" ${checkstate}>
+                        <label>Skip Verification<br>
+                        <small>Check this if proxy target is using self signed certificates</small></label>
+                    </div>
+                `;
+                column.empty().append(input);
+            }else if (datatype == 'action'){
+                column.empty().append(`
+                    <button title="Save" onclick="saveVdirInlineEdit('${payload.MatchingPath.hexEncode()}');" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui green save icon"></i></button>
+                    <button title="Cancel" onclick="exitVdirInlineEdit();" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui remove icon"></i></button>
+                `);
+            }
+        }); 
+
+    }
+
+    function saveVdirInlineEdit(mathingPath){
+        mathingPath = mathingPath.hexDecode();
+
+        var epType = "host";
+        var path = $("#vdirBaseRoutingRule").val().trim();
+        if ($("#useRootProxyRouterForVdir")[0].checked){
+            epType = "root";
+            path = "";
+        }
+
+        //Load new setting from inline editor
+        let newDomain = $("#vdirList").find(".Domain").val();
+        let requireTLS = $("#vdirList").find(".RequireTLS")[0].checked;
+        let skipValidation = $("#vdirList").find(".SkipCertValidations")[0].checked;
+
+        //console.log(mathingPath, newDomain, requireTLS, skipValidation);
+
+        $.ajax({
+            url: "/api/proxy/vdir/edit",
+            method: "POST",
+            data: {
+                "type": epType,
+                "vdir": mathingPath,
+                "domain":newDomain,
+                "path":path,
+                "reqTLS":requireTLS,
+                "skipValid": skipValidation
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }else{
+                    msgbox("Virtual Directory rule updated", true);
+                    exitVdirInlineEdit();
+                }
+            },
+            error: function(){
+                msgbox("unknown error occured", false)
+            }
+        })
+    }
+
+    function exitVdirInlineEdit(){
+        reloadVdirList();
+    }
+
     //Bind on tab switch events
     tabSwitchEventBind["vdir"] = function(){
-        listVdirs();
+        initVdirList();
     }
+
+    initVdirList();
 </script>

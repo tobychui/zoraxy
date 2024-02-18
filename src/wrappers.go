@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -119,11 +120,10 @@ func UpdateUptimeMonitorTargets() {
 
 // Generate uptime monitor targets from reverse proxy rules
 func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Target {
-	subds := dp.GetSDProxyEndpointsAsMap()
-	vdirs := dp.GetVDProxyEndpointsAsMap()
+	hosts := dp.GetProxyEndpointsAsMap()
 
 	UptimeTargets := []*uptime.Target{}
-	for subd, target := range subds {
+	for hostid, target := range hosts {
 		url := "http://" + target.Domain
 		protocol := "http"
 		if target.RequireTLS {
@@ -131,27 +131,31 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 			protocol = "https"
 		}
 
+		//Add the root url
 		UptimeTargets = append(UptimeTargets, &uptime.Target{
-			ID:       subd,
-			Name:     subd,
+			ID:       hostid,
+			Name:     hostid,
 			URL:      url,
 			Protocol: protocol,
 		})
-	}
 
-	for vdir, target := range vdirs {
-		url := "http://" + target.Domain
-		protocol := "http"
-		if target.RequireTLS {
-			url = "https://" + target.Domain
-			protocol = "https"
+		//Add each virtual directory into the list
+		for _, vdir := range target.VirtualDirectories {
+			url := "http://" + vdir.Domain
+			protocol := "http"
+			if target.RequireTLS {
+				url = "https://" + vdir.Domain
+				protocol = "https"
+			}
+			//Add the root url
+			UptimeTargets = append(UptimeTargets, &uptime.Target{
+				ID:       hostid + vdir.MatchingPath,
+				Name:     hostid + vdir.MatchingPath,
+				URL:      url,
+				Protocol: protocol,
+			})
+
 		}
-		UptimeTargets = append(UptimeTargets, &uptime.Target{
-			ID:       vdir,
-			Name:     "*" + vdir,
-			URL:      url,
-			Protocol: protocol,
-		})
 	}
 
 	return UptimeTargets
@@ -166,6 +170,48 @@ func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+/*
+	Static Web Server
+*/
+
+// Handle port change, if root router is using internal static web server
+// update the root router as well
+func HandleStaticWebServerPortChange(w http.ResponseWriter, r *http.Request) {
+	newPort, err := utils.PostInt(r, "port")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
+	if dynamicProxyRouter.Root.DefaultSiteOption == dynamicproxy.DefaultSite_InternalStaticWebServer {
+		//Update the root site as well
+		newDraftingRoot := dynamicProxyRouter.Root.Clone()
+		newDraftingRoot.Domain = "127.0.0.1:" + strconv.Itoa(newPort)
+		activatedNewRoot, err := dynamicProxyRouter.PrepareProxyRoute(newDraftingRoot)
+		if err != nil {
+			utils.SendErrorResponse(w, "unable to update root routing rule")
+			return
+		}
+
+		//Replace the root
+		dynamicProxyRouter.Root = activatedNewRoot
+
+		SaveReverseProxyConfig(newDraftingRoot)
+	}
+
+	err = staticWebServer.ChangePort(strconv.Itoa(newPort))
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+/*
+	mDNS Scanning
+*/
 
 // Handle listing current registered mdns nodes
 func HandleMdnsListing(w http.ResponseWriter, r *http.Request) {

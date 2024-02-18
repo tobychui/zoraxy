@@ -2,18 +2,25 @@
 
 # Zoraxy
 
-General purpose request (reverse) proxy and forwarding tool for low power devices. Now written in Go!
+General purpose request (reverse) proxy and forwarding tool for networking noobs. Now written in Go!
+
+*Zoraxy v3 HTTP proxy config is not compatible with the older v2. If you are looking for the legacy version of Zoraxy, take a look at the [v2 branch](https://github.com/tobychui/zoraxy/tree/v2)*
 
 ### Features
 
 - Simple to use interface with detail in-system instructions
 - Reverse Proxy
-  - Subdomain Reverse Proxy
-  - Virtual Directory Reverse Proxy
+  - Virtual Directory
+  - Basic Auth
+  - Custom Headers
 - Redirection Rules
 - TLS / SSL setup and deploy
-- Blacklist by country or IP address (single IP, CIDR or wildcard for beginners)
+  - ACME features like auto-renew to serve your sites in http**s**
+  - SNI support (one certificate contains multiple host names)
+
+- Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
 - Global Area Network Controller Web UI (ZeroTier not included)
+- TCP Tunneling / Proxy
 - Integrated Up-time Monitor
 - Web-SSH Terminal
 - Utilities
@@ -83,8 +90,6 @@ Usage of zoraxy:
         Disable authentication for management interface
   -port string
         Management web interface listening port (default ":8000")
-  -rpt string
-        Reserved
   -sshlb
         Allow loopback web ssh connection (DANGER)
   -version
@@ -109,44 +114,11 @@ If you already have an upstream reverse proxy server in place with permission ma
 
 *Note: For security reaons, you should only enable no-auth if you are running Zoraxy in a trusted environment or with another authentication management proxy in front.*
 
-#### Use with ArozOS
-
-The [ArozOS](https://arozos.com) subservice is a built-in, permission-managed, reverse proxy server. To use Zoraxy with ArozOS, connect to your ArozOS host via SSH and use the following command to install Zoraxy:
-
-```bash
-# cd into your ArozOS subservice folder. Sometimes it is under ~/arozos/src/subservice.
-cd ~/arozos/subservices
-mkdir zoraxy
-cd ./zoraxy
-
-# Download the release binary from Github release.
-wget {binary executable link from release page}
-
-# Set permission. Change this if required.
-sudo chmod 775 -R ./
-
-# Start zoraxy to see if the downloaded arch is correct.
-./zoraxy
-
-# After unzipping, press Ctrl + C to kill it.
-# Rename it to validate the ArozOS subservice binary format.
-mv ./zoraxy zoraxy_linux_amd64
-
-# If you are using SBCs with a different CPU arch, use the following names:
-# mv ./zoraxy zoraxy_linux_arm
-# mv ./zoraxy zoraxy_linux_arm64
-
-# Restart ArozOS
-sudo systemctl restart arozos
-```
-
-To start the module, go to System Settings > Modules > Subservice and enable it in the menu. You should be able to see a new module named "Zoraxy" pop up in the start menu.
-
 ## Screenshots
 
-![](img/screenshots/0_1.png)
-
 ![](img/screenshots/1.png)
+
+![](img/screenshots/2.png)
 
 More screenshots on the wikipage [Screenshots](https://github.com/tobychui/zoraxy/wiki/Screenshots)!
 
@@ -194,5 +166,5 @@ If you like the project and want to support us, please consider a donation. You 
 
 ## License
 
-This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **If you plan to use this project in a commercial environment (which violate the AGPL terms), please contact toby@imuslab.com for an alternative commercial license.** 
+This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **If you plan to use this project in a commercial environment (which violate the AGPL terms), please contact toby@imuslab.com for an alternative license.** 
 

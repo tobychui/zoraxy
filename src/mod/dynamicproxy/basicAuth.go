@@ -26,10 +26,6 @@ func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	proxyType := "vdir-auth"
-	if pe.ProxyType == ProxyType_Subdomain {
-		proxyType = "subd-auth"
-	}
 	u, p, ok := r.BasicAuth()
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
@@ -48,7 +44,7 @@ func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Req
 	}
 
 	if !matchingFound {
-		h.logRequest(r, false, 401, proxyType, pe.Domain)
+		h.logRequest(r, false, 401, "host", pe.Domain)
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 		w.WriteHeader(401)
 		return errors.New("unauthorized")

@@ -3,8 +3,6 @@ FROM docker.io/golang:alpine
 ARG VERSION
 
 RUN apk add --no-cache bash netcat-openbsd sudo
-# Alternatives for security
-RUN apk add --no-cache openssl=3.1.4-r1
 
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /opt/zoraxy/config/ &&\

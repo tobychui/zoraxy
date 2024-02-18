@@ -217,7 +217,11 @@ func getWebsiteStatusWithLatency(url string) (bool, int64, int) {
 }
 
 func getWebsiteStatus(url string) (int, error) {
-	resp, err := http.Get(url)
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Get(url)
 	if err != nil {
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
@@ -227,7 +231,7 @@ func getWebsiteStatus(url string) (int, error) {
 			rewriteURL = strings.ReplaceAll(url, "http://", "https://")
 		}
 
-		resp, err = http.Get(rewriteURL)
+		resp, err = client.Get(rewriteURL)
 		if err != nil {
 			if strings.Contains(err.Error(), "http: server gave HTTP response to HTTPS client") {
 				//Invalid downstream reverse proxy settings, but it is online

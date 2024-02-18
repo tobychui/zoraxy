@@ -1,0 +1,275 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>HTTP Proxy</h2>
+        <p>Proxy HTTP server with HTTP or HTTPS for multiple hosts. If you are only proxying for one host / domain, use Default Site instead.</p>
+    </div>
+    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+        <table class="ui celled sortable unstackable compact table">
+            <thead>
+                <tr>
+                    <th>Host</th>
+                    <th>Destination</th>
+                    <th>Virtual Directory</th>
+                    <th>Basic Auth</th>
+                    <th class="no-sort" style="min-width:100px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="httpProxyList">
+            
+            </tbody>
+        </table>
+    </div>
+
+    <button class="ui icon right floated basic button" onclick="listProxyEndpoints();"><i class="green refresh icon"></i> Refresh</button>
+    <br><br>
+</div>
+
+<script>
+    function listProxyEndpoints(){
+        $.get("/api/proxy/list?type=host", function(data){
+            $("#httpProxyList").html(``);
+            if (data.error !== undefined){
+                    $("#httpProxyList").append(`<tr>
+                    <td data-label="" colspan="5"><i class="remove icon"></i> ${data.error}</td>
+                </tr>`);
+            }else if (data.length == 0){
+                $("#httpProxyList").append(`<tr>
+                    <td data-label="" colspan="5"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
+                </tr>`);
+            }else{
+                data.forEach(subd => {
+                    let tlsIcon = "";
+                    let subdData = encodeURIComponent(JSON.stringify(subd));
+                    if (subd.RequireTLS){
+                        tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                        if (subd.SkipCertValidations){
+                            tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                        }
+                    }
+
+                    let inboundTlsIcon = "";
+                    if ($("#tls").checkbox("is checked")){
+                        inboundTlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                        if (subd.BypassGlobalTLS){
+                            inboundTlsIcon = `<i class="grey lock icon" title="TLS Bypass Enabled"></i>`;
+                        }
+                    }else{
+                        inboundTlsIcon = `<i class="yellow lock open icon" title="Plain Text Mode"></i>`;
+                    }
+                    
+                    //Build the virtual directory list
+                    var vdList = `<div class="ui list">`;
+                    subd.VirtualDirectories.forEach(vdir => {
+                        vdList += `<div class="item">${vdir.MatchingPath} <i class="green angle double right icon"></i> ${vdir.Domain}</div>`;
+                    });
+                    vdList += `</div>`;
+
+                    if (subd.VirtualDirectories.length == 0){
+                        vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;"><i class="check icon"></i> No Virtual Directory</small>`;
+                    }
+
+                    $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
+                        <td data-label="" editable="true" datatype="inbound"><a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}</td>
+                        <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
+                        <td data-label="" editable="true" datatype="vdir">${vdList}</td>
+                        <td data-label="" editable="true" datatype="basicauth">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
+                        <td class="center aligned" editable="true" datatype="action" data-label="">
+                            <button class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
+                            <button class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
+                        </td>
+                    </tr>`);
+                });
+            }
+        });
+    }
+
+    
+    /*
+        Inline editor for httprp.html
+    */
+
+    function editEndpoint(uuid) {
+        uuid = uuid.hexDecode();
+        var row = $('tr[eptuuid="' + uuid + '"]');
+        var columns = row.find('td[data-label]');
+        var payload = $(row).attr("payload");
+        payload = JSON.parse(decodeURIComponent(payload));
+        console.log(payload);
+        //console.log(payload);
+        columns.each(function(index) {
+            var column = $(this);
+            var oldValue = column.text().trim();
+
+            if ($(this).attr("editable") == "false"){
+                //This col do not allow edit. Skip
+                return;
+            }
+
+            // Create an input element based on the column content
+            var input;
+            var datatype = $(this).attr("datatype");
+            if (datatype == "domain"){
+                let domain = payload.Domain;
+                //Target require TLS for proxying
+                let tls = payload.RequireTLS;
+                if (tls){
+                    tls = "checked";
+                }else{
+                    tls = "";
+                }
+
+                //Require TLS validation
+                let skipTLSValidation = payload.SkipCertValidations;
+                let checkstate = "";
+                if (skipTLSValidation){
+                    checkstate = "checked";
+                }
+
+                input = `
+                    <div class="ui mini fluid input">
+                        <input type="text" class="Domain" value="${domain}">
+                    </div>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="RequireTLS" ${tls}>
+                        <label>Require TLS<br>
+                            <small>Proxy target require HTTPS connection</small></label>
+                    </div><br>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="SkipCertValidations" ${checkstate}>
+                        <label>Skip Verification<br>
+                        <small>Check this if proxy target is using self signed certificates</small></label>
+                    </div>
+                `;
+                column.empty().append(input);
+            }else if (datatype == "vdir"){
+                //Append a quick access button for vdir page
+                column.append(`<button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="quickEditVdir('${uuid}');">
+                    <i class="ui yellow folder icon"></i> Edit Virtual Directories
+                </button>`);
+
+            }else if (datatype == "basicauth"){
+                let requireBasicAuth = payload.RequireBasicAuth;
+                let checkstate = "";
+                if (requireBasicAuth){
+                    checkstate = "checked";
+                }
+                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
+                    <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
+                    <label>Require Basic Auth</label>
+                    </div>
+                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
+                    <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
+                        <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Advance Configs
+                            </div>
+                            <div class="content">
+                                <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
+                                <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
+                            </div>
+                        </div>
+                    <div>
+                `);
+
+            }else if (datatype == 'action'){
+                column.empty().append(`
+                <button title="Save" onclick="saveProxyInlineEdit('${uuid.hexEncode()}');" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui green save icon"></i></button>
+                <button title="Cancel" onclick="exitProxyInlineEdit();" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui remove icon"></i></button>
+                
+                `);
+            }else if (datatype == "inbound"){
+                let originalContent = $(column).html();
+                column.empty().append(`${originalContent}
+                    <div class="ui divider"></div>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="BypassGlobalTLS" ${payload.BypassGlobalTLS?"checked":""}>
+                        <label>Allow plain HTTP access<br>
+                            <small>Allow inbound connections without TLS/SSL</small></label>
+                    </div><br>
+                `);
+            }else{
+                //Unknown field. Leave it untouched
+            }
+        });
+
+        $(".endpointAdvanceConfig").accordion();
+        $("#httpProxyList").find(".editBtn").addClass("disabled");
+    }
+
+    function exitProxyInlineEdit(){
+        listProxyEndpoints();
+        $("#httpProxyList").find(".editBtn").removeClass("disabled");
+    }
+
+    function saveProxyInlineEdit(uuid){
+        uuid = uuid.hexDecode();
+        var row = $('tr[eptuuid="' + uuid + '"]');
+        if (row.length == 0){
+            return;
+        }
+        
+        var epttype = "host";
+        let newDomain =  $(row).find(".Domain").val();
+        let requireTLS = $(row).find(".RequireTLS")[0].checked;
+        let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
+        let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
+        let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
+
+        console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
+
+        $.ajax({
+            url: "/api/proxy/edit",
+            method: "POST",
+            data: {
+                "type": epttype,
+                "rootname": uuid,
+                "ep":newDomain,
+                "bpgtls": bypassGlobalTLS,
+                "tls" :requireTLS,
+                "tlsval": skipCertValidations,
+                "bauth" :requireBasicAuth,
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    msgbox("Proxy endpoint updated");
+                    listProxyEndpoints();
+                }
+            }
+        })
+    }
+    
+    /* button events */
+    function editBasicAuthCredentials(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function quickEditVdir(uuid){
+        openTabById("vdir");
+        $("#vdirBaseRoutingRule").parent().dropdown("set selected", uuid);
+    }
+
+    function editCustomHeaders(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/customHeaders.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function editLoadBalanceOptions(uuid){
+        alert(uuid);
+    }
+    
+
+    //Bind on tab switch events
+    tabSwitchEventBind["httprp"] = function(){
+        listProxyEndpoints();
+    }
+</script>
