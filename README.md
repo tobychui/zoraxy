@@ -32,6 +32,13 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
   - External permission management system for easy system integration
   - SMTP config for password reset
 
+## Downloads
+[Windows](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_windows_amd64.exe)
+/[Linux (amd64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_amd64)
+/[Linux (arm64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_arm64)
+
+For other systems or architectures, please see [Release](https://github.com/tobychui/zoraxy/releases/latest/) 
+
 ## Build from Source
 Requires Go 1.20 or higher
 
