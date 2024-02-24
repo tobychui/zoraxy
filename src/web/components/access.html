@@ -766,7 +766,8 @@
     function initWhitelistCountryList(){
         $.get("/api/whitelist/list?type=country", function(data) {
             let bannedListHtml = '';
-            data.forEach((countryCode) => {
+            data.forEach((countryWhitelistEntry) => {
+                let countryCode = countryWhitelistEntry.CC;
                 bannedListHtml += `
                 <tr>
                     <td><i class="${countryCode} flag"></i> ${getCountryName(countryCode)} (${countryCode.toUpperCase()})</td>
