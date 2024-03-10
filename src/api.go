@@ -163,6 +163,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/tools/smtp/set", HandleSMTPSet)
 	authRouter.HandleFunc("/api/tools/smtp/admin", HandleAdminEmailGet)
 	authRouter.HandleFunc("/api/tools/smtp/test", HandleTestEmailSend)
+	authRouter.HandleFunc("/api/tools/fwdproxy/enable", forwardProxy.HandleToogle)
+	authRouter.HandleFunc("/api/tools/fwdproxy/port", forwardProxy.HandlePort)
 
 	//Account Reset
 	http.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)

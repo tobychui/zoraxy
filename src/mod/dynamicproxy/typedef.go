@@ -95,9 +95,10 @@ type ProxyEndpoint struct {
 	Domain               string //Domain or IP to proxy to
 
 	//TLS/SSL Related
-	RequireTLS          bool //Target domain require TLS
-	BypassGlobalTLS     bool //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
-	SkipCertValidations bool //Set to true to accept self signed certs
+	RequireTLS               bool //Target domain require TLS
+	BypassGlobalTLS          bool //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
+	SkipCertValidations      bool //Set to true to accept self signed certs
+	SkipWebSocketOriginCheck bool //Skip origin check on websocket upgrade connections
 
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint
@@ -115,6 +116,7 @@ type ProxyEndpoint struct {
 	DefaultSiteValue  string //Fallback routing target, optional
 
 	Disabled bool //If the rule is disabled
+
 	//Internal Logic Elements
 	parent *Router
 	proxy  *dpcore.ReverseProxy `json:"-"`

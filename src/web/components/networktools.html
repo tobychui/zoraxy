@@ -84,7 +84,23 @@
                 Paste to Terminal <code style="float: right;">Shift + Insert</code>
             </div>
         </div>
-       
+        <div class="ui divider"></div>
+        <h2>Forward Proxy</h2>
+        <p>Setup a basic HTTP forward proxy to access web server in another LAN<br>
+        To enable forward proxy in your domain, add a proxy rule to 127.0.0.1:{selected_port}</p>
+        <form class="ui form">
+            <div class="field">
+                <label>Listening Port</label>
+                <div class="ui action input">
+                    <input id="forwardProxyPort" type="number" placeholder="5587" step="1", min="1024" max="65535" value="5587">
+                    <button onclick="updateForwardProxyPort(); event.preventDefault();" class="ui basic button"><i class="ui green check icon"></i> Apply</button>
+                </div>
+            </div>
+            <div id="forwardProxyButtons" class="field">
+                <button onclick="toggleForwadProxy(true); event.preventDefault();" class="ui basic small green button startBtn"><i class="ui green arrow alternate circle up icon"></i>  Start</button>
+                <button onclick="toggleForwadProxy(false); event.preventDefault();" class="ui basic small red button stopBtn"><i class="ui red minus circle icon"></i>  Stop</button>
+            </div>
+        </form>
         <div class="ui divider"></div>
         <h2>Wake On LAN</h2>
         <p>Wake up a remote server by WOL Magic Packet or an IoT device</p>
@@ -557,6 +573,68 @@ function renderWhoisDomainTable(jsonData) {
     $('#whois_table').empty().append(table);
 }
 
+
+//Forward Proxy
+function initForwardProxyInfo(){
+    $.get("/api/tools/fwdproxy/enable", function(data){
+        if (data == true){
+            //Disable the start btn
+            $("#forwardProxyButtons").find(".startBtn").addClass('disabled');
+            $("#forwardProxyButtons").find(".stopBtn").removeClass('disabled');
+        }else{
+            $("#forwardProxyButtons").find(".startBtn").removeClass('disabled');
+            $("#forwardProxyButtons").find(".stopBtn").addClass('disabled');
+        }
+    });
+
+    $.get("/api/tools/fwdproxy/port", function(data){
+        $("#forwardProxyPort").val(data);
+    })
+}
+initForwardProxyInfo();
+
+function toggleForwadProxy(enabled){
+    $.ajax({
+        url: "/api/tools/fwdproxy/enable",
+        method: "POST",
+        data: {
+            "enable": enabled
+        },
+        success: function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+            }else{
+                msgbox(`Forward proxy ${enabled?"enabled":"disabled"}`)
+            }
+
+            initForwardProxyInfo();
+        }
+    })
+}
+
+function updateForwardProxyPort(){
+    let newPortNumber = $("#forwardProxyPort").val();
+    if (newPortNumber < 1024 || newPortNumber > 65535){
+        $("#newPortNumber").parent().addClass('error');
+    }else{
+        $("#newPortNumber").parent().removeClass('error');
+    }
+
+    $.ajax({
+        url: "/api/tools/fwdproxy/port",
+        method: "POST",
+        data: {
+            "port": newPortNumber
+        },
+        success: function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+            }
+            msgbox("Forward proxy port updated");
+            initForwardProxyInfo();
+        }
+    });
+}
 
 </script>
 

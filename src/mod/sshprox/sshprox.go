@@ -85,7 +85,10 @@ func (m *Manager) HandleHttpByInstanceId(instanceId string, w http.ResponseWrite
 		r.Header.Set("Zr-Origin-Upgrade", "websocket")
 		requestURL = strings.TrimPrefix(requestURL, "/")
 		u, _ := url.Parse("ws://127.0.0.1:" + strconv.Itoa(targetInstance.AssignedPort) + "/" + requestURL)
-		wspHandler := websocketproxy.NewProxy(u, false)
+		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
+			SkipTLSValidation: false,
+			SkipOriginCheck:   false,
+		})
 		wspHandler.ServeHTTP(w, r)
 		return
 	}

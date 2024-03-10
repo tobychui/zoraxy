@@ -12,6 +12,7 @@ import (
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
+	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -219,6 +220,18 @@ func startupSequence() {
 	//Create an analytic loader
 	AnalyticLoader = analytic.NewDataLoader(sysdb, statisticCollector)
 
+	//Create basic forward proxy
+	sysdb.NewTable("fwdproxy")
+	fwdProxyEnabled := false
+	fwdProxyPort := 5587
+	sysdb.Read("fwdproxy", "port", &fwdProxyPort)
+	sysdb.Read("fwdproxy", "enabled", &fwdProxyEnabled)
+	forwardProxy = forwardproxy.NewForwardProxy(sysdb, fwdProxyPort, SystemWideLogger)
+	if fwdProxyEnabled {
+		SystemWideLogger.PrintAndLog("Forward Proxy", "HTTP Forward Proxy Listening on :"+strconv.Itoa(forwardProxy.Port), nil)
+		forwardProxy.Start()
+	}
+
 	/*
 		ACME API
 
@@ -241,4 +254,5 @@ func finalSequence() {
 
 	//Inject routing rules
 	registerBuildInRoutingRules()
+
 }

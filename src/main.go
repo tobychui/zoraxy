@@ -17,6 +17,7 @@ import (
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/email"
+	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -49,9 +50,9 @@ var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.0"
+	version     = "3.0.1"
 	nodeUUID    = "generic"
-	development = false //Set this to false to use embedded web fs
+	development = true //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
@@ -79,6 +80,7 @@ var (
 	acmeHandler        *acme.ACMEHandler       //Handler for ACME Certificate renew
 	acmeAutoRenewer    *acme.AutoRenewer       //Handler for ACME auto renew ticking
 	staticWebServer    *webserv.WebServer      //Static web server for hosting simple stuffs
+	forwardProxy       *forwardproxy.Handler   //HTTP Forward proxy, basically VPN for web browser
 
 	//Helper modules
 	EmailSender      *email.Sender        //Email sender that handle email sending

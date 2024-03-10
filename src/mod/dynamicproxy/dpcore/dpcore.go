@@ -272,6 +272,14 @@ func removeHeaders(header http.Header, noCache bool) {
 		header.Del("Cache-Control")
 		header.Set("Cache-Control", "no-store")
 	}
+
+	//Hide Go-HTTP-Client UA if the client didnt sent us one
+	if _, ok := header["User-Agent"]; !ok {
+		// If the outbound request doesn't have a User-Agent header set,
+		// don't send the default Go HTTP client User-Agent.
+		header.Set("User-Agent", "")
+	}
+
 }
 
 func addXForwardedForHeader(req *http.Request) {
@@ -364,6 +372,12 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			return err
 		}
 	}
+
+	//if res.StatusCode == 501 || res.StatusCode == 500 {
+	//	fmt.Println(outreq.Proto, outreq.RemoteAddr, outreq.RequestURI)
+	//	fmt.Println(">>>", outreq.Method, res.Header, res.ContentLength, res.StatusCode)
+	//	fmt.Println(outreq.Header, req.Host)
+	//}
 
 	//Custom header rewriter functions
 	if res.Header.Get("Location") != "" {

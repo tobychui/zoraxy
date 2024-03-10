@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	strip "github.com/grokify/html-strip-tags-go"
+	"github.com/microcosm-cc/bluemonday"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -137,7 +137,8 @@ func handleCountryWhitelistAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comment, _ := utils.PostPara(r, "comment")
-	comment = strip.StripTags(comment)
+	p := bluemonday.StrictPolicy()
+	comment = p.Sanitize(comment)
 
 	geodbStore.AddCountryCodeToWhitelist(countryCode, comment)
 
@@ -164,7 +165,8 @@ func handleIpWhitelistAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comment, _ := utils.PostPara(r, "comment")
-	comment = strip.StripTags(comment)
+	p := bluemonday.StrictPolicy()
+	comment = p.Sanitize(comment)
 
 	geodbStore.AddIPToWhiteList(ipAddr, comment)
 }

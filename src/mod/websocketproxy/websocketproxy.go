@@ -47,19 +47,26 @@ type WebsocketProxy struct {
 	//  If nil, DefaultDialer is used.
 	Dialer *websocket.Dialer
 
-	Verbal            bool
-	SkipTlsValidation bool
+	Verbal bool
+
+	Options Options
+}
+
+// Additional options for websocket proxy runtime
+type Options struct {
+	SkipTLSValidation bool //Skip backend TLS validation
+	SkipOriginCheck   bool //Skip origin check
 }
 
 // ProxyHandler returns a new http.Handler interface that reverse proxies the
 // request to the given target.
-func ProxyHandler(target *url.URL, skipTlsValidation bool) http.Handler {
-	return NewProxy(target, skipTlsValidation)
+func ProxyHandler(target *url.URL, options Options) http.Handler {
+	return NewProxy(target, options)
 }
 
 // NewProxy returns a new Websocket reverse proxy that rewrites the
 // URL's to the scheme, host and base path provider in target.
-func NewProxy(target *url.URL, skipTlsValidation bool) *WebsocketProxy {
+func NewProxy(target *url.URL, options Options) *WebsocketProxy {
 	backend := func(r *http.Request) *url.URL {
 		// Shallow copy
 		u := *target
@@ -68,7 +75,7 @@ func NewProxy(target *url.URL, skipTlsValidation bool) *WebsocketProxy {
 		u.RawQuery = r.URL.RawQuery
 		return &u
 	}
-	return &WebsocketProxy{Backend: backend, Verbal: false, SkipTlsValidation: skipTlsValidation}
+	return &WebsocketProxy{Backend: backend, Verbal: false, Options: options}
 }
 
 // ServeHTTP implements the http.Handler that proxies WebSocket connections.
@@ -88,7 +95,7 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	dialer := w.Dialer
 	if w.Dialer == nil {
-		if w.SkipTlsValidation {
+		if w.Options.SkipTLSValidation {
 			//Disable TLS secure check if target allow skip verification
 			bypassDialer := websocket.DefaultDialer
 			bypassDialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -169,6 +176,13 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	upgrader := w.Upgrader
 	if w.Upgrader == nil {
 		upgrader = DefaultUpgrader
+	}
+
+	//Fixing issue #107 by bypassing request origin check
+	if w.Options.SkipOriginCheck {
+		upgrader.CheckOrigin = func(r *http.Request) bool {
+			return true
+		}
 	}
 
 	// Only pass those headers to the upgrader.
