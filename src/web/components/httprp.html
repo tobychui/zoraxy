@@ -153,6 +153,13 @@
                 if (requireBasicAuth){
                     checkstate = "checked";
                 }
+
+                let skipWebSocketOriginCheck = payload.SkipWebSocketOriginCheck;
+                let wsCheckstate = "";
+                if (skipWebSocketOriginCheck){
+                    wsCheckstate = "checked";
+                }
+
                 column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
                     <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
                     <label>Require Basic Auth</label>
@@ -165,6 +172,11 @@
                                 Advance Configs
                             </div>
                             <div class="content">
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="SkipWebSocketOriginCheck" ${wsCheckstate}>
+                                    <label>Skip WebSocket Origin Check<br>
+                                    <small>Check this to allow cross-origin websocket requests</small></label>
+                                </div>
                                 <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
                                 <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
                             </div>
@@ -215,7 +227,7 @@
         let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
         let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
-
+        let bypassWebsocketOrigin = $(row).find(".SkipWebSocketOriginCheck")[0].checked;
         console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
 
         $.ajax({
@@ -228,6 +240,7 @@
                 "bpgtls": bypassGlobalTLS,
                 "tls" :requireTLS,
                 "tlsval": skipCertValidations,
+                "bpwsorg" : bypassWebsocketOrigin,
                 "bauth" :requireBasicAuth,
             },
             success: function(data){

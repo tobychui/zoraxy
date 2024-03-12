@@ -215,6 +215,13 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	requireBasicAuth := (rba == "true")
 
+	// Bypass WebSocket Origin Check
+	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
+	if strbpwsorg == "" {
+		strbpwsorg = "false"
+	}
+	bypassWebsocketOriginCheck := (strbpwsorg == "true")
+
 	//Prase the basic auth to correct structure
 	cred, _ := utils.PostPara(r, "cred")
 	basicAuthCredentials := []*dynamicproxy.BasicAuthCredentials{}
@@ -256,9 +263,10 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			RootOrMatchingDomain: rootOrMatchingDomain,
 			Domain:               endpoint,
 			//TLS
-			RequireTLS:          useTLS,
-			BypassGlobalTLS:     useBypassGlobalTLS,
-			SkipCertValidations: skipTlsValidation,
+			RequireTLS:               useTLS,
+			BypassGlobalTLS:          useBypassGlobalTLS,
+			SkipCertValidations:      skipTlsValidation,
+			SkipWebSocketOriginCheck: bypassWebsocketOriginCheck,
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Custom headers
@@ -305,12 +313,13 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 		//Write the root options to file
 		rootRoutingEndpoint := dynamicproxy.ProxyEndpoint{
-			ProxyType:            dynamicproxy.ProxyType_Root,
-			RootOrMatchingDomain: "/",
-			Domain:               endpoint,
-			RequireTLS:           useTLS,
-			BypassGlobalTLS:      false,
-			SkipCertValidations:  false,
+			ProxyType:                dynamicproxy.ProxyType_Root,
+			RootOrMatchingDomain:     "/",
+			Domain:                   endpoint,
+			RequireTLS:               useTLS,
+			BypassGlobalTLS:          false,
+			SkipCertValidations:      false,
+			SkipWebSocketOriginCheck: true,
 
 			DefaultSiteOption: defaultSiteOption,
 			DefaultSiteValue:  dsVal,
@@ -381,12 +390,20 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassGlobalTLS := (bpgtls == "true")
 
+	// Basic Auth
 	rba, _ := utils.PostPara(r, "bauth")
 	if rba == "" {
 		rba = "false"
 	}
 
 	requireBasicAuth := (rba == "true")
+
+	// Bypass WebSocket Origin Check
+	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
+	if strbpwsorg == "" {
+		strbpwsorg = "false"
+	}
+	bypassWebsocketOriginCheck := (strbpwsorg == "true")
 
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
@@ -402,6 +419,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
 	newProxyEndpoint.SkipCertValidations = skipTlsValidation
 	newProxyEndpoint.RequireBasicAuth = requireBasicAuth
+	newProxyEndpoint.SkipWebSocketOriginCheck = bypassWebsocketOriginCheck
 
 	//Prepare to replace the current routing rule
 	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
