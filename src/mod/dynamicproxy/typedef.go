@@ -143,4 +143,6 @@ Web Templates
 var (
 	//go:embed templates/forbidden.html
 	page_forbidden []byte
+	//go:embed templates/hosterror.html
+	page_hosterror []byte
 )

@@ -702,9 +702,42 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 	utils.SendOK(w)
 }
 
+// Report the current status of the reverse proxy server
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
 	js, _ := json.Marshal(dynamicProxyRouter)
 	utils.SendJSONResponse(w, string(js))
+}
+
+// Toggle a certain rule on and off
+func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
+	//No need to check for type as root cannot be turned off
+	ep, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid ep given")
+		return
+	}
+
+	targetProxyRule, err := dynamicProxyRouter.LoadProxy(ep)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid endpoint given")
+		return
+	}
+
+	enableStr, err := utils.PostPara(r, "enable")
+	if err != nil {
+		enableStr = "true"
+	}
+
+	//Flip the enable and disabled tag state
+	ruleDisabled := enableStr == "false"
+
+	targetProxyRule.Disabled = ruleDisabled
+	err = SaveReverseProxyConfig(targetProxyRule)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save updated rule")
+		return
+	}
+	utils.SendOK(w)
 }
 
 func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
