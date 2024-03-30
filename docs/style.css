@@ -1,5 +1,5 @@
 body{
-    background: #f6f6f6 !important;
+    background: #ffffff !important;
     margin: 0;
     padding: 0;
     overflow-y: hidden;
@@ -18,7 +18,7 @@ body{
 .left-menu {
     width: 80px;
     min-width: 80px;
-    background-color: #ffffff;
+    background-color: #fcfcfc;
     min-height: 100vh;
     padding-top: 1.5em;
 }
@@ -48,17 +48,19 @@ body{
     text-align: center;
     border-bottom: 1px solid #f6f6f6;
     width: 100%;
-    border-right: 0.4em solid var(--themeTextColor);
     transition: border-left ease-in-out 0.1s, background-color ease-in-out 0.1s;
 }
 
 .menu-item.active{
-    border-right: 0.4em solid var(--themeSkyblueColorDecondary);
-    background-color: #f0f8ff;
+    background: linear-gradient(60deg, rgba(84, 58, 183, 0.3) 0%, rgba(0, 172, 193, 0.3) 100%);
+}
+
+.menu-item .item-icon{
+	fill: #fcfcfc;
 }
 
 .menu-item:hover{
-    border-right: 0.4em solid var(--themeSkyblueColorDecondary);
+   background: rgba(35,35,35,0.1);
 }
 
 .menu-item img{
@@ -69,18 +71,6 @@ body{
 
 
 /* Head banner */
-.headbanner{
-    background-image: url('img/bg.png');
-    background-repeat: no-repeat;
-    background-position: right center;
-    background-size: auto 100%;
-    position:absolute;
-    right: 0;
-    top: 0;
-    height: 100vh;
-    width: 100%;
-    z-index: -100;
-}
 
 .herotext{
     padding-top: 15em; 
@@ -91,17 +81,34 @@ body{
 .bannerHeader{
     font-size: 8em; 
     font-weight: 600;
+	color: white;
 }
 
 .bannerSubheader{
     font-weight: 400; 
     font-size: 1.2em; 
+	color: #ebebeb;
     margin-top: -20px;
 }
 
 .bannerHeaderWrapper{
     text-align: center; 
     display: inline-block;
+}
+
+#home{
+	background: linear-gradient(60deg, rgba(84,58,183,1) 0%, rgba(0,172,193,1) 100%);
+}
+
+#home .table th, #home .table h4{
+	color: white;
+}
+
+#home .table h4 .content, #home .table h4 .sub.header{
+	color: white;
+}
+#home .table td a{
+	color: #d6ddff;
 }
 
 /* features */
@@ -173,56 +180,58 @@ body{
     }
 }
 
-/* Decorative Animation */
-.dot-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 40px;
-    position: absolute;
-    top: 2em;
-    left: 2em;
-}
-  
-.dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #d9d9d9;
-    margin-right: 6px;
-    animation-name: dot-animation;
-    animation-duration: 4s;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
+/* 
+	Waves CSS 
+*/
+
+#wavesWrapper{
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	left: 0;
 }
 
-.dot:nth-child(1) {
-    animation-delay: 0s;
+.waves {
+	position:relative;
+	width: 100%;
+	height:15vh;
+	margin-bottom:-7px; /*Fix for safari gap*/
+	min-height:100px;
+	max-height:150px;
 }
 
-.dot:nth-child(2) {
-    animation-delay: 1s;
-}
 
-.dot:nth-child(3) {
-    animation-delay: 2s;
+.parallax > use {
+	animation: move-forever 25s cubic-bezier(.55,.5,.45,.5)     infinite;
 }
-
-.dot:nth-child(4) {
-    animation-delay: 3s;
+.parallax > use:nth-child(1) {
+	animation-delay: -8s;
+	animation-duration: 28s;
 }
-
-@keyframes dot-animation {
-    0% {
-        background-color: #d9d9d9;
-        transform: scale(1);
-    }
-    50% {
-        background-color: #a9d1f3;
-        transform: scale(1.5);
-    }
-    100% {
-        background-color: #d9d9d9;
-        transform: scale(1);
-    }
+.parallax > use:nth-child(2) {
+	animation-delay: -12s;
+	animation-duration: 40s;
+}
+.parallax > use:nth-child(3) {
+	animation-delay: -16s;
+	animation-duration: 52s;
+}
+.parallax > use:nth-child(4) {
+	animation-delay: -20s;
+	animation-duration: 80s;
+}
+@keyframes move-forever {
+	0% {
+		transform: translate3d(-90px,0,0);
+	}
+	100% { 
+		transform: translate3d(85px,0,0);
+	}
+}
+/*Shrinking for mobile*/
+@media (max-width: 768px) {
+	.waves {
+		height:40px;
+		min-height:40px;
+	}
 }
