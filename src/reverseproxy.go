@@ -896,7 +896,7 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxyRoot := strings.TrimSuffix(dynamicProxyRouter.Root.Domain, "/")
-	if strings.HasPrefix(proxyRoot, "localhost:"+strconv.Itoa(newIncomingPortInt)) || strings.HasPrefix(proxyRoot, "127.0.0.1:"+strconv.Itoa(newIncomingPortInt)) {
+	if strings.EqualFold(proxyRoot, "localhost:"+strconv.Itoa(newIncomingPortInt)) || strings.EqualFold(proxyRoot, "127.0.0.1:"+strconv.Itoa(newIncomingPortInt)) {
 		//Listening port is same as proxy root
 		//Not allow recursive settings
 		utils.SendErrorResponse(w, "Recursive listening port! Check your proxy root settings.")
