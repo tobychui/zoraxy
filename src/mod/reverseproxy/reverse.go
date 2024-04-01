@@ -85,10 +85,6 @@ func NewReverseProxy(target *url.URL) *ReverseProxy {
 		} else {
 			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
 		}
-
-		if _, ok := req.Header["User-Agent"]; !ok {
-			req.Header.Set("User-Agent", "")
-		}
 	}
 
 	return &ReverseProxy{Director: director, Verbal: false}
