@@ -73,10 +73,14 @@ func startupSequence() {
 	}
 
 	//Create a redirection rule table
-	redirectTable, err = redirection.NewRuleTable("./conf/redirect")
+	db.NewTable("redirect")
+	redirectAllowRegexp := false
+	db.Read("redirect", "regex", &redirectAllowRegexp)
+	redirectTable, err = redirection.NewRuleTable("./conf/redirect", redirectAllowRegexp)
 	if err != nil {
 		panic(err)
 	}
+	redirectTable.Logger = SystemWideLogger
 
 	//Create a geodb store
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{

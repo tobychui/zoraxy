@@ -27,7 +27,6 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		Special Routing Rules, bypass most of the limitations
 	*/
-
 	//Check if there are external routing rule matches.
 	//If yes, route them via external rr
 	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)

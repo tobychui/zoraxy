@@ -4,6 +4,7 @@
       <h2>Redirection Rules</h2>
       <p>Add exception case for redirecting any matching URLs</p>
     </div>
+    <!-- Current list of redirection rules-->
     <div style="width: 100%; overflow-x: auto;">
         <table class="ui sortable unstackable celled table" >
           <thead>
@@ -28,6 +29,27 @@
     <div class="ui green message" id="delRuleSucc" style="display:none;">
       <i class="ui green checkmark icon"></i> Redirection Rule Deleted
     </div>
+    <!-- Options -->
+    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+      <div class="ui accordion advanceSettings">
+          <div class="title">
+            <i class="dropdown icon"></i>
+              Advance Settings
+          </div>
+          <div class="content">
+            <div class="ui basic segment">
+              <div class="ui toggle checkbox">
+                  <input id="redirectRegex" type="checkbox">
+                  <label>Enable Regular Expression Support<br>
+                  <small>Regular expression redirection check will noticeably slow down page load<br>
+                    Support <a href="https://yourbasic.org/golang/regexp-cheat-sheet/" target="_blank">Go style regex</a>. e.g. <code style="background-color: rgb(44, 44, 44); color: white">.\.redirect\.example\.com</code></small></label>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+
+    <!-- Add New Redirection Rules -->
     <div class="ui divider"></div>
     <h4>Add Redirection Rule</h4>
     <div class="ui form">
@@ -76,12 +98,12 @@
   </div>
 </div>
 <script>
-    
-  /*
-    Redirection functions
-  */
-    $(".checkbox").checkbox();
+    /*
+      Redirection functions
+    */
 
+    $(".checkbox").checkbox();
+    $(".advanceSettings").accordion();
     function resetForm() {
       document.getElementById("rurl").value = "";
       document.getElementsByName("destination-url")[0].value = "";
@@ -149,7 +171,7 @@
                     <td><button onclick="deleteRule(this);" rurl="${encodeURIComponent(JSON.stringify(entry.RedirectURL))}" title="Delete redirection rule" class="ui mini red icon basic button"><i class="trash icon"></i></button></td>
                 </tr>`);
             });
-
+            
             if (data.length == 0){
               $("#redirectionRuleList").append(`<tr colspan="4"><td><i class="green check circle icon"></i> No redirection rule</td></tr>`);
             }
@@ -157,6 +179,34 @@
         });
     }
     initRedirectionRuleList();
+
+    function initRegexpSupportToggle(){
+      $.get("/api/redirect/regex", function(data){
+        //Set the checkbox initial state
+        if (data == true){
+          $("#redirectRegex").parent().checkbox("set checked");
+        }else{
+          $("#redirectRegex").parent().checkbox("set unchecked");
+        }
+
+        //Bind event to the checkbox
+        $("#redirectRegex").on("change", function(){
+          $.ajax({
+            url: "/api/redirect/regex",
+            data: {"enable": $(this)[0].checked},
+            success: function(data){
+              if (data.error != undefined){
+                msgbox(data.error, false);
+              }else{
+                msgbox("Regex redirect setting updated", true);
+              }
+            }
+          });
+        });
+      });
+    }
+
+    initRegexpSupportToggle();
 
     $("#rurl").on('change', (event) => {
       const value = event.target.value.trim().replace(/^(https?:\/\/)/, '');

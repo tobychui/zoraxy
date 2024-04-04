@@ -85,6 +85,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/redirect/list", handleListRedirectionRules)
 	authRouter.HandleFunc("/api/redirect/add", handleAddRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
+	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
 
 	//Blacklist APIs
 	authRouter.HandleFunc("/api/blacklist/list", handleListBlacklisted)
