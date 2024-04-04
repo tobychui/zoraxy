@@ -1,3 +1,19 @@
+# v3.0.1 Apr 04 2024
+
+## Bugfixupdate for big release of V3, read update notes from V3 if you are still on V2
+
++ Added regex support for redirect (slow, don't use it unless you really needs it) [#42](https://github.com/tobychui/zoraxy/issues/42)
++ Added new dpcore implementations for faster proxy speed
++ Added support for CF-Connecting-IP to X-Real-IP auto rewrite [#114](https://github.com/tobychui/zoraxy/issues/114)
++ Added enable / disable of HTTP proxy rules in runtime via slider [#108](https://github.com/tobychui/zoraxy/issues/108)
++ Added better 404 page
++ Added option to bypass websocket origin check [#107](https://github.com/tobychui/zoraxy/issues/107)
++ Updated project homepage design
++ Fixed recursive port detection logic
++ Fixed UserAgent in resp bug
++ Updated minimum required Go version to v1.22 (Notes: Windows 7 support is dropped) [#112](https://github.com/tobychui/zoraxy/issues/112)
+
+
 # v3.0.0 Feb 18 2024
 
 ## IMPORTANT: V3 is a big rewrite and it is incompatible with V2! There is NO migration, if you want to stay on V2, please use V2 branch!
