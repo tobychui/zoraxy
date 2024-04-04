@@ -4,12 +4,12 @@
         <p>You might find these tools or information helpful when setting up your gateway server</p>
     </div>
     <div class="ui top attached tabular menu">
-        <a class="nettools item active" data-tab="tab1"><i class="ui user circle blue icon"></i> Accounts</a>
-        <a class="nettools item" data-tab="tab2">Toolbox</a>
-        <a class="nettools item" data-tab="tab3">System</a>
+        <a class="utils item active" data-tab="utiltab1"><i class="ui user circle blue icon"></i> Accounts</a>
+        <a class="utils item" data-tab="utiltab2">Toolbox</a>
+        <a class="utils item" data-tab="utiltab3">System</a>
     </div>
 
-    <div class="ui bottom attached tab segment nettoolstab active" data-tab="tab1">
+    <div class="ui bottom attached tab segment utilitiesTabs active" data-tab="utiltab1">
         <div class="extAuthOnly" style="display:none;">
             <div class="ui basic segment">
                 <i class="ui green circle check icon"></i> Account options are not available due to -noauth flag is set to true.
@@ -99,7 +99,7 @@
             </form>
         </div>
     </div>
-    <div class="ui bottom attached tab segment nettoolstab" data-tab="tab2">
+    <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab2">
         <h3> IP Address to CIDR</h3>
         <p>No experience with CIDR notations? Here are some tools you can use to make setting up easier.</p>
         <div class="ui basic segment">
@@ -128,7 +128,7 @@
         </div>
         <div class="ui divider"></div>
     </div>
-    <div class="ui bottom attached tab segment nettoolstab" data-tab="tab3">
+    <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab3">
         <!-- Config Tools -->
         <h3>System Backup & Restore</h3>
         <p>Options related to system backup, migrate and restore.</p>
@@ -175,7 +175,16 @@
     <br>
 </div>
 <script>
-    $('.menu .nettools.item').tab();
+    $('.menu .utils.item').tab();
+    // Switch tabs when clicking on the menu items
+    $('.menu .utils.item').on('click', function() {
+        $('.menu .utils.item').removeClass('active');
+        $(this).addClass('active');
+        var tab = $(this).attr('data-tab');
+        $('.utilitiesTabs.tab.segment').removeClass('active');
+        $('div[data-tab="' + tab + '"]').addClass('active');
+    }); 
+
     /*
         Account Password utilities
     */

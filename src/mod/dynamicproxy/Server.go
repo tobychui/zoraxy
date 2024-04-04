@@ -27,7 +27,6 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		Special Routing Rules, bypass most of the limitations
 	*/
-
 	//Check if there are external routing rule matches.
 	//If yes, route them via external rr
 	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)
@@ -193,7 +192,15 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		h.logRequest(r, false, 307, "root-redirect", domainOnly)
 		http.Redirect(w, r, redirectTarget, http.StatusTemporaryRedirect)
 	case DefaultSite_NotFoundPage:
-		http.NotFound(w, r)
+		//Serve the not found page, use template if exists
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/notfound.html"))
+		if err != nil {
+			w.Write(page_hosterror)
+		} else {
+			w.Write(template)
+		}
 	}
 }
 

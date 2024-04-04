@@ -46,6 +46,12 @@
                                 </div>
                                 <div class="field">
                                     <div class="ui checkbox">
+                                        <input type="checkbox" id="skipWebsocketOriginCheck" checked>
+                                        <label>Skip WebSocket Origin Check<br><small>Allow cross-origin websocket requests (Usually not a security concern)</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
                                         <input type="checkbox" id="bypassGlobalTLS">
                                         <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
                                     </div>
@@ -126,6 +132,7 @@
         var skipTLSValidation = $("#skipTLSValidation")[0].checked;
         var bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
         var requireBasicAuth = $("#requireBasicAuth")[0].checked;
+        var skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -150,9 +157,11 @@
                 tls: useTLS, 
                 ep: proxyDomain,
                 tlsval: skipTLSValidation,
+                bpwsorg: skipWebSocketOriginCheck,
                 bypassGlobalTLS: bypassGlobalTLS,
                 bauth: requireBasicAuth,
                 cred: JSON.stringify(credentials),
+                
             },
             success: function(data){
                 if (data.error != undefined){

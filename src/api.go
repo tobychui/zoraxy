@@ -47,6 +47,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/enable", ReverseProxyHandleOnOff)
 	authRouter.HandleFunc("/api/proxy/add", ReverseProxyHandleAddEndpoint)
 	authRouter.HandleFunc("/api/proxy/status", ReverseProxyStatus)
+	authRouter.HandleFunc("/api/proxy/toggle", ReverseProxyToggleRuleSet)
 	authRouter.HandleFunc("/api/proxy/list", ReverseProxyList)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
@@ -84,6 +85,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/redirect/list", handleListRedirectionRules)
 	authRouter.HandleFunc("/api/redirect/add", handleAddRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
+	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
 
 	//Blacklist APIs
 	authRouter.HandleFunc("/api/blacklist/list", handleListBlacklisted)
@@ -163,6 +165,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/tools/smtp/set", HandleSMTPSet)
 	authRouter.HandleFunc("/api/tools/smtp/admin", HandleAdminEmailGet)
 	authRouter.HandleFunc("/api/tools/smtp/test", HandleTestEmailSend)
+	authRouter.HandleFunc("/api/tools/fwdproxy/enable", forwardProxy.HandleToogle)
+	authRouter.HandleFunc("/api/tools/fwdproxy/port", forwardProxy.HandlePort)
 
 	//Account Reset
 	http.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)

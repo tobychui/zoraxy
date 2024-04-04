@@ -2,19 +2,25 @@ package redirection
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
 type RuleTable struct {
+	AllowRegex bool //Allow regular expression to be used in rule matching. Require up to O(n^m) time complexity
+	Logger     *logger.Logger
 	configPath string   //The location where the redirection rules is stored
 	rules      sync.Map //Store the redirection rules for this reverse proxy instance
+
 }
 
 type RedirectRules struct {
@@ -24,10 +30,11 @@ type RedirectRules struct {
 	StatusCode       int    //Status Code for redirection
 }
 
-func NewRuleTable(configPath string) (*RuleTable, error) {
+func NewRuleTable(configPath string, allowRegex bool) (*RuleTable, error) {
 	thisRuleTable := RuleTable{
 		rules:      sync.Map{},
 		configPath: configPath,
+		AllowRegex: allowRegex,
 	}
 	//Load all the rules from the config path
 	if !utils.FileExists(configPath) {
@@ -77,7 +84,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	}
 
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
-	filename := strings.ReplaceAll(strings.ReplaceAll(redirectURL, "/", "-"), ".", "_") + ".json"
+	filename := utils.ReplaceSpecialCharacters(redirectURL) + ".json"
 
 	// Create the full file path by joining the t.configPath with the filename
 	filepath := path.Join(t.configPath, filename)
@@ -105,11 +112,12 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 
 func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
-	filename := strings.ReplaceAll(strings.ReplaceAll(redirectURL, "/", "-"), ".", "_") + ".json"
+	filename := utils.ReplaceSpecialCharacters(redirectURL) + ".json"
 
 	// Create the full file path by joining the t.configPath with the filename
 	filepath := path.Join(t.configPath, filename)
 
+	fmt.Println(redirectURL, filename, filepath)
 	// Check if the file exists
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		return nil // File doesn't exist, nothing to delete
@@ -145,18 +153,47 @@ func (t *RuleTable) MatchRedirectRule(requestedURL string) *RedirectRules {
 	// Iterate through all the keys in the rules map
 	var targetRedirectionRule *RedirectRules = nil
 	var maxMatch int = 0
-
 	t.rules.Range(func(key interface{}, value interface{}) bool {
 		// Check if the requested URL starts with the key as a prefix
-		if strings.HasPrefix(requestedURL, key.(string)) {
-			// This request URL matched the domain
-			if len(key.(string)) > maxMatch {
+		if t.AllowRegex {
+			//Regexp matching rule
+			matched, err := regexp.MatchString(key.(string), requestedURL)
+			if err != nil {
+				//Something wrong with the regex?
+				t.log("Unable to match regex", err)
+				return true
+			}
+			if matched {
 				maxMatch = len(key.(string))
 				targetRedirectionRule = value.(*RedirectRules)
 			}
+
+		} else {
+			//Default: prefix matching redirect
+			if strings.HasPrefix(requestedURL, key.(string)) {
+				// This request URL matched the domain
+				if len(key.(string)) > maxMatch {
+					maxMatch = len(key.(string))
+					targetRedirectionRule = value.(*RedirectRules)
+				}
+			}
 		}
+
 		return true
 	})
 
 	return targetRedirectionRule
+}
+
+// Log the message to log file, use STDOUT if logger not set
+func (t *RuleTable) log(message string, err error) {
+	if t.Logger == nil {
+		if err == nil {
+			log.Println("[Redirect] " + message)
+		} else {
+			log.Println("[Redirect] " + message + ": " + err.Error())
+		}
+	} else {
+		t.Logger.PrintAndLog("Redirect", message, err)
+	}
 }

@@ -42,7 +42,9 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 	}
 
 	//Create the proxy routing handler
-	proxy := dpcore.NewDynamicProxyCore(path, "", endpoint.SkipCertValidations)
+	proxy := dpcore.NewDynamicProxyCore(path, "", &dpcore.DpcoreOptions{
+		IgnoreTLSVerification: endpoint.SkipCertValidations,
+	})
 	endpoint.proxy = proxy
 	endpoint.parent = router
 
@@ -69,7 +71,9 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 			return nil, err
 		}
 
-		proxy := dpcore.NewDynamicProxyCore(path, vdir.MatchingPath, vdir.SkipCertValidations)
+		proxy := dpcore.NewDynamicProxyCore(path, vdir.MatchingPath, &dpcore.DpcoreOptions{
+			IgnoreTLSVerification: vdir.SkipCertValidations,
+		})
 		vdir.proxy = proxy
 		vdir.parent = endpoint
 	}

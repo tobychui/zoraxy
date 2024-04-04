@@ -114,7 +114,10 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
 		}
 		h.logRequest(r, true, 101, "subdomain-websocket", target.Domain)
-		wspHandler := websocketproxy.NewProxy(u, target.SkipCertValidations)
+		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
+			SkipTLSValidation: target.SkipCertValidations,
+			SkipOriginCheck:   target.SkipWebSocketOriginCheck,
+		})
 		wspHandler.ServeHTTP(w, r)
 		return
 	}
@@ -178,7 +181,10 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
 		}
 		h.logRequest(r, true, 101, "vdir-websocket", target.Domain)
-		wspHandler := websocketproxy.NewProxy(u, target.SkipCertValidations)
+		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
+			SkipTLSValidation: target.SkipCertValidations,
+			SkipOriginCheck:   target.parent.SkipWebSocketOriginCheck,
+		})
 		wspHandler.ServeHTTP(w, r)
 		return
 	}

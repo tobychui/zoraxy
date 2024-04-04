@@ -3,6 +3,11 @@
         <h2>HTTP Proxy</h2>
         <p>Proxy HTTP server with HTTP or HTTPS for multiple hosts. If you are only proxying for one host / domain, use Default Site instead.</p>
     </div>
+    <style>
+        #httpProxyList .ui.toggle.checkbox input:checked ~ label::before{
+            background-color: #00ca52 !important;
+        }
+    </style>
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
         <table class="ui celled sortable unstackable compact table">
             <thead>
@@ -68,14 +73,23 @@
                         vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;"><i class="check icon"></i> No Virtual Directory</small>`;
                     }
 
+                    var enableChecked = "checked";
+                    if (subd.Disabled){
+                        enableChecked = "";
+                    }
+
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td data-label="" editable="true" datatype="inbound"><a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}</td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
                         <td data-label="" editable="true" datatype="basicauth">${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}</td>
                         <td class="center aligned" editable="true" datatype="action" data-label="">
-                            <button class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
-                            <button class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
+                            <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
+                                <input type="checkbox" class="enableToggle" name="active" ${enableChecked} eptuuid="${subd.RootOrMatchingDomain}" onchange="handleProxyRuleToggle(this);">
+                                <label></label>
+                            </div>
+                            <button title="Edit Proxy Rule" class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
+                            <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
                         </td>
                     </tr>`);
                 });
@@ -153,6 +167,13 @@
                 if (requireBasicAuth){
                     checkstate = "checked";
                 }
+
+                let skipWebSocketOriginCheck = payload.SkipWebSocketOriginCheck;
+                let wsCheckstate = "";
+                if (skipWebSocketOriginCheck){
+                    wsCheckstate = "checked";
+                }
+
                 column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
                     <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
                     <label>Require Basic Auth</label>
@@ -165,6 +186,11 @@
                                 Advance Configs
                             </div>
                             <div class="content">
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="SkipWebSocketOriginCheck" ${wsCheckstate}>
+                                    <label>Skip WebSocket Origin Check<br>
+                                    <small>Check this to allow cross-origin websocket requests</small></label>
+                                </div>
                                 <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
                                 <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
                             </div>
@@ -215,7 +241,7 @@
         let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
         let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
-
+        let bypassWebsocketOrigin = $(row).find(".SkipWebSocketOriginCheck")[0].checked;
         console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
 
         $.ajax({
@@ -228,6 +254,7 @@
                 "bpgtls": bypassGlobalTLS,
                 "tls" :requireTLS,
                 "tlsval": skipCertValidations,
+                "bpwsorg" : bypassWebsocketOrigin,
                 "bauth" :requireBasicAuth,
             },
             success: function(data){
@@ -263,8 +290,28 @@
         showSideWrapper("snippet/customHeaders.html?t=" + Date.now() + "#" + payload);
     }
 
-    function editLoadBalanceOptions(uuid){
-        alert(uuid);
+    function handleProxyRuleToggle(object){
+        let endpointUUID = $(object).attr("eptuuid");
+        let isChecked = object.checked;
+        $.ajax({
+            url: "/api/proxy/toggle",
+            data: {
+                "ep": endpointUUID,
+                "enable": isChecked
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }else{
+                    if (isChecked){
+                        msgbox("Proxy Rule Enabled");
+                    }else{
+                        msgbox("Proxy Rule Disabled");
+                    }
+                    
+                }
+            }
+        })
     }
     
 

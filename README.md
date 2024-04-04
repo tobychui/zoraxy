@@ -40,7 +40,7 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
 For other systems or architectures, please see [Release](https://github.com/tobychui/zoraxy/releases/latest/) 
 
 ## Build from Source
-Requires Go 1.20 or higher
+Requires Go 1.22 or higher
 
 ```bash
 git clone https://github.com/tobychui/zoraxy

@@ -12,6 +12,7 @@ import (
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
+	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -72,10 +73,14 @@ func startupSequence() {
 	}
 
 	//Create a redirection rule table
-	redirectTable, err = redirection.NewRuleTable("./conf/redirect")
+	db.NewTable("redirect")
+	redirectAllowRegexp := false
+	db.Read("redirect", "regex", &redirectAllowRegexp)
+	redirectTable, err = redirection.NewRuleTable("./conf/redirect", redirectAllowRegexp)
 	if err != nil {
 		panic(err)
 	}
+	redirectTable.Logger = SystemWideLogger
 
 	//Create a geodb store
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
@@ -219,6 +224,18 @@ func startupSequence() {
 	//Create an analytic loader
 	AnalyticLoader = analytic.NewDataLoader(sysdb, statisticCollector)
 
+	//Create basic forward proxy
+	sysdb.NewTable("fwdproxy")
+	fwdProxyEnabled := false
+	fwdProxyPort := 5587
+	sysdb.Read("fwdproxy", "port", &fwdProxyPort)
+	sysdb.Read("fwdproxy", "enabled", &fwdProxyEnabled)
+	forwardProxy = forwardproxy.NewForwardProxy(sysdb, fwdProxyPort, SystemWideLogger)
+	if fwdProxyEnabled {
+		SystemWideLogger.PrintAndLog("Forward Proxy", "HTTP Forward Proxy Listening on :"+strconv.Itoa(forwardProxy.Port), nil)
+		forwardProxy.Start()
+	}
+
 	/*
 		ACME API
 
@@ -241,4 +258,5 @@ func finalSequence() {
 
 	//Inject routing rules
 	registerBuildInRoutingRules()
+
 }

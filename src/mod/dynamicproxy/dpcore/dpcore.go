@@ -1,6 +1,7 @@
 package dpcore
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -8,11 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 )
-
-var onExitFlushLoop func()
 
 // ReverseProxy is an HTTP Handler that takes an incoming request and
 // sends it to another server, proxying the response back to the
@@ -68,7 +66,12 @@ type requestCanceler interface {
 	CancelRequest(req *http.Request)
 }
 
-func NewDynamicProxyCore(target *url.URL, prepender string, ignoreTLSVerification bool) *ReverseProxy {
+type DpcoreOptions struct {
+	IgnoreTLSVerification bool
+	FlushInterval         time.Duration
+}
+
+func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
 	targetQuery := target.RawQuery
 	director := func(req *http.Request) {
 		req.URL.Scheme = target.Scheme
@@ -78,10 +81,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, ignoreTLSVerificatio
 			req.URL.RawQuery = targetQuery + req.URL.RawQuery
 		} else {
 			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
-		}
-
-		if _, ok := req.Header["User-Agent"]; !ok {
-			req.Header.Set("User-Agent", "")
 		}
 
 	}
@@ -95,16 +94,17 @@ func NewDynamicProxyCore(target *url.URL, prepender string, ignoreTLSVerificatio
 	thisTransporter.(*http.Transport).MaxConnsPerHost = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).DisableCompression = true
 
-	if ignoreTLSVerification {
+	if dpcOptions.IgnoreTLSVerification {
 		//Ignore TLS certificate validation error
 		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	return &ReverseProxy{
-		Director:  director,
-		Prepender: prepender,
-		Verbal:    false,
-		Transport: thisTransporter,
+		Director:      director,
+		Prepender:     prepender,
+		FlushInterval: dpcOptions.FlushInterval,
+		Verbal:        false,
+		Transport:     thisTransporter,
 	}
 }
 
@@ -178,62 +178,64 @@ var hopHeaders = []string{
 	//"Upgrade",
 }
 
-func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
-	if p.FlushInterval != 0 {
-		if wf, ok := dst.(writeFlusher); ok {
-			mlw := &maxLatencyWriter{
-				dst:     wf,
-				latency: p.FlushInterval,
-				done:    make(chan bool),
-			}
-
-			go mlw.flushLoop()
-			defer mlw.stop()
-			dst = mlw
+// Copy response from src to dst with given flush interval, reference from httputil.ReverseProxy
+func (p *ReverseProxy) copyResponse(dst http.ResponseWriter, src io.Reader, flushInterval time.Duration) error {
+	var w io.Writer = dst
+	if flushInterval != 0 {
+		mlw := &maxLatencyWriter{
+			dst:     dst,
+			flush:   http.NewResponseController(dst).Flush,
+			latency: flushInterval,
 		}
+
+		defer mlw.stop()
+		// set up initial timer so headers get flushed even if body writes are delayed
+		mlw.flushPending = true
+		mlw.t = time.AfterFunc(flushInterval, mlw.delayedFlush)
+		w = mlw
 	}
 
-	io.Copy(dst, src)
+	var buf []byte
+	_, err := p.copyBuffer(w, src, buf)
+	return err
+
 }
 
-type writeFlusher interface {
-	io.Writer
-	http.Flusher
-}
+// Copy with given buffer size. Default to 64k
+func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
+	if len(buf) == 0 {
+		buf = make([]byte, 64*1024)
+	}
 
-type maxLatencyWriter struct {
-	dst     writeFlusher
-	latency time.Duration
-	mu      sync.Mutex
-	done    chan bool
-}
-
-func (m *maxLatencyWriter) Write(b []byte) (int, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.dst.Write(b)
-}
-
-func (m *maxLatencyWriter) flushLoop() {
-	t := time.NewTicker(m.latency)
-	defer t.Stop()
+	var written int64
 	for {
-		select {
-		case <-m.done:
-			if onExitFlushLoop != nil {
-				onExitFlushLoop()
+		nr, rerr := src.Read(buf)
+		if rerr != nil && rerr != io.EOF && rerr != context.Canceled {
+			p.logf("dpcore read error during body copy: %v", rerr)
+		}
+
+		if nr > 0 {
+			nw, werr := dst.Write(buf[:nr])
+			if nw > 0 {
+				written += int64(nw)
 			}
-			return
-		case <-t.C:
-			m.mu.Lock()
-			m.dst.Flush()
-			m.mu.Unlock()
+
+			if werr != nil {
+				return written, werr
+			}
+
+			if nr != nw {
+				return written, io.ErrShortWrite
+			}
+		}
+
+		if rerr != nil {
+			if rerr == io.EOF {
+				rerr = nil
+			}
+			return written, rerr
 		}
 	}
-}
-
-func (m *maxLatencyWriter) stop() {
-	m.done <- true
 }
 
 func (p *ReverseProxy) logf(format string, args ...interface{}) {
@@ -272,6 +274,14 @@ func removeHeaders(header http.Header, noCache bool) {
 		header.Del("Cache-Control")
 		header.Set("Cache-Control", "no-store")
 	}
+
+	//Hide Go-HTTP-Client UA if the client didnt sent us one
+	if _, ok := header["User-Agent"]; !ok {
+		// If the outbound request doesn't have a User-Agent header set,
+		// don't send the default Go HTTP client User-Agent.
+		header.Set("User-Agent", "")
+	}
+
 }
 
 func addXForwardedForHeader(req *http.Request) {
@@ -290,8 +300,19 @@ func addXForwardedForHeader(req *http.Request) {
 		}
 
 		if req.Header.Get("X-Real-Ip") == "" {
-			//Not exists. Fill it in with client IP
-			req.Header.Set("X-Real-Ip", clientIP)
+			//Check if CF-Connecting-IP header exists
+			CF_Connecting_IP := req.Header.Get("CF-Connecting-IP")
+			if CF_Connecting_IP != "" {
+				//Use CF Connecting IP
+				req.Header.Set("X-Real-Ip", CF_Connecting_IP)
+			} else {
+				// Not exists. Fill it in with first entry in X-Forwarded-For
+				ips := strings.Split(clientIP, ",")
+				if len(ips) > 0 {
+					req.Header.Set("X-Real-Ip", strings.TrimSpace(ips[0]))
+				}
+			}
+
 		}
 
 	}
@@ -354,6 +375,12 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
 	removeHeaders(res.Header, rrr.NoCache)
 
+	//Remove the User-Agent header if exists
+	if _, ok := res.Header["User-Agent"]; ok {
+		//Server to client request should not contains a User-Agent header
+		res.Header.Del("User-Agent")
+	}
+
 	if p.ModifyResponse != nil {
 		if err := p.ModifyResponse(res); err != nil {
 			if p.Verbal {
@@ -364,6 +391,12 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			return err
 		}
 	}
+
+	//if res.StatusCode == 501 || res.StatusCode == 500 {
+	//	fmt.Println(outreq.Proto, outreq.RemoteAddr, outreq.RequestURI)
+	//	fmt.Println(">>>", outreq.Method, res.Header, res.ContentLength, res.StatusCode)
+	//	fmt.Println(outreq.Header, req.Host)
+	//}
 
 	//Custom header rewriter functions
 	if res.Header.Get("Location") != "" {
@@ -413,7 +446,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		}
 	}
 
-	p.copyResponse(rw, res.Body)
+	//Get flush interval in real time and start copying the request
+	flushInterval := p.getFlushInterval(req, res)
+	p.copyResponse(rw, res.Body, flushInterval)
+
 	// close now, instead of defer, to populate res.Trailer
 	res.Body.Close()
 	copyHeader(rw.Header(), res.Trailer)

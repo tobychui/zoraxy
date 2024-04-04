@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#4b75ff">
+        <link rel="icon" type="image/png" href="img/small_icon.png"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.js"></script>
+        <title>404 - Host Not Found</title>
+        <style>
+            h1, h2, h3, h4, h5, p, a, span{
+                font-family: 'Noto Sans TC', sans-serif;
+                font-weight: 300;
+                color: rgb(88, 88, 88)
+            }
+
+            .diagram{
+                background-color: #ebebeb;
+                box-shadow: 
+                    inset 0px 11px 8px -10px #CCC,
+                    inset 0px -11px 8px -10px #CCC; 
+                padding-bottom: 2em;
+            }
+
+            .diagramHeader{
+                margin-top: 0.2em;
+            }
+
+            @media (max-width:512px) { 
+                .widescreenOnly{
+                    display: none !important;
+                    
+                }
+
+                .four.wide.column:not(.widescreenOnly){
+                    width: 50% !important;
+                }
+
+                .ui.grid{
+                    justify-content: center !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <br><br>
+            <div class="ui container">
+                <h1 style="font-size: 4rem;">Error 404</h1>
+                <p style="font-size: 2rem; margin-bottom: 0.4em;">Target Host Not Found</p>
+                <small id="timestamp"></small>
+            </div>
+            <br><br>
+        </div>
+        <div class="diagram">
+            <div class="ui text container">
+                <div class="ui grid">
+                    <div class="four wide column widescreenOnly" align="center">
+                        <svg version="1.1" id="client_svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                            width="100%" viewBox="0 0 200 200" enable-background="new 0 0 200 200" xml:space="preserve">
+                        <path fill="#C9CACA" d="M184.795,143.037c0,9.941-8.059,18-18,18H33.494c-9.941,0-18-8.059-18-18V44.952c0-9.941,8.059-18,18-18
+                            h133.301c9.941,0,18,8.059,18,18V143.037z"/>
+                        <circle fill="#FFFFFF" cx="37.39" cy="50.88" r="6.998"/>
+                        <circle fill="#FFFFFF" cx="54.115" cy="50.88" r="6.998"/>
+                        <path fill="#FFFFFF" d="M167.188,50.88c0,3.865-3.133,6.998-6.998,6.998H72.379c-3.865,0-6.998-3.133-6.998-6.998l0,0
+                            c0-3.865,3.133-6.998,6.998-6.998h87.811C164.055,43.882,167.188,47.015,167.188,50.88L167.188,50.88z"/>
+                        <rect x="31.296" y="66.907" fill="#FFFFFF" width="132.279" height="77.878"/>
+                        <circle fill="#9BCA3E" cx="96.754" cy="144.785" r="37.574"/>
+                        <polyline fill="none" stroke="#FFFFFF" stroke-width="8" stroke-miterlimit="10" points="108.497,133.047 93.373,153.814 
+                            82.989,143.204 "/>
+                        </svg>
+                        <small>You</small>
+                        <h2 class="diagramHeader">Browser</h2>
+                        <p style="font-weight: 500; color: #9bca3e;">Working</p>
+                    </div>  
+                    <div class="two wide column widescreenOnly" style="margin-top: 8em; text-align: center;">
+                        <i class="ui big grey exchange alternate icon" style="color:rgb(167, 167, 167) !important;"></i>
+                    </div>
+                    <div class="four wide column widescreenOnly" align="center">
+                        <svg version="1.1" id="cloud_svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                            width="100%" viewBox="0 0 200 200" enable-background="new 0 0 200 200" xml:space="preserve">
+                            <ellipse fill="#9FA0A0" cx="46.979" cy="108.234" rx="25.399" ry="25.139"/>
+                            <circle fill="#9FA0A0" cx="109.407" cy="100.066" r="50.314"/>
+                            <circle fill="#9FA0A0" cx="22.733" cy="129.949" r="19.798"/>
+                            <circle fill="#9FA0A0" cx="172.635" cy="125.337" r="24.785"/>
+                            <path fill="#9FA0A0" d="M193.514,133.318c0,9.28-7.522,16.803-16.803,16.803H28.223c-9.281,0-16.803-7.522-16.803-16.803l0,0
+                                c0-9.28,7.522-16.804,16.803-16.804h148.488C185.991,116.515,193.514,124.038,193.514,133.318L193.514,133.318z"/>
+                            <circle fill="#9BCA3D" cx="100" cy="149.572" r="38.267"/>
+                            <polyline fill="none" stroke="#FFFFFF" stroke-width="8" stroke-miterlimit="10" points="113.408,136.402 95.954,160.369 
+                                83.971,148.123 "/>
+                        </svg>
+
+                        <small>Gateway Node</small>
+                        <h2 class="diagramHeader">Reverse Proxy</h2>
+                        <p style="font-weight: 500; color: #9bca3e;">Working</p>
+                    </div>  
+                    <div class="two wide column widescreenOnly" style="margin-top: 8em; text-align: center;">
+                        <i class="ui big grey exchange alternate icon" style="color:rgb(167, 167, 167) !important;"></i>
+                    </div>
+                    <div class="four wide column" align="center">
+                        <svg version="1.1" id="host_svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                            width="100%" viewBox="0 0 200 200" enable-background="new 0 0 200 200" xml:space="preserve">
+                        <path fill="#999999" d="M168.484,113.413c0,9.941,3.317,46.324-6.624,46.324H35.359c-9.941,0-5.873-39.118-5.715-46.324
+                            l17.053-50.909c1.928-9.879,8.059-18,18-18h69.419c9.941,0,15.464,7.746,18,18L168.484,113.413z"/>
+                        <rect x="38.068" y="118.152" fill="#FFFFFF" width="122.573" height="34.312"/>
+                        <circle fill="#BD2426" cx="141.566" cy="135.873" r="8.014"/>
+                        <circle fill="#BD2426" cx="99.354" cy="152.464" r="36.343"/>
+                        <line fill="none" stroke="#FFFFFF" stroke-width="6" stroke-miterlimit="10" x1="90.5" y1="144.125" x2="107.594" y2="161.946"/>
+                        <line fill="none" stroke="#FFFFFF" stroke-width="6" stroke-miterlimit="10" x1="90.5" y1="161.946" x2="107.594" y2="144.79"/>
+                        </svg>
+                        <small id="host"></small>
+                        <h2 class="diagramHeader">Host</h2>
+                        <p style="font-weight: 500; color: #bd2426;">Not Found</p>
+                    </div>
+                  </div>
+            </div>
+        </div>
+        <div>
+            <br>
+            <div class="ui container">
+                <div class="ui stackable grid">
+                    <div class="eight wide column">
+                        <h1>What happend?</h1>
+                        <p>The reverse proxy target domain is not found.<br>For more information, see the error message on the reverse proxy terminal.</p>
+                    </div>
+                    <div class="eight wide column">
+                        <h1>What can I do?</h1>
+                        <h5 style="font-weight: 500;">If you are a visitor of this website: </h5>
+                        <p>Please try again in a few minutes</p>
+                        <h5 style="font-weight: 500;">If you are the owner of this website:</h5>
+                        <div class="ui bulleted list">
+                            <div class="item">Check if the proxy rules that match this hostname exists</div>
+                            <div class="item">Visit the Reverse Proxy management interface to correct any setting errors</div>
+                        </div>
+                    </div>
+                  </div>
+            </div>
+            <br>
+        </div>
+        <div class="ui divider"></div>
+        <div class="ui container" style="color: grey; font-size: 90%">
+            <p>Powered by Zoraxy</p>
+        </div>
+        <br><br>
+
+        <script>
+            $("#timestamp").text(new Date());
+            $("#host").text(location.href);
+        </script>
+    </body>
+</html>

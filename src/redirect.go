@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -15,12 +16,14 @@ import (
 	related to redirection function in the reverse proxy
 */
 
+// Handle request for listing all stored redirection rules
 func handleListRedirectionRules(w http.ResponseWriter, r *http.Request) {
 	rules := redirectTable.GetAllRedirectRules()
 	js, _ := json.Marshal(rules)
 	utils.SendJSONResponse(w, string(js))
 }
 
+// Handle request for adding new redirection rule
 func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 	redirectUrl, err := utils.PostPara(r, "redirectUrl")
 	if err != nil {
@@ -58,6 +61,7 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
+// Handle remove of a given redirection rule
 func handleDeleteRedirectionRule(w http.ResponseWriter, r *http.Request) {
 	redirectUrl, err := utils.PostPara(r, "redirectUrl")
 	if err != nil {
@@ -71,5 +75,32 @@ func handleDeleteRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	utils.SendOK(w)
+}
+
+// Toggle redirection regex support. Note that this cost another O(n) time complexity to each page load
+func handleToggleRedirectRegexpSupport(w http.ResponseWriter, r *http.Request) {
+	enabled, err := utils.PostPara(r, "enable")
+	if err != nil {
+		//Return the current state of the regex support
+		js, _ := json.Marshal(redirectTable.AllowRegex)
+		utils.SendJSONResponse(w, string(js))
+		return
+	}
+
+	//Update the current regex support rule enable state
+	enableRegexSupport := strings.EqualFold(strings.TrimSpace(enabled), "true")
+	redirectTable.AllowRegex = enableRegexSupport
+	err = sysdb.Write("Redirect", "regex", enableRegexSupport)
+
+	if enableRegexSupport {
+		SystemWideLogger.PrintAndLog("redirect", "Regex redirect rule enabled", nil)
+	} else {
+		SystemWideLogger.PrintAndLog("redirect", "Regex redirect rule disabled", nil)
+	}
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save settings")
+		return
+	}
 	utils.SendOK(w)
 }
