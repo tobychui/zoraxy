@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"imuslab.com/zoraxy/mod/geodb"
 )
 
 /*
@@ -32,28 +30,12 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)
 	if matchedRoutingRule != nil {
 		//Matching routing rule found. Let the sub-router handle it
-		if matchedRoutingRule.UseSystemAccessControl {
-			//This matching rule request system access control.
-			//check access logic
-			respWritten := h.handleAccessRouting(w, r)
-			if respWritten {
-				return
-			}
-		}
 		matchedRoutingRule.Route(w, r)
 		return
 	}
 
 	//Inject headers
 	w.Header().Set("x-proxy-by", "zoraxy/"+h.Parent.Option.HostVersion)
-
-	/*
-		General Access Check
-	*/
-	respWritten := h.handleAccessRouting(w, r)
-	if respWritten {
-		return
-	}
 
 	/*
 		Redirection Routing
@@ -65,19 +47,30 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Extract request host to see if it is virtual directory or subdomain
+	/*
+		Host Routing
+	*/
+	//Extract request host to see if any proxy rule is matched
 	domainOnly := r.Host
 	if strings.Contains(r.Host, ":") {
 		hostPath := strings.Split(r.Host, ":")
 		domainOnly = hostPath[0]
 	}
-
-	/*
-		Host Routing
-	*/
-
 	sep := h.Parent.getProxyEndpointFromHostname(domainOnly)
 	if sep != nil && !sep.Disabled {
+		//Matching proxy rule found
+		//Access Check (blacklist / whitelist)
+		ruleID := sep.AccessFilterUUID
+		if sep.AccessFilterUUID == "" {
+			//Use default rule
+			ruleID = "default"
+		}
+		if h.handleAccessRouting(ruleID, w, r) {
+			//Request handled by subroute
+			return
+		}
+
+		//Validate basic auth
 		if sep.RequireBasicAuth {
 			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
@@ -136,7 +129,6 @@ Once entered this routing segment, the root routing options will take over
 for the routing logic.
 */
 func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request) {
-
 	domainOnly := r.Host
 	if strings.Contains(r.Host, ":") {
 		hostPath := strings.Split(r.Host, ":")
@@ -202,39 +194,4 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 			w.Write(template)
 		}
 	}
-}
-
-// Handle access routing logic. Return true if the request is handled or blocked by the access control logic
-// if the return value is false, you can continue process the response writer
-func (h *ProxyHandler) handleAccessRouting(w http.ResponseWriter, r *http.Request) bool {
-	//Check if this ip is in blacklist
-	clientIpAddr := geodb.GetRequesterIP(r)
-	if h.Parent.Option.GeodbStore.IsBlacklisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/blacklist.html"))
-		if err != nil {
-			w.Write(page_forbidden)
-		} else {
-			w.Write(template)
-		}
-		h.logRequest(r, false, 403, "blacklist", "")
-		return true
-	}
-
-	//Check if this ip is in whitelist
-	if !h.Parent.Option.GeodbStore.IsWhitelisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/whitelist.html"))
-		if err != nil {
-			w.Write(page_forbidden)
-		} else {
-			w.Write(template)
-		}
-		h.logRequest(r, false, 403, "whitelist", "")
-		return true
-	}
-
-	return false
 }

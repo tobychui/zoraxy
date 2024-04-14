@@ -373,3 +373,34 @@ func (a *AutoRenewer) saveRenewConfigToFile() error {
 	js, _ := json.MarshalIndent(a.RenewerConfig, "", " ")
 	return os.WriteFile(a.ConfigFilePath, js, 0775)
 }
+
+// Handle update auto renew EAD configuration
+func (a *AutoRenewer) HanldeSetEAB(w http.ResponseWriter, r *http.Request) {
+	kid, err := utils.GetPara(r, "kid")
+	if err != nil {
+		utils.SendErrorResponse(w, "kid not set")
+		return
+	}
+
+	hmacEncoded, err := utils.GetPara(r, "hmacEncoded")
+	if err != nil {
+		utils.SendErrorResponse(w, "hmacEncoded not set")
+		return
+	}
+
+	acmeDirectoryURL, err := utils.GetPara(r, "acmeDirectoryURL")
+	if err != nil {
+		utils.SendErrorResponse(w, "acmeDirectoryURL not set")
+		return
+	}
+
+	if !a.AcmeHandler.Database.TableExists("acme") {
+		a.AcmeHandler.Database.NewTable("acme")
+	}
+
+	a.AcmeHandler.Database.Write("acme", acmeDirectoryURL+"_kid", kid)
+	a.AcmeHandler.Database.Write("acme", acmeDirectoryURL+"_hmacEncoded", hmacEncoded)
+
+	utils.SendOK(w)
+
+}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
@@ -86,6 +87,16 @@ func startupSequence() {
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
 		AllowSlowIpv4LookUp: !*enableHighSpeedGeoIPLookup,
 		AllowSloeIpv6Lookup: !*enableHighSpeedGeoIPLookup,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	//Create the access controller
+	accessController, err = access.NewAccessController(&access.Options{
+		Database:     sysdb,
+		GeoDB:        geodbStore,
+		ConfigFolder: "./conf/access",
 	})
 	if err != nil {
 		panic(err)
@@ -211,7 +222,7 @@ func startupSequence() {
 	//Create TCP Proxy Manager
 	tcpProxyManager = tcpprox.NewTCProxy(&tcpprox.Options{
 		Database:             sysdb,
-		AccessControlHandler: geodbStore.AllowConnectionAccess,
+		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
 	})
 
 	//Create WoL MAC storage table

@@ -19,6 +19,9 @@ import (
 func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint, error) {
 	//Filter the tailing slash if any
 	domain := endpoint.Domain
+	if len(domain) == 0 {
+		return nil, errors.New("invalid endpoint config")
+	}
 	if domain[len(domain)-1:] == "/" {
 		domain = domain[:len(domain)-1]
 	}
@@ -51,6 +54,10 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 	//Prepare proxy routing hjandler for each of the virtual directories
 	for _, vdir := range endpoint.VirtualDirectories {
 		domain := vdir.Domain
+		if len(domain) == 0 {
+			//invalid vdir
+			continue
+		}
 		if domain[len(domain)-1:] == "/" {
 			domain = domain[:len(domain)-1]
 		}

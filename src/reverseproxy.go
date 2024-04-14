@@ -94,6 +94,7 @@ func ReverseProxtInit() {
 		GeodbStore:         geodbStore,
 		StatisticCollector: statisticCollector,
 		WebDirectory:       *staticWebServerRoot,
+		AccessController:   accessController,
 	})
 	if err != nil {
 		SystemWideLogger.PrintAndLog("Proxy", "Unable to create dynamic proxy router", err)
@@ -738,6 +739,35 @@ func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.SendOK(w)
+}
+
+func ReverseProxyListDetail(w http.ResponseWriter, r *http.Request) {
+	eptype, err := utils.PostPara(r, "type") //Support root and host
+	if err != nil {
+		utils.SendErrorResponse(w, "type not defined")
+		return
+	}
+
+	if eptype == "host" {
+		epname, err := utils.PostPara(r, "epname")
+		if err != nil {
+			utils.SendErrorResponse(w, "epname not defined")
+			return
+		}
+		endpointRaw, ok := dynamicProxyRouter.ProxyEndpoints.Load(epname)
+		if !ok {
+			utils.SendErrorResponse(w, "proxy rule not found")
+			return
+		}
+		targetEndpoint := dynamicproxy.CopyEndpoint(endpointRaw.(*dynamicproxy.ProxyEndpoint))
+		js, _ := json.Marshal(targetEndpoint)
+		utils.SendJSONResponse(w, string(js))
+	} else if eptype == "root" {
+		js, _ := json.Marshal(dynamicProxyRouter.Root)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		utils.SendErrorResponse(w, "Invalid type given")
+	}
 }
 
 func ReverseProxyList(w http.ResponseWriter, r *http.Request) {

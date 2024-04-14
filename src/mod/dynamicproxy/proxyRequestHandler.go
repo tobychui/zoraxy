@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
-	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/websocketproxy"
 )
@@ -224,7 +224,7 @@ func (h *ProxyHandler) logRequest(r *http.Request, succ bool, statusCode int, fo
 	if h.Parent.Option.StatisticCollector != nil {
 		go func() {
 			requestInfo := statistic.RequestInfo{
-				IpAddr:                        geodb.GetRequesterIP(r),
+				IpAddr:                        netutils.GetRequesterIP(r),
 				RequestOriginalCountryISOCode: h.Parent.Option.GeodbStore.GetRequesterCountryISOCode(r),
 				Succ:                          succ,
 				StatusCode:                    statusCode,

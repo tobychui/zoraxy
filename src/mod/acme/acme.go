@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -24,6 +25,7 @@ import (
 	"github.com/go-acme/lego/v4/challenge/http01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
+	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -38,6 +40,11 @@ type ACMEUser struct {
 	Email        string
 	Registration *registration.Resource
 	key          crypto.PrivateKey
+}
+
+type EABConfig struct {
+	Kid     string `json:"kid"`
+	HmacKey string `json:"HmacKey"`
 }
 
 // GetEmail returns the email of the ACMEUser.
@@ -59,13 +66,15 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 type ACMEHandler struct {
 	DefaultAcmeServer string
 	Port              string
+	Database          *database.Database
 }
 
 // NewACME creates a new ACMEHandler instance.
-func NewACME(acmeServer string, port string) *ACMEHandler {
+func NewACME(acmeServer string, port string, database *database.Database) *ACMEHandler {
 	return &ACMEHandler{
 		DefaultAcmeServer: acmeServer,
 		Port:              port,
+		Database:          database,
 	}
 }
 
@@ -143,10 +152,63 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// New users will need to register
-	reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
-	if err != nil {
-		log.Println(err)
-		return false, err
+	/*
+		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+	*/
+	var reg *registration.Resource
+	// New users will need to register
+	if client.GetExternalAccountRequired() {
+		log.Println("External Account Required for this ACME Provider.")
+		// IF KID and HmacEncoded is overidden
+
+		if !a.Database.TableExists("acme") {
+			a.Database.NewTable("acme")
+			return false, errors.New("kid and HmacEncoded configuration required for ACME Provider (Error -1)")
+		}
+
+		if !a.Database.KeyExists("acme", config.CADirURL+"_kid") || !a.Database.KeyExists("acme", config.CADirURL+"_hmacEncoded") {
+			return false, errors.New("kid and HmacEncoded configuration required for ACME Provider (Error -2)")
+		}
+
+		var kid string
+		var hmacEncoded string
+		err := a.Database.Read("acme", config.CADirURL+"_kid", &kid)
+
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+
+		err = a.Database.Read("acme", config.CADirURL+"_hmacEncoded", &hmacEncoded)
+
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+
+		log.Println("EAB Credential retrieved.", kid, hmacEncoded)
+		if kid != "" && hmacEncoded != "" {
+			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
+				TermsOfServiceAgreed: true,
+				Kid:                  kid,
+				HmacEncoded:          hmacEncoded,
+			})
+		}
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+		//return false, errors.New("External Account Required for this ACME Provider.")
+	} else {
+		reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
 	}
 	adminUser.Registration = reg
 

@@ -115,6 +115,28 @@ func (router *Router) StartProxyService() error {
 							r.URL, _ = url.Parse(originalHostHeader)
 						}
 
+						//Access Check (blacklist / whitelist)
+						ruleID := sep.AccessFilterUUID
+						if sep.AccessFilterUUID == "" {
+							//Use default rule
+							ruleID = "default"
+						}
+						accessRule, err := router.Option.AccessController.GetAccessRuleByID(ruleID)
+						if err == nil {
+							isBlocked, _ := accessRequestBlocked(accessRule, router.Option.WebDirectory, w, r)
+							if isBlocked {
+								return
+							}
+						}
+
+						//Validate basic auth
+						if sep.RequireBasicAuth {
+							err := handleBasicAuth(w, r, sep)
+							if err != nil {
+								return
+							}
+						}
+
 						sep.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 							ProxyDomain:  sep.Domain,
 							OriginalHost: originalHostHeader,

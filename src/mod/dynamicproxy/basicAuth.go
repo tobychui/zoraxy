@@ -16,6 +16,16 @@ import (
 */
 
 func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
+	err := handleBasicAuth(w, r, pe)
+	if err != nil {
+		h.logRequest(r, false, 401, "host", pe.Domain)
+	}
+	return err
+}
+
+// Handle basic auth logic
+// do not write to http.ResponseWriter if err return is not nil (already handled by this function)
+func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
 	if len(pe.BasicAuthExceptionRules) > 0 {
 		//Check if the current path matches the exception rules
 		for _, exceptionRule := range pe.BasicAuthExceptionRules {
@@ -44,7 +54,6 @@ func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Req
 	}
 
 	if !matchingFound {
-		h.logRequest(r, false, 401, "host", pe.Domain)
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 		w.WriteHeader(401)
 		return errors.New("unauthorized")

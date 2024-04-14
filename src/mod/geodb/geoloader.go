@@ -5,6 +5,8 @@ import (
 	"encoding/csv"
 	"io"
 	"strings"
+
+	"imuslab.com/zoraxy/mod/netutils"
 )
 
 func (s *Store) search(ip string) string {
@@ -24,7 +26,7 @@ func (s *Store) search(ip string) string {
 
 	//Search in geotrie tree
 	cc := ""
-	if IsIPv6(ip) {
+	if netutils.IsIPv6(ip) {
 		if s.geotrieIpv6 == nil {
 			cc = s.slowSearchIpv6(ip)
 		} else {
