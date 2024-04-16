@@ -195,6 +195,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	useTLS := (tls == "true")
 
+	//Bypass global TLS value / allow direct access from port 80?
 	bypassGlobalTLS, _ := utils.PostPara(r, "bypassGlobalTLS")
 	if bypassGlobalTLS == "" {
 		bypassGlobalTLS = "false"
@@ -202,6 +203,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	useBypassGlobalTLS := bypassGlobalTLS == "true"
 
+	//Enable TLS validation?
 	stv, _ := utils.PostPara(r, "tlsval")
 	if stv == "" {
 		stv = "false"
@@ -209,6 +211,17 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	skipTlsValidation := (stv == "true")
 
+	//Get access rule ID
+	accessRuleID, _ := utils.PostPara(r, "access")
+	if accessRuleID == "" {
+		accessRuleID = "default"
+	}
+	if !accessController.AccessRuleExists(accessRuleID) {
+		utils.SendErrorResponse(w, "invalid access rule ID selected")
+		return
+	}
+
+	//Require basic auth?
 	rba, _ := utils.PostPara(r, "bauth")
 	if rba == "" {
 		rba = "false"
@@ -255,19 +268,37 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	if eptype == "host" {
 		rootOrMatchingDomain, err := utils.PostPara(r, "rootname")
 		if err != nil {
-			utils.SendErrorResponse(w, "subdomain not defined")
+			utils.SendErrorResponse(w, "hostname not defined")
 			return
 		}
+		rootOrMatchingDomain = strings.TrimSpace(rootOrMatchingDomain)
+
+		//Check if it contains ",", if yes, split the remainings as alias
+		aliasHostnames := []string{}
+		if strings.Contains(rootOrMatchingDomain, ",") {
+			matchingDomains := strings.Split(rootOrMatchingDomain, ",")
+			if len(matchingDomains) > 1 {
+				rootOrMatchingDomain = matchingDomains[0]
+				for _, aliasHostname := range matchingDomains[1:] {
+					//Filter out any space
+					aliasHostnames = append(aliasHostnames, strings.TrimSpace(aliasHostname))
+				}
+			}
+		}
+
+		//Generate a proxy endpoint object
 		thisProxyEndpoint := dynamicproxy.ProxyEndpoint{
 			//I/O
 			ProxyType:            dynamicproxy.ProxyType_Host,
 			RootOrMatchingDomain: rootOrMatchingDomain,
+			MatchingDomainAlias:  aliasHostnames,
 			Domain:               endpoint,
 			//TLS
 			RequireTLS:               useTLS,
 			BypassGlobalTLS:          useBypassGlobalTLS,
 			SkipCertValidations:      skipTlsValidation,
 			SkipWebSocketOriginCheck: bypassWebsocketOriginCheck,
+			AccessFilterUUID:         accessRuleID,
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Custom headers
@@ -436,6 +467,62 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	//Update uptime monitor
 	UpdateUptimeMonitorTargets()
+
+	utils.SendOK(w)
+}
+
+func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
+	rootNameOrMatchingDomain, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	//No need to check for type as root (/) can be set to default route
+	//and hence, you will not need alias
+
+	//Load the previous alias from current proxy rules
+	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, "Target proxy config not found or could not be loaded")
+		return
+	}
+
+	newAliasJSON, err := utils.PostPara(r, "alias")
+	if err != nil {
+		//No new set of alias given
+		utils.SendErrorResponse(w, "new alias not given")
+		return
+	}
+
+	//Write new alias to runtime and file
+	newAlias := []string{}
+	err = json.Unmarshal([]byte(newAliasJSON), &newAlias)
+	if err != nil {
+		SystemWideLogger.PrintAndLog("Proxy", "Unable to parse new alias list", err)
+		utils.SendErrorResponse(w, "Invalid alias list given")
+		return
+	}
+
+	//Set the current alias
+	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
+	newProxyEndpoint.MatchingDomainAlias = newAlias
+
+	// Prepare to replace the current routing rule
+	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	targetProxyEntry.Remove()
+	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
+
+	// Save it to file
+	err = SaveReverseProxyConfig(newProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "Alias update failed")
+		SystemWideLogger.PrintAndLog("Proxy", "Unable to save alias update", err)
+	}
 
 	utils.SendOK(w)
 }

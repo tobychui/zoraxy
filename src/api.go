@@ -51,6 +51,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/list", ReverseProxyList)
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
+	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
 	authRouter.HandleFunc("/api/proxy/updateCredentials", UpdateProxyBasicAuthCredentials)
 	authRouter.HandleFunc("/api/proxy/tlscheck", HandleCheckSiteSupportTLS)

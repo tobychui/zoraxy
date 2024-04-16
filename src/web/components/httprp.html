@@ -7,6 +7,10 @@
         #httpProxyList .ui.toggle.checkbox input:checked ~ label::before{
             background-color: #00ca52 !important;
         }
+
+        .subdEntry td:not(.ignoremw){
+            min-width: 200px;
+        }
     </style>
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui celled sortable unstackable compact table">
@@ -44,6 +48,8 @@
                     <td data-label="" colspan="5"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
                 </tr>`);
             }else{
+                //Sort by RootOrMatchingDomain field
+                data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0))
                 data.forEach(subd => {
                     let tlsIcon = "";
                     let subdData = encodeURIComponent(JSON.stringify(subd));
@@ -75,14 +81,25 @@
                         vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;"><i class="check icon"></i> No Virtual Directory</small>`;
                     }
 
-                    var enableChecked = "checked";
+                    let enableChecked = "checked";
                     if (subd.Disabled){
                         enableChecked = "";
+                    }
+
+                    let aliasDomains = ``;
+                    if (subd.MatchingDomainAlias != undefined && subd.MatchingDomainAlias.length > 0){
+                        aliasDomains = `<small class="aliasDomains" eptuuid="${subd.RootOrMatchingDomain}" style="color: #636363;">Alias: `;
+                        subd.MatchingDomainAlias.forEach(alias => {
+                            aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+                        });
+                        aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
+                        aliasDomains += `</small><br>`;
                     }
 
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td data-label="" editable="true" datatype="inbound">
                             <a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}<br>
+                            ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
@@ -90,7 +107,7 @@
                         <td data-label="" editable="true" datatype="basicauth">
                             ${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}
                         </td>
-                        <td class="center aligned" editable="true" datatype="action" data-label="">
+                        <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
                                 <input type="checkbox" class="enableToggle" name="active" ${enableChecked} eptuuid="${subd.RootOrMatchingDomain}" onchange="handleProxyRuleToggle(this);">
                                 <label></label>
@@ -104,6 +121,28 @@
 
             resolveAccessRuleNameOnHostRPlist();
         });
+    }
+
+    //Perform realtime alias update without refreshing the whole page
+    function updateAliasListForEndpoint(endpointName, newAliasDomainList){
+        let targetEle = $(`.aliasDomains[eptuuid='${endpointName}']`);
+        console.log(targetEle);
+        if (targetEle.length == 0){
+            return;
+        }
+
+        let aliasDomains = ``;
+        if (newAliasDomainList != undefined && newAliasDomainList.length > 0){
+            aliasDomains = `Alias: `;
+            newAliasDomainList.forEach(alias => {
+                aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+            });
+            aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
+            $(targetEle).html(aliasDomains);
+            $(targetEle).show();
+        }else{
+            $(targetEle).hide();
+        }
     }
 
     //Resolve & Update all rule names on host PR list
@@ -277,7 +316,9 @@
                         <label>Allow plain HTTP access<br>
                             <small>Allow inbound connections without TLS/SSL</small></label>
                     </div><br>
-                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Edit Access Rule</button>
+                    <button class="ui basic compact tiny  button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
+                    <button class="ui basic compact tiny  button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
+                    
                 `);
 
                 $(".hostAccessRuleSelector").dropdown();
@@ -350,6 +391,14 @@
             ep: uuid
         }));
         showSideWrapper("snippet/hostAccessEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function editAliasHostnames(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/aliasEditor.html?t=" + Date.now() + "#" + payload);
     }
 
     function quickEditVdir(uuid){
