@@ -9,8 +9,9 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
 ### Features
 
 - Simple to use interface with detail in-system instructions
-- Reverse Proxy
+- Reverse Proxy (HTTP/2)
   - Virtual Directory
+  - WebSocket Proxy (automatic, no set-up needed) 
   - Basic Auth
   - Custom Headers
 - Redirection Rules
