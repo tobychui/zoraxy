@@ -1,3 +1,13 @@
+# v3.0.2 Apr 24 2024
+
++ Added alias for HTTP proxy host names [#76](https://github.com/tobychui/zoraxy/issues/76)
++ Added separator support for create new proxy rules (use "," to add alias when creating new proxy rule)
++ Added HTTP proxy host based access rules [#69](https://github.com/tobychui/zoraxy/issues/69)
++ Added EAD Configuration for ACME (by [yeungalan](https://github.com/yeungalan)) [#45](https://github.com/tobychui/zoraxy/issues/45)
++ Fixed bug for bypassGlobalTLS endpoint do not support basic-auth
++ Fixed panic due to empty domain field in json config [#120](https://github.com/tobychui/zoraxy/issues/120)
++ Removed dependencies on management panel css for online font files
+
 # v3.0.1 Apr 04 2024
 
 ## Bugfixupdate for big release of V3, read update notes from V3 if you are still on V2
