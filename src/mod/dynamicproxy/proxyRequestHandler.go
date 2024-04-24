@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
-	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/websocketproxy"
 )
@@ -34,22 +34,44 @@ func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	var targetSubdomainEndpoint *ProxyEndpoint = nil
 	ep, ok := router.ProxyEndpoints.Load(hostname)
 	if ok {
+		//Exact hit
 		targetSubdomainEndpoint = ep.(*ProxyEndpoint)
+		if !targetSubdomainEndpoint.Disabled {
+			return targetSubdomainEndpoint
+		}
 	}
 
-	//No hit. Try with wildcard
+	//No hit. Try with wildcard and alias
 	matchProxyEndpoints := []*ProxyEndpoint{}
 	router.ProxyEndpoints.Range(func(k, v interface{}) bool {
 		ep := v.(*ProxyEndpoint)
 		match, err := filepath.Match(ep.RootOrMatchingDomain, hostname)
 		if err != nil {
-			//Continue
+			//Bad pattern. Skip this rule
 			return true
 		}
+
 		if match {
-			//targetSubdomainEndpoint = ep
+			//Wildcard matches. Skip checking alias
 			matchProxyEndpoints = append(matchProxyEndpoints, ep)
 			return true
+		}
+
+		//Wildcard not match. Check for alias
+		if ep.MatchingDomainAlias != nil && len(ep.MatchingDomainAlias) > 0 {
+			for _, aliasDomain := range ep.MatchingDomainAlias {
+				match, err := filepath.Match(aliasDomain, hostname)
+				if err != nil {
+					//Bad pattern. Skip this alias
+					continue
+				}
+
+				if match {
+					//This alias match
+					matchProxyEndpoints = append(matchProxyEndpoints, ep)
+					return true
+				}
+			}
 		}
 		return true
 	})
@@ -224,7 +246,7 @@ func (h *ProxyHandler) logRequest(r *http.Request, succ bool, statusCode int, fo
 	if h.Parent.Option.StatisticCollector != nil {
 		go func() {
 			requestInfo := statistic.RequestInfo{
-				IpAddr:                        geodb.GetRequesterIP(r),
+				IpAddr:                        netutils.GetRequesterIP(r),
 				RequestOriginalCountryISOCode: h.Parent.Option.GeodbStore.GetRequesterCountryISOCode(r),
 				Succ:                          succ,
 				StatusCode:                    statusCode,

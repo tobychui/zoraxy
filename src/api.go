@@ -49,7 +49,9 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/status", ReverseProxyStatus)
 	authRouter.HandleFunc("/api/proxy/toggle", ReverseProxyToggleRuleSet)
 	authRouter.HandleFunc("/api/proxy/list", ReverseProxyList)
+	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
+	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
 	authRouter.HandleFunc("/api/proxy/updateCredentials", UpdateProxyBasicAuthCredentials)
 	authRouter.HandleFunc("/api/proxy/tlscheck", HandleCheckSiteSupportTLS)
@@ -87,6 +89,12 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
 
+	//Access Rules API
+	authRouter.HandleFunc("/api/access/list", handleListAccessRules)
+	authRouter.HandleFunc("/api/access/attach", handleAttachRuleToHost)
+	authRouter.HandleFunc("/api/access/create", handleCreateAccessRule)
+	authRouter.HandleFunc("/api/access/remove", handleRemoveAccessRule)
+	authRouter.HandleFunc("/api/access/update", handleUpadateAccessRule)
 	//Blacklist APIs
 	authRouter.HandleFunc("/api/blacklist/list", handleListBlacklisted)
 	authRouter.HandleFunc("/api/blacklist/country/add", handleCountryBlacklistAdd)
@@ -94,7 +102,6 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/blacklist/ip/add", handleIpBlacklistAdd)
 	authRouter.HandleFunc("/api/blacklist/ip/remove", handleIpBlacklistRemove)
 	authRouter.HandleFunc("/api/blacklist/enable", handleBlacklistEnable)
-
 	//Whitelist APIs
 	authRouter.HandleFunc("/api/whitelist/list", handleListWhitelisted)
 	authRouter.HandleFunc("/api/whitelist/country/add", handleCountryWhitelistAdd)
@@ -179,6 +186,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/acme/autoRenew/ca", HandleACMEPreferredCA)
 	authRouter.HandleFunc("/api/acme/autoRenew/email", acmeAutoRenewer.HandleACMEEmail)
 	authRouter.HandleFunc("/api/acme/autoRenew/setDomains", acmeAutoRenewer.HandleSetAutoRenewDomains)
+	authRouter.HandleFunc("/api/acme/autoRenew/setEAB", acmeAutoRenewer.HanldeSetEAB)
 	authRouter.HandleFunc("/api/acme/autoRenew/listDomains", acmeAutoRenewer.HandleLoadAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewPolicy", acmeAutoRenewer.HandleRenewPolicy)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)

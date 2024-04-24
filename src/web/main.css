@@ -2,9 +2,6 @@
     index.html style overwrite
 */
 :root{
-   
-
-
     --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
     --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
     --theme_green: linear-gradient(270deg, #27e7ff, #00ca52);
@@ -256,7 +253,7 @@ body{
 
 .sideWrapperMenu{
     height: 3px;
-    background-color: #414141;
+    background: var(--theme_background);
 }
 
 /*

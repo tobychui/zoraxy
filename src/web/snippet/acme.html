@@ -118,6 +118,14 @@
       <label>ACME Server URL</label>
       <input id="caURL" type="text" placeholder="https://example.com/acme/dictionary">
     </div>
+    <div class="field" id="kidInput" style="display:none;">
+      <label>EAB Credentials (KID) for current provider</label>
+      <input id="eab_kid" type="text" placeholder="Leave this field blank to keep the current configuration">
+    </div>
+    <div class="field" id="hmacInput" style="display:none;">
+      <label>EAB HMAC Key for current provider</label>
+      <input id="eab_hmac" type="text" placeholder="Leave this field blank to keep the current configuration">
+    </div>
     <div class="field" id="skipTLS" style="display:none;">
       <div class="ui checkbox">
         <input type="checkbox" id="skipTLSCheckbox">
@@ -314,18 +322,87 @@
     // Button click event handler for obtaining certificate
     $("#obtainButton").click(function() {
       $("#obtainButton").addClass("loading").addClass("disabled");
+      updateCertificateEAB();
       obtainCertificate();
     });
 
     $("input[name=ca]").on('change', function() {
       if(this.value == "Custom ACME Server") {
         $("#caInput").show();
+        $("#kidInput").show();
+        $("#hmacInput").show();
         $("#skipTLS").show();
-      } else {
+      } else if (this.value == "ZeroSSL") {
+        $("#kidInput").show();
+        $("#hmacInput").show();
+      } else if (this.value == "Buypass") {
+        $("#kidInput").show();
+        $("#hmacInput").show();
+      }else {
         $("#caInput").hide();
         $("#skipTLS").hide();
+        $("#kidInput").hide();
+        $("#hmacInput").hide();
       }
     })
+
+
+    // Obtain certificate from API
+    function updateCertificateEAB() {
+      var ca = $("#ca").dropdown("get value");
+      var caURL = "";
+      if (ca == "Custom ACME Server") {
+        ca = "custom";
+        caURL = $("#caURL").val();
+      }else if(ca == "Buypass") {
+        caURL = "https://api.buypass.com/acme/directory";
+      }else if(ca == "ZeroSSL") {
+        caURL = "https://acme.zerossl.com/v2/DV90";
+      }
+
+      if(caURL == "") {
+        return;
+      }
+
+      var kid = $("#eab_kid").val();
+      var hmac = $("#eab_hmac").val();
+      
+      if(kid == "" || hmac == "") {
+        return;
+      }
+
+      console.log(caURL + " " + kid + " " + hmac);
+
+      $.ajax({
+        url: "/api/acme/autoRenew/setEAB",
+        method: "GET",
+        data: {
+          acmeDirectoryURL: caURL,
+          kid: kid,
+          hmacEncoded: hmac,
+        },
+        success: function(response) {
+          //$("#obtainButton").removeClass("loading").removeClass("disabled");
+          if (response.error) {
+            console.log("Error:", response.error);
+            // Show error message
+            parent.msgbox(response.error, false, 12000);
+          } else {
+            console.log("Certificate EAB updated successfully");
+            // Show success message
+            parent.msgbox("Certificate EAB updated successfully");
+            
+            // Renew the parent certificate list
+            parent.initManagedDomainCertificateList();
+          }
+        },
+        error: function(error) {
+          //$("#obtainButton").removeClass("loading").removeClass("disabled");
+          console.log("Failed to update EAB configuration:", error);
+          parent.msgbox("Failed to update EAB configuration");
+        }
+      });
+    }
 
     // Obtain certificate from API
     function obtainCertificate() {

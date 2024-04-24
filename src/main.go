@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
@@ -50,7 +51,7 @@ var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.1"
+	version     = "3.0.2"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -69,7 +70,8 @@ var (
 	tlsCertManager     *tlscert.Manager        //TLS / SSL management
 	redirectTable      *redirection.RuleTable  //Handle special redirection rule sets
 	pathRuleHandler    *pathrule.Handler       //Handle specific path blocking or custom headers
-	geodbStore         *geodb.Store            //GeoIP database, also handle black list and whitelist features
+	geodbStore         *geodb.Store            //GeoIP database, for resolving IP into country code
+	accessController   *access.Controller      //Access controller, handle black list and white list
 	netstatBuffers     *netstat.NetStatBuffers //Realtime graph buffers
 	statisticCollector *statistic.Collector    //Collecting statistic from visitors
 	uptimeMonitor      *uptime.Monitor         //Uptime monitor service worker

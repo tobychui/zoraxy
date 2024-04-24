@@ -1,4 +1,4 @@
-package geodb
+package netutils
 
 import (
 	"net"
@@ -6,7 +6,13 @@ import (
 	"strings"
 )
 
-// Utilities function
+/*
+	MatchIP.go
+
+	This script contains function for matching IP address, comparing
+	CIDR and IPv4 / v6 validations
+*/
+
 func GetRequesterIP(r *http.Request) string {
 	ip := r.Header.Get("X-Real-Ip")
 	if ip == "" {

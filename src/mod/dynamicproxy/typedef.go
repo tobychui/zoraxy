@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/geodb"
@@ -34,7 +35,8 @@ type RouterOption struct {
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
 	TlsManager         *tlscert.Manager
 	RedirectRuleTable  *redirection.RuleTable
-	GeodbStore         *geodb.Store //GeoIP blacklist and whitelist
+	GeodbStore         *geodb.Store       //GeoIP resolver
+	AccessController   *access.Controller //Blacklist / whitelist controller
 	StatisticCollector *statistic.Collector
 	WebDirectory       string //The static web server directory containing the templates folder
 }
@@ -90,9 +92,10 @@ type VirtualDirectoryEndpoint struct {
 
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
-	ProxyType            int    //The type of this proxy, see const def
-	RootOrMatchingDomain string //Matching domain for host, also act as key
-	Domain               string //Domain or IP to proxy to
+	ProxyType            int      //The type of this proxy, see const def
+	RootOrMatchingDomain string   //Matching domain for host, also act as key
+	MatchingDomainAlias  []string //A list of domains that alias to this rule
+	Domain               string   //Domain or IP to proxy to
 
 	//TLS/SSL Related
 	RequireTLS               bool //Target domain require TLS
@@ -111,14 +114,17 @@ type ProxyEndpoint struct {
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
 
-	//Fallback routing logic
-	DefaultSiteOption int    //Fallback routing logic options
-	DefaultSiteValue  string //Fallback routing target, optional
+	//Access Control
+	AccessFilterUUID string //Access filter ID
 
 	Disabled bool //If the rule is disabled
 
+	//Fallback routing logic (Special Rule Sets Only)
+	DefaultSiteOption int    //Fallback routing logic options
+	DefaultSiteValue  string //Fallback routing target, optional
+
 	//Internal Logic Elements
-	parent *Router
+	parent *Router              `json:"-"`
 	proxy  *dpcore.ReverseProxy `json:"-"`
 }
 

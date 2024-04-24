@@ -5,6 +5,12 @@
         color: var(--theme_lgrey);
         border-radius: 1em !important;
     }
+
+    .ui.form .sub.field{
+        background-color: var(--theme_advance);
+        border-radius: 0.6em;
+        padding: 1em;
+    }
 </style>
 <div class="standardContainer">
     <div class="ui stackable grid">
@@ -16,7 +22,7 @@
                     <div class="field">
                         <label>Matching Keyword / Domain</label>
                         <input type="text" id="rootname" placeholder="mydomain.com">
-                        <small>Support subdomain and wildcard, e.g. s1.mydomain.com or *.test.mydomain.com</small>
+                        <small>Support subdomain and wildcard, e.g. s1.mydomain.com or *.test.mydomain.com. Use comma (,) for alias hostnames. </small>
                     </div>
                     <div class="field">
                         <label>Target IP Address or Domain Name with port</label>
@@ -37,7 +43,18 @@
                             Advance Settings
                             </div>
                             <div class="content">
-                                <p></p>
+                                <div class="field">
+                                    <label>Access Rule</label>
+                                    <div class="ui selection dropdown">
+                                        <input type="hidden" id="newProxyRuleAccessFilter" value="default">
+                                        <i class="dropdown icon"></i>
+                                        <div class="default text">Default</div>
+                                        <div class="menu" id="newProxyRuleAccessList">
+                                            <div class="item" data-value="default"><i class="ui yellow star icon"></i> Default</div>
+                                        </div>
+                                    </div>
+                                    <small>Allow regional access control using blacklist or whitelist. Use "default" for "allow all".</small>
+                                </div>
                                 <div class="field">
                                     <div class="ui checkbox">
                                         <input type="checkbox" id="skipTLSValidation">
@@ -121,8 +138,6 @@
     </div>
 </div>
 <script>
-    $("#advanceProxyRules").accordion();
-
 
     //New Proxy Endpoint
     function newProxyEndpoint(){
@@ -133,7 +148,8 @@
         var bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
         var requireBasicAuth = $("#requireBasicAuth")[0].checked;
         var skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
-
+        var accessRuleToUse = $("#newProxyRuleAccessFilter").val();
+        
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
             return
@@ -161,7 +177,7 @@
                 bypassGlobalTLS: bypassGlobalTLS,
                 bauth: requireBasicAuth,
                 cred: JSON.stringify(credentials),
-                
+                access: accessRuleToUse,
             },
             success: function(data){
                 if (data.error != undefined){
@@ -343,4 +359,47 @@
         return back;
     }
 
+    /*
+        Access Rule dropdown Initialization
+    */
+
+    function initNewProxyRuleAccessDropdownList(callback=undefined){
+        $.get("/api/access/list", function(data){
+            if (data.error == undefined){
+                $("#newProxyRuleAccessList").html("");
+                data.forEach(function(rule){
+                    let icon = `<i class="ui grey filter icon"></i>`;
+                    if (rule.ID == "default"){
+                        icon = `<i class="ui yellow star icon"></i>`;
+                    }else if (rule.BlacklistEnabled && !rule.WhitelistEnabled){
+                        //This is a blacklist filter
+                        icon = `<i class="ui red filter icon"></i>`;
+                    }else if (rule.WhitelistEnabled && !rule.BlacklistEnabled){
+                        //This is a whitelist filter
+                        icon = `<i class="ui green filter icon"></i>`;
+                    }
+                    $("#newProxyRuleAccessList").append(`<div class="item" data-value="${rule.ID}">${icon} ${rule.Name}</div>`);
+                });
+                $("#newProxyRuleAccessFilter").parent().dropdown();
+                if (callback != undefined){
+                    callback();
+                }
+            }else{
+                msgbox("Access rule load failed: " + data.error, false);
+            }
+        })
+    }
+    initNewProxyRuleAccessDropdownList();
+
+    //Bind on tab switch events
+    tabSwitchEventBind["rules"] = function(){
+        //Update the access rule list
+        initNewProxyRuleAccessDropdownList();
+    }
+
+    $(document).ready(function(){
+        $("#advanceProxyRules").accordion();
+        $("#newProxyRuleAccessFilter").parent().dropdown();
+    });
+    
 </script>
