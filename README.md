@@ -13,12 +13,12 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
   - Virtual Directory
   - WebSocket Proxy (automatic, no set-up needed) 
   - Basic Auth
+  - Alias Hostnames
   - Custom Headers
 - Redirection Rules
 - TLS / SSL setup and deploy
   - ACME features like auto-renew to serve your sites in http**s**
   - SNI support (one certificate contains multiple host names)
-
 - Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
 - Global Area Network Controller Web UI (ZeroTier not included)
 - TCP Tunneling / Proxy
