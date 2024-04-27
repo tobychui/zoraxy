@@ -345,7 +345,8 @@
             form.find('input[name="hostname"]').parent().removeClass('error');
         }
 
-        // validate domain
+        // validate domain, now allow empty string (for smtp that dont use domain as input)
+        /*
         const domain = form.find('input[name="domain"]').val().trim();
         if (!domainRegex.test(domain)) {
             form.find('input[name="domain"]').parent().addClass('error');
@@ -353,6 +354,7 @@
         } else {
             form.find('input[name="domain"]').parent().removeClass('error');
         }
+        */
 
         // validate username
         const username = form.find('input[name="username"]').val().trim();

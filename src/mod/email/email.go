@@ -20,7 +20,7 @@ type Sender struct {
 	SenderAddr string //e.g. admin@arozos.com
 }
 
-//Create a new email sender object
+// Create a new email sender object
 func NewEmailSender(hostname string, domain string, port int, username string, password string, senderAddr string) *Sender {
 	return &Sender{
 		Hostname:   hostname,
@@ -33,13 +33,15 @@ func NewEmailSender(hostname string, domain string, port int, username string, p
 }
 
 /*
-	Send a email to a reciving addr
-	Example Usage:
-	SendEmail(
-		test@example.com,
-		"Free donuts",
-		"Come get your free donuts on this Sunday!"
-	)
+Send a email to a reciving addr
+Example Usage:
+SendEmail(
+
+	test@example.com,
+	"Free donuts",
+	"Come get your free donuts on this Sunday!"
+
+)
 */
 func (s *Sender) SendEmail(to string, subject string, content string) error {
 	//Parse the email content
@@ -50,7 +52,13 @@ func (s *Sender) SendEmail(to string, subject string, content string) error {
 		content + "\n\n")
 
 	//Login to the SMTP server
-	auth := smtp.PlainAuth("", s.Username+"@"+s.Domain, s.Password, s.Hostname)
+	var auth smtp.Auth
+	if s.Domain == "" {
+		auth = smtp.PlainAuth("", s.Username, s.Password, s.Hostname)
+	} else {
+		auth = smtp.PlainAuth("", s.Username+"@"+s.Domain, s.Password, s.Hostname)
+	}
+
 	err := smtp.SendMail(s.Hostname+":"+strconv.Itoa(s.Port), auth, s.SenderAddr, []string{to}, msg)
 	if err != nil {
 		return err

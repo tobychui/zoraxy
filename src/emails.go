@@ -27,8 +27,8 @@ func HandleSMTPSet(w http.ResponseWriter, r *http.Request) {
 
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
-		utils.SendErrorResponse(w, "domain cannot be empty")
-		return
+		//Assume domain is empty, raised by issue #129
+		domain = ""
 	}
 
 	portString, err := utils.PostPara(r, "port")
@@ -206,7 +206,7 @@ var (
 )
 
 func HandleAdminAccountResetEmail(w http.ResponseWriter, r *http.Request) {
-	if EmailSender.Username == "" || EmailSender.Domain == "" {
+	if EmailSender.Username == "" {
 		//Reset account not setup
 		utils.SendErrorResponse(w, "Reset account not setup.")
 		return
