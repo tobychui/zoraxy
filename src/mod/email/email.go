@@ -13,7 +13,6 @@ import (
 
 type Sender struct {
 	Hostname   string //E.g. mail.gandi.net
-	Domain     string //E.g. arozos.com
 	Port       int    //E.g. 587
 	Username   string //Username of the email account
 	Password   string //Password of the email account
@@ -21,10 +20,9 @@ type Sender struct {
 }
 
 // Create a new email sender object
-func NewEmailSender(hostname string, domain string, port int, username string, password string, senderAddr string) *Sender {
+func NewEmailSender(hostname string, port int, username string, password string, senderAddr string) *Sender {
 	return &Sender{
 		Hostname:   hostname,
-		Domain:     domain,
 		Port:       port,
 		Username:   username,
 		Password:   password,
@@ -52,12 +50,8 @@ func (s *Sender) SendEmail(to string, subject string, content string) error {
 		content + "\n\n")
 
 	//Login to the SMTP server
-	var auth smtp.Auth
-	if s.Domain == "" {
-		auth = smtp.PlainAuth("", s.Username, s.Password, s.Hostname)
-	} else {
-		auth = smtp.PlainAuth("", s.Username+"@"+s.Domain, s.Password, s.Hostname)
-	}
+	//Username can be username (e.g. admin) or email (e.g. admin@example.com), depending on SMTP service provider
+	auth := smtp.PlainAuth("", s.Username, s.Password, s.Hostname)
 
 	err := smtp.SendMail(s.Hostname+":"+strconv.Itoa(s.Port), auth, s.SenderAddr, []string{to}, msg)
 	if err != nil {

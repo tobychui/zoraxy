@@ -25,12 +25,6 @@ func HandleSMTPSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domain, err := utils.PostPara(r, "domain")
-	if err != nil {
-		//Assume domain is empty, raised by issue #129
-		domain = ""
-	}
-
 	portString, err := utils.PostPara(r, "port")
 	if err != nil {
 		utils.SendErrorResponse(w, "port must be a valid integer")
@@ -76,7 +70,6 @@ func HandleSMTPSet(w http.ResponseWriter, r *http.Request) {
 	//Set the email sender properties
 	thisEmailSender := email.Sender{
 		Hostname:   strings.TrimSpace(hostname),
-		Domain:     strings.TrimSpace(domain),
 		Port:       port,
 		Username:   strings.TrimSpace(username),
 		Password:   strings.TrimSpace(password),

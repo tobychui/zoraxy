@@ -65,21 +65,9 @@
     
                 <div class="field">
                     <p><i class="caret down icon"></i> Credentials for SMTP server authentications</p>
-                    <div class="two fields">
-                        <div class="field">
-                            <label>Sender Username</label>
-                            <input type="text" name="username" placeholder="E.g. admin">
-                        </div>
-                    
-                        <div class="field">
-                            <label>Sender Domain</label>
-                            <div class="ui labeled input">
-                                <div class="ui basic label">
-                                  @
-                                </div>
-                                <input type="text" name="domain" min="1" max="65534" placeholder="E.g. arozos.com">
-                            </div>
-                        </div>
+                    <div class="field">
+                        <label>Sender Username / Email</label>
+                        <input type="text" name="username" placeholder="e.g. admin or admin@mydomain.com">
                     </div>
                 </div>
                 <div class="field">
@@ -272,7 +260,6 @@
         e.preventDefault();
         var data = {
             hostname: $('input[name=hostname]').val(),
-            domain: $('input[name=domain]').val(),
             port: parseInt($('input[name=port]').val()),
             username: $('input[name=username]').val(),
             password: $('input[name=password]').val(),
@@ -306,7 +293,6 @@
     function initSMTPSettings(){
         $.get("/api/tools/smtp/get", function(data){
             $('#email-form input[name=hostname]').val(data.Hostname);
-            $('#email-form input[name=domain]').val(data.Domain);
             $('#email-form input[name=port]').val(data.Port);
             $('#email-form input[name=username]').val(data.Username);
             $('#email-form input[name=senderAddr]').val(data.SenderAddr);
@@ -345,16 +331,6 @@
             form.find('input[name="hostname"]').parent().removeClass('error');
         }
 
-        // validate domain, now allow empty string (for smtp that dont use domain as input)
-        /*
-        const domain = form.find('input[name="domain"]').val().trim();
-        if (!domainRegex.test(domain)) {
-            form.find('input[name="domain"]').parent().addClass('error');
-            isValid = false;
-        } else {
-            form.find('input[name="domain"]').parent().removeClass('error');
-        }
-        */
 
         // validate username
         const username = form.find('input[name="username"]').val().trim();
