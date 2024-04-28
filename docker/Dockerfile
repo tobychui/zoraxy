@@ -8,10 +8,7 @@ RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /opt/zoraxy/config/ &&\
     mkdir -p /usr/local/bin/
 
-COPY entrypoint.sh /opt/zoraxy/
-
-RUN chmod -R 755 /opt/zoraxy/ &&\
-    chmod +x /opt/zoraxy/entrypoint.sh
+RUN chmod -R 770 /opt/zoraxy/
 
 VOLUME [ "/opt/zoraxy/config/" ]
 
@@ -24,15 +21,15 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     rm -r /opt/zoraxy/source/
 
-RUN chmod +x /usr/local/bin/zoraxy
+RUN chmod 755 /usr/local/bin/zoraxy &&\
+    chmod +x /usr/local/bin/zoraxy
 
 WORKDIR /opt/zoraxy/config/
 
 ENV VERSION=$VERSION
-
 ENV ARGS="-noauth=false"
 
-ENTRYPOINT ["/opt/zoraxy/entrypoint.sh"]
+ENTRYPOINT "zoraxy" "-port=:8000" "${ARGS}"
 
 HEALTHCHECK --interval=5s --timeout=5s --retries=2 CMD nc -vz 127.0.0.1 8000 || exit 1
 
