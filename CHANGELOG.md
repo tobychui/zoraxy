@@ -1,3 +1,17 @@
+# v3.0.3 Apr 30 2024
+## Breaking Change
+
+For users using SMTP with older versions, you might need to update the settings by moving the domains (the part after @ in the username and domain setup field) into the username field.
+
++ Updated SMTP UI for non email login username [#129](https://github.com/tobychui/zoraxy/issues/129)
++ Fixed ACME cert store reload after cert request [#126](https://github.com/tobychui/zoraxy/issues/126)
++ Fixed default rule not applying to default site when default site is set to proxy target [#130](https://github.com/tobychui/zoraxy/issues/130)
++ Fixed blacklist-ip not working with CIDR bug
++ Fixed minor vdir bug in tailing slash detection and redirect logic
++ Added custom mdns name support (-mdnsname flag)
++ Added LAN tag in statistic [#131](https://github.com/tobychui/zoraxy/issues/131)
+
+
 # v3.0.2 Apr 24 2024
 
 + Added alias for HTTP proxy host names [#76](https://github.com/tobychui/zoraxy/issues/76)
