@@ -102,6 +102,13 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		Root Router Handling
 	*/
+
+	//Root access control based on default rule
+	blocked := h.handleAccessRouting("default", w, r)
+	if blocked {
+		return
+	}
+
 	//Clean up the request URI
 	proxyingPath := strings.TrimSpace(r.RequestURI)
 	if !strings.HasSuffix(proxyingPath, "/") {
