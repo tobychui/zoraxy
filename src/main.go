@@ -41,6 +41,7 @@ var noauth = flag.Bool("noauth", false, "Disable authentication for management i
 var showver = flag.Bool("version", false, "Show version of this server")
 var allowSshLoopback = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
 var allowMdnsScanning = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
+var mdnsName = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
 var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")

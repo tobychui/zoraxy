@@ -160,8 +160,17 @@ func startupSequence() {
 		if err != nil {
 			portInt = 8000
 		}
+
+		hostName := *mdnsName
+		if hostName == "" {
+			hostName = "zoraxy_" + nodeUUID
+		} else {
+			//Trim off the suffix
+			hostName = strings.TrimSuffix(hostName, ".local")
+		}
+
 		mdnsScanner, err = mdns.NewMDNS(mdns.NetworkHost{
-			HostName:     "zoraxy_" + nodeUUID,
+			HostName:     hostName,
 			Port:         portInt,
 			Domain:       "zoraxy.arozos.com",
 			Model:        "Network Gateway",
