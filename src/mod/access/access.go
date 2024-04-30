@@ -69,6 +69,9 @@ func NewAccessController(options *Options) (*Controller, error) {
 		Options:           options,
 	}
 
+	//Assign default access rule parent
+	thisController.DefaultAccessRule.parent = &thisController
+
 	//Load all acccess rules from file
 	configFiles, err := filepath.Glob(options.ConfigFolder + "/*.json")
 	if err != nil {
@@ -113,6 +116,7 @@ func (c *Controller) GetGlobalAccessRule() (*AccessRule, error) {
 // Load access rules to runtime, require rule ID
 func (c *Controller) GetAccessRuleByID(accessRuleID string) (*AccessRule, error) {
 	if accessRuleID == "default" || accessRuleID == "" {
+
 		return c.DefaultAccessRule, nil
 	}
 	//Load from sync.Map, should be O(1)

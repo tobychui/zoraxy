@@ -70,7 +70,8 @@ func (ep *ProxyEndpoint) AddUserDefinedHeader(key string, value string) error {
 func (ep *ProxyEndpoint) GetVirtualDirectoryHandlerFromRequestURI(requestURI string) *VirtualDirectoryEndpoint {
 	for _, vdir := range ep.VirtualDirectories {
 		if strings.HasPrefix(requestURI, vdir.MatchingPath) {
-			return vdir
+			thisVdir := vdir
+			return thisVdir
 		}
 	}
 	return nil
@@ -80,7 +81,8 @@ func (ep *ProxyEndpoint) GetVirtualDirectoryHandlerFromRequestURI(requestURI str
 func (ep *ProxyEndpoint) GetVirtualDirectoryRuleByMatchingPath(matchingPath string) *VirtualDirectoryEndpoint {
 	for _, vdir := range ep.VirtualDirectories {
 		if vdir.MatchingPath == matchingPath {
-			return vdir
+			thisVdir := vdir
+			return thisVdir
 		}
 	}
 	return nil

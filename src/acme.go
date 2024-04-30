@@ -101,6 +101,7 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 	} else {
 		//This port do not support ACME
 		utils.SendErrorResponse(w, "ACME renew only support web server listening on port 80 (http) or 443 (https)")
+		return
 	}
 
 	//Add a 3 second delay to make sure everything is settle down
@@ -109,6 +110,10 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 	// Pass over to the acmeHandler to deal with the communication
 	acmeHandler.HandleRenewCertificate(w, r)
 
+	//Update the TLS cert store buffer
+	tlsCertManager.UpdateLoadedCertList()
+
+	//Restore original settings
 	if dynamicProxyRouter.Option.Port == 443 {
 		if !isForceHttpsRedirectEnabledOriginally {
 			//Default is off. Turn the redirection off

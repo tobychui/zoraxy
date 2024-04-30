@@ -87,7 +87,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyType_Root {
 			potentialProxtEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
-			if potentialProxtEndpoint != nil && !targetProxyEndpoint.Disabled {
+			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
 				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
 				return
@@ -102,6 +102,13 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		Root Router Handling
 	*/
+
+	//Root access control based on default rule
+	blocked := h.handleAccessRouting("default", w, r)
+	if blocked {
+		return
+	}
+
 	//Clean up the request URI
 	proxyingPath := strings.TrimSpace(r.RequestURI)
 	if !strings.HasSuffix(proxyingPath, "/") {

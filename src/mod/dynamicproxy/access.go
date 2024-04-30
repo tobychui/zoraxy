@@ -21,6 +21,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 		w.Write([]byte("500 - Internal Server Error"))
 		return true
 	}
+
 	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.Option.WebDirectory, w, r)
 	if isBlocked {
 		h.logRequest(r, false, 403, blockedReason, "")

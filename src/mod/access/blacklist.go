@@ -2,6 +2,8 @@ package access
 
 import (
 	"strings"
+
+	"imuslab.com/zoraxy/mod/netutils"
 )
 
 /*
@@ -71,5 +73,22 @@ func (s *AccessRule) GetAllBlacklistedIp() []string {
 func (s *AccessRule) IsIPBlacklisted(ipAddr string) bool {
 	IPBlacklist := *s.BlackListIP
 	_, ok := IPBlacklist[ipAddr]
-	return ok
+	if ok {
+		return true
+	}
+
+	//Check for CIDR
+	for ipOrCIDR, _ := range IPBlacklist {
+		wildcardMatch := netutils.MatchIpWildcard(ipAddr, ipOrCIDR)
+		if wildcardMatch {
+			return true
+		}
+
+		cidrMatch := netutils.MatchIpCIDR(ipAddr, ipOrCIDR)
+		if cidrMatch {
+			return true
+		}
+	}
+
+	return false
 }

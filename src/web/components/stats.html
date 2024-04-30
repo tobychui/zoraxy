@@ -765,8 +765,11 @@
         let data = Object.values(visitorData);
 
         Object.keys(visitorData).forEach(function(cc){
+            console.log(cc);
             if (cc == ""){
-                labels.push("Local / Unknown")
+                labels.push("Unknown")
+            }else if (cc == "lan"){
+                labels.push(`LAN / Loopback`);
             }else{
                 labels.push(`${getCountryName(cc)} [${cc.toUpperCase()}]` );
             }
