@@ -13,6 +13,6 @@ The templates folder contains the template for overriding the build in error or 
 - whitelist.html (Error page when client being blocked by whitelist rule)
 - blacklist.html (Error page when client being blocked by blacklist rule)
 
+To use the template, copy and paste the `wwww` folder to the same directory as zoraxy executable (aka the src/ file if you `go build` with the current folder tree). 
 
-
-To use the template, copy and paste the `wwww` folder to the same directory as zoraxy executable (aka the src/ file if you `go build` with the current folder tree) . 
+It is worth mentioning that the uwu icons for not-found and access-denied are created by @SAWARATSUKI
