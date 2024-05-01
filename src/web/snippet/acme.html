@@ -114,6 +114,29 @@
         </div>
       </div>
     </div>
+    <div class="field">
+      <div class="ui checkbox">
+        <input type="checkbox" id="useDnsChallenge" onchange="toggleDnsChallenge()">
+        <label>Use a DNS Challenge<br>
+      </div>
+    </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <label>DNS Provider</label>
+      <div class="ui selection dropdown" id="dnsProvider">
+        <input type="hidden" name="dnsProvider">
+        <i class="dropdown icon"></i>
+        <div class="default text">Please Choose...</div>
+        <div class="menu">
+          <div class="item" data-value="Dynu">Dynu</div>
+          <!-- <div class="item" data-value="Other DNS Providers">Other DNS Providers</div> -->
+        </div>
+      </div>
+    </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <label>Credentials File Content</label>
+      <textarea id="dnsCredentials" placeholder=""></textarea>
+      <small>Some text explaining how this works</small>
+    </div>
     <div class="field" id="caInput" style="display:none;">
       <label>ACME Server URL</label>
       <input id="caURL" type="text" placeholder="https://example.com/acme/dictionary">
@@ -476,6 +499,14 @@
         $(".multiDomainOnly").show();
       }else{
         $(".multiDomainOnly").hide();
+      }
+    }
+
+    function toggleDnsChallenge(){
+      if ( $("#useDnsChallenge")[0].checked){
+        $(".dnsChallengeOnly").show();
+      }else{
+        $(".dnsChallengeOnly").hide();
       }
     }
 
