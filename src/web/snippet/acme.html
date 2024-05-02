@@ -463,6 +463,8 @@
       var dnsProvider = "";
       var dnsCredentials = "";
       if (dns) {
+        //Filename cannot contain wildcards, and wildcards are possible with DNS challenges
+        filename = filename.replace("*", "_");
         dnsProvider = $("#dnsProvider").dropdown("get value");
         dnsCredentials = $("#dnsCredentials").val();
       }
@@ -480,8 +482,6 @@
           caURL: caURL,
           skipTLS: skipTLSValue,
           dns: dns,
-          dnsProvider: dnsProvider,
-          dnsCredentials: dnsCredentials,
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");

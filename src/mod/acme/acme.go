@@ -24,6 +24,7 @@ import (
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge/http01"
 	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/providers/dns/dynu"
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/utils"
@@ -33,6 +34,7 @@ type CertificateInfoJSON struct {
 	AcmeName string `json:"acme_name"`
 	AcmeUrl  string `json:"acme_url"`
 	SkipTLS  bool   `json:"skip_tls"`
+	DNS      bool   `json:"dns"`
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -79,7 +81,7 @@ func NewACME(acmeServer string, port string, database *database.Database) *ACMEH
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, dns bool) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -145,10 +147,26 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// setup how to receive challenge
-	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer("", a.Port))
-	if err != nil {
-		log.Println(err)
-		return false, err
+	if dns {
+		dynuConfig := dynu.NewDefaultConfig()
+		dynuConfig.APIKey = "yourApiKey"
+
+		provider, err := dynu.NewDNSProviderConfig(dynuConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = client.Challenge.SetDNS01Provider(provider)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+	} else {
+		err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer("", a.Port))
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
 	}
 
 	// New users will need to register
@@ -241,6 +259,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		AcmeName: caName,
 		AcmeUrl:  caUrl,
 		SkipTLS:  skipTLS,
+		DNS:      dns,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -391,8 +410,18 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		skipTLS = true
 	}
 
+	var dns bool
+
+	if dnsString, err := utils.PostPara(r, "dns"); err != nil {
+		dns = false
+	} else if dnsString != "true" {
+		dns = false
+	} else {
+		dns = true
+	}
+
 	domains := strings.Split(domainPara, ",")
-	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS)
+	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS, dns)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
