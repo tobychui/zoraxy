@@ -85,7 +85,9 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 			}
 			certInfoFilename := filepath.Join(tlsCertManager.CertStore, filename+".json")
 			certInfo, err := acme.LoadCertInfoJSON(certInfoFilename)
-			SystemWideLogger.PrintAndLog("Could not Load CertInfoJson", certFilepath, err)
+			if err != nil {
+				SystemWideLogger.PrintAndLog("Could not Load CertInfoJson", certInfoFilename, err)
+			}
 
 			thisCertInfo := CertInfo{
 				Domain:           filename,
