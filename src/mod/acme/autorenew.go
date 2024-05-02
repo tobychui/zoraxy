@@ -404,3 +404,35 @@ func (a *AutoRenewer) HanldeSetEAB(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 
 }
+
+
+// Handle update auto renew DNS configuration
+func (a *AutoRenewer) HanldeSetDNS(w http.ResponseWriter, r *http.Request) {
+	dnsProvider, err := utils.PostPara(r, "dnsProvider")
+	if err != nil {
+		utils.SendErrorResponse(w, "dnsProvider not set")
+		return
+	}
+
+	dnsCredentials, err := utils.PostPara(r, "dnsCredentials")
+	if err != nil {
+		utils.SendErrorResponse(w, "dnsCredentials not set")
+		return
+	}
+
+	filename, err := utils.PostPara(r, "filename")
+	if err != nil {
+		utils.SendErrorResponse(w, "filename not set")
+		return
+	}
+
+	if !a.AcmeHandler.Database.TableExists("acme") {
+		a.AcmeHandler.Database.NewTable("acme")
+	}
+
+	a.AcmeHandler.Database.Write("acme", filename+"_dns_provider", dnsProvider)
+	a.AcmeHandler.Database.Write("acme", filename+"_dns_credentials", dnsCredentials)
+
+	utils.SendOK(w)
+
+}

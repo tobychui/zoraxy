@@ -148,8 +148,25 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// setup how to receive challenge
 	if dns {
+		if !a.Database.TableExists("acme") {
+			a.Database.NewTable("acme")
+			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -1)")
+		}
+
+		if !a.Database.KeyExists("acme", certificateName+"_dns_provider") || !a.Database.KeyExists("acme", certificateName+"_dns_credentials") {
+			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -2)")
+		}
+
+		var dnsCredentials string
+		err := a.Database.Read("acme", certificateName+"_dns_credentials", &dnsCredentials)
+
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+
 		dynuConfig := dynu.NewDefaultConfig()
-		dynuConfig.APIKey = "yourApiKey"
+		dynuConfig.APIKey = dnsCredentials
 
 		provider, err := dynu.NewDNSProviderConfig(dynuConfig)
 		if err != nil {

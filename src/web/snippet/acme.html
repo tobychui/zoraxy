@@ -346,6 +346,7 @@
     $("#obtainButton").click(function() {
       $("#obtainButton").addClass("loading").addClass("disabled");
       updateCertificateEAB();
+      updateCertificateDNS();
       obtainCertificate();
     });
 
@@ -373,8 +374,31 @@
       }
     })
 
+    // Get filename form domains and input
+    function getFilename() {
+      var domains = $("#domainsInput").val();
+      var filename = $("#filenameInput").val();
+      if (filename.trim() == "" && !domains.includes(",")){
+        //Zoraxy filename are the matching name for domains.
+        //Use the same as domains
+        filename = domains;
+      }else if (filename != "" && !domains.includes(",")){
+        //Invalid settings. Force the filename to be same as domain
+        //if there are only 1 domain
+        filename = domains;
+      }else if (filename == "" && domains.includes(",")){
+        parent.msgbox("Filename cannot be empty for certs containing multiple domains.", false, 5000);
+        $("#obtainButton").removeClass("loading").removeClass("disabled");
+        return;
+      }
 
-    // Obtain certificate from API
+      //Filename cannot contain wildcards, and wildcards are possible with DNS challenges
+      filename = filename.replace("*", "_");
+      return filename;
+    }
+      
+
+    // Update EAB values for autorenewal
     function updateCertificateEAB() {
       var ca = $("#ca").dropdown("get value");
       var caURL = "";
@@ -431,29 +455,79 @@
       });
     }
 
+    // Update DNS values for autorenewal
+    function updateCertificateDNS() {
+      var dns = $("#useDnsChallenge")[0].checked;
+      var dnsProvider = "";
+      var dnsCredentials = "";
+
+      if (dns) {
+        dnsProvider = $("#dnsProvider").dropdown("get value");
+        dnsCredentials = $("#dnsCredentials").val();
+
+        if(dnsProvider == "") {
+          parent.msgbox("DNS Provider cannot be empty", false, 5000);
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+          return;
+        }
+
+        
+        if(dnsCredentials == "") {
+          parent.msgbox("DNS Credentials cannot be empty", false, 5000);
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+          return;
+        }
+      } else {
+        return;
+      }
+
+      var filename = getFilename();
+      if (filename == '') {
+        return;
+      }
+
+      $.ajax({
+        url: "/api/acme/autoRenew/setDNS",
+        method: "POST",
+        data: {
+          filename: filename,
+          dnsProvider: dnsProvider,
+          dnsCredentials: dnsCredentials,
+        },
+        success: function(response) {
+          //$("#obtainButton").removeClass("loading").removeClass("disabled");
+          if (response.error) {
+            console.log("Error:", response.error);
+            // Show error message
+            parent.msgbox(response.error, false, 12000);
+          } else {
+            console.log("Certificate DNS updated successfully");
+            // Show success message
+            parent.msgbox("Certificate DNS updated successfully");
+          }
+        },
+        error: function(error) {
+          //$("#obtainButton").removeClass("loading").removeClass("disabled");
+          console.log("Failed to update DNS configuration:", error);
+          parent.msgbox("Failed to update DNS configuration");
+        }
+      });
+    }
+
     // Obtain certificate from API
     function obtainCertificate() {
       var domains = $("#domainsInput").val();
-      var filename = $("#filenameInput").val();
+      var filename = getFilename();
+      if (filename == '') {
+        return;
+      }
       var email = $("#caRegisterEmail").val();
       if (email == ""){
         parent.msgbox("ACME renew email is not set", false)
         $("#obtainButton").removeClass("loading").removeClass("disabled");
         return;
       }
-      if (filename.trim() == "" && !domains.includes(",")){
-        //Zoraxy filename are the matching name for domains.
-        //Use the same as domains
-        filename = domains;
-      }else if (filename != "" && !domains.includes(",")){
-        //Invalid settings. Force the filename to be same as domain
-        //if there are only 1 domain
-        filename = domains;
-      }else if (filename == "" && domains.includes(",")){
-        parent.msgbox("Filename cannot be empty for certs containing multiple domains.", false, 5000);
-        $("#obtainButton").removeClass("loading").removeClass("disabled");
-        return;
-      }
+    
       
       var ca = $("#ca").dropdown("get value");
       var caURL = "";
@@ -467,8 +541,6 @@
       var dnsProvider = "";
       var dnsCredentials = "";
       if (dns) {
-        //Filename cannot contain wildcards, and wildcards are possible with DNS challenges
-        filename = filename.replace("*", "_");
         dnsProvider = $("#dnsProvider").dropdown("get value");
         dnsCredentials = $("#dnsCredentials").val();
       }
