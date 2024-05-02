@@ -344,7 +344,7 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 
 		// Load certificate info for ACME detail
 		certInfoFilename := fmt.Sprintf("%s/%s.json", filepath.Dir(expiredCert.Filepath), certName)
-		certInfo, err := loadCertInfoJSON(certInfoFilename)
+		certInfo, err := LoadCertInfoJSON(certInfoFilename)
 		if err != nil {
 			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, trying org section as ca", certName, err)
 

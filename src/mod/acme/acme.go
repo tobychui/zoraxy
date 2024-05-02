@@ -470,7 +470,7 @@ func IsPortInUse(port int) bool {
 }
 
 // Load cert information from json file
-func loadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
+func LoadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
 	certInfoBytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
