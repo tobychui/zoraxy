@@ -114,7 +114,7 @@
         </div>
       </div>
     </div>
-    <div class="field">
+    <div class="field" id="dnsChallenge">
       <div class="ui checkbox">
         <input type="checkbox" id="useDnsChallenge" onchange="toggleDnsChallenge()">
         <label>Use a DNS Challenge<br>
@@ -355,17 +355,21 @@
         $("#kidInput").show();
         $("#hmacInput").show();
         $("#skipTLS").show();
+        $("#dnsChallenge").hide();
       } else if (this.value == "ZeroSSL") {
         $("#kidInput").show();
         $("#hmacInput").show();
+        $("#dnsChallenge").hide();
       } else if (this.value == "Buypass") {
         $("#kidInput").show();
         $("#hmacInput").show();
+        $("#dnsChallenge").hide()
       }else {
         $("#caInput").hide();
         $("#skipTLS").hide();
         $("#kidInput").hide();
         $("#hmacInput").hide();
+        $("#dnsChallenge").show();
       }
     })
 
