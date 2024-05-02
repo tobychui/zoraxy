@@ -458,6 +458,15 @@
         caURL = $("#caURL").val();
       }
 
+      
+      var dns = $("#useDnsChallenge")[0].checked;
+      var dnsProvider = "";
+      var dnsCredentials = "";
+      if (dns) {
+        dnsProvider = $("#dnsProvider").dropdown("get value");
+        dnsCredentials = $("#dnsCredentials").val();
+      }
+
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
 
       $.ajax({
@@ -470,6 +479,9 @@
           ca: ca,
           caURL: caURL,
           skipTLS: skipTLSValue,
+          dns: dns,
+          dnsProvider: dnsProvider,
+          dnsCredentials: dnsCredentials,
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
