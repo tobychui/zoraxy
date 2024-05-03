@@ -405,7 +405,6 @@ func (a *AutoRenewer) HanldeSetEAB(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 // Handle update auto renew DNS configuration
 func (a *AutoRenewer) HanldeSetDNS(w http.ResponseWriter, r *http.Request) {
 	dnsProvider, err := utils.PostPara(r, "dnsProvider")

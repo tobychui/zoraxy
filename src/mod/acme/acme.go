@@ -24,7 +24,6 @@ import (
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge/http01"
 	"github.com/go-acme/lego/v4/lego"
-	"github.com/go-acme/lego/v4/providers/dns/dynu"
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/utils"
@@ -159,16 +158,19 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 		var dnsCredentials string
 		err := a.Database.Read("acme", certificateName+"_dns_credentials", &dnsCredentials)
-
 		if err != nil {
 			log.Println(err)
 			return false, err
 		}
 
-		dynuConfig := dynu.NewDefaultConfig()
-		dynuConfig.APIKey = dnsCredentials
+		var dnsProvider string
+		err = a.Database.Read("acme", certificateName+"_dns_provider", &dnsProvider)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
 
-		provider, err := dynu.NewDNSProviderConfig(dynuConfig)
+		provider, err := GetDnsChallengeProviderByName(dnsProvider, dnsCredentials)
 		if err != nil {
 			log.Fatal(err)
 		}
