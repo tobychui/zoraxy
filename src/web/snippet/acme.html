@@ -128,6 +128,7 @@
         <div class="default text">Please Choose...</div>
         <div class="menu">
           <!-- List of supported DNS providers with acme-lego 4.16 -->
+          <!-- The file proivders-scraper-util.js can be used to generate the list of providers -->
           <div class="item" data-value="edgedns">Akamai EdgeDNS</div>
           <div class="item" data-value="alidns">Alibaba Cloud DNS</div>
           <div class="item" data-value="allinkl">all-inkl</div>
@@ -204,7 +205,6 @@
           <div class="item" data-value="loopia">Loopia</div>
           <div class="item" data-value="luadns">LuaDNS</div>
           <div class="item" data-value="mailinabox">Mail-in-a-Box</div>
-          <div class="item" data-value="manual">Manual</div>
           <div class="item" data-value="metaname">Metaname</div>
           <div class="item" data-value="mydnsjp">MyDNS.jp</div>
           <div class="item" data-value="mythicbeasts">MythicBeasts</div>
@@ -508,8 +508,7 @@
     })
 
     $("input[name=dnsProvider]").on('change', function() {
-      // This currently only contains some exmaple prefills. Could be extended by a person with patience from here: https://go-acme.github.io/lego/dns/
-      // Some webscraping could be done to get the list of variables from the lego documentation
+      // The file proivders-scraper-util.js can be used to generate the list of providers
       switch(this.value){
         case "edgedns":
           $("#dnsCredentials").val("AKAMAI_ACCESS_TOKEN=\nAKAMAI_CLIENT_SECRET=\nAKAMAI_CLIENT_TOKEN=\nAKAMAI_EDGERC=\nAKAMAI_EDGERC_SECTION=\nAKAMAI_HOST=");
@@ -520,12 +519,391 @@
         case "allinkl":
           $("#dnsCredentials").val("ALL_INKL_LOGIN=\nALL_INKL_PASSWORD=");
           break;
+        case "lightsail":
+          $("#dnsCredentials").val("AWS_ACCESS_KEY_ID=\nAWS_ACCESS_KEY_ID_FILE=\nAWS_SHARED_CREDENTIALS_FILE=\nAWS_SECRET_ACCESS_KEY=\nAWS_SECRET_ACCESS_KEY_FILE=\nAWS_SHARED_CREDENTIALS_FILE=\nDNS_ZONE=");
+          break;
+        case "route53":
+          $("#dnsCredentials").val("AWS_ACCESS_KEY_ID=\nAWS_ACCESS_KEY_ID_FILE=\nAWS_SHARED_CREDENTIALS_FILE=\nAWS_ASSUME_ROLE_ARN=\nAWS_ASSUME_ROLE_ARN_FILE=\nAWS_EXTERNAL_ID=\nAWS_EXTERNAL_ID_FILE=\nAWS_HOSTED_ZONE_ID=\nAWS_PROFILE=\nAWS_PROFILE_FILE=\nAWS_REGION=\nAWS_REGION_FILE=\nAWS_SDK_LOAD_CONFIG=\nAWS_SDK_LOAD_CONFIG_FILE=\nAWS_SECRET_ACCESS_KEY=\nAWS_SECRET_ACCESS_KEY_FILE=\nAWS_SHARED_CREDENTIALS_FILE=");
+          break;
+        case "arvancloud":
+          $("#dnsCredentials").val("ARVANCLOUD_API_KEY=");
+          break;
+        case "auroradns":
+          $("#dnsCredentials").val("AURORA_API_KEY=\nAURORA_SECRET=");
+          break;
+        case "autodns":
+          $("#dnsCredentials").val("AUTODNS_API_PASSWORD=\nAUTODNS_API_USER=");
+          break;
+        case "azure":
+          $("#dnsCredentials").val("AZURE_CLIENT_ID=\nAZURE_CLIENT_SECRET=\nAZURE_ENVIRONMENT=\nAZURE_RESOURCE_GROUP=\nAZURE_SUBSCRIPTION_ID=\nAZURE_TENANT_ID=\ninstance metadata service=");
+          break;
+        case "azuredns":
+          $("#dnsCredentials").val("AZURE_CLIENT_CERTIFICATE_PATH=\nAZURE_CLIENT_ID=\nAZURE_CLIENT_SECRET=\nAZURE_TENANT_ID=");
+          break;
+        case "bindman":
+          $("#dnsCredentials").val("BINDMAN_MANAGER_ADDRESS=");
+          break;
+        case "bluecat":
+          $("#dnsCredentials").val("BLUECAT_CONFIG_NAME=\nBLUECAT_DNS_VIEW=\nBLUECAT_PASSWORD=\nBLUECAT_SERVER_URL=\nBLUECAT_USER_NAME=");
+          break;
+        case "brandit":
+          $("#dnsCredentials").val("BRANDIT_API_KEY=\nBRANDIT_API_USERNAME=");
+          break;
+        case "bunny":
+          $("#dnsCredentials").val("BUNNY_API_KEY=");
+          break;
+        case "checkdomain":
+          $("#dnsCredentials").val("CHECKDOMAIN_TOKEN=");
+          break;
+        case "civo":
+          $("#dnsCredentials").val("CIVO_TOKEN=");
+          break;
+        case "cloudru":
+          $("#dnsCredentials").val("CLOUDRU_KEY_ID=\nCLOUDRU_SECRET=\nCLOUDRU_SERVICE_INSTANCE_ID=");
+          break;
+        case "clouddns":
+          $("#dnsCredentials").val("CLOUDDNS_CLIENT_ID=\nCLOUDDNS_EMAIL=\nCLOUDDNS_PASSWORD=");
+          break;
+        case "cloudflare":
+          $("#dnsCredentials").val("CF_API_EMAIL=\nCF_API_KEY=\nCF_DNS_API_TOKEN=\nCF_ZONE_API_TOKEN=\nCLOUDFLARE_API_KEY=\nCLOUDFLARE_DNS_API_TOKEN=\nCLOUDFLARE_EMAIL=\nCLOUDFLARE_ZONE_API_TOKEN=");
+          break;
+        case "cloudns":
+          $("#dnsCredentials").val("CLOUDNS_AUTH_ID=\nCLOUDNS_AUTH_PASSWORD=");
+          break;
+        case "cloudxns":
+          $("#dnsCredentials").val("CLOUDXNS_API_KEY=\nCLOUDXNS_SECRET_KEY=");
+          break;
+        case "conoha":
+          $("#dnsCredentials").val("CONOHA_API_PASSWORD=\nCONOHA_API_USERNAME=\nCONOHA_TENANT_ID=");
+          break;
+        case "constellix":
+          $("#dnsCredentials").val("CONSTELLIX_API_KEY=\nCONSTELLIX_SECRET_KEY=");
+          break;
+        case "cpanel":
+          $("#dnsCredentials").val("CPANEL_BASE_URL=\nCPANEL_TOKEN=\nCPANEL_USERNAME=");
+          break;
+        case "derak":
+          $("#dnsCredentials").val("DERAK_API_KEY=");
+          break;
+        case "desec":
+          $("#dnsCredentials").val("DESEC_TOKEN=");
+          break;
+        case "designate":
+          $("#dnsCredentials").val("OS_APPLICATION_CREDENTIAL_ID=\nOS_APPLICATION_CREDENTIAL_NAME=\nOS_APPLICATION_CREDENTIAL_SECRET=\nOS_AUTH_URL=\nOS_PASSWORD=\nOS_PROJECT_NAME=\nOS_REGION_NAME=\nOS_USERNAME=\nOS_USER_ID=");
+          break;
+        case "digitalocean":
+          $("#dnsCredentials").val("DO_AUTH_TOKEN=");
+          break;
+        case "dnsmadeeasy":
+          $("#dnsCredentials").val("DNSMADEEASY_API_KEY=\nDNSMADEEASY_API_SECRET=");
+          break;
+        case "dnshomede":
+          $("#dnsCredentials").val("DNSHOMEDE_CREDENTIALS=");
+          break;
+        case "dnsimple":
+          $("#dnsCredentials").val("DNSIMPLE_OAUTH_TOKEN=");
+          break;
+        case "dnspod":
+          $("#dnsCredentials").val("DNSPOD_API_KEY=");
+          break;
+        case "dode":
+          $("#dnsCredentials").val("DODE_TOKEN=");
+          break;
+        case "domeneshop":
+          $("#dnsCredentials").val("DOMENESHOP_API_SECRET=\nDOMENESHOP_API_TOKEN=");
+          break;
+        case "dreamhost":
+          $("#dnsCredentials").val("DREAMHOST_API_KEY=");
+          break;
+        case "duckdns":
+          $("#dnsCredentials").val("DUCKDNS_TOKEN=");
+          break;
+        case "dyn":
+          $("#dnsCredentials").val("DYN_CUSTOMER_NAME=\nDYN_PASSWORD=\nDYN_USER_NAME=");
+          break;
         case "dynu":
           $("#dnsCredentials").val("DYNU_API_KEY=");
           break;
-        default:
-          $("#dnsCredentials").val('See here for Variable List:\nhttps://go-acme.github.io/lego/dns/'+this.value+'\nSuch as:\n'+this.value.toUpperCase()+'_YYYY=XXX');
-      }
+        case "easydns":
+          $("#dnsCredentials").val("EASYDNS_KEY=\nEASYDNS_TOKEN=");
+          break;
+        case "efficientip":
+          $("#dnsCredentials").val("EFFICIENTIP_DNS_NAME=\nEFFICIENTIP_HOSTNAME=\nEFFICIENTIP_PASSWORD=\nEFFICIENTIP_USERNAME=");
+          break;
+        case "epik":
+          $("#dnsCredentials").val("EPIK_SIGNATURE=");
+          break;
+        case "exoscale":
+          $("#dnsCredentials").val("EXOSCALE_API_KEY=\nEXOSCALE_API_SECRET=");
+          break;
+        case "exec":
+          $("#dnsCredentials").val("EXEC_MODE=\nRAW=\nEXEC_PATH=");
+          break;
+        case "freemyip":
+          $("#dnsCredentials").val("FREEMYIP_TOKEN=");
+          break;
+        case "gcore":
+          $("#dnsCredentials").val("GCORE_PERMANENT_API_TOKEN=");
+          break;
+        case "gandi":
+          $("#dnsCredentials").val("GANDI_API_KEY=");
+          break;
+        case "gandiv5":
+          $("#dnsCredentials").val("GANDIV5_API_KEY=\nGANDIV5_PERSONAL_ACCESS_TOKEN=");
+          break;
+        case "glesys":
+          $("#dnsCredentials").val("GLESYS_API_KEY=\nGLESYS_API_USER=");
+          break;
+        case "godaddy":
+          $("#dnsCredentials").val("GODADDY_API_KEY=\nGODADDY_API_SECRET=");
+          break;
+        case "gcloud":
+          $("#dnsCredentials").val("Application Default Credentials=\nGCE_PROJECT=\nGCE_SERVICE_ACCOUNT=\nGCE_SERVICE_ACCOUNT_FILE=");
+          break;
+        case "googledomains":
+          $("#dnsCredentials").val("GOOGLE_DOMAINS_ACCESS_TOKEN=");
+          break;
+        case "hetzner":
+          $("#dnsCredentials").val("HETZNER_API_KEY=");
+          break;
+        case "hostingde":
+          $("#dnsCredentials").val("HOSTINGDE_API_KEY=");
+          break;
+        case "hosttech":
+          $("#dnsCredentials").val("HOSTTECH_API_KEY=\nHOSTTECH_PASSWORD=");
+          break;
+        case "httpreq":
+          $("#dnsCredentials").val("HTTPREQ_ENDPOINT=\nHTTPREQ_MODE=\nRAW=");
+          break;
+        case "httpnet":
+          $("#dnsCredentials").val("HTTPNET_API_KEY=");
+          break;
+        case "hurricane":
+          $("#dnsCredentials").val("HURRICANE_TOKENS=");
+          break;
+        case "hyperone":
+          $("#dnsCredentials").val("HYPERONE_API_URL=\nHYPERONE_LOCATION_ID=\nHYPERONE_PASSPORT_LOCATION=\nHYPERONE_POLLING_INTERVAL=\nHYPERONE_PROPAGATION_TIMEOUT=\nHYPERONE_TTL=");
+          break;
+        case "ibmcloud":
+          $("#dnsCredentials").val("SOFTLAYER_API_KEY=\nSOFTLAYER_USERNAME=");
+          break;
+        case "iijdpf":
+          $("#dnsCredentials").val("IIJ_DPF_API_TOKEN=\nIIJ_DPF_DPM_SERVICE_CODE=");
+          break;
+        case "infoblox":
+          $("#dnsCredentials").val("INFOBLOX_HOST=\nINFOBLOX_PASSWORD=\nINFOBLOX_USERNAME=");
+          break;
+        case "infomaniak":
+          $("#dnsCredentials").val("INFOMANIAK_ACCESS_TOKEN=");
+          break;
+        case "iij":
+          $("#dnsCredentials").val("IIJ_API_ACCESS_KEY=\nIIJ_API_SECRET_KEY=\nIIJ_DO_SERVICE_CODE=");
+          break;
+        case "internetbs":
+          $("#dnsCredentials").val("INTERNET_BS_API_KEY=\nINTERNET_BS_PASSWORD=");
+          break;
+        case "inwx":
+          $("#dnsCredentials").val("INWX_PASSWORD=\nINWX_USERNAME=");
+          break;
+        case "ionos":
+          $("#dnsCredentials").val("IONOS_API_KEY=\n&lt;prefix&gt;.&lt;secret&gt;=");
+          break;
+        case "ipv64":
+          $("#dnsCredentials").val("IPV64_API_KEY=");
+          break;
+        case "iwantmyname":
+          $("#dnsCredentials").val("IWANTMYNAME_PASSWORD=\nIWANTMYNAME_USERNAME=");
+          break;
+        case "joker":
+          $("#dnsCredentials").val("JOKER_API_KEY=\nJOKER_API_MODE=\nJOKER_PASSWORD=\nJOKER_USERNAME=");
+          break;
+        case "acme-dns":
+          $("#dnsCredentials").val("ACME_DNS_API_BASE=\nACME_DNS_STORAGE_PATH=");
+          break;
+        case "liara":
+          $("#dnsCredentials").val("LIARA_API_KEY=");
+          break;
+        case "linode":
+          $("#dnsCredentials").val("LINODE_TOKEN=");
+          break;
+        case "liquidweb":
+          $("#dnsCredentials").val("LWAPI_PASSWORD=\nLWAPI_USERNAME=");
+          break;
+        case "loopia":
+          $("#dnsCredentials").val("LOOPIA_API_PASSWORD=\nLOOPIA_API_USER=");
+          break;
+        case "luadns":
+          $("#dnsCredentials").val("LUADNS_API_TOKEN=\nLUADNS_API_USERNAME=");
+          break;
+        case "mailinabox":
+          $("#dnsCredentials").val("MAILINABOX_BASE_URL=\nMAILINABOX_EMAIL=\nMAILINABOX_PASSWORD=");
+          break;
+        case "metaname":
+          $("#dnsCredentials").val("METANAME_ACCOUNT_REFERENCE=\nMETANAME_API_KEY=");
+          break;
+        case "mydnsjp":
+          $("#dnsCredentials").val("MYDNSJP_MASTER_ID=\nMYDNSJP_PASSWORD=");
+          break;
+        case "mythicbeasts":
+          $("#dnsCredentials").val("MYTHICBEASTS_PASSWORD=\nMYTHICBEASTS_USERNAME=");
+          break;
+        case "namedotcom":
+          $("#dnsCredentials").val("NAMECOM_API_TOKEN=\nNAMECOM_USERNAME=");
+          break;
+        case "namecheap":
+          $("#dnsCredentials").val("NAMECHEAP_API_KEY=\nNAMECHEAP_API_USER=");
+          break;
+        case "namesilo":
+          $("#dnsCredentials").val("NAMESILO_API_KEY=");
+          break;
+        case "nearlyfreespeech":
+          $("#dnsCredentials").val("NEARLYFREESPEECH_API_KEY=\nNEARLYFREESPEECH_LOGIN=");
+          break;
+        case "netcup":
+          $("#dnsCredentials").val("NETCUP_API_KEY=\nNETCUP_API_PASSWORD=\nNETCUP_CUSTOMER_NUMBER=");
+          break;
+        case "netlify":
+          $("#dnsCredentials").val("NETLIFY_TOKEN=");
+          break;
+        case "nicmanager":
+          $("#dnsCredentials").val("NICMANAGER_API_EMAIL=\nNICMANAGER_API_LOGIN=\nNICMANAGER_API_PASSWORD=\nNICMANAGER_API_USERNAME=");
+          break;
+        case "nifcloud":
+          $("#dnsCredentials").val("NIFCLOUD_ACCESS_KEY_ID=\nNIFCLOUD_SECRET_ACCESS_KEY=");
+          break;
+        case "njalla":
+          $("#dnsCredentials").val("NJALLA_TOKEN=");
+          break;
+        case "nodion":
+          $("#dnsCredentials").val("NODION_API_TOKEN=");
+          break;
+        case "ns1":
+          $("#dnsCredentials").val("NS1_API_KEY=");
+          break;
+        case "otc":
+          $("#dnsCredentials").val("OTC_DOMAIN_NAME=\nOTC_IDENTITY_ENDPOINT=\nOTC_PASSWORD=\nOTC_PROJECT_NAME=\nOTC_USER_NAME=");
+          break;
+        case "oraclecloud":
+          $("#dnsCredentials").val("OCI_COMPARTMENT_OCID=\nOCI_PRIVKEY_FILE=\nOCI_PRIVKEY_PASS=\nOCI_PUBKEY_FINGERPRINT=\nOCI_REGION=\nOCI_TENANCY_OCID=\nOCI_USER_OCID=");
+          break;
+        case "ovh":
+          $("#dnsCredentials").val("OVH_APPLICATION_KEY=\nOVH_APPLICATION_SECRET=\nOVH_CONSUMER_KEY=\nOVH_ENDPOINT=");
+          break;
+        case "plesk":
+          $("#dnsCredentials").val("PLESK_PASSWORD=\nPLESK_SERVER_BASE_URL=\nPLESK_USERNAME=");
+          break;
+        case "porkbun":
+          $("#dnsCredentials").val("PORKBUN_API_KEY=\nPORKBUN_SECRET_API_KEY=");
+          break;
+        case "pdns":
+          $("#dnsCredentials").val("PDNS_API_KEY=\nPDNS_API_URL=");
+          break;
+        case "rackspace":
+          $("#dnsCredentials").val("RACKSPACE_API_KEY=\nRACKSPACE_USER=");
+          break;
+        case "rcodezero":
+          $("#dnsCredentials").val("RCODEZERO_API_TOKEN=");
+          break;
+        case "regru":
+          $("#dnsCredentials").val("REGRU_PASSWORD=\nREGRU_USERNAME=");
+          break;
+        case "rfc2136":
+          $("#dnsCredentials").val("RFC2136_NAMESERVER=\nRFC2136_TSIG_ALGORITHM=\nRFC2136_TSIG*=\nRFC2136_TSIG_KEY=\nRFC2136_TSIG*=\nRFC2136_TSIG_SECRET=\n RFC2136_TSIG*=");
+          break;
+        case "rimuhosting":
+          $("#dnsCredentials").val("RIMUHOSTING_API_KEY=");
+          break;
+        case "sakuracloud":
+          $("#dnsCredentials").val("SAKURACLOUD_ACCESS_TOKEN=\nSAKURACLOUD_ACCESS_TOKEN_SECRET=");
+          break;
+        case "scaleway":
+          $("#dnsCredentials").val("SCW_PROJECT_ID=\nSCW_SECRET_KEY=");
+          break;
+        case "selectel":
+          $("#dnsCredentials").val("SELECTEL_API_TOKEN=");
+          break;
+        case "selectelv2":
+          $("#dnsCredentials").val("SELECTELV2_ACCOUNT_ID=\nSELECTELV2_PASSWORD=\nSELECTELV2_PROJECT_ID=\nSELECTELV2_USERNAME=");
+          break;
+        case "servercow":
+          $("#dnsCredentials").val("SERVERCOW_PASSWORD=\nSERVERCOW_USERNAME=");
+          break;
+        case "shellrent":
+          $("#dnsCredentials").val("SHELLRENT_TOKEN=\nSHELLRENT_USERNAME=");
+          break;
+        case "simply":
+          $("#dnsCredentials").val("SIMPLY_ACCOUNT_NAME=\nSIMPLY_API_KEY=");
+          break;
+        case "sonic":
+          $("#dnsCredentials").val("SONIC_API_KEY=\nSONIC_USER_ID=");
+          break;
+        case "stackpath":
+          $("#dnsCredentials").val("STACKPATH_CLIENT_ID=\nSTACKPATH_CLIENT_SECRET=\nSTACKPATH_STACK_ID=");
+          break;
+        case "tencentcloud":
+          $("#dnsCredentials").val("TENCENTCLOUD_SECRET_ID=\nTENCENTCLOUD_SECRET_KEY=");
+          break;
+        case "transip":
+          $("#dnsCredentials").val("TRANSIP_ACCOUNT_NAME=\nTRANSIP_PRIVATE_KEY_PATH=");
+          break;
+        case "safedns":
+          $("#dnsCredentials").val("SAFEDNS_AUTH_TOKEN=");
+          break;
+        case "ultradns":
+          $("#dnsCredentials").val("ULTRADNS_PASSWORD=\nULTRADNS_USERNAME=");
+          break;
+        case "variomedia":
+          $("#dnsCredentials").val("VARIOMEDIA_API_TOKEN=");
+          break;
+        case "vegadns":
+          $("#dnsCredentials").val("SECRET_VEGADNS_KEY=\nSECRET_VEGADNS_SECRET=\nVEGADNS_URL=");
+          break;
+        case "vercel":
+          $("#dnsCredentials").val("VERCEL_API_TOKEN=");
+          break;
+        case "versio":
+          $("#dnsCredentials").val("VERSIO_PASSWORD=\nVERSIO_USERNAME=");
+          break;
+        case "vinyldns":
+          $("#dnsCredentials").val("VINYLDNS_ACCESS_KEY=\nVINYLDNS_HOST=\nVINYLDNS_SECRET_KEY=");
+          break;
+        case "vkcloud":
+          $("#dnsCredentials").val("VK_CLOUD_PASSWORD=\nVK_CLOUD_PROJECT_ID=\nVK_CLOUD_USERNAME=");
+          break;
+        case "vscale":
+          $("#dnsCredentials").val("VSCALE_API_TOKEN=");
+          break;
+        case "vultr":
+          $("#dnsCredentials").val("VULTR_API_KEY=");
+          break;
+        case "webnames":
+          $("#dnsCredentials").val("WEBNAMES_API_KEY=");
+          break;
+        case "httpreq":
+          $("#dnsCredentials").val("HTTPREQ_ENDPOINT=\nHTTPREQ_MODE=\nRAW=");
+          break;
+        case "websupport":
+          $("#dnsCredentials").val("WEBSUPPORT_API_KEY=\nWEBSUPPORT_SECRET=");
+          break;
+        case "wedos":
+          $("#dnsCredentials").val("WEDOS_USERNAME=\nWEDOS_WAPI_PASSWORD=");
+          break;
+        case "yandex360":
+          $("#dnsCredentials").val("YANDEX360_OAUTH_TOKEN=\nYANDEX360_ORG_ID=");
+          break;
+        case "yandexcloud":
+          $("#dnsCredentials").val("YANDEX_CLOUD_FOLDER_ID=\nYANDEX_CLOUD_IAM_TOKEN=\ndns.admin=");
+          break;
+        case "yandex":
+          $("#dnsCredentials").val("YANDEX_PDD_TOKEN=");
+          break;
+        case "zoneee":
+          $("#dnsCredentials").val("ZONEEE_API_KEY=\nZONEEE_API_USER=");
+          break;
+        case "zonomi":
+          $("#dnsCredentials").val("ZONOMI_API_KEY=");
+          break;
+              }
     })
 
     // Get filename form domains and input
