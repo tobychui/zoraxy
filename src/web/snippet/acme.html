@@ -127,15 +127,148 @@
         <i class="dropdown icon"></i>
         <div class="default text">Please Choose...</div>
         <div class="menu">
+          <!-- List of supported DNS providers with acme-lego 4.16 -->
+          <div class="item" data-value="edgedns">Akamai EdgeDNS</div>
+          <div class="item" data-value="alidns">Alibaba Cloud DNS</div>
+          <div class="item" data-value="allinkl">all-inkl</div>
+          <div class="item" data-value="lightsail">Amazon Lightsail</div>
+          <div class="item" data-value="route53">Amazon Route 53</div>
+          <div class="item" data-value="arvancloud">ArvanCloud</div>
+          <div class="item" data-value="auroradns">Aurora DNS</div>
+          <div class="item" data-value="autodns">Autodns</div>
+          <div class="item" data-value="azure">Azure (deprecated)</div>
+          <div class="item" data-value="azuredns">Azure DNS</div>
+          <div class="item" data-value="bindman">Bindman</div>
+          <div class="item" data-value="bluecat">Bluecat</div>
+          <div class="item" data-value="brandit">Brandit</div>
+          <div class="item" data-value="bunny">Bunny</div>
+          <div class="item" data-value="checkdomain">Checkdomain</div>
+          <div class="item" data-value="civo">Civo</div>
+          <div class="item" data-value="cloudru">Cloud.ru</div>
+          <div class="item" data-value="clouddns">CloudDNS</div>
+          <div class="item" data-value="cloudflare">Cloudflare</div>
+          <div class="item" data-value="cloudns">ClouDNS</div>
+          <div class="item" data-value="cloudxns">CloudXNS</div>
+          <div class="item" data-value="conoha">ConoHa</div>
+          <div class="item" data-value="constellix">Constellix</div>
+          <div class="item" data-value="cpanel">CPanel/WHM</div>
+          <div class="item" data-value="derak">Derak Cloud</div>
+          <div class="item" data-value="desec">deSEC.io</div>
+          <div class="item" data-value="designate">Designate DNSaaS for Openstack</div>
+          <div class="item" data-value="digitalocean">Digital Ocean</div>
+          <div class="item" data-value="dnsmadeeasy">DNS Made Easy</div>
+          <div class="item" data-value="dnshomede">dnsHome.de</div>
+          <div class="item" data-value="dnsimple">DNSimple</div>
+          <div class="item" data-value="dnspod">DNSPod (deprecated)</div>
+          <div class="item" data-value="dode">Domain Offensive (do.de)</div>
+          <div class="item" data-value="domeneshop">Domeneshop</div>
+          <div class="item" data-value="dreamhost">DreamHost</div>
+          <div class="item" data-value="duckdns">Duck DNS</div>
+          <div class="item" data-value="dyn">Dyn</div>
           <div class="item" data-value="dynu">Dynu</div>
-          <!-- <div class="item" data-value="Other DNS Providers">Other DNS Providers</div> -->
+          <div class="item" data-value="easydns">EasyDNS</div>
+          <div class="item" data-value="efficientip">Efficient IP</div>
+          <div class="item" data-value="epik">Epik</div>
+          <div class="item" data-value="exoscale">Exoscale</div>
+          <div class="item" data-value="exec">External program</div>
+          <div class="item" data-value="freemyip">freemyip.com</div>
+          <div class="item" data-value="gcore">G-Core</div>
+          <div class="item" data-value="gandi">Gandi</div>
+          <div class="item" data-value="gandiv5">Gandi Live DNS (v5)</div>
+          <div class="item" data-value="glesys">Glesys</div>
+          <div class="item" data-value="godaddy">Go Daddy</div>
+          <div class="item" data-value="gcloud">Google Cloud</div>
+          <div class="item" data-value="googledomains">Google Domains</div>
+          <div class="item" data-value="hetzner">Hetzner</div>
+          <div class="item" data-value="hostingde">Hosting.de</div>
+          <div class="item" data-value="hosttech">Hosttech</div>
+          <div class="item" data-value="httpreq">HTTP request</div>
+          <div class="item" data-value="httpnet">http.net</div>
+          <div class="item" data-value="hurricane">Hurricane Electric DNS</div>
+          <div class="item" data-value="hyperone">HyperOne</div>
+          <div class="item" data-value="ibmcloud">IBM Cloud (SoftLayer)</div>
+          <div class="item" data-value="iijdpf">IIJ DNS Platform Service</div>
+          <div class="item" data-value="infoblox">Infoblox</div>
+          <div class="item" data-value="infomaniak">Infomaniak</div>
+          <div class="item" data-value="iij">Internet Initiative Japan</div>
+          <div class="item" data-value="internetbs">Internet.bs</div>
+          <div class="item" data-value="inwx">INWX</div>
+          <div class="item" data-value="ionos">Ionos</div>
+          <div class="item" data-value="ipv64">IPv64</div>
+          <div class="item" data-value="iwantmyname">iwantmyname</div>
+          <div class="item" data-value="joker">Joker</div>
+          <div class="item" data-value="acme-dns">Joohoi's ACME-DNS</div>
+          <div class="item" data-value="liara">Liara</div>
+          <div class="item" data-value="linode">Linode (v4)</div>
+          <div class="item" data-value="liquidweb">Liquid Web</div>
+          <div class="item" data-value="loopia">Loopia</div>
+          <div class="item" data-value="luadns">LuaDNS</div>
+          <div class="item" data-value="mailinabox">Mail-in-a-Box</div>
+          <div class="item" data-value="manual">Manual</div>
+          <div class="item" data-value="metaname">Metaname</div>
+          <div class="item" data-value="mydnsjp">MyDNS.jp</div>
+          <div class="item" data-value="mythicbeasts">MythicBeasts</div>
+          <div class="item" data-value="namedotcom">Name.com</div>
+          <div class="item" data-value="namecheap">Namecheap</div>
+          <div class="item" data-value="namesilo">Namesilo</div>
+          <div class="item" data-value="nearlyfreespeech">NearlyFreeSpeech.NET</div>
+          <div class="item" data-value="netcup">Netcup</div>
+          <div class="item" data-value="netlify">Netlify</div>
+          <div class="item" data-value="nicmanager">Nicmanager</div>
+          <div class="item" data-value="nifcloud">NIFCloud</div>
+          <div class="item" data-value="njalla">Njalla</div>
+          <div class="item" data-value="nodion">Nodion</div>
+          <div class="item" data-value="ns1">NS1</div>
+          <div class="item" data-value="otc">Open Telekom Cloud</div>
+          <div class="item" data-value="oraclecloud">Oracle Cloud</div>
+          <div class="item" data-value="ovh">OVH</div>
+          <div class="item" data-value="plesk">plesk.com</div>
+          <div class="item" data-value="porkbun">Porkbun</div>
+          <div class="item" data-value="pdns">PowerDNS</div>
+          <div class="item" data-value="rackspace">Rackspace</div>
+          <div class="item" data-value="rcodezero">RcodeZero</div>
+          <div class="item" data-value="regru">reg.ru</div>
+          <div class="item" data-value="rfc2136">RFC2136</div>
+          <div class="item" data-value="rimuhosting">RimuHosting</div>
+          <div class="item" data-value="sakuracloud">Sakura Cloud</div>
+          <div class="item" data-value="scaleway">Scaleway</div>
+          <div class="item" data-value="selectel">Selectel</div>
+          <div class="item" data-value="servercow">Servercow</div>
+          <div class="item" data-value="shellrent">Shellrent</div>
+          <div class="item" data-value="simply">Simply.com</div>
+          <div class="item" data-value="sonic">Sonic</div>
+          <div class="item" data-value="stackpath">Stackpath</div>
+          <div class="item" data-value="tencentcloud">Tencent Cloud DNS</div>
+          <div class="item" data-value="transip">TransIP</div>
+          <div class="item" data-value="safedns">UKFast SafeDNS</div>
+          <div class="item" data-value="ultradns">Ultradns</div>
+          <div class="item" data-value="variomedia">Variomedia</div>
+          <div class="item" data-value="vegadns">VegaDNS</div>
+          <div class="item" data-value="vercel">Vercel</div>
+          <div class="item" data-value="versio">Versio.[nl|eu|uk]</div>
+          <div class="item" data-value="vinyldns">VinylDNS</div>
+          <div class="item" data-value="vkcloud">VK Cloud</div>
+          <div class="item" data-value="vscale">Vscale</div>
+          <div class="item" data-value="vultr">Vultr</div>
+          <div class="item" data-value="webnames">Webnames</div>
+          <div class="item" data-value="websupport">Websupport</div>
+          <div class="item" data-value="wedos">WEDOS</div>
+          <div class="item" data-value="yandex360">Yandex 360</div>
+          <div class="item" data-value="yandexcloud">Yandex Cloud</div>
+          <div class="item" data-value="yandex">Yandex PDD</div>
+          <div class="item" data-value="zoneee">Zone.ee</div>
+          <div class="item" data-value="zonomi">Zonomi</div>
         </div>
       </div>
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <label>Credentials File Content</label>
       <textarea id="dnsCredentials" placeholder=""></textarea>
-      <small>Some text explaining how this works</small>
+      <small>For more information on the supported DNS Providers and their attirbutes look <a href="https://go-acme.github.io/lego/dns/" target="_blank">here</a>! </small>
+      <div class="ui negative message">
+        <i class="icon exclamation triangle"></i>
+        These credentials will be stored as plaintext in the database and in environment variables!
+      </div>
     </div>
     <div class="field" id="caInput" style="display:none;">
       <label>ACME Server URL</label>
@@ -374,6 +507,27 @@
       }
     })
 
+    $("input[name=dnsProvider]").on('change', function() {
+      // This currently only contains some exmaple prefills. Could be extended by a person with patience from here: https://go-acme.github.io/lego/dns/
+      // Some webscraping could be done to get the list of variables from the lego documentation
+      switch(this.value){
+        case "edgedns":
+          $("#dnsCredentials").val("AKAMAI_ACCESS_TOKEN=\nAKAMAI_CLIENT_SECRET=\nAKAMAI_CLIENT_TOKEN=\nAKAMAI_EDGERC=\nAKAMAI_EDGERC_SECTION=\nAKAMAI_HOST=");
+          break;
+        case "alidns":
+          $("#dnsCredentials").val("ALICLOUD_ACCESS_KEY=\nALICLOUD_RAM_ROLE=\nALICLOUD_SECRET_KEY=\nALICLOUD_SECURITY_TOKEN=");
+          break;
+        case "allinkl":
+          $("#dnsCredentials").val("ALL_INKL_LOGIN=\nALL_INKL_PASSWORD=");
+          break;
+        case "dynu":
+          $("#dnsCredentials").val("DYNU_API_KEY=");
+          break;
+        default:
+          $("#dnsCredentials").val('See here for Variable List:\nhttps://go-acme.github.io/lego/dns/'+this.value+'\nSuch as:\n'+this.value.toUpperCase()+'_YYYY=XXX');
+      }
+    })
+
     // Get filename form domains and input
     function getFilename() {
       var domains = $("#domainsInput").val();
@@ -501,9 +655,9 @@
             // Show error message
             parent.msgbox(response.error, false, 12000);
           } else {
-            console.log("Certificate DNS updated successfully");
+            console.log("Certificate DNS Credentials updated successfully");
             // Show success message
-            parent.msgbox("Certificate DNS updated successfully");
+            parent.msgbox("Certificate DNS Credentials updated successfully");
           }
         },
         error: function(error) {
@@ -538,13 +692,6 @@
 
       
       var dns = $("#useDnsChallenge")[0].checked;
-      var dnsProvider = "";
-      var dnsCredentials = "";
-      if (dns) {
-        dnsProvider = $("#dnsProvider").dropdown("get value");
-        dnsCredentials = $("#dnsCredentials").val();
-      }
-
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
 
       $.ajax({

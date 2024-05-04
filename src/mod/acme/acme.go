@@ -172,7 +172,8 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 		provider, err := GetDnsChallengeProviderByName(dnsProvider, dnsCredentials)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			return false, err
 		}
 
 		err = client.Challenge.SetDNS01Provider(provider)
