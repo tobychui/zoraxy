@@ -21,7 +21,9 @@ func setCredentialsIntoEnvironmentVariables(credentials map[string]string) {
 	for key, value := range credentials {
 		err := os.Setenv(key, value)
 		if err != nil {
-			log.Printf("Failed to set environment variable %s: %v", key, err)
+			log.Println("[ERR] Failed to set environment variable %s: %v", key, err)
+		} else {
+			log.Println("[INFO] Environment variable %s set successfully", key)
 		}
 	}
 }
