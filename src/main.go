@@ -52,7 +52,7 @@ var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.3"
+	version     = "3.0.4"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
