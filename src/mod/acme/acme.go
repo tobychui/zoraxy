@@ -33,7 +33,7 @@ type CertificateInfoJSON struct {
 	AcmeName string `json:"acme_name"`
 	AcmeUrl  string `json:"acme_url"`
 	SkipTLS  bool   `json:"skip_tls"`
-	DNS      bool   `json:"dns"`
+	UseDNS   bool   `json:"dns"`
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -80,7 +80,7 @@ func NewACME(acmeServer string, port string, database *database.Database) *ACMEH
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, dns bool) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -146,7 +146,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// setup how to receive challenge
-	if dns {
+	if useDNS {
 		if !a.Database.TableExists("acme") {
 			a.Database.NewTable("acme")
 			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -1)")
@@ -279,7 +279,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		AcmeName: caName,
 		AcmeUrl:  caUrl,
 		SkipTLS:  skipTLS,
-		DNS:      dns,
+		UseDNS:   useDNS,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -392,6 +392,8 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
 	}
+	//Make sure the wildcard * do not goes into the filename
+	filename = strings.ReplaceAll(filename, "*", "_")
 
 	email, err := utils.PostPara(r, "email")
 	if err != nil {

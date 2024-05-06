@@ -51,21 +51,30 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 	}
 
 	// Test an IP address that should return a valid country code
-	ip := "8.8.8.8"
-	expected := "US"
-	info, err := store.ResolveCountryCodeFromIP(ip)
-	if err != nil {
-		t.Errorf("error resolving country code for IP %s: %v", ip, err)
-		return
+	knownIpCountryMap := [][]string{
+		{"3.224.220.101", "US"},
+		{"176.113.115.113", "RU"},
+		{"65.21.233.213", "FI"},
+		{"94.23.207.193", "FR"},
 	}
-	if info.CountryIsoCode != expected {
-		t.Errorf("expected country code %s, but got %s for IP %s", expected, info.CountryIsoCode, ip)
+
+	for _, testcase := range knownIpCountryMap {
+		ip := testcase[0]
+		expected := testcase[1]
+		info, err := store.ResolveCountryCodeFromIP(ip)
+		if err != nil {
+			t.Errorf("error resolving country code for IP %s: %v", ip, err)
+			return
+		}
+		if info.CountryIsoCode != expected {
+			t.Errorf("expected country code %s, but got %s for IP %s", expected, info.CountryIsoCode, ip)
+		}
 	}
 
 	// Test an IP address that should return an empty country code
-	ip = "127.0.0.1"
-	expected = ""
-	info, err = store.ResolveCountryCodeFromIP(ip)
+	ip := "127.0.0.1"
+	expected := ""
+	info, err := store.ResolveCountryCodeFromIP(ip)
 	if err != nil {
 		t.Errorf("error resolving country code for IP %s: %v", ip, err)
 		return

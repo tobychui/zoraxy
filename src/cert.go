@@ -47,7 +47,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 			LastModifiedDate string
 			ExpireDate       string
 			RemainingDays    int
-			DNS              bool
+			UseDNS           bool
 		}
 
 		results := []*CertInfo{}
@@ -94,7 +94,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 				LastModifiedDate: modifiedTime,
 				ExpireDate:       certExpireTime,
 				RemainingDays:    expiredIn,
-				DNS:              certInfo.DNS,
+				UseDNS:           certInfo.UseDNS,
 			}
 
 			results = append(results, &thisCertInfo)

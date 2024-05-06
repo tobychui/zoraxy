@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -10,7 +11,10 @@ import (
 )
 
 func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string) (challenge.Provider, error) {
-	credentials := extractDnsCredentials(dnsCredentials)
+	credentials, err := extractDnsCredentials(dnsCredentials)
+	if err != nil {
+		return nil, err
+	}
 	setCredentialsIntoEnvironmentVariables(credentials)
 
 	provider, err := dns.NewDNSChallengeProviderByName(dnsProvider)
@@ -28,7 +32,7 @@ func setCredentialsIntoEnvironmentVariables(credentials map[string]string) {
 	}
 }
 
-func extractDnsCredentials(input string) map[string]string {
+func extractDnsCredentials(input string) (map[string]string, error) {
 	result := make(map[string]string)
 
 	// Split the input string by newline character
@@ -37,7 +41,8 @@ func extractDnsCredentials(input string) map[string]string {
 	// Iterate over each line
 	for _, line := range lines {
 		// Split the line by "=" character
-		parts := strings.Split(line, "=")
+		//use SpliyN to make sure not to split the value if the value is base64
+		parts := strings.SplitN(line, "=", 1)
 
 		// Check if the line is in the correct format
 		if len(parts) == 2 {
@@ -46,8 +51,13 @@ func extractDnsCredentials(input string) map[string]string {
 
 			// Add the key-value pair to the map
 			result[key] = value
+
+			if value == "" || key == "" {
+				//invalid config
+				return result, errors.New("DNS credential extract failed")
+			}
 		}
 	}
 
-	return result
+	return result, nil
 }

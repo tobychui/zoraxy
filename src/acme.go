@@ -85,8 +85,8 @@ func acmeRegisterSpecialRoutingRule() {
 // This function check if the renew setup is satisfied. If not, toggle them automatically
 func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
 	isForceHttpsRedirectEnabledOriginally := false
-	dnsPara, _ := utils.PostPara(r, "dns")
-	if dnsPara == "false" {
+	dnsPara, _ := utils.PostBool(r, "dns")
+	if !dnsPara {
 		if dynamicProxyRouter.Option.Port == 443 {
 			//Enable port 80 to 443 redirect
 			if !dynamicProxyRouter.Option.ForceHttpsRedirect {
@@ -117,7 +117,7 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 	tlsCertManager.UpdateLoadedCertList()
 
 	//Restore original settings
-	if dynamicProxyRouter.Option.Port == 443 && dnsPara == "false" {
+	if dynamicProxyRouter.Option.Port == 443 && !dnsPara {
 		if !isForceHttpsRedirectEnabledOriginally {
 			//Default is off. Turn the redirection off
 			SystemWideLogger.PrintAndLog("ACME", "Restoring HTTP to HTTPS redirect settings", nil)
