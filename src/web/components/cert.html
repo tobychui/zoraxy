@@ -66,6 +66,7 @@
                 <tr><th>Domain</th>
                 <th>Last Update</th>
                 <th>Expire At</th>
+                <th>DNS Challenge</th>
                 <th class="no-sort">Renew</th>
                 <th class="no-sort">Remove</th>
                 </tr></thead>
@@ -147,7 +148,7 @@
 
 
     //Renew certificate by button press
-    function renewCertificate(domain, btn=undefined){
+    function renewCertificate(domain, dns, btn=undefined){
         let defaultCA = $("#defaultCA").dropdown("get value");
         if (defaultCA.trim() == ""){
             defaultCA = "Let's Encrypt";
@@ -160,7 +161,7 @@
             $(btn).addClass('disabled');
             $(btn).html(`<i class="ui loading spinner icon"></i>`);
         }
-        obtainCertificate(domain, defaultCA.trim(), function(succ){
+        obtainCertificate(domain, dns, defaultCA.trim(), function(succ){
             if (btn != undefined){
                 $(btn).removeClass('disabled');
                 if (succ){
@@ -181,7 +182,7 @@
     */
 
    // Obtain certificate from API, only support one domain
-   function obtainCertificate(domains, usingCa = "Let's Encrypt", callback=undefined) {
+   function obtainCertificate(domains, dns, usingCa = "Let's Encrypt", callback=undefined) {
         //Load the ACME email from server side
         let acmeEmail = "";
         $.get("/api/acme/autoRenew/email", function(data){
@@ -213,6 +214,8 @@
                 }
                 return;
             }
+            //Filename cannot contain wildcards, and wildcards are possible with DNS challenges
+            filename = filename.replace("*", "_");
 
             $.ajax({
                 url: "/api/acme/obtainCert",
@@ -222,6 +225,7 @@
                     filename: filename,
                     email: email,
                     ca: usingCa,
+                    dns: dns
                 },
                 success: function(response) {
                     if (response.error) {
@@ -357,7 +361,8 @@
                         <td>${entry.Domain}</td>
                         <td>${entry.LastModifiedDate}</td>
                         <td class="${isExpired?"expired":"valid"} certdate">${entry.ExpireDate} (${!isExpired?entry.RemainingDays+" days left":"Expired"})</td>
-                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entry.Domain}', this);"><i class="ui green refresh icon"></i></button></td>
+                        <td><i class="${entry.DNS?"green check": "red times"} circle outline icon"></i></td>
+                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entry.Domain}', '${entry.DNS}', this);"><i class="ui green refresh icon"></i></button></td>
                         <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
                     </tr>`);
                 });

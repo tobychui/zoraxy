@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -46,6 +47,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 			LastModifiedDate string
 			ExpireDate       string
 			RemainingDays    int
+			DNS              bool
 		}
 
 		results := []*CertInfo{}
@@ -81,12 +83,18 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+			certInfoFilename := filepath.Join(tlsCertManager.CertStore, filename+".json")
+			certInfo, err := acme.LoadCertInfoJSON(certInfoFilename)
+			if err != nil {
+				SystemWideLogger.PrintAndLog("Could not Load CertInfoJson", certInfoFilename, err)
+			}
 
 			thisCertInfo := CertInfo{
 				Domain:           filename,
 				LastModifiedDate: modifiedTime,
 				ExpireDate:       certExpireTime,
 				RemainingDays:    expiredIn,
+				DNS:              certInfo.DNS,
 			}
 
 			results = append(results, &thisCertInfo)

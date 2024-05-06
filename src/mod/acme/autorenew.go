@@ -344,7 +344,7 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 
 		// Load certificate info for ACME detail
 		certInfoFilename := fmt.Sprintf("%s/%s.json", filepath.Dir(expiredCert.Filepath), certName)
-		certInfo, err := loadCertInfoJSON(certInfoFilename)
+		certInfo, err := LoadCertInfoJSON(certInfoFilename)
 		if err != nil {
 			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, trying org section as ca", certName, err)
 
@@ -356,7 +356,7 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 			}
 		}
 
-		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS)
+		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.DNS)
 		if err != nil {
 			log.Println("Renew " + fileName + "(" + strings.Join(expiredCert.Domains, ",") + ") failed: " + err.Error())
 		} else {
@@ -400,6 +400,37 @@ func (a *AutoRenewer) HanldeSetEAB(w http.ResponseWriter, r *http.Request) {
 
 	a.AcmeHandler.Database.Write("acme", acmeDirectoryURL+"_kid", kid)
 	a.AcmeHandler.Database.Write("acme", acmeDirectoryURL+"_hmacEncoded", hmacEncoded)
+
+	utils.SendOK(w)
+
+}
+
+// Handle update auto renew DNS configuration
+func (a *AutoRenewer) HanldeSetDNS(w http.ResponseWriter, r *http.Request) {
+	dnsProvider, err := utils.PostPara(r, "dnsProvider")
+	if err != nil {
+		utils.SendErrorResponse(w, "dnsProvider not set")
+		return
+	}
+
+	dnsCredentials, err := utils.PostPara(r, "dnsCredentials")
+	if err != nil {
+		utils.SendErrorResponse(w, "dnsCredentials not set")
+		return
+	}
+
+	filename, err := utils.PostPara(r, "filename")
+	if err != nil {
+		utils.SendErrorResponse(w, "filename not set")
+		return
+	}
+
+	if !a.AcmeHandler.Database.TableExists("acme") {
+		a.AcmeHandler.Database.NewTable("acme")
+	}
+
+	a.AcmeHandler.Database.Write("acme", filename+"_dns_provider", dnsProvider)
+	a.AcmeHandler.Database.Write("acme", filename+"_dns_credentials", dnsCredentials)
 
 	utils.SendOK(w)
 

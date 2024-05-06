@@ -33,6 +33,7 @@ type CertificateInfoJSON struct {
 	AcmeName string `json:"acme_name"`
 	AcmeUrl  string `json:"acme_url"`
 	SkipTLS  bool   `json:"skip_tls"`
+	DNS      bool   `json:"dns"`
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -79,7 +80,7 @@ func NewACME(acmeServer string, port string, database *database.Database) *ACMEH
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, dns bool) (bool, error) {
 	log.Println("[ACME] Obtaining certificate...")
 
 	// generate private key
@@ -145,10 +146,47 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// setup how to receive challenge
-	err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer("", a.Port))
-	if err != nil {
-		log.Println(err)
-		return false, err
+	if dns {
+		if !a.Database.TableExists("acme") {
+			a.Database.NewTable("acme")
+			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -1)")
+		}
+
+		if !a.Database.KeyExists("acme", certificateName+"_dns_provider") || !a.Database.KeyExists("acme", certificateName+"_dns_credentials") {
+			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -2)")
+		}
+
+		var dnsCredentials string
+		err := a.Database.Read("acme", certificateName+"_dns_credentials", &dnsCredentials)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+
+		var dnsProvider string
+		err = a.Database.Read("acme", certificateName+"_dns_provider", &dnsProvider)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+
+		provider, err := GetDnsChallengeProviderByName(dnsProvider, dnsCredentials)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+
+		err = client.Challenge.SetDNS01Provider(provider)
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+	} else {
+		err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer("", a.Port))
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
 	}
 
 	// New users will need to register
@@ -241,6 +279,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		AcmeName: caName,
 		AcmeUrl:  caUrl,
 		SkipTLS:  skipTLS,
+		DNS:      dns,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -391,8 +430,18 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		skipTLS = true
 	}
 
+	var dns bool
+
+	if dnsString, err := utils.PostPara(r, "dns"); err != nil {
+		dns = false
+	} else if dnsString != "true" {
+		dns = false
+	} else {
+		dns = true
+	}
+
 	domains := strings.Split(domainPara, ",")
-	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS)
+	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS, dns)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
@@ -424,7 +473,7 @@ func IsPortInUse(port int) bool {
 }
 
 // Load cert information from json file
-func loadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
+func LoadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
 	certInfoBytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
