@@ -155,7 +155,7 @@ func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
 */
 
 func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
-	includeSysDBRaw, err := utils.GetPara(r, "includeDB")
+	includeSysDBRaw, _ := utils.GetPara(r, "includeDB")
 	includeSysDB := false
 	if includeSysDBRaw == "true" {
 		//Include the system database in backup snapshot
@@ -177,7 +177,7 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 	defer zipWriter.Close()
 
 	// Walk through the folder and add files to the zip
-	err = filepath.Walk(folderPath, func(filePath string, fileInfo os.FileInfo, err error) error {
+	err := filepath.Walk(folderPath, func(filePath string, fileInfo os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
