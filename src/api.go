@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 
+	"imuslab.com/zoraxy/mod/acme/acmedns"
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/netstat"
@@ -191,6 +192,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/acme/autoRenew/listDomains", acmeAutoRenewer.HandleLoadAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewPolicy", acmeAutoRenewer.HandleRenewPolicy)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)
+	authRouter.HandleFunc("/api/acme/dns/providers", acmedns.HandleServeProvidersJson)
 	authRouter.HandleFunc("/api/acme/wizard", acmewizard.HandleGuidedStepCheck) //ACME Wizard
 
 	//Static Web Server
