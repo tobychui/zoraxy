@@ -836,28 +836,6 @@
    }
   ]
  },
- "designate": {
-  "Name": "designate",
-  "ConfigableFields": [],
-  "HiddenFields": [
-   {
-    "Title": "PropagationTimeout",
-    "Datatype": "time.Duration"
-   },
-   {
-    "Title": "PollingInterval",
-    "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
-    "Title": "opts",
-    "Datatype": "gophercloud.AuthOptions"
-   }
-  ]
- },
  "digitalocean": {
   "Name": "digitalocean",
   "ConfigableFields": [
@@ -2305,45 +2283,6 @@
    }
   ]
  },
- "mythicbeasts": {
-  "Name": "mythicbeasts",
-  "ConfigableFields": [
-   {
-    "Title": "UserName",
-    "Datatype": "string"
-   },
-   {
-    "Title": "Password",
-    "Datatype": "string"
-   },
-   {
-    "Title": "APIEndpoint",
-    "Datatype": "*url.URL"
-   },
-   {
-    "Title": "AuthAPIEndpoint",
-    "Datatype": "*url.URL"
-   }
-  ],
-  "HiddenFields": [
-   {
-    "Title": "HTTPClient",
-    "Datatype": "*http.Client"
-   },
-   {
-    "Title": "PropagationTimeout",
-    "Datatype": "time.Duration"
-   },
-   {
-    "Title": "PollingInterval",
-    "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   }
-  ]
- },
  "namecheap": {
   "Name": "namecheap",
   "ConfigableFields": [
@@ -3087,6 +3026,10 @@
    }
   ],
   "HiddenFields": [
+   {
+    "Title": "WaitForRecordSetsChanged",
+    "Datatype": "bool"
+   },
    {
     "Title": "TTL",
     "Datatype": "int"

@@ -16,6 +16,11 @@ else
 fi
 
 # Run the extract.go to get all the config from lego source code
+echo "Generating code"
 go run ./extract.go
 
+echo "Cleaning up lego"
+# Comment the line below if you dont want to pull everytime update
+# This is to help go compiler to not load all the lego source file when compile
+rm -rf ./lego/
 echo "Config generated"
