@@ -33,10 +33,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPTimeout",
     "Datatype": "time.Duration"
    }
@@ -64,10 +60,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -89,10 +81,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -124,10 +112,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -152,10 +136,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -218,10 +198,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -299,10 +275,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -369,10 +341,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -400,10 +368,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -425,10 +389,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -445,10 +405,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -483,10 +439,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -507,10 +459,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -546,10 +494,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -590,10 +534,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -631,10 +571,6 @@
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -658,10 +594,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -690,10 +622,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -730,10 +658,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -760,10 +684,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -800,10 +720,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -827,10 +743,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -849,10 +761,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -917,10 +825,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -956,10 +860,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -972,10 +872,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -1126,10 +1022,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -1149,10 +1041,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1177,10 +1065,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
@@ -1260,10 +1144,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1326,10 +1206,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1355,10 +1231,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1398,10 +1270,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1429,10 +1297,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1458,10 +1322,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1510,10 +1370,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1541,10 +1397,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1566,10 +1418,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1599,10 +1447,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -1625,10 +1469,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -1669,10 +1509,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPTimeout",
     "Datatype": "time.Duration"
    }
@@ -1702,10 +1538,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -1733,10 +1565,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -1784,10 +1612,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -1811,10 +1635,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1842,10 +1662,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1881,10 +1697,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -1904,10 +1716,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -1964,10 +1772,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2011,10 +1815,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2029,10 +1829,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -2088,10 +1884,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPTimeout",
     "Datatype": "time.Duration"
    }
@@ -2118,10 +1910,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
@@ -2162,10 +1950,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2191,10 +1975,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -2249,10 +2029,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -2335,10 +2111,6 @@
   ],
   "HiddenFields": [
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -2368,10 +2140,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -2388,10 +2156,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -2428,10 +2192,6 @@
   ],
   "HiddenFields": [
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -2461,10 +2221,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -2510,10 +2266,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2545,10 +2297,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2570,10 +2318,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -2599,10 +2343,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2624,10 +2364,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -2673,10 +2409,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2706,10 +2438,6 @@
    {
     "Title": "ID",
     "Datatype": "int64"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -2743,10 +2471,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2778,10 +2502,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2807,10 +2527,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -2844,10 +2560,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2869,10 +2581,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -2910,10 +2618,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -2949,10 +2653,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "SequenceInterval",
     "Datatype": "time.Duration"
    },
@@ -2978,10 +2678,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -3031,10 +2727,6 @@
     "Datatype": "bool"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -3057,10 +2749,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -3097,10 +2785,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3130,10 +2814,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -3157,10 +2837,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -3188,10 +2864,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -3235,10 +2907,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3272,10 +2940,6 @@
    {
     "Title": "SequenceInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -3296,10 +2960,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -3338,10 +2998,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPTimeout",
@@ -3412,10 +3068,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3445,10 +3097,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -3465,10 +3113,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -3500,10 +3144,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -3539,10 +3179,6 @@
    }
   ],
   "HiddenFields": [
-   {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
    {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
@@ -3589,10 +3225,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -3618,10 +3250,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3643,10 +3271,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -3707,10 +3331,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3738,10 +3358,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3763,10 +3379,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",
@@ -3796,10 +3408,6 @@
     "Datatype": "time.Duration"
    },
    {
-    "Title": "TTL",
-    "Datatype": "int"
-   },
-   {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
    }
@@ -3825,10 +3433,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    }
   ]
  },
@@ -3879,10 +3483,6 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
-   },
-   {
-    "Title": "TTL",
-    "Datatype": "int"
    },
    {
     "Title": "HTTPClient",

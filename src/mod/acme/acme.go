@@ -117,6 +117,11 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	}
 
+	//Fallback to Let's Encrypt if it is not set
+	if caName == "" {
+		caName = "Let's Encrypt"
+	}
+
 	// setup the custom ACME url endpoint.
 	if caUrl != "" {
 		config.CADirURL = caUrl

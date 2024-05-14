@@ -133,7 +133,8 @@
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <div class="ui divider"></div>
-      <p>Required Configurations</p>
+      <p>DNS Credentials (Leave all fields empty to use previous settings)<br>
+      <small><i class="yellow exclamation triangle icon"></i> Note that domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</small></p>
       <div id="dnsProviderAPIFields">
 
       </div>
@@ -355,9 +356,26 @@
     // Button click event handler for obtaining certificate
     $("#obtainButton").click(function() {
       $("#obtainButton").addClass("loading").addClass("disabled");
-      updateCertificateEAB();
-      updateCertificateDNS();
-      obtainCertificate();
+      updateCertificateEAB(function(succ){
+        if (succ){
+          //Continue to next step
+          updateCertificateDNS(function(succ){
+            if (succ){
+              obtainCertificate(function(succ){
+                $("#obtainButton").removeClass("loading").removeClass("disabled");
+              });
+            }else{
+              $("#obtainButton").removeClass("loading").removeClass("disabled");
+              console.log("update Certificate DNS process halted");
+            }
+          });
+        }else{
+          console.log("Update Certificate EAB process halted");
+          $("#obtainButton").removeClass("loading").removeClass("disabled");
+        }
+      });
+      
+      
     });
 
     //On CA change in dropdown
@@ -459,7 +477,7 @@
       
 
     // Update EAB values for autorenewal
-    function updateCertificateEAB() {
+    function updateCertificateEAB(callback=undefined) {
       var ca = $("#ca").dropdown("get value");
       var caURL = "";
       if (ca == "Custom ACME Server") {
@@ -472,6 +490,10 @@
       }
 
       if(caURL == "") {
+        //Skip update
+        if (callback != undefined){
+          callback(true);
+        }
         return;
       }
 
@@ -479,6 +501,10 @@
       var hmac = $("#eab_hmac").val();
       
       if(kid == "" || hmac == "") {
+        //Skip update
+        if (callback != undefined){
+          callback(true);
+        }
         return;
       }
 
@@ -498,6 +524,9 @@
             console.log("Error:", response.error);
             // Show error message
             parent.msgbox(response.error, false, 12000);
+            if (callback != undefined){
+              callback(false);
+            }
           } else {
             console.log("Certificate EAB updated successfully");
             // Show success message
@@ -505,12 +534,18 @@
             
             // Renew the parent certificate list
             parent.initManagedDomainCertificateList();
+            if (callback != undefined){
+              callback(true);
+            }
           }
         },
         error: function(error) {
           //$("#obtainButton").removeClass("loading").removeClass("disabled");
           console.log("Failed to update EAB configuration:", error);
           parent.msgbox("Failed to update EAB configuration");
+          if (callback != undefined){
+              callback(false);
+            }
         }
       });
     }
@@ -519,30 +554,49 @@
     // the old DNSCredential TextArea input
     
     function readDnsCredentials(){
-      let dnsCredentials = "";
+      let dnsCredentials = {};
       $(".dnsConfigField").each(function(){
         let thisKey = $(this).attr("key");
+        let value = "";
         if ($(this).hasClass("checkbox")){
           //Boolean option
           let checked = $(this).find("input")[0].checked;
-          dnsCredentials += `${thisKey}=${checked?"true":"false"}\n`
+          dnsCredentials[thisKey] = checked;
         }else{
           //String or int options
           let value = $(this).find("input").val().trim();
-          dnsCredentials += `${thisKey}=${value}\n`
+          dnsCredentials[thisKey] = value;
         }
       });
-      dnsCredentials = dnsCredentials.trim();
+      
       return dnsCredentials;
     }
 
     // Update DNS values for autorenewal
-    function updateCertificateDNS() {
+    function updateCertificateDNS(callback=undefined) {
       var dns = $("#useDnsChallenge")[0].checked;
       var dnsProvider = "";
       var dnsCredentials = "";
 
       if (!dns) {
+        if (callback != undefined){
+          callback(true);
+        }
+        return;
+      }
+
+      //Check if all fields is empty. If yes, do not update the config
+      let allFieldsEmpty = true;
+      $(".dnsConfigField").each(function(){
+        if ($(this).find("input").val().trim() != ""){
+          allFieldsEmpty = false;
+        }
+      });
+      if (allFieldsEmpty){
+        //Do not update config on server side
+        if (callback != undefined){
+          callback(true);
+        }
         return;
       }
 
@@ -554,18 +608,18 @@
       if(dnsProvider == "") {
         parent.msgbox("DNS Provider cannot be empty", false, 5000);
         $("#obtainButton").removeClass("loading").removeClass("disabled");
-        return;
-      }
-
-      
-      if(dnsCredentials == "") {
-        parent.msgbox("DNS Credentials cannot be empty", false, 5000);
-        $("#obtainButton").removeClass("loading").removeClass("disabled");
+        if (callback != undefined){
+          callback(false);
+        }
         return;
       }
 
       var filename = getFilename();
       if (filename == '') {
+        parent.msgbox("Domain to renew cannot be empty", false, 5000);
+        if (callback != undefined){
+          callback(false);
+        }
         return;
       }
 
@@ -575,7 +629,7 @@
         data: {
           filename: filename,
           dnsProvider: dnsProvider,
-          dnsCredentials: dnsCredentials,
+          dnsCredentials: JSON.stringify(dnsCredentials),
         },
         success: function(response) {
           //$("#obtainButton").removeClass("loading").removeClass("disabled");
@@ -583,31 +637,44 @@
             console.log("Error:", response.error);
             // Show error message
             parent.msgbox(response.error, false, 12000);
+            if (callback != undefined){
+              callback(false);
+            }
           } else {
             console.log("Certificate DNS Credentials updated successfully");
             // Show success message
             parent.msgbox("Certificate DNS Credentials updated successfully");
+            if (callback != undefined){
+              callback(true);
+            }
           }
         },
         error: function(error) {
           //$("#obtainButton").removeClass("loading").removeClass("disabled");
           console.log("Failed to update DNS configuration:", error);
           parent.msgbox("Failed to update DNS configuration");
+          if (callback != undefined){
+            callback(false);
+          }
         }
       });
     }
 
     // Obtain certificate from API
-    function obtainCertificate() {
+    function obtainCertificate(callback=undefined) {
       var domains = $("#domainsInput").val();
       var filename = getFilename();
       if (filename == '') {
+        if (callback != undefined){
+          parent.msgbox("Domain to obtain certificate cannot be empty", false)
+          callback(false);
+        }
         return;
       }
       var email = $("#caRegisterEmail").val();
       if (email == ""){
         parent.msgbox("ACME renew email is not set", false)
-        $("#obtainButton").removeClass("loading").removeClass("disabled");
+        if (callback != undefined){callback(false);}
         return;
       }
     
@@ -641,6 +708,7 @@
             console.log("Error:", response.error);
             // Show error message
             parent.msgbox(response.error, false, 12000);
+            if (callback != undefined){callback(false);}
           } else {
             console.log("Certificate renewed successfully");
             // Show success message
@@ -648,11 +716,14 @@
             
             // Renew the parent certificate list
             parent.initManagedDomainCertificateList();
+
+            if (callback != undefined){callback(true);}
           }
         },
         error: function(error) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
           console.log("Failed to renewed certificate:", error);
+          if (callback != undefined){callback(false);}
         }
       });
     }

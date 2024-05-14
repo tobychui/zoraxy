@@ -137,845 +137,845 @@ func GetDNSProviderByJsonConfig(name string, js string)(challenge.Provider, erro
 	switch name {
 
 	case "alidns":
-		cfg := alidns.Config{}
+		cfg := alidns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return alidns.NewDNSProviderConfig(&cfg)
+		return alidns.NewDNSProviderConfig(cfg)
 	case "allinkl":
-		cfg := allinkl.Config{}
+		cfg := allinkl.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return allinkl.NewDNSProviderConfig(&cfg)
+		return allinkl.NewDNSProviderConfig(cfg)
 	case "arvancloud":
-		cfg := arvancloud.Config{}
+		cfg := arvancloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return arvancloud.NewDNSProviderConfig(&cfg)
+		return arvancloud.NewDNSProviderConfig(cfg)
 	case "auroradns":
-		cfg := auroradns.Config{}
+		cfg := auroradns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return auroradns.NewDNSProviderConfig(&cfg)
+		return auroradns.NewDNSProviderConfig(cfg)
 	case "autodns":
-		cfg := autodns.Config{}
+		cfg := autodns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return autodns.NewDNSProviderConfig(&cfg)
+		return autodns.NewDNSProviderConfig(cfg)
 	case "azure":
-		cfg := azure.Config{}
+		cfg := azure.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return azure.NewDNSProviderConfig(&cfg)
+		return azure.NewDNSProviderConfig(cfg)
 	case "azuredns":
-		cfg := azuredns.Config{}
+		cfg := azuredns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return azuredns.NewDNSProviderConfig(&cfg)
+		return azuredns.NewDNSProviderConfig(cfg)
 	case "bindman":
-		cfg := bindman.Config{}
+		cfg := bindman.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return bindman.NewDNSProviderConfig(&cfg)
+		return bindman.NewDNSProviderConfig(cfg)
 	case "bluecat":
-		cfg := bluecat.Config{}
+		cfg := bluecat.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return bluecat.NewDNSProviderConfig(&cfg)
+		return bluecat.NewDNSProviderConfig(cfg)
 	case "brandit":
-		cfg := brandit.Config{}
+		cfg := brandit.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return brandit.NewDNSProviderConfig(&cfg)
+		return brandit.NewDNSProviderConfig(cfg)
 	case "bunny":
-		cfg := bunny.Config{}
+		cfg := bunny.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return bunny.NewDNSProviderConfig(&cfg)
+		return bunny.NewDNSProviderConfig(cfg)
 	case "checkdomain":
-		cfg := checkdomain.Config{}
+		cfg := checkdomain.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return checkdomain.NewDNSProviderConfig(&cfg)
+		return checkdomain.NewDNSProviderConfig(cfg)
 	case "civo":
-		cfg := civo.Config{}
+		cfg := civo.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return civo.NewDNSProviderConfig(&cfg)
+		return civo.NewDNSProviderConfig(cfg)
 	case "clouddns":
-		cfg := clouddns.Config{}
+		cfg := clouddns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return clouddns.NewDNSProviderConfig(&cfg)
+		return clouddns.NewDNSProviderConfig(cfg)
 	case "cloudflare":
-		cfg := cloudflare.Config{}
+		cfg := cloudflare.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return cloudflare.NewDNSProviderConfig(&cfg)
+		return cloudflare.NewDNSProviderConfig(cfg)
 	case "cloudns":
-		cfg := cloudns.Config{}
+		cfg := cloudns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return cloudns.NewDNSProviderConfig(&cfg)
+		return cloudns.NewDNSProviderConfig(cfg)
 	case "cloudru":
-		cfg := cloudru.Config{}
+		cfg := cloudru.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return cloudru.NewDNSProviderConfig(&cfg)
+		return cloudru.NewDNSProviderConfig(cfg)
 	case "cloudxns":
-		cfg := cloudxns.Config{}
+		cfg := cloudxns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return cloudxns.NewDNSProviderConfig(&cfg)
+		return cloudxns.NewDNSProviderConfig(cfg)
 	case "conoha":
-		cfg := conoha.Config{}
+		cfg := conoha.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return conoha.NewDNSProviderConfig(&cfg)
+		return conoha.NewDNSProviderConfig(cfg)
 	case "constellix":
-		cfg := constellix.Config{}
+		cfg := constellix.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return constellix.NewDNSProviderConfig(&cfg)
+		return constellix.NewDNSProviderConfig(cfg)
 	case "cpanel":
-		cfg := cpanel.Config{}
+		cfg := cpanel.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return cpanel.NewDNSProviderConfig(&cfg)
+		return cpanel.NewDNSProviderConfig(cfg)
 	case "derak":
-		cfg := derak.Config{}
+		cfg := derak.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return derak.NewDNSProviderConfig(&cfg)
+		return derak.NewDNSProviderConfig(cfg)
 	case "desec":
-		cfg := desec.Config{}
+		cfg := desec.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return desec.NewDNSProviderConfig(&cfg)
+		return desec.NewDNSProviderConfig(cfg)
 	case "digitalocean":
-		cfg := digitalocean.Config{}
+		cfg := digitalocean.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return digitalocean.NewDNSProviderConfig(&cfg)
+		return digitalocean.NewDNSProviderConfig(cfg)
 	case "dnshomede":
-		cfg := dnshomede.Config{}
+		cfg := dnshomede.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dnshomede.NewDNSProviderConfig(&cfg)
+		return dnshomede.NewDNSProviderConfig(cfg)
 	case "dnsimple":
-		cfg := dnsimple.Config{}
+		cfg := dnsimple.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dnsimple.NewDNSProviderConfig(&cfg)
+		return dnsimple.NewDNSProviderConfig(cfg)
 	case "dnsmadeeasy":
-		cfg := dnsmadeeasy.Config{}
+		cfg := dnsmadeeasy.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dnsmadeeasy.NewDNSProviderConfig(&cfg)
+		return dnsmadeeasy.NewDNSProviderConfig(cfg)
 	case "dnspod":
-		cfg := dnspod.Config{}
+		cfg := dnspod.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dnspod.NewDNSProviderConfig(&cfg)
+		return dnspod.NewDNSProviderConfig(cfg)
 	case "dode":
-		cfg := dode.Config{}
+		cfg := dode.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dode.NewDNSProviderConfig(&cfg)
+		return dode.NewDNSProviderConfig(cfg)
 	case "domeneshop":
-		cfg := domeneshop.Config{}
+		cfg := domeneshop.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return domeneshop.NewDNSProviderConfig(&cfg)
+		return domeneshop.NewDNSProviderConfig(cfg)
 	case "dreamhost":
-		cfg := dreamhost.Config{}
+		cfg := dreamhost.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dreamhost.NewDNSProviderConfig(&cfg)
+		return dreamhost.NewDNSProviderConfig(cfg)
 	case "duckdns":
-		cfg := duckdns.Config{}
+		cfg := duckdns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return duckdns.NewDNSProviderConfig(&cfg)
+		return duckdns.NewDNSProviderConfig(cfg)
 	case "dyn":
-		cfg := dyn.Config{}
+		cfg := dyn.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dyn.NewDNSProviderConfig(&cfg)
+		return dyn.NewDNSProviderConfig(cfg)
 	case "dynu":
-		cfg := dynu.Config{}
+		cfg := dynu.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return dynu.NewDNSProviderConfig(&cfg)
+		return dynu.NewDNSProviderConfig(cfg)
 	case "easydns":
-		cfg := easydns.Config{}
+		cfg := easydns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return easydns.NewDNSProviderConfig(&cfg)
+		return easydns.NewDNSProviderConfig(cfg)
 	case "efficientip":
-		cfg := efficientip.Config{}
+		cfg := efficientip.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return efficientip.NewDNSProviderConfig(&cfg)
+		return efficientip.NewDNSProviderConfig(cfg)
 	case "epik":
-		cfg := epik.Config{}
+		cfg := epik.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return epik.NewDNSProviderConfig(&cfg)
+		return epik.NewDNSProviderConfig(cfg)
 	case "exoscale":
-		cfg := exoscale.Config{}
+		cfg := exoscale.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return exoscale.NewDNSProviderConfig(&cfg)
+		return exoscale.NewDNSProviderConfig(cfg)
 	case "freemyip":
-		cfg := freemyip.Config{}
+		cfg := freemyip.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return freemyip.NewDNSProviderConfig(&cfg)
+		return freemyip.NewDNSProviderConfig(cfg)
 	case "gandi":
-		cfg := gandi.Config{}
+		cfg := gandi.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return gandi.NewDNSProviderConfig(&cfg)
+		return gandi.NewDNSProviderConfig(cfg)
 	case "gandiv5":
-		cfg := gandiv5.Config{}
+		cfg := gandiv5.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return gandiv5.NewDNSProviderConfig(&cfg)
+		return gandiv5.NewDNSProviderConfig(cfg)
 	case "gcore":
-		cfg := gcore.Config{}
+		cfg := gcore.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return gcore.NewDNSProviderConfig(&cfg)
+		return gcore.NewDNSProviderConfig(cfg)
 	case "glesys":
-		cfg := glesys.Config{}
+		cfg := glesys.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return glesys.NewDNSProviderConfig(&cfg)
+		return glesys.NewDNSProviderConfig(cfg)
 	case "godaddy":
-		cfg := godaddy.Config{}
+		cfg := godaddy.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return godaddy.NewDNSProviderConfig(&cfg)
+		return godaddy.NewDNSProviderConfig(cfg)
 	case "googledomains":
-		cfg := googledomains.Config{}
+		cfg := googledomains.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return googledomains.NewDNSProviderConfig(&cfg)
+		return googledomains.NewDNSProviderConfig(cfg)
 	case "hetzner":
-		cfg := hetzner.Config{}
+		cfg := hetzner.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return hetzner.NewDNSProviderConfig(&cfg)
+		return hetzner.NewDNSProviderConfig(cfg)
 	case "hostingde":
-		cfg := hostingde.Config{}
+		cfg := hostingde.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return hostingde.NewDNSProviderConfig(&cfg)
+		return hostingde.NewDNSProviderConfig(cfg)
 	case "hosttech":
-		cfg := hosttech.Config{}
+		cfg := hosttech.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return hosttech.NewDNSProviderConfig(&cfg)
+		return hosttech.NewDNSProviderConfig(cfg)
 	case "httpnet":
-		cfg := httpnet.Config{}
+		cfg := httpnet.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return httpnet.NewDNSProviderConfig(&cfg)
+		return httpnet.NewDNSProviderConfig(cfg)
 	case "hyperone":
-		cfg := hyperone.Config{}
+		cfg := hyperone.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return hyperone.NewDNSProviderConfig(&cfg)
+		return hyperone.NewDNSProviderConfig(cfg)
 	case "ibmcloud":
-		cfg := ibmcloud.Config{}
+		cfg := ibmcloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ibmcloud.NewDNSProviderConfig(&cfg)
+		return ibmcloud.NewDNSProviderConfig(cfg)
 	case "iij":
-		cfg := iij.Config{}
+		cfg := iij.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return iij.NewDNSProviderConfig(&cfg)
+		return iij.NewDNSProviderConfig(cfg)
 	case "iijdpf":
-		cfg := iijdpf.Config{}
+		cfg := iijdpf.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return iijdpf.NewDNSProviderConfig(&cfg)
+		return iijdpf.NewDNSProviderConfig(cfg)
 	case "infoblox":
-		cfg := infoblox.Config{}
+		cfg := infoblox.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return infoblox.NewDNSProviderConfig(&cfg)
+		return infoblox.NewDNSProviderConfig(cfg)
 	case "infomaniak":
-		cfg := infomaniak.Config{}
+		cfg := infomaniak.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return infomaniak.NewDNSProviderConfig(&cfg)
+		return infomaniak.NewDNSProviderConfig(cfg)
 	case "internetbs":
-		cfg := internetbs.Config{}
+		cfg := internetbs.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return internetbs.NewDNSProviderConfig(&cfg)
+		return internetbs.NewDNSProviderConfig(cfg)
 	case "inwx":
-		cfg := inwx.Config{}
+		cfg := inwx.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return inwx.NewDNSProviderConfig(&cfg)
+		return inwx.NewDNSProviderConfig(cfg)
 	case "ionos":
-		cfg := ionos.Config{}
+		cfg := ionos.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ionos.NewDNSProviderConfig(&cfg)
+		return ionos.NewDNSProviderConfig(cfg)
 	case "ipv64":
-		cfg := ipv64.Config{}
+		cfg := ipv64.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ipv64.NewDNSProviderConfig(&cfg)
+		return ipv64.NewDNSProviderConfig(cfg)
 	case "iwantmyname":
-		cfg := iwantmyname.Config{}
+		cfg := iwantmyname.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return iwantmyname.NewDNSProviderConfig(&cfg)
+		return iwantmyname.NewDNSProviderConfig(cfg)
 	case "joker":
-		cfg := joker.Config{}
+		cfg := joker.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return joker.NewDNSProviderConfig(&cfg)
+		return joker.NewDNSProviderConfig(cfg)
 	case "liara":
-		cfg := liara.Config{}
+		cfg := liara.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return liara.NewDNSProviderConfig(&cfg)
+		return liara.NewDNSProviderConfig(cfg)
 	case "lightsail":
-		cfg := lightsail.Config{}
+		cfg := lightsail.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return lightsail.NewDNSProviderConfig(&cfg)
+		return lightsail.NewDNSProviderConfig(cfg)
 	case "linode":
-		cfg := linode.Config{}
+		cfg := linode.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return linode.NewDNSProviderConfig(&cfg)
+		return linode.NewDNSProviderConfig(cfg)
 	case "liquidweb":
-		cfg := liquidweb.Config{}
+		cfg := liquidweb.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return liquidweb.NewDNSProviderConfig(&cfg)
+		return liquidweb.NewDNSProviderConfig(cfg)
 	case "loopia":
-		cfg := loopia.Config{}
+		cfg := loopia.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return loopia.NewDNSProviderConfig(&cfg)
+		return loopia.NewDNSProviderConfig(cfg)
 	case "luadns":
-		cfg := luadns.Config{}
+		cfg := luadns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return luadns.NewDNSProviderConfig(&cfg)
+		return luadns.NewDNSProviderConfig(cfg)
 	case "mailinabox":
-		cfg := mailinabox.Config{}
+		cfg := mailinabox.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return mailinabox.NewDNSProviderConfig(&cfg)
+		return mailinabox.NewDNSProviderConfig(cfg)
 	case "metaname":
-		cfg := metaname.Config{}
+		cfg := metaname.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return metaname.NewDNSProviderConfig(&cfg)
+		return metaname.NewDNSProviderConfig(cfg)
 	case "mydnsjp":
-		cfg := mydnsjp.Config{}
+		cfg := mydnsjp.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return mydnsjp.NewDNSProviderConfig(&cfg)
+		return mydnsjp.NewDNSProviderConfig(cfg)
 	case "namecheap":
-		cfg := namecheap.Config{}
+		cfg := namecheap.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return namecheap.NewDNSProviderConfig(&cfg)
+		return namecheap.NewDNSProviderConfig(cfg)
 	case "namedotcom":
-		cfg := namedotcom.Config{}
+		cfg := namedotcom.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return namedotcom.NewDNSProviderConfig(&cfg)
+		return namedotcom.NewDNSProviderConfig(cfg)
 	case "namesilo":
-		cfg := namesilo.Config{}
+		cfg := namesilo.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return namesilo.NewDNSProviderConfig(&cfg)
+		return namesilo.NewDNSProviderConfig(cfg)
 	case "nearlyfreespeech":
-		cfg := nearlyfreespeech.Config{}
+		cfg := nearlyfreespeech.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return nearlyfreespeech.NewDNSProviderConfig(&cfg)
+		return nearlyfreespeech.NewDNSProviderConfig(cfg)
 	case "netcup":
-		cfg := netcup.Config{}
+		cfg := netcup.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return netcup.NewDNSProviderConfig(&cfg)
+		return netcup.NewDNSProviderConfig(cfg)
 	case "netlify":
-		cfg := netlify.Config{}
+		cfg := netlify.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return netlify.NewDNSProviderConfig(&cfg)
+		return netlify.NewDNSProviderConfig(cfg)
 	case "nicmanager":
-		cfg := nicmanager.Config{}
+		cfg := nicmanager.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return nicmanager.NewDNSProviderConfig(&cfg)
+		return nicmanager.NewDNSProviderConfig(cfg)
 	case "nifcloud":
-		cfg := nifcloud.Config{}
+		cfg := nifcloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return nifcloud.NewDNSProviderConfig(&cfg)
+		return nifcloud.NewDNSProviderConfig(cfg)
 	case "njalla":
-		cfg := njalla.Config{}
+		cfg := njalla.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return njalla.NewDNSProviderConfig(&cfg)
+		return njalla.NewDNSProviderConfig(cfg)
 	case "nodion":
-		cfg := nodion.Config{}
+		cfg := nodion.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return nodion.NewDNSProviderConfig(&cfg)
+		return nodion.NewDNSProviderConfig(cfg)
 	case "ns1":
-		cfg := ns1.Config{}
+		cfg := ns1.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ns1.NewDNSProviderConfig(&cfg)
+		return ns1.NewDNSProviderConfig(cfg)
 	case "otc":
-		cfg := otc.Config{}
+		cfg := otc.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return otc.NewDNSProviderConfig(&cfg)
+		return otc.NewDNSProviderConfig(cfg)
 	case "ovh":
-		cfg := ovh.Config{}
+		cfg := ovh.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ovh.NewDNSProviderConfig(&cfg)
+		return ovh.NewDNSProviderConfig(cfg)
 	case "pdns":
-		cfg := pdns.Config{}
+		cfg := pdns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return pdns.NewDNSProviderConfig(&cfg)
+		return pdns.NewDNSProviderConfig(cfg)
 	case "plesk":
-		cfg := plesk.Config{}
+		cfg := plesk.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return plesk.NewDNSProviderConfig(&cfg)
+		return plesk.NewDNSProviderConfig(cfg)
 	case "porkbun":
-		cfg := porkbun.Config{}
+		cfg := porkbun.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return porkbun.NewDNSProviderConfig(&cfg)
+		return porkbun.NewDNSProviderConfig(cfg)
 	case "rackspace":
-		cfg := rackspace.Config{}
+		cfg := rackspace.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return rackspace.NewDNSProviderConfig(&cfg)
+		return rackspace.NewDNSProviderConfig(cfg)
 	case "rcodezero":
-		cfg := rcodezero.Config{}
+		cfg := rcodezero.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return rcodezero.NewDNSProviderConfig(&cfg)
+		return rcodezero.NewDNSProviderConfig(cfg)
 	case "regru":
-		cfg := regru.Config{}
+		cfg := regru.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return regru.NewDNSProviderConfig(&cfg)
+		return regru.NewDNSProviderConfig(cfg)
 	case "rfc2136":
-		cfg := rfc2136.Config{}
+		cfg := rfc2136.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return rfc2136.NewDNSProviderConfig(&cfg)
+		return rfc2136.NewDNSProviderConfig(cfg)
 	case "rimuhosting":
-		cfg := rimuhosting.Config{}
+		cfg := rimuhosting.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return rimuhosting.NewDNSProviderConfig(&cfg)
+		return rimuhosting.NewDNSProviderConfig(cfg)
 	case "route53":
-		cfg := route53.Config{}
+		cfg := route53.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return route53.NewDNSProviderConfig(&cfg)
+		return route53.NewDNSProviderConfig(cfg)
 	case "safedns":
-		cfg := safedns.Config{}
+		cfg := safedns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return safedns.NewDNSProviderConfig(&cfg)
+		return safedns.NewDNSProviderConfig(cfg)
 	case "sakuracloud":
-		cfg := sakuracloud.Config{}
+		cfg := sakuracloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return sakuracloud.NewDNSProviderConfig(&cfg)
+		return sakuracloud.NewDNSProviderConfig(cfg)
 	case "scaleway":
-		cfg := scaleway.Config{}
+		cfg := scaleway.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return scaleway.NewDNSProviderConfig(&cfg)
+		return scaleway.NewDNSProviderConfig(cfg)
 	case "selectel":
-		cfg := selectel.Config{}
+		cfg := selectel.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return selectel.NewDNSProviderConfig(&cfg)
+		return selectel.NewDNSProviderConfig(cfg)
 	case "servercow":
-		cfg := servercow.Config{}
+		cfg := servercow.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return servercow.NewDNSProviderConfig(&cfg)
+		return servercow.NewDNSProviderConfig(cfg)
 	case "shellrent":
-		cfg := shellrent.Config{}
+		cfg := shellrent.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return shellrent.NewDNSProviderConfig(&cfg)
+		return shellrent.NewDNSProviderConfig(cfg)
 	case "simply":
-		cfg := simply.Config{}
+		cfg := simply.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return simply.NewDNSProviderConfig(&cfg)
+		return simply.NewDNSProviderConfig(cfg)
 	case "sonic":
-		cfg := sonic.Config{}
+		cfg := sonic.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return sonic.NewDNSProviderConfig(&cfg)
+		return sonic.NewDNSProviderConfig(cfg)
 	case "stackpath":
-		cfg := stackpath.Config{}
+		cfg := stackpath.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return stackpath.NewDNSProviderConfig(&cfg)
+		return stackpath.NewDNSProviderConfig(cfg)
 	case "tencentcloud":
-		cfg := tencentcloud.Config{}
+		cfg := tencentcloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return tencentcloud.NewDNSProviderConfig(&cfg)
+		return tencentcloud.NewDNSProviderConfig(cfg)
 	case "transip":
-		cfg := transip.Config{}
+		cfg := transip.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return transip.NewDNSProviderConfig(&cfg)
+		return transip.NewDNSProviderConfig(cfg)
 	case "ultradns":
-		cfg := ultradns.Config{}
+		cfg := ultradns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ultradns.NewDNSProviderConfig(&cfg)
+		return ultradns.NewDNSProviderConfig(cfg)
 	case "variomedia":
-		cfg := variomedia.Config{}
+		cfg := variomedia.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return variomedia.NewDNSProviderConfig(&cfg)
+		return variomedia.NewDNSProviderConfig(cfg)
 	case "vegadns":
-		cfg := vegadns.Config{}
+		cfg := vegadns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return vegadns.NewDNSProviderConfig(&cfg)
+		return vegadns.NewDNSProviderConfig(cfg)
 	case "vercel":
-		cfg := vercel.Config{}
+		cfg := vercel.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return vercel.NewDNSProviderConfig(&cfg)
+		return vercel.NewDNSProviderConfig(cfg)
 	case "versio":
-		cfg := versio.Config{}
+		cfg := versio.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return versio.NewDNSProviderConfig(&cfg)
+		return versio.NewDNSProviderConfig(cfg)
 	case "vinyldns":
-		cfg := vinyldns.Config{}
+		cfg := vinyldns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return vinyldns.NewDNSProviderConfig(&cfg)
+		return vinyldns.NewDNSProviderConfig(cfg)
 	case "vkcloud":
-		cfg := vkcloud.Config{}
+		cfg := vkcloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return vkcloud.NewDNSProviderConfig(&cfg)
+		return vkcloud.NewDNSProviderConfig(cfg)
 	case "vscale":
-		cfg := vscale.Config{}
+		cfg := vscale.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return vscale.NewDNSProviderConfig(&cfg)
+		return vscale.NewDNSProviderConfig(cfg)
 	case "vultr":
-		cfg := vultr.Config{}
+		cfg := vultr.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return vultr.NewDNSProviderConfig(&cfg)
+		return vultr.NewDNSProviderConfig(cfg)
 	case "webnames":
-		cfg := webnames.Config{}
+		cfg := webnames.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return webnames.NewDNSProviderConfig(&cfg)
+		return webnames.NewDNSProviderConfig(cfg)
 	case "websupport":
-		cfg := websupport.Config{}
+		cfg := websupport.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return websupport.NewDNSProviderConfig(&cfg)
+		return websupport.NewDNSProviderConfig(cfg)
 	case "wedos":
-		cfg := wedos.Config{}
+		cfg := wedos.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return wedos.NewDNSProviderConfig(&cfg)
+		return wedos.NewDNSProviderConfig(cfg)
 	case "yandex":
-		cfg := yandex.Config{}
+		cfg := yandex.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return yandex.NewDNSProviderConfig(&cfg)
+		return yandex.NewDNSProviderConfig(cfg)
 	case "yandex360":
-		cfg := yandex360.Config{}
+		cfg := yandex360.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return yandex360.NewDNSProviderConfig(&cfg)
+		return yandex360.NewDNSProviderConfig(cfg)
 	case "yandexcloud":
-		cfg := yandexcloud.Config{}
+		cfg := yandexcloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return yandexcloud.NewDNSProviderConfig(&cfg)
+		return yandexcloud.NewDNSProviderConfig(cfg)
 	case "zoneee":
-		cfg := zoneee.Config{}
+		cfg := zoneee.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return zoneee.NewDNSProviderConfig(&cfg)
+		return zoneee.NewDNSProviderConfig(cfg)
 	case "zonomi":
-		cfg := zonomi.Config{}
+		cfg := zonomi.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return zonomi.NewDNSProviderConfig(&cfg)
+		return zonomi.NewDNSProviderConfig(cfg)
 	default:
 		return nil, fmt.Errorf("unrecognized DNS provider: %s", name)
 	}

@@ -176,6 +176,8 @@ func main() {
 						Title:    fields[0],
 						Datatype: fields[1],
 					})
+				} else if fields[0] == "TTL" {
+					//haveTTLField = true
 				} else {
 					hiddenKeys = append(hiddenKeys, &Field{
 						Title:    fields[0],
@@ -210,17 +212,15 @@ func main() {
 			HiddenFields:     hiddenKeys,
 		}
 
-		//Generate the code for it
-
 		//Generate the code for converting incoming json into target config
 		codeSegment := `
 	case "` + providerName + `":
-		cfg := ` + providerName + `.Config{}
+		cfg := ` + providerName + `.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
 		}
-		return ` + providerName + `.NewDNSProviderConfig(&cfg)`
+		return ` + providerName + `.NewDNSProviderConfig(cfg)`
 
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"

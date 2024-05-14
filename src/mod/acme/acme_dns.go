@@ -7,19 +7,28 @@ import (
 	"strings"
 
 	"github.com/go-acme/lego/v4/challenge"
-	"github.com/go-acme/lego/v4/providers/dns"
+	"imuslab.com/zoraxy/mod/acme/acmedns"
 )
 
 func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string) (challenge.Provider, error) {
-	credentials, err := extractDnsCredentials(dnsCredentials)
+
+	//Original Implementation
+	/*credentials, err := extractDnsCredentials(dnsCredentials)
 	if err != nil {
 		return nil, err
 	}
 	setCredentialsIntoEnvironmentVariables(credentials)
 
 	provider, err := dns.NewDNSChallengeProviderByName(dnsProvider)
-	return provider, err
+	*/
+
+	//New implementation using acmedns CICD pipeline generated datatype
+	return acmedns.GetDNSProviderByJsonConfig(dnsProvider, dnsCredentials)
 }
+
+/*
+	Original implementation of DNS ACME using OS.Env as payload
+*/
 
 func setCredentialsIntoEnvironmentVariables(credentials map[string]string) {
 	for key, value := range credentials {
