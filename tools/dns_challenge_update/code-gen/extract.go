@@ -9,6 +9,15 @@ import (
 	"strings"
 )
 
+/*
+	Usage
+
+	git clone {repo_link_for_lego}
+	go run extract.go
+	//go run extract.go -- "win7"
+
+*/
+
 var legoProvidersSourceFolder string = "./lego/providers/dns/"
 var outputDir string = "./acmedns"
 var defTemplate string = `package acmedns
@@ -72,6 +81,26 @@ func getExcludedDNSProviders() []string {
 	}
 }
 
+// Exclude list for Windows build, due to limitations for lego versions
+func getExcludedDNSProvidersNT61() []string {
+	return []string{
+		"edgedns",      //Too complex data structure
+		"exec",         //Not a DNS provider
+		"httpreq",      //Not a DNS provider
+		"hurricane",    //Multi-credentials arch
+		"oraclecloud",  //Evil company
+		"acmedns",      //Not a DNS provider
+		"selectelv2",   //Not sure why not working with our code generator
+		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
+		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
+
+		//The following suppliers was not in lego v1.15 (Windows 7 last supported version of lego)
+		"cpanel",
+		"mailinabox",
+		"shellrent",
+	}
+}
+
 func isInSlice(str string, slice []string) bool {
 	for _, s := range slice {
 		if s == str {
@@ -83,6 +112,10 @@ func isInSlice(str string, slice []string) bool {
 
 func isExcludedDNSProvider(providerName string) bool {
 	return isInSlice(providerName, getExcludedDNSProviders())
+}
+
+func isExcludedDNSProviderNT61(providerName string) bool {
+	return isInSlice(providerName, getExcludedDNSProvidersNT61())
 }
 
 // extractConfigStruct extracts the name of the config struct and its content as plain text from a given source code.
@@ -106,6 +139,7 @@ func extractConfigStruct(sourceCode string) (string, string) {
 func main() {
 	// A map of provider name to information on what can be filled
 	extractedProviderList := map[string]*ProviderInfo{}
+	buildForWindowsSeven := (len(os.Args) > 2 && os.Args[2] == "win7")
 
 	//Search all providers
 	providers, err := filepath.Glob(filepath.Join(legoProvidersSourceFolder, "/*"))
@@ -123,10 +157,19 @@ func main() {
 	importList := ""
 	for _, provider := range providers {
 		providerName := filepath.Base(provider)
-		if isExcludedDNSProvider(providerName) {
-			//Ignore this provider
-			continue
+
+		if buildForWindowsSeven {
+			if isExcludedDNSProviderNT61(providerName) {
+				//Ignore this provider
+				continue
+			}
+		} else {
+			if isExcludedDNSProvider(providerName) {
+				//Ignore this provider
+				continue
+			}
 		}
+
 		//Check if {provider_name}.go exists
 		providerDef := filepath.Join(provider, providerName+".go")
 		if !fileExists(providerDef) {
@@ -230,11 +273,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	os.WriteFile(filepath.Join(outputDir, "providers.json"), js, 0775)
 
 	fullCodeSnippet := strings.ReplaceAll(defTemplate, "{{magic}}", generatedConvertcode)
 	fullCodeSnippet = strings.ReplaceAll(fullCodeSnippet, "{{imports}}", importList)
 
-	os.WriteFile(filepath.Join(outputDir, "acmedns.go"), []byte(fullCodeSnippet), 0775)
+	outJsonFilename := "providers.json"
+	outGoFilename := "acmedns.go"
+	if buildForWindowsSeven {
+		outJsonFilename = "providers_nt61.json"
+		outGoFilename = "acmedns_nt61.go"
+	}
+	os.WriteFile(filepath.Join(outputDir, outJsonFilename), js, 0775)
+	os.WriteFile(filepath.Join(outputDir, outGoFilename), []byte(fullCodeSnippet), 0775)
 	fmt.Println("Output written to file")
 }

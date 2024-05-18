@@ -18,6 +18,7 @@ fi
 # Run the extract.go to get all the config from lego source code
 echo "Generating code"
 go run ./extract.go
+go run ./extract.go -- "win7"
 
 echo "Cleaning up lego"
 # Comment the line below if you dont want to pull everytime update
