@@ -19,6 +19,7 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
 - TLS / SSL setup and deploy
   - ACME features like auto-renew to serve your sites in http**s**
   - SNI support (and SAN certs)
+  - DNS Challenge for Let's Encrypt and [these DNS providers](https://go-acme.github.io/lego/dns/)
 - Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
 - Global Area Network Controller Web UI (ZeroTier not included)
 - TCP Tunneling / Proxy
