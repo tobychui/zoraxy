@@ -47,7 +47,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 			LastModifiedDate string
 			ExpireDate       string
 			RemainingDays    int
-			DNS              bool
+			UseDNS           bool
 		}
 
 		results := []*CertInfo{}
@@ -84,9 +84,10 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			certInfoFilename := filepath.Join(tlsCertManager.CertStore, filename+".json")
-			certInfo, err := acme.LoadCertInfoJSON(certInfoFilename)
-			if err != nil {
-				SystemWideLogger.PrintAndLog("Could not Load CertInfoJson", certInfoFilename, err)
+			useDNSValidation := false                                //Default to false for HTTP TLS certificates
+			certInfo, err := acme.LoadCertInfoJSON(certInfoFilename) //Note: Not all certs have info json
+			if err == nil {
+				useDNSValidation = certInfo.UseDNS
 			}
 
 			thisCertInfo := CertInfo{
@@ -94,7 +95,7 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 				LastModifiedDate: modifiedTime,
 				ExpireDate:       certExpireTime,
 				RemainingDays:    expiredIn,
-				DNS:              certInfo.DNS,
+				UseDNS:           useDNSValidation,
 			}
 
 			results = append(results, &thisCertInfo)

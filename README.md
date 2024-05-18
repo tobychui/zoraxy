@@ -34,6 +34,7 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
   - SMTP config for password reset
 
 ## Downloads
+
 [Windows](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_windows_amd64.exe)
 /[Linux (amd64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_amd64)
 /[Linux (arm64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_arm64)
@@ -41,6 +42,7 @@ General purpose request (reverse) proxy and forwarding tool for networking noobs
 For other systems or architectures, please see [Release](https://github.com/tobychui/zoraxy/releases/latest/) 
 
 ## Build from Source
+
 Requires Go 1.22 or higher
 
 ```bash
@@ -79,21 +81,23 @@ The installation method is same as Linux. If you are using a Raspberry Pi 4 or n
 The installation method is same as Linux. For other ARM SBCs, please refer to your SBC's CPU architecture and pick the one that is suitable for your device. 
 
 #### Docker
+
 See the [/docker](https://github.com/tobychui/zoraxy/tree/main/docker) folder for more details.
 
 ### Start Paramters
+
 ```
 Usage of zoraxy:
   -autorenew int
         ACME auto TLS/SSL certificate renew check interval (seconds) (default 86400)
   -fastgeoip
         Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
-  -info
-        Show information about this program in JSON
   -log
         Log terminal output to file (default true)
   -mdns
         Enable mDNS scanner and transponder (default true)
+  -mdnsname string
+        mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)
   -noauth
         Disable authentication for management interface
   -port string
@@ -153,12 +157,13 @@ This allows you to have an infinite number of network members in your Global Are
 ## Web SSH
 
 Web SSH currently only supports Linux based OSes. The following platforms are supported:
+
 - linux/amd64
 - linux/arm64
 - linux/armv6 (experimental)
 - linux/386 (experimental)
 
-### Loopback Connection 
+### Loopback Connection
 
 Loopback web SSH connection, by default, is disabled. This means that if you are trying to connect to an address like 127.0.0.1 or localhost, the system will reject your connection for security reasons. To enable loopback for testing or development purpose, use the following flags to override the loopback checking:
 
@@ -167,12 +172,14 @@ Loopback web SSH connection, by default, is disabled. This means that if you are
 ```
 
 ## Sponsor This Project
+
 If you like the project and want to support us, please consider a donation. You can use the links below
+
 - [tobychui (Primary author)](https://paypal.me/tobychui)
 - PassiveLemon (Docker compatibility maintainer)
 
-
 ## License
 
-This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **If you plan to use this project in a commercial environment (which violate the AGPL terms), please contact toby@imuslab.com for an alternative license.** 
+This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **This software is intended to be free of charge. If you have acquired this software from a third-party seller, the authors of this repository bears no responsibility for any technical difficulties assistance or support.**
+
 
