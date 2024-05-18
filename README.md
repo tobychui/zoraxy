@@ -2,9 +2,8 @@
 
 # Zoraxy
 
-General purpose request (reverse) proxy and forwarding tool for networking noobs. Now written in Go!
+A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
 
-*Zoraxy v3 HTTP proxy config is not compatible with the older v2. If you are looking for the legacy version of Zoraxy, take a look at the [v2 branch](https://github.com/tobychui/zoraxy/tree/v2)*
 
 ### Features
 
