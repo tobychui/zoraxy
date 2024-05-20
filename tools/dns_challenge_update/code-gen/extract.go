@@ -132,6 +132,23 @@ func extractConfigStruct(sourceCode string) (string, string) {
 	// Extract the struct name and its content.
 	structName := match[1]
 	structContent := match[2]
+	if structName != "Config" {
+		allStructs := structRegex.FindAllStringSubmatch(sourceCode, 10)
+		for _, thisStruct := range allStructs {
+			//fmt.Println("Name => ", test[1])
+			//fmt.Println("Content => ", test[2])
+
+			if thisStruct[1] == "Config" {
+				structName = "Config"
+				structContent = thisStruct[2]
+				break
+			}
+		}
+
+		if structName != "Config" {
+			panic("Unable to find Config for this provider")
+		}
+	}
 
 	return structName, structContent
 }
