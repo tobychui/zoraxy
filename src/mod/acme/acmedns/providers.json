@@ -1242,15 +1242,32 @@
   "Name": "gandiv5",
   "ConfigableFields": [
    {
-    "Title": "fieldName",
+    "Title": "BaseURL",
     "Datatype": "string"
    },
    {
-    "Title": "authZone",
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PersonalAccessToken",
     "Datatype": "string"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "gcore": {
   "Name": "gcore",
@@ -2063,35 +2080,40 @@
   "Name": "namecheap",
   "ConfigableFields": [
    {
-    "Title": "domain",
+    "Title": "Debug",
+    "Datatype": "bool"
+   },
+   {
+    "Title": "BaseURL",
     "Datatype": "string"
    },
    {
-    "Title": "key",
+    "Title": "APIUser",
     "Datatype": "string"
    },
    {
-    "Title": "keyFqdn",
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
-    "Title": "keyValue",
-    "Datatype": "string"
-   },
-   {
-    "Title": "tld",
-    "Datatype": "string"
-   },
-   {
-    "Title": "sld",
-    "Datatype": "string"
-   },
-   {
-    "Title": "host",
+    "Title": "ClientIP",
     "Datatype": "string"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "namedotcom": {
   "Name": "namedotcom",
@@ -2418,26 +2440,38 @@
   "Name": "ovh",
   "ConfigableFields": [
    {
-    "Title": "FieldType",
+    "Title": "APIEndpoint",
     "Datatype": "string"
    },
    {
-    "Title": "SubDomain",
+    "Title": "ApplicationKey",
     "Datatype": "string"
    },
    {
-    "Title": "Target",
+    "Title": "ApplicationSecret",
     "Datatype": "string"
    },
    {
-    "Title": "Zone",
+    "Title": "ConsumerKey",
     "Datatype": "string"
    }
   ],
   "HiddenFields": [
    {
-    "Title": "ID",
-    "Datatype": "int64"
+    "Title": "OAuth2Config",
+    "Datatype": "*OAuth2Config"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
    }
   ]
  },
@@ -2875,15 +2909,28 @@
   "Name": "shellrent",
   "ConfigableFields": [
    {
-    "Title": "domainID",
-    "Datatype": "int"
+    "Title": "Username",
+    "Datatype": "string"
    },
    {
-    "Title": "recordID",
-    "Datatype": "int"
+    "Title": "Token",
+    "Datatype": "string"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "simply": {
   "Name": "simply",
@@ -3034,15 +3081,28 @@
  },
  "ultradns": {
   "Name": "ultradns",
-  "ConfigableFields": [],
-  "HiddenFields": [
+  "ConfigableFields": [
    {
-    "Title": "config",
-    "Datatype": "*Config"
+    "Title": "Username",
+    "Datatype": "string"
    },
    {
-    "Title": "client",
-    "Datatype": "*client.Client"
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Endpoint",
+    "Datatype": "string"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
    }
   ]
  },
