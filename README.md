@@ -60,7 +60,7 @@ Zoraxy provides basic authentication system for standalone mode. To use it in st
 
 ### Standalone Mode
 
-Standalone mode is the default mode for Zoraxy. This allows a single account to manage your reverse proxy server, just like a home router. This mode is suitable for new owners to homelabs or makers starting growing their web services into multiple servers.
+Standalone mode is the default mode for Zoraxy. This allows a single account to manage your reverse proxy server just like a consumer home router. This mode is suitable for new owners to homelabs or makers starting growing their web services into multiple servers. A full "Getting Started" guide can be found [here](https://github.com/tobychui/zoraxy/wiki/Getting-Started).
 
 #### Linux
 
