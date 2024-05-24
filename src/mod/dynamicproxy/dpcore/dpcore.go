@@ -346,11 +346,8 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	p.Director(outreq)
 	outreq.Close = false
 
-	if !rrr.UseTLS {
-		//This seems to be routing to external sites
-		//Do not keep the original host
-		outreq.Host = rrr.OriginalHost
-	}
+	// Always use the original host, see issue #164
+	outreq.Host = rrr.OriginalHost
 
 	// We may modify the header (shallow copied above), so we only copy it.
 	outreq.Header = make(http.Header)
