@@ -22,6 +22,28 @@
 
 
 <script>
+    var uptime5xxErrorMessage = {
+        "500": "Internal Server Error",
+        "501": "Not Implemented",
+        "502": "Bad Gateway",
+        "503": "Service Unavailable",
+        "504": "Gateway Timeout",
+        "505": "HTTP Version Not Supported",
+        "506": "Variant Also Negotiates",
+        "507": "Insufficient Storage",
+        "508": "Loop Detected",
+        "510": "Not Extended",
+        "511": "Network Authentication Required",
+        "520": "Web Server Returned an Unknown Error (Cloudflare)",
+        "521": "Web Server is Down (Cloudflare)",
+        "522": "Connection Timed Out (Cloudflare)",
+        "523": "Origin is Unreachable (Cloudflare)",
+        "524": "A Timeout Occurred (Cloudflare)",
+        "525": "SSL Handshake Failed (Cloudflare)",
+        "526": "Invalid SSL Certificate (Cloudflare)",
+        "527": "Railgun Error (Cloudflare)",
+        "530": "Site is Frozen (Pantheon)"
+    }
 
         $('#utmEnable').checkbox({
           onChange: function() {
@@ -78,6 +100,14 @@
         return(date.toLocaleString());
     }
 
+    function resolveUptime5xxErrorMessage(errorCode){
+        if (uptime5xxErrorMessage[errorCode] != undefined){
+            return uptime5xxErrorMessage[errorCode]
+        }else{
+            return "Unknown Error";
+        }
+    }
+
 
     function renderUptimeData(key, value){
         if (value.length == 0){
@@ -101,26 +131,33 @@
             //Render status to html
             let thisStatus = value[i];
             let dotType = "";
-            if (thisStatus.Online){
-                if (thisStatus.StatusCode < 200 || thisStatus.StatusCode >= 300){
-                    dotType = "error";
-                }else{
-                    dotType = "online";
-                }
-                ontimeRate++;
-            }else{
-                if (thisStatus.StatusCode >= 500 && thisStatus.StatusCode < 600){
-                    //Special type of error, cause by downstream reverse proxy
-                    dotType = "error";
-                }else if (thisStatus.StatusCode == 401){
-                    //Unauthorized error
-                    dotType = "error";
-                }else{
-                    dotType = "offline";
-                }
-                
-            }
+            let statusCode = thisStatus.StatusCode;
 
+            if (!thisStatus.Online && statusCode == 0){
+                dotType = "offline";
+            }else if (statusCode < 200){
+                //1xx
+                dotType = "error";
+                ontimeRate++;
+            }else if (statusCode < 300){
+                //2xx
+                dotType = "online";
+                ontimeRate++;
+            }else if (statusCode < 400){
+                //3xx
+                dotType = "online";
+                ontimeRate++;
+            }else if (statusCode < 500){
+                //4xx
+                dotType = "error";
+                ontimeRate++;
+            }else if (statusCode < 600){
+                //5xx
+                dotType = "error";
+            }else {
+                dotType = "offline";
+            }
+        
             let datetime = format_time(thisStatus.Timestamp);
             statusDotList += `<div title="${datetime}" class="${dotType} statusDot"></div>`
         }
@@ -141,11 +178,13 @@
             onlineStatusCss = `color: #3bd671;`;
         }else{
             if (value[value.length - 1].StatusCode >= 500 && value[value.length - 1].StatusCode < 600){
-                currentOnlineStatus = `<i class="exclamation circle icon"></i> Misconfigured`;
+                var latestStatusCode = value[value.length - 1].StatusCode
+                currentOnlineStatus = `<i class="exclamation circle icon"></i>${latestStatusCode} - ${resolveUptime5xxErrorMessage(latestStatusCode)}`;
                 onlineStatusCss = `color: #f38020;`;
-                reminderEle = `<small style="${onlineStatusCss}">Downstream proxy server is online with misconfigured settings</small>`;
+                reminderEle = `<small style="${onlineStatusCss}">Downstream proxy server is responsive but returning server error</small>`;
             }else if (value[value.length - 1].StatusCode >= 400 && value[value.length - 1].StatusCode <= 405){
-                switch(value[value.length - 1].StatusCode){
+                let latestStatusCode = value[value.length - 1].StatusCode;
+                switch(latestStatusCode){
                     case 400:
                         currentOnlineStatus = `<i class="exclamation circle icon"></i> Bad Request`;
                         break;
@@ -160,6 +199,9 @@
                         break; 
                     case 405: 
                         currentOnlineStatus = `<i class="exclamation circle icon"></i> Method Not Allowed`;
+                        break;
+                    default:
+                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Status Code: ${latestStatusCode}`;
                         break;
                 }
                 
