@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 	"time"
 
+	"golang.org/x/net/publicsuffix"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -217,11 +219,24 @@ func getWebsiteStatusWithLatency(url string) (bool, int64, int) {
 }
 
 func getWebsiteStatus(url string) (int, error) {
+	// Create a one-time use cookie jar to store cookies
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client := http.Client{
+		Jar:     jar,
 		Timeout: 10 * time.Second,
 	}
 
-	resp, err := client.Get(url)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header = http.Header{
+		"User-Agent": {"zoraxy-uptime/1.1"},
+	}
+
+	resp, err := client.Do(req)
+	//resp, err := client.Get(url)
 	if err != nil {
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
@@ -231,7 +246,12 @@ func getWebsiteStatus(url string) (int, error) {
 			rewriteURL = strings.ReplaceAll(url, "http://", "https://")
 		}
 
-		resp, err = client.Get(rewriteURL)
+		req, _ := http.NewRequest("GET", rewriteURL, nil)
+		req.Header = http.Header{
+			"User-Agent": {"zoraxy-uptime/1.1"},
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			if strings.Contains(err.Error(), "http: server gave HTTP response to HTTPS client") {
 				//Invalid downstream reverse proxy settings, but it is online

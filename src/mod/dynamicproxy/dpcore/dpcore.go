@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 )
 
 // ReverseProxy is an HTTP Handler that takes an incoming request and
@@ -346,8 +348,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	p.Director(outreq)
 	outreq.Close = false
 
-	// Always use the original host, see issue #164
-	outreq.Host = rrr.OriginalHost
+	//Only skip origin rewrite iff proxy target require TLS and it is external domain name like github.com
+	if !(rrr.UseTLS && isExternalDomainName(rrr.ProxyDomain)) {
+		// Always use the original host, see issue #164
+		outreq.Host = rrr.OriginalHost
+	}
 
 	// We may modify the header (shallow copied above), so we only copy it.
 	outreq.Header = make(http.Header)
@@ -423,6 +428,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 
 	// Copy header from response to client.
 	copyHeader(rw.Header(), res.Header)
+
+	// inject permission policy headers
+	//TODO: Load permission policy from rrr
+	permissionpolicy.InjectPermissionPolicyHeader(rw, nil)
 
 	// The "Trailer" header isn't included in the Transport's response, Build it up from Trailer.
 	if len(res.Trailer) > 0 {

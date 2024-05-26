@@ -1,6 +1,7 @@
 package dpcore
 
 import (
+	"net"
 	"net/url"
 	"strings"
 )
@@ -59,4 +60,35 @@ func replaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS b
 // Debug functions
 func ReplaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS bool) (string, error) {
 	return replaceLocationHost(urlString, rrr, useTLS)
+}
+
+// isExternalDomainName check and return if the hostname is external domain name (e.g. github.com)
+// instead of internal (like 192.168.1.202:8443 (ip address) or domains end with .local or .internal)
+func isExternalDomainName(hostname string) bool {
+	host, _, err := net.SplitHostPort(hostname)
+	if err != nil {
+		//hostname doesnt contain port
+		ip := net.ParseIP(hostname)
+		if ip != nil {
+			//IP address, not a domain name
+			return false
+		}
+	} else {
+		//Hostname contain port, use hostname without port to check if it is ip
+		ip := net.ParseIP(host)
+		if ip != nil {
+			//IP address, not a domain name
+			return false
+		}
+	}
+
+	//Check if it is internal DNS assigned domains
+	internalDNSTLD := []string{".local", ".internal", ".localhost", ".home.arpa"}
+	for _, tld := range internalDNSTLD {
+		if strings.HasSuffix(strings.ToLower(hostname), tld) {
+			return false
+		}
+	}
+
+	return true
 }
