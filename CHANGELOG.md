@@ -1,3 +1,13 @@
+# v3.0.5 May 26 2024
+
+
++ Optimized uptime monitor error message [#121](https://github.com/tobychui/zoraxy/issues/121)
++ Optimized detection logic for internal proxy target and header rewrite condition for HTTP_HOST [#164](https://github.com/tobychui/zoraxy/issues/164)
++ Fixed ovh DNS challenge provider form generator bug [#161](https://github.com/tobychui/zoraxy/issues/161)
++ Added permission policy module (not enabled)
++ Added single-use cookiejar to uptime monitor request client to handle cookie issues on some poorly written back-end server [#149](https://github.com/tobychui/zoraxy/issues/149)
+
+
 # v3.0.4 May 18 2024
 
 ## This release tidied up the contribution by [Teifun2](https://github.com/Teifun2) and added a new way to generate DNS challenge based certificate (e.g. wildcards) from Let's Encrypt without changing any environment variables. This also fixes a few previous ACME module EAB settings bug related to concurrent save.
