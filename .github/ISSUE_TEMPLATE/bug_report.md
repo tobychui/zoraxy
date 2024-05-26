@@ -33,6 +33,7 @@ If applicable, add screenshots to help explain your problem.
  - Device: [e.g. Bananapi R2 PRO]
  - OS: [e.g. Armbian]
  - Version [e.g.  23.02 Bullseye ]
+ - Docker Version (if you are running Zoraxy in docker): [e.g. 3.0.4]
 
 **Additional context**
 Add any other context about the problem here.
