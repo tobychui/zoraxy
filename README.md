@@ -41,6 +41,12 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
 
 For other systems or architectures, please see [Release](https://github.com/tobychui/zoraxy/releases/latest/) 
 
+## Getting Started
+[Installing Zoraxy Reverse Proxy: Your Gateway to Efficient Web Routing](https://geekscircuit.com/installing-zoraxy-reverse-proxy-your-gateway-to-efficient-web-routing/)
+
+Thank you for the well written and easy to follow tutorial by Reddit users [itsvmn](https://www.reddit.com/user/itsvmn/)! 
+If you have no background in setting up reverse proxy or web routing, you should check this out before you start setting up your Zoraxy. 
+
 ## Build from Source
 
 Requires Go 1.22 or higher
