@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -38,8 +39,12 @@ func isReachable(target string) bool {
 	return true
 }
 
-func connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *int64) {
-	io.Copy(conn1, conn2)
+func connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *atomic.Int64) {
+	n, err := io.Copy(conn1, conn2)
+	if err != nil {
+		//Add to accumulator
+		accumulator.Add(n)
+	}
 	conn1.Close()
 	log.Println("[←]", "close the connect at local:["+conn1.LocalAddr().String()+"] and remote:["+conn1.RemoteAddr().String()+"]")
 	//conn2.Close()
@@ -47,7 +52,7 @@ func connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *i
 	wg.Done()
 }
 
-func forward(conn1 net.Conn, conn2 net.Conn, aTob *int64, bToa *int64) {
+func forward(conn1 net.Conn, conn2 net.Conn, aTob *atomic.Int64, bToa *atomic.Int64) {
 	log.Printf("[+] start transmit. [%s],[%s] <-> [%s],[%s] \n", conn1.LocalAddr().String(), conn1.RemoteAddr().String(), conn2.LocalAddr().String(), conn2.RemoteAddr().String())
 	var wg sync.WaitGroup
 	// wait tow goroutines
@@ -158,6 +163,8 @@ func (c *ProxyRelayConfig) Start() error {
 			err = c.Port2port(c.PortA, c.PortB, stopChan)
 		} else if c.Mode == ProxyMode_Starter {
 			err = c.Host2host(c.PortA, c.PortB, stopChan)
+		} else if c.Mode == ProxyMode_UDP {
+			err = c.ForwardUDP(c.PortA, c.PortB, stopChan)
 		}
 		if err != nil {
 			c.Running = false

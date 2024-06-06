@@ -304,9 +304,13 @@ func addXForwardedForHeader(req *http.Request) {
 		if req.Header.Get("X-Real-Ip") == "" {
 			//Check if CF-Connecting-IP header exists
 			CF_Connecting_IP := req.Header.Get("CF-Connecting-IP")
+			Fastly_Client_IP := req.Header.Get("Fastly-Client-IP")
 			if CF_Connecting_IP != "" {
 				//Use CF Connecting IP
 				req.Header.Set("X-Real-Ip", CF_Connecting_IP)
+			} else if Fastly_Client_IP != "" {
+				//Use Fastly Client IP
+				req.Header.Set("X-Real-Ip", Fastly_Client_IP)
 			} else {
 				// Not exists. Fill it in with first entry in X-Forwarded-For
 				ips := strings.Split(clientIP, ",")

@@ -3,6 +3,8 @@ package tcpprox
 import (
 	"errors"
 	"net"
+	"sync"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/database"
@@ -20,6 +22,7 @@ const (
 	ProxyMode_Listen    = 0
 	ProxyMode_Transport = 1
 	ProxyMode_Starter   = 2
+	ProxyMode_UDP       = 3
 )
 
 type ProxyRelayOptions struct {
@@ -31,16 +34,16 @@ type ProxyRelayOptions struct {
 }
 
 type ProxyRelayConfig struct {
-	UUID                        string    //A UUIDv4 representing this config
-	Name                        string    //Name of the config
-	Running                     bool      //If the service is running
-	PortA                       string    //Ports A (config depends on mode)
-	PortB                       string    //Ports B (config depends on mode)
-	Mode                        int       //Operation Mode
-	Timeout                     int       //Timeout for connection in sec
-	stopChan                    chan bool //Stop channel to stop the listener
-	aTobAccumulatedByteTransfer int64     //Accumulated byte transfer from A to B
-	bToaAccumulatedByteTransfer int64     //Accumulated byte transfer from B to A
+	UUID                        string       //A UUIDv4 representing this config
+	Name                        string       //Name of the config
+	Running                     bool         //If the service is running
+	PortA                       string       //Ports A (config depends on mode)
+	PortB                       string       //Ports B (config depends on mode)
+	Mode                        int          //Operation Mode
+	Timeout                     int          //Timeout for connection in sec
+	stopChan                    chan bool    //Stop channel to stop the listener
+	aTobAccumulatedByteTransfer atomic.Int64 //Accumulated byte transfer from A to B
+	bToaAccumulatedByteTransfer atomic.Int64 //Accumulated byte transfer from B to A
 
 	parent *Manager `json:"-"`
 }
@@ -57,7 +60,8 @@ type Manager struct {
 	Configs []*ProxyRelayConfig
 
 	//Realtime Statistics
-	Connections int //currently connected connect counts
+	Connections  int      //currently connected connect counts
+	UDPClientMap sync.Map //map storing the UDP client-server connections
 }
 
 func NewTCProxy(options *Options) *Manager {
@@ -94,6 +98,11 @@ func NewTCProxy(options *Options) *Manager {
 }
 
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
+	//Generate two zero value for atomic int64
+	aAcc := atomic.Int64{}
+	bAcc := atomic.Int64{}
+	aAcc.Store(0)
+	bAcc.Store(0)
 	//Generate a new config from options
 	configUUID := uuid.New().String()
 	thisConfig := ProxyRelayConfig{
@@ -105,8 +114,8 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		Mode:                        config.Mode,
 		Timeout:                     config.Timeout,
 		stopChan:                    nil,
-		aTobAccumulatedByteTransfer: 0,
-		bToaAccumulatedByteTransfer: 0,
+		aTobAccumulatedByteTransfer: aAcc,
+		bToaAccumulatedByteTransfer: bAcc,
 
 		parent: m,
 	}
