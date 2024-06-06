@@ -23,7 +23,7 @@ import (
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
-	"imuslab.com/zoraxy/mod/tcpprox"
+	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/webserv"
 )
@@ -229,7 +229,7 @@ func startupSequence() {
 	webSshManager = sshprox.NewSSHProxyManager()
 
 	//Create TCP Proxy Manager
-	tcpProxyManager = tcpprox.NewTCProxy(&tcpprox.Options{
+	streamProxyManager = streamproxy.NewStreamProxy(&streamproxy.Options{
 		Database:             sysdb,
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
 	})

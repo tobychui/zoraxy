@@ -1,9 +1,10 @@
-package tcpprox
+package streamproxy
 
 import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -22,13 +23,13 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	portA, err := utils.PostPara(r, "porta")
+	listenAddr, err := utils.PostPara(r, "listenAddr")
 	if err != nil {
 		utils.SendErrorResponse(w, "first address cannot be empty")
 		return
 	}
 
-	portB, err := utils.PostPara(r, "portb")
+	proxyAddr, err := utils.PostPara(r, "proxyAddr")
 	if err != nil {
 		utils.SendErrorResponse(w, "second address cannot be empty")
 		return
@@ -44,27 +45,17 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	modeValue := ProxyMode_Transport
-	mode, err := utils.PostPara(r, "mode")
-	if err != nil || mode == "" {
-		utils.SendErrorResponse(w, "no mode given")
-	} else if mode == "listen" {
-		modeValue = ProxyMode_Listen
-	} else if mode == "transport" {
-		modeValue = ProxyMode_Transport
-	} else if mode == "starter" {
-		modeValue = ProxyMode_Starter
-	} else {
-		utils.SendErrorResponse(w, "invalid mode given. Only support listen / transport / starter")
-	}
+	useTCP, _ := utils.PostBool(r, "useTCP")
+	useUDP, _ := utils.PostBool(r, "useUDP")
 
 	//Create the target config
 	newConfigUUID := m.NewConfig(&ProxyRelayOptions{
-		Name:    name,
-		PortA:   portA,
-		PortB:   portB,
-		Timeout: timeout,
-		Mode:    modeValue,
+		Name:          name,
+		ListeningAddr: strings.TrimSpace(listenAddr),
+		ProxyAddr:     strings.TrimSpace(proxyAddr),
+		Timeout:       timeout,
+		UseTCP:        useTCP,
+		UseUDP:        useUDP,
 	})
 
 	js, _ := json.Marshal(newConfigUUID)
@@ -80,22 +71,10 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 	}
 
 	newName, _ := utils.PostPara(r, "name")
-	newPortA, _ := utils.PostPara(r, "porta")
-	newPortB, _ := utils.PostPara(r, "portb")
-	newModeStr, _ := utils.PostPara(r, "mode")
-	newMode := -1
-	if newModeStr != "" {
-		if newModeStr == "listen" {
-			newMode = 0
-		} else if newModeStr == "transport" {
-			newMode = 1
-		} else if newModeStr == "starter" {
-			newMode = 2
-		} else {
-			utils.SendErrorResponse(w, "invalid new mode value")
-			return
-		}
-	}
+	listenAddr, _ := utils.PostPara(r, "listenAddr")
+	proxyAddr, _ := utils.PostPara(r, "proxyAddr")
+	useTCP, _ := utils.PostBool(r, "useTCP")
+	useUDP, _ := utils.PostBool(r, "useUDP")
 
 	newTimeoutStr, _ := utils.PostPara(r, "timeout")
 	newTimeout := -1
@@ -108,7 +87,7 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Call the EditConfig method to modify the configuration
-	err = m.EditConfig(configUUID, newName, newPortA, newPortB, newMode, newTimeout)
+	err = m.EditConfig(configUUID, newName, listenAddr, proxyAddr, useTCP, useUDP, newTimeout)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -158,6 +137,7 @@ func (m *Manager) HandleStopProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !targetProxyConfig.IsRunning() {
+		targetProxyConfig.Running = false
 		utils.SendErrorResponse(w, "target proxy service is not running")
 		return
 	}
@@ -180,6 +160,7 @@ func (m *Manager) HandleRemoveProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if targetProxyConfig.IsRunning() {
+		targetProxyConfig.Running = false
 		utils.SendErrorResponse(w, "Service is running")
 		return
 	}
@@ -208,26 +189,4 @@ func (m *Manager) HandleGetProxyStatus(w http.ResponseWriter, r *http.Request) {
 
 	js, _ := json.Marshal(targetConfig)
 	utils.SendJSONResponse(w, string(js))
-}
-
-func (m *Manager) HandleConfigValidate(w http.ResponseWriter, r *http.Request) {
-	uuid, err := utils.GetPara(r, "uuid")
-	if err != nil {
-		utils.SendErrorResponse(w, "invalid uuid given")
-		return
-	}
-
-	targetConfig, err := m.GetConfigByUUID(uuid)
-	if err != nil {
-		utils.SendErrorResponse(w, err.Error())
-		return
-	}
-
-	err = targetConfig.ValidateConfigs()
-	if err != nil {
-		utils.SendErrorResponse(w, err.Error())
-		return
-	}
-
-	utils.SendOK(w)
 }

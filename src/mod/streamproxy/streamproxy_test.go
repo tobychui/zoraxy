@@ -1,10 +1,10 @@
-package tcpprox_test
+package streamproxy_test
 
 import (
 	"testing"
 	"time"
 
-	"imuslab.com/zoraxy/mod/tcpprox"
+	"imuslab.com/zoraxy/mod/streamproxy"
 )
 
 func TestPort2Port(t *testing.T) {
@@ -12,7 +12,7 @@ func TestPort2Port(t *testing.T) {
 	stopChan := make(chan bool)
 
 	// Create a ProxyRelayConfig with dummy values
-	config := &tcpprox.ProxyRelayConfig{
+	config := &streamproxy.ProxyRelayConfig{
 		Timeout: 1,
 	}
 
@@ -36,7 +36,7 @@ func TestPort2Port(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// If the goroutine is still running, it means it did not stop as expected
-	if config.Running {
+	if config.IsRunning() {
 		t.Errorf("port2port did not stop as expected")
 	}
 

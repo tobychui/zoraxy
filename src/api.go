@@ -141,14 +141,13 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/gan/members/delete", ganManager.HandleMemberDelete)
 
 	//TCP Proxy
-	authRouter.HandleFunc("/api/tcpprox/config/add", tcpProxyManager.HandleAddProxyConfig)
-	authRouter.HandleFunc("/api/tcpprox/config/edit", tcpProxyManager.HandleEditProxyConfigs)
-	authRouter.HandleFunc("/api/tcpprox/config/list", tcpProxyManager.HandleListConfigs)
-	authRouter.HandleFunc("/api/tcpprox/config/start", tcpProxyManager.HandleStartProxy)
-	authRouter.HandleFunc("/api/tcpprox/config/stop", tcpProxyManager.HandleStopProxy)
-	authRouter.HandleFunc("/api/tcpprox/config/delete", tcpProxyManager.HandleRemoveProxy)
-	authRouter.HandleFunc("/api/tcpprox/config/status", tcpProxyManager.HandleGetProxyStatus)
-	authRouter.HandleFunc("/api/tcpprox/config/validate", tcpProxyManager.HandleConfigValidate)
+	authRouter.HandleFunc("/api/streamprox/config/add", streamProxyManager.HandleAddProxyConfig)
+	authRouter.HandleFunc("/api/streamprox/config/edit", streamProxyManager.HandleEditProxyConfigs)
+	authRouter.HandleFunc("/api/streamprox/config/list", streamProxyManager.HandleListConfigs)
+	authRouter.HandleFunc("/api/streamprox/config/start", streamProxyManager.HandleStartProxy)
+	authRouter.HandleFunc("/api/streamprox/config/stop", streamProxyManager.HandleStopProxy)
+	authRouter.HandleFunc("/api/streamprox/config/delete", streamProxyManager.HandleRemoveProxy)
+	authRouter.HandleFunc("/api/streamprox/config/status", streamProxyManager.HandleGetProxyStatus)
 
 	//mDNS APIs
 	authRouter.HandleFunc("/api/mdns/list", HandleMdnsListing)

@@ -68,9 +68,9 @@ func PostBool(r *http.Request, key string) (bool, error) {
 
 	x = strings.TrimSpace(x)
 
-	if x == "1" || strings.ToLower(x) == "true" {
+	if x == "1" || strings.ToLower(x) == "true" || strings.ToLower(x) == "on" {
 		return true, nil
-	} else if x == "0" || strings.ToLower(x) == "false" {
+	} else if x == "0" || strings.ToLower(x) == "false" || strings.ToLower(x) == "off" {
 		return false, nil
 	}
 
