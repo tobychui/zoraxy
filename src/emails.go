@@ -272,17 +272,14 @@ func HandleNewPasswordSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Delete the user account
-	authAgent.UnregisterUser(username)
-
-	//Ok. Set the new password
-	err = authAgent.CreateUserAccount(username, newPassword, "")
-	if err != nil {
+	// Un register the user account
+	if err := authAgent.UnregisterUser(username); err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
 
-	if err != nil {
+	//Ok. Set the new password
+	if err := authAgent.CreateUserAccount(username, newPassword, ""); err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
