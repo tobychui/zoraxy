@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/database"
@@ -88,6 +89,11 @@ func NewStreamProxy(options *Options) *Manager {
 	//Inject manager into the rules
 	for _, rule := range previousRules {
 		rule.parent = &thisManager
+		if rule.Running {
+			//This was previously running. Start it again
+			log.Println("[Stream Proxy] Resuming stream proxy rule " + rule.Name)
+			rule.Start()
+		}
 	}
 
 	thisManager.Configs = previousRules
@@ -164,6 +170,11 @@ func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr
 
 	m.SaveConfigToDatabase()
 
+	//Check if config is running. If yes, restart it
+	if foundConfig.IsRunning() {
+		foundConfig.Restart()
+	}
+
 	return nil
 }
 
@@ -196,22 +207,17 @@ func (c *ProxyRelayConfig) Start() error {
 
 	// Create a stopChan to control the loop
 	tcpStopChan := make(chan bool)
-	c.tcpStopChan = tcpStopChan
-
 	udpStopChan := make(chan bool)
-	c.udpStopChan = udpStopChan
 
 	//Start the proxy service
 	if c.UseUDP {
+		c.udpStopChan = udpStopChan
 		go func() {
-			if !c.UseTCP {
-				//By default running state shows TCP proxy. If TCP is not in use, UDP is shown instead
-				c.Running = true
-			}
 			err := c.ForwardUDP(c.ListeningAddress, c.ProxyTargetAddr, udpStopChan)
 			if err != nil {
 				if !c.UseTCP {
 					c.Running = false
+					c.parent.SaveConfigToDatabase()
 				}
 				log.Println("[TCP] Error starting stream proxy " + c.Name + "(" + c.UUID + "): " + err.Error())
 			}
@@ -219,41 +225,57 @@ func (c *ProxyRelayConfig) Start() error {
 	}
 
 	if c.UseTCP {
+		c.tcpStopChan = tcpStopChan
 		go func() {
 			//Default to transport mode
-			c.Running = true
 			err := c.Port2host(c.ListeningAddress, c.ProxyTargetAddr, tcpStopChan)
 			if err != nil {
 				c.Running = false
+				c.parent.SaveConfigToDatabase()
 				log.Println("[TCP] Error starting stream proxy " + c.Name + "(" + c.UUID + "): " + err.Error())
 			}
 		}()
 	}
 
 	//Successfully spawned off the proxy routine
-
+	c.Running = true
+	c.parent.SaveConfigToDatabase()
 	return nil
 }
 
-// Stop a running proxy if running
+// Return if a proxy config is running
 func (c *ProxyRelayConfig) IsRunning() bool {
 	return c.tcpStopChan != nil || c.udpStopChan != nil
 }
 
+// Restart a proxy config
+func (c *ProxyRelayConfig) Restart() {
+	if c.IsRunning() {
+		c.Stop()
+	}
+	time.Sleep(300 * time.Millisecond)
+	c.Start()
+}
+
 // Stop a running proxy if running
 func (c *ProxyRelayConfig) Stop() {
-	log.Println("[PROXY] Stopping Stream Proxy " + c.Name)
+	log.Println("[STREAM PROXY] Stopping Stream Proxy " + c.Name)
 
 	if c.udpStopChan != nil {
+		log.Println("[STREAM PROXY] Stopping UDP for " + c.Name)
 		c.udpStopChan <- true
 		c.udpStopChan = nil
 	}
 
 	if c.tcpStopChan != nil {
+		log.Println("[STREAM PROXY] Stopping TCP for " + c.Name)
 		c.tcpStopChan <- true
 		c.tcpStopChan = nil
 	}
 
-	log.Println("[PROXY] Stopped Stream Proxy " + c.Name)
+	log.Println("[STREAM PROXY] Stopped Stream Proxy " + c.Name)
 	c.Running = false
+
+	//Update the running status
+	c.parent.SaveConfigToDatabase()
 }

@@ -5,15 +5,15 @@
     </div>
     <div class="ui divider"></div>
     <div class="ui basic segment" style="margin-top: 0;">
-        <h4>TCP / UDP Proxy Rules</h4>
-        <p>A list of TCP proxy rules created on this host. To enable them, use the toggle button on the right.</p>
-        <div style="overflow-x: auto; min-height: 400px;">
-            <table id="proxyTable" class="ui celled unstackable table">
+        <h3>TCP / UDP Proxy Rules</h3>
+        <p>A list of TCP / UDP proxy rules created on this host.</p>
+        <div style="overflow-x: auto; ">
+            <table id="proxyTable" class="ui celled basic unstackable table">
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Port/Addr A</th>
-                        <th>Port/Addr B</th>
+                        <th>Listening Address</th>
+                        <th>Target Address</th>
                         <th>Mode</th>
                         <th>Timeout (s)</th>
                         <th>Actions</th>
@@ -24,12 +24,13 @@
                 </tbody>
             </table>
         </div>
+        <br>
         <button class="ui basic right floated button" onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i>Refresh</button>
         <br><br>
     </div>
     <div class="ui divider"></div>
     <div class="ui basic segment" id="addproxyConfig">
-        <h4>Add or Edit Stream Proxy</h4>
+        <h3>Add or Edit Stream Proxy</h3>
         <p>Create or edit a new stream proxy instance</p>
         <form id="streamProxyForm" class="ui form">
             <div class="field" style="display:none;">
@@ -41,10 +42,10 @@
                 <input type="text" name="name" placeholder="Config Name">
             </div>
             <div class="field">
-                <label>Listening Port / Address with Port</label>
+                <label>Listening Address with Port</label>
                 <input type="text" name="listenAddr" placeholder="">
-                <small>Port to listen on this host. e.g. :25565 or 127.0.0.1:25565. <br>
-                    If you are using Docker, you will need to expose this port to host network.</small>
+                <small>Address to listen on this host. e.g. :25565 or 127.0.0.1:25565. <br>
+                    If you are using Docker, you will also need to expose this port to host network.</small>
             </div>
             <div class="field">
                 <label>Proxy Target Address with Port</label>
@@ -75,72 +76,6 @@
             <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
             <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
             <button class="ui basic red button" onclick="event.preventDefault(); cancelStreamProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>  
-            <!-- 
-            <div class="ui basic inverted segment" style="background: var(--theme_background_inverted); border-radius: 0.6em;">
-                <p>TCP Proxy support the following TCP sockets proxy modes</p>
-                <table class="ui celled padded inverted basic table">
-                    <thead>
-                      <tr><th class="single line">Mode</th>
-                      <th>Public-IP</th>
-                      <th>Concurrent Access</th>
-                      <th>Flow Diagram</th>
-                    </tr></thead>
-                    <tbody>
-                      <tr>
-                        <td>
-                          <h4 class="ui center aligned inverted header">Transport</h4>
-                        </td>
-                        <td class="single line">
-                            Server: <i class="ui green check icon"></i><br>
-                            A: <i class="ui remove icon"></i><br>
-                            B: <i class="ui green check icon"></i> (or same LAN)<br>
-                        </td>
-                        <td>
-                            <i class="ui green check icon"></i>
-                        </td>
-                        <td>Port A (e.g. 25565) <i class="arrow right icon"></i> Server<br>
-                            Server <i class="arrow right icon"></i> Port B (e.g. 192.168.0.2:25565)<br>
-                            <small>Traffic from Port A will be forward to Port B's (IP if provided and) Port</small>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <h4 class="ui center aligned inverted header">Listen</h4>
-                        </td>
-                        <td class="single line">
-                            Server: <i class="ui green check icon"></i><br>
-                            A: <i class="ui remove icon"></i><br>
-                            B: <i class="ui remove icon"></i><br>
-                        </td>
-                        <td>
-                            <i class="ui red times icon"></i>
-                        </td>
-                        <td>Port A (e.g. 8080) <i class="arrow right icon"></i> Server<br>
-                            Port B (e.g. 8081) <i class="arrow right icon"></i> Server<br>
-                            <small>Server will act as a bridge to proxy traffic between Port A and B</small>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <h4 class="ui center aligned inverted header">Starter</h4>
-                        </td>
-                        <td class="single line">
-                            Server: <i class="ui times icon"></i><br>
-                            A: <i class="ui green check icon"></i><br>
-                            B: <i class="ui green check icon"></i><br>
-                        </td>
-                        <td>
-                            <i class="ui red times icon"></i>
-                        </td>
-                        <td>Server <i class="arrow right icon"></i> Port A (e.g. remote.local.:8080) <br>
-                            Server <i class="arrow right icon"></i> Port B (e.g. recv.local.:8081) <br>
-                            <small>Port A and B will be actively bridged</small>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                -->
         </form>
     </div>
 </div>
@@ -243,10 +178,10 @@
                 proxyConfigs.forEach(function(config) {
                     var runningLogo = 'Stopped';
                     var runningClass = "stopped";
-                    var startButton = `<button onclick="startStreamProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="green play icon"></i> Start Proxy</button>`;
+                    var startButton = `<button onclick="startStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Start Proxy"><i class="green play icon"></i></button>`;
                     if (config.Running){
                         runningLogo = 'Running';
-                        startButton = `<button onclick="stopStreamProx('${config.UUID}');" class="ui button" title="Start Proxy"><i class="red stop icon"></i> Stop Proxy</button>`;
+                        startButton = `<button onclick="stopStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Stop Proxy"><i class="red stop icon"></i></button>`;
                         runningClass = "running"
                     }
 
@@ -259,11 +194,11 @@
                         modeText.push("UDP")
                     }
 
-                    modeText = modeText.join(" | ")
+                    modeText = modeText.join(" & ")
 
                     var thisConfig = encodeURIComponent(JSON.stringify(config));
 
-                    var row = $(`<tr class="tcproxConfig ${runningClass}" uuid="${config.UUID}" config="${thisConfig}">`);
+                    var row = $(`<tr class="streamproxConfig ${runningClass}" uuid="${config.UUID}" config="${thisConfig}">`);
                     row.append($('<td>').html(`
                         ${config.Name}
                         <div class="statusText">${runningLogo}</div>`));
@@ -272,11 +207,9 @@
                     row.append($('<td>').text(modeText));
                     row.append($('<td>').text(config.Timeout));
                     row.append($('<td>').html(`
-                        <div class="ui basic vertical fluid tiny buttons">
-                            ${startButton}
-                            <button onclick="editTCPProxyConfig('${config.UUID}');" class="ui button" title="Edit Config"><i class="edit icon"></i> Edit </button>
-                            <button onclick="deleteTCPProxyConfig('${config.UUID}');" class="ui red basic button" title="Delete Config"><i class="trash icon"></i> Remove</button>
-                        </div>
+                        ${startButton}
+                        <button onclick="editTCPProxyConfig('${config.UUID}');" class="ui circular basic mini icon button" title="Edit Config"><i class="edit icon"></i></button>
+                        <button onclick="deleteTCPProxyConfig('${config.UUID}');" class="ui circular red basic mini icon button" title="Delete Config"><i class="trash icon"></i></button>
                     `));
                     tableBody.append(row);
                 });
@@ -285,7 +218,7 @@
 
         function getConfigDetailsFromDOM(configUUID){
             let thisConfig = null;
-            $(".tcproxConfig").each(function(){
+            $(".streamproxConfig").each(function(){
                 let uuid = $(this).attr("uuid");
                 if (configUUID == uuid){
                     //This is the one we are looking for
