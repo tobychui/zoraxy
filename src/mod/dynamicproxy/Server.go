@@ -39,9 +39,6 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Inject headers
-	w.Header().Set("x-proxy-by", "zoraxy/"+h.Parent.Option.HostVersion)
-
 	/*
 		Redirection Routing
 	*/

@@ -111,13 +111,6 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
 
-	//Inject custom headers
-	if len(target.UserDefinedHeaders) > 0 {
-		for _, customHeader := range target.UserDefinedHeaders {
-			r.Header.Set(customHeader.Key, customHeader.Value)
-		}
-	}
-
 	requestURL := r.URL.String()
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
@@ -152,12 +145,18 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
+	//Build downstream and upstream header rules
+	upstreamHeaders, downstreamHeaders := target.SplitInboundOutboundHeaders()
+
 	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:  target.Domain,
-		OriginalHost: originalHostHeader,
-		UseTLS:       target.RequireTLS,
-		NoCache:      h.Parent.Option.NoCache,
-		PathPrefix:   "",
+		ProxyDomain:       target.Domain,
+		OriginalHost:      originalHostHeader,
+		UseTLS:            target.RequireTLS,
+		NoCache:           h.Parent.Option.NoCache,
+		PathPrefix:        "",
+		UpstreamHeaders:   upstreamHeaders,
+		DownstreamHeaders: downstreamHeaders,
+		Version:           target.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError
@@ -183,13 +182,6 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
-
-	//Inject custom headers
-	if len(target.parent.UserDefinedHeaders) > 0 {
-		for _, customHeader := range target.parent.UserDefinedHeaders {
-			r.Header.Set(customHeader.Key, customHeader.Value)
-		}
-	}
 
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
@@ -219,11 +211,17 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
+	//Build downstream and upstream header rules
+	upstreamHeaders, downstreamHeaders := target.parent.SplitInboundOutboundHeaders()
+
 	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:  target.Domain,
-		OriginalHost: originalHostHeader,
-		UseTLS:       target.RequireTLS,
-		PathPrefix:   target.MatchingPath,
+		ProxyDomain:       target.Domain,
+		OriginalHost:      originalHostHeader,
+		UseTLS:            target.RequireTLS,
+		PathPrefix:        target.MatchingPath,
+		UpstreamHeaders:   upstreamHeaders,
+		DownstreamHeaders: downstreamHeaders,
+		Version:           target.parent.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError

@@ -86,7 +86,6 @@ type UserDefinedHeader struct {
 	Key       string
 	Value     string
 	IsRemove  bool //Instead of set, remove this key instead
-	IsAppend  bool //Instead of set, append to the current one with "," as seperator
 }
 
 // A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better

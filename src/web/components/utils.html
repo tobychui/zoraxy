@@ -217,6 +217,7 @@
         $("#zoraxyinfo .uuid").text(data.NodeUUID);
         $("#zoraxyinfo .development").text(data.Development?"Development":"Release");
         $("#zoraxyinfo .version").text(data.Version);
+        $(".zrversion").text("v." + data.Version); //index footer
         $("#zoraxyinfo .boottime").text(timeConverter(data.BootTime) + ` ( ${secondsToDhms(parseInt(Date.now()/1000) - data.BootTime)} ago)`);
         $("#zoraxyinfo .zt").html(data.ZerotierConnected?`<i class="ui green check icon"></i> Connected`:`<i class="ui red times icon"></i> Link Error`);
         $("#zoraxyinfo .sshlb").html(data.EnableSshLoopback?`<i class="ui yellow exclamation triangle icon"></i> Enabled`:`Disabled`);
@@ -339,15 +340,6 @@
             isValid = false;
         } else {
             form.find('input[name="username"]').parent().removeClass('error');
-        }
-
-        // validate password
-        const password = form.find('input[name="password"]').val().trim();
-        if (password === '') {
-            form.find('input[name="password"]').parent().addClass('error');
-            isValid = false;
-        } else {
-            form.find('input[name="password"]').parent().removeClass('error');
         }
 
         // validate sender address

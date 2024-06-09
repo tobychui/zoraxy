@@ -142,6 +142,7 @@ func (router *Router) StartProxyService() error {
 							OriginalHost: originalHostHeader,
 							UseTLS:       sep.RequireTLS,
 							PathPrefix:   "",
+							Version:      sep.parent.Option.HostVersion,
 						})
 						return
 					}

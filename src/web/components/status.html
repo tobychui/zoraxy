@@ -68,12 +68,13 @@
 <div class="standardContainer">
     <div class="ui divider"></div>
     <h4>Global Settings</h4>
-    <p>Inbound Port (Port to be proxied)</p>
+    <p>Inbound Port (Reverse Proxy Listening Port)</p>
     <div class="ui action fluid notloopbackOnly input">
+        <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
         <input type="text" id="incomingPort" placeholder="Incoming Port" value="80">
-        <button class="ui basic notloopbackOnly button" onclick="handlePortChange();"><i class="ui green checkmark icon"></i> Apply</button>
+        <button class="ui green notloopbackOnly button" style="background: linear-gradient(60deg, #27e7ff, #00ca52);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
     </div>
-    <br>
+    <br><br>
     <div id="tls" class="ui toggle notloopbackOnly checkbox">
         <input type="checkbox">
         <label>Use TLS to serve proxy request</label>
@@ -160,6 +161,7 @@
 </div>
 <script>
     let loopbackProxiedInterface = false;
+    let currentListeningPort = 80;
     $(".advanceSettings").accordion();
 
     //Initial the start stop button if this is reverse proxied
@@ -176,6 +178,8 @@
     //Get the latest server status from proxy server
     function initRPStaste(){
         $.get("/api/proxy/status", function(data){
+            $("#incomingPort").off("change");
+
             if (data.Running == true){
                 $("#startbtn").addClass("disabled");
                 if (!loopbackProxiedInterface){
@@ -194,6 +198,15 @@
                 $("#serverstatus").removeClass("green");
             }
             $("#incomingPort").val(data.Option.Port);
+            currentListeningPort = data.Option.Port;
+            $("#incomingPort").on("change", function(){
+                let newPortValue = $("#incomingPort").val().trim();
+                if (currentListeningPort != newPortValue){
+                    $("#applyButtonReminder").show();
+                }else{
+                    $("#applyButtonReminder").hide();
+                }
+            });
             
         });
         
@@ -353,8 +366,11 @@
                 msgbox(data.error, false, 5000);
                 return;
             }
-            msgbox("Setting Updated");
+            msgbox("Listening Port Updated");
             initRPStaste();
+
+            //Hide the reminder text
+            $("#applyButtonReminder").hide();
         });
     }
 

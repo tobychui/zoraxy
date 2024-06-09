@@ -57,11 +57,14 @@ type ReverseProxy struct {
 }
 
 type ResponseRewriteRuleSet struct {
-	ProxyDomain  string
-	OriginalHost string
-	UseTLS       bool
-	NoCache      bool
-	PathPrefix   string //Vdir prefix for root, / will be rewrite to this
+	ProxyDomain       string
+	OriginalHost      string
+	UseTLS            bool
+	NoCache           bool
+	PathPrefix        string //Vdir prefix for root, / will be rewrite to this
+	UpstreamHeaders   [][]string
+	DownstreamHeaders [][]string
+	Version           string //Version number of Zoraxy, use for X-Proxy-By
 }
 
 type requestCanceler interface {
@@ -248,82 +251,6 @@ func (p *ReverseProxy) logf(format string, args ...interface{}) {
 	}
 }
 
-func removeHeaders(header http.Header, noCache bool) {
-	// Remove hop-by-hop headers listed in the "Connection" header.
-	if c := header.Get("Connection"); c != "" {
-		for _, f := range strings.Split(c, ",") {
-			if f = strings.TrimSpace(f); f != "" {
-				header.Del(f)
-			}
-		}
-	}
-
-	// Remove hop-by-hop headers
-	for _, h := range hopHeaders {
-		if header.Get(h) != "" {
-			header.Del(h)
-		}
-	}
-
-	//Restore the Upgrade header if any
-	if header.Get("Zr-Origin-Upgrade") != "" {
-		header.Set("Upgrade", header.Get("Zr-Origin-Upgrade"))
-		header.Del("Zr-Origin-Upgrade")
-	}
-
-	//Disable cache if nocache is set
-	if noCache {
-		header.Del("Cache-Control")
-		header.Set("Cache-Control", "no-store")
-	}
-
-	//Hide Go-HTTP-Client UA if the client didnt sent us one
-	if _, ok := header["User-Agent"]; !ok {
-		// If the outbound request doesn't have a User-Agent header set,
-		// don't send the default Go HTTP client User-Agent.
-		header.Set("User-Agent", "")
-	}
-
-}
-
-func addXForwardedForHeader(req *http.Request) {
-	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
-		// If we aren't the first proxy retain prior
-		// X-Forwarded-For information as a comma+space
-		// separated list and fold multiple headers into one.
-		if prior, ok := req.Header["X-Forwarded-For"]; ok {
-			clientIP = strings.Join(prior, ", ") + ", " + clientIP
-		}
-		req.Header.Set("X-Forwarded-For", clientIP)
-		if req.TLS != nil {
-			req.Header.Set("X-Forwarded-Proto", "https")
-		} else {
-			req.Header.Set("X-Forwarded-Proto", "http")
-		}
-
-		if req.Header.Get("X-Real-Ip") == "" {
-			//Check if CF-Connecting-IP header exists
-			CF_Connecting_IP := req.Header.Get("CF-Connecting-IP")
-			Fastly_Client_IP := req.Header.Get("Fastly-Client-IP")
-			if CF_Connecting_IP != "" {
-				//Use CF Connecting IP
-				req.Header.Set("X-Real-Ip", CF_Connecting_IP)
-			} else if Fastly_Client_IP != "" {
-				//Use Fastly Client IP
-				req.Header.Set("X-Real-Ip", Fastly_Client_IP)
-			} else {
-				// Not exists. Fill it in with first entry in X-Forwarded-For
-				ips := strings.Split(clientIP, ",")
-				if len(ips) > 0 {
-					req.Header.Set("X-Real-Ip", strings.TrimSpace(ips[0]))
-				}
-			}
-
-		}
-
-	}
-}
-
 func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) error {
 	transport := p.Transport
 
@@ -362,11 +289,17 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	outreq.Header = make(http.Header)
 	copyHeader(outreq.Header, req.Header)
 
-	// Remove hop-by-hop headers listed in the "Connection" header, Remove hop-by-hop headers.
+	// Remove hop-by-hop headers.
 	removeHeaders(outreq.Header, rrr.NoCache)
 
 	// Add X-Forwarded-For Header.
 	addXForwardedForHeader(outreq)
+
+	// Add user defined headers (to upstream)
+	injectUserDefinedHeaders(outreq.Header, rrr.UpstreamHeaders)
+
+	// Rewrite outbound UA, must be after user headers
+	rewriteUserAgent(outreq.Header, "Zoraxy/"+rrr.Version)
 
 	res, err := transport.RoundTrip(outreq)
 	if err != nil {
@@ -398,13 +331,17 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		}
 	}
 
+	//TODO: Figure out a way to proxy for proxmox
 	//if res.StatusCode == 501 || res.StatusCode == 500 {
 	//	fmt.Println(outreq.Proto, outreq.RemoteAddr, outreq.RequestURI)
 	//	fmt.Println(">>>", outreq.Method, res.Header, res.ContentLength, res.StatusCode)
 	//	fmt.Println(outreq.Header, req.Host)
 	//}
 
-	//Custom header rewriter functions
+	//Add debug X-Proxy-By tracker
+	res.Header.Set("x-proxy-by", "zoraxy/"+rrr.Version)
+
+	//Custom Location header rewriter functions
 	if res.Header.Get("Location") != "" {
 		locationRewrite := res.Header.Get("Location")
 		originLocation := res.Header.Get("Location")
@@ -429,6 +366,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		//Custom redirection to this rproxy relative path
 		res.Header.Set("Location", locationRewrite)
 	}
+
+	// Add user defined headers (to downstream)
+	injectUserDefinedHeaders(res.Header, rrr.DownstreamHeaders)
 
 	// Copy header from response to client.
 	copyHeader(rw.Header(), res.Header)

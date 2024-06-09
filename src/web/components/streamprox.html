@@ -112,7 +112,6 @@
                     }
                     clearStreamProxyAddEditForm();
                     initProxyConfigList();
-                    $("#addproxyConfig").slideUp("fast");
                 },
                 error: function() {
                     msgbox('An error occurred while processing the request', false);
@@ -123,6 +122,7 @@
         function clearStreamProxyAddEditForm(){
             $('#streamProxyForm input, #streamProxyForm select').val('');
             $('#streamProxyForm select').dropdown('clear');
+            $("#streamProxyForm input[name=timeout]").val(10);
         }
 
         function cancelStreamProxyEdit(event=undefined) {
@@ -268,8 +268,6 @@
                     }
                 });
                 editingStreamProxyConfigUUID = configUUID;
-                $("#addproxyConfig").slideDown("fast");
-
             }else{
                 msgbox("Unable to load target config", false);
             }

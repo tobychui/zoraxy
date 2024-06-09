@@ -509,6 +509,16 @@ body{
     }
   }
 
+  /* Remind message for user forgetting to click Apply button*/
+  #applyButtonReminder{
+    position: absolute; 
+    bottom:-1.6em; 
+    left: 0; 
+    font-weight: bolder; 
+    color: #faac26; 
+    display:none;
+  }
+
 /*
   HTTP Proxy & Virtual Directory
 */

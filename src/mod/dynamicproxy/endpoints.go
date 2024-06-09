@@ -30,7 +30,6 @@ func (ep *ProxyEndpoint) UserDefinedHeaderExists(key string) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -49,16 +48,13 @@ func (ep *ProxyEndpoint) RemoveUserDefinedHeader(key string) error {
 }
 
 // Add a user defined header to the list, duplicates will be automatically removed
-func (ep *ProxyEndpoint) AddUserDefinedHeader(key string, value string) error {
-	if ep.UserDefinedHeaderExists(key) {
-		ep.RemoveUserDefinedHeader(key)
+func (ep *ProxyEndpoint) AddUserDefinedHeader(newHeaderRule *UserDefinedHeader) error {
+	if ep.UserDefinedHeaderExists(newHeaderRule.Key) {
+		ep.RemoveUserDefinedHeader(newHeaderRule.Key)
 	}
 
-	ep.UserDefinedHeaders = append(ep.UserDefinedHeaders, &UserDefinedHeader{
-		Key:   cases.Title(language.Und, cases.NoLower).String(key), //e.g. x-proxy-by -> X-Proxy-By
-		Value: value,
-	})
-
+	newHeaderRule.Key = cases.Title(language.Und, cases.NoLower).String(newHeaderRule.Key)
+	ep.UserDefinedHeaders = append(ep.UserDefinedHeaders, newHeaderRule)
 	return nil
 }
 
