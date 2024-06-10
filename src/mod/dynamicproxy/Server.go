@@ -14,11 +14,16 @@ import (
 	Main server for dynamic proxy core
 
 	Routing Handler Priority (High to Low)
-	- Blacklist
-	- Whitelist
+	- Special Routing Rule (e.g. acme)
 	- Redirectable
 	- Subdomain Routing
-	- Vitrual Directory Routing
+		- Access Router
+			- Blacklist
+			- Whitelist
+		- Basic Auth
+		- Vitrual Directory Proxy
+		- Subdomain Proxy
+	- Root router (default site router)
 */
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -33,9 +38,6 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		matchedRoutingRule.Route(w, r)
 		return
 	}
-
-	//Inject headers
-	w.Header().Set("x-proxy-by", "zoraxy/"+h.Parent.Option.HostVersion)
 
 	/*
 		Redirection Routing

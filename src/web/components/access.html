@@ -65,7 +65,7 @@
                 <div class="ui form">
                     <div class="field">
                         <label>Select Country</label>
-                        <div id="countrySelector" class="ui fluid search selection dropdown">
+                        <div id="countrySelector" class="ui fluid search multiple selection dropdown">
                             <input type="hidden" name="country">
                             <i class="dropdown icon"></i>
                             <div class="default text">Select Country</div>
@@ -382,7 +382,7 @@
                 <div class="ui form">
                     <div class="field">
                         <label>Select Country</label>
-                        <div id="countrySelectorWhitelist" class="ui fluid search selection dropdown">
+                        <div id="countrySelectorWhitelist" class="ui fluid search multiple selection dropdown">
                             <input type="hidden" name="country">
                             <i class="dropdown icon"></i>
                             <div class="default text">Select Country</div>
@@ -1018,42 +1018,71 @@
 
     function addCountryToBlacklist() {
         var countryCode = $("#countrySelector").dropdown("get value").toLowerCase();
-        $('#countrySelector').dropdown('clear');
-        $.ajax({
-            type: "POST",
-            url: "/api/blacklist/country/add",
-            data: { cc: countryCode, id: currentEditingAccessRule},
-            success: function(response) {
-                if (response.error != undefined){
-                    msgbox(response.error, false);
-                }
-                initBannedCountryList();
-            },
-            error: function(xhr, status, error) {
-            // handle error response
-            }
-        });
-    }
+        let ccs = [countryCode];
+        if (countryCode.includes(",")){
+            //Multiple country codes selected
+            //Usually just a few countries a for loop will get the job done
+            ccs = countryCode.split(",");
+        }
 
-    function removeFromBannedList(countryCode){
-        if (confirm("Confirm removing " + getCountryName(countryCode) + " from blacklist?")){
-            countryCode = countryCode.toLowerCase(); 
+        let counter = 0;
+        for(var i = 0; i < ccs.length; i++){
+            let thisCountryCode = ccs[i];
             $.ajax({
-                url: "/api/blacklist/country/remove",
-                method: "POST",
-                data: { cc: countryCode, id: currentEditingAccessRule},
+                type: "POST",
+                url: "/api/blacklist/country/add",
+                data: { cc: thisCountryCode, id: currentEditingAccessRule},
                 success: function(response) {
                     if (response.error != undefined){
                         msgbox(response.error, false);
                     }
-                    initBannedCountryList();
+                    
+                    if (counter == (ccs.length - 1)){
+                        //Last item
+                        setTimeout(function(){
+                            initBannedCountryList();
+                            if (ccs.length == 1){
+                                //Single country
+                                msgbox(`Added ${getCountryName(ccs[0])} to blacklist`);
+                            }else{
+                                msgbox(ccs.length + " countries added to blacklist");
+                            }
+                            
+                        }, (ccs.length==1)?0:100);
+                    }
+                    counter++;
                 },
                 error: function(xhr, status, error) {
-                    console.error("Error removing country from blacklist: " + error);
-                    // Handle error response
+                // handle error response
                 }
             });
         }
+        
+        
+        $('#countrySelector').dropdown('clear');
+        
+    }
+
+    function removeFromBannedList(countryCode){
+        countryCode = countryCode.toLowerCase();
+        let countryName = getCountryName(countryCode);
+        $.ajax({
+            url: "/api/blacklist/country/remove",
+            method: "POST",
+            data: { cc: countryCode, id: currentEditingAccessRule},
+            success: function(response) {
+                if (response.error != undefined){
+                    msgbox(response.error, false);
+                }else{
+                    msgbox(countryName + " removed from blacklist");
+                }
+                initBannedCountryList();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error removing country from blacklist: " + error);
+                // Handle error response
+            }
+        });
     }
 
     function addIpBlacklist(){
@@ -1126,21 +1155,45 @@
 
     function addCountryToWhitelist() {
         var countryCode = $("#countrySelectorWhitelist").dropdown("get value").toLowerCase();
-        $('#countrySelectorWhitelist').dropdown('clear');
-        $.ajax({
-            type: "POST",
-            url: "/api/whitelist/country/add",
-            data: { cc: countryCode , id: currentEditingAccessRule},
-            success: function(response) {
-                if (response.error != undefined){
-                    msgbox(response.error, false);
+        let ccs = [countryCode];
+        if (countryCode.includes(",")){
+            //Multiple country codes selected
+            //Usually just a few countries a for loop will get the job done
+            ccs = countryCode.split(",");
+        }
+    
+        let counter = 0;
+        for(var i = 0; i < ccs.length; i++){
+            let thisCountryCode = ccs[i];
+            $.ajax({
+                type: "POST",
+                url: "/api/whitelist/country/add",
+                data: { cc: thisCountryCode , id: currentEditingAccessRule},
+                success: function(response) {
+                    if (response.error != undefined){
+                        msgbox(response.error, false);
+                    }
+
+                    if (counter == (ccs.length - 1)){
+                        setTimeout(function(){
+                            initWhitelistCountryList();
+                            if (ccs.length == 1){
+                                //Single country
+                                msgbox(`Added ${getCountryName(ccs[0])} to whitelist`);
+                            }else{
+                                msgbox(ccs.length + " countries added to whitelist");
+                            }
+                        }, (ccs.length==1)?0:100);
+                    }
+                    counter++;
+                },
+                error: function(xhr, status, error) {
+                    // handle error response
                 }
-                initWhitelistCountryList();
-            },
-            error: function(xhr, status, error) {
-                // handle error response
-            }
-        });
+            });
+        }
+
+        $('#countrySelectorWhitelist').dropdown('clear');
     }
 
     function removeFromWhiteList(countryCode){

@@ -72,10 +72,20 @@ type BasicAuthExceptionRule struct {
 	PathPrefix string
 }
 
+// Header injection direction type
+type HeaderDirection int
+
+const (
+	HeaderDirection_ZoraxyToUpstream   HeaderDirection = 0 //Inject (or remove) header to request out-going from Zoraxy to backend server
+	HeaderDirection_ZoraxyToDownstream HeaderDirection = 1 //Inject (or remove) header to request out-going from Zoraxy to client (e.g. browser)
+)
+
 // User defined headers to add into a proxy endpoint
 type UserDefinedHeader struct {
-	Key   string
-	Value string
+	Direction HeaderDirection
+	Key       string
+	Value     string
+	IsRemove  bool //Instead of set, remove this key instead
 }
 
 // A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better

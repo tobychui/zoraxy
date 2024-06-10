@@ -1,0 +1,382 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Stream Proxy</h2>
+        <p>Proxy traffic flow on layer 3 via TCP or UDP</p>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment" style="margin-top: 0;">
+        <h3>TCP / UDP Proxy Rules</h3>
+        <p>A list of TCP / UDP proxy rules created on this host.</p>
+        <div style="overflow-x: auto; ">
+            <table id="proxyTable" class="ui celled basic unstackable table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Listening Address</th>
+                        <th>Target Address</th>
+                        <th>Mode</th>
+                        <th>Timeout (s)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+        <br>
+        <button class="ui basic right floated button" onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i>Refresh</button>
+        <br><br>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment" id="addproxyConfig">
+        <h3>Add or Edit Stream Proxy</h3>
+        <p>Create or edit a new stream proxy instance</p>
+        <form id="streamProxyForm" class="ui form">
+            <div class="field" style="display:none;">
+                <label>UUID</label>
+                <input type="text" name="uuid">
+            </div>
+            <div class="field">
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Config Name">
+            </div>
+            <div class="field">
+                <label>Listening Address with Port</label>
+                <input type="text" name="listenAddr" placeholder="">
+                <small>Address to listen on this host. e.g. :25565 or 127.0.0.1:25565. <br>
+                    If you are using Docker, you will also need to expose this port to host network.</small>
+            </div>
+            <div class="field">
+                <label>Proxy Target Address with Port</label>
+                <input type="text" name="proxyAddr" placeholder="">
+                <small>Server address to forward TCP / UDP package. e.g. 192.168.1.100:25565</small>
+            </div>
+            <div class="field">
+                <label>Timeout (s)</label>
+                <input type="text" name="timeout" placeholder="" value="10">
+                <small>Connection timeout in seconds</small>
+            </div>
+            <Br>
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" tabindex="0" name="useTCP" class="hidden">
+                    <label>Enable TCP<br>
+                        <small>Forward TCP request on this listening socket</small>
+                    </label>
+                </div>
+            </div>
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" tabindex="0" name="useUDP" class="hidden">
+                    <label>Enable UDP<br>
+                    <small>Forward UDP request on this listening socket</small></label>
+                </div>
+            </div>
+            <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
+            <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
+            <button class="ui basic red button" onclick="event.preventDefault(); cancelStreamProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>  
+        </form>
+    </div>
+</div>
+    <script>
+        let editingStreamProxyConfigUUID = ""; //The current editing TCP Proxy config UUID
+
+        $("#streamProxyForm .dropdown").dropdown();
+        $('#streamProxyForm').on('submit', function(event) {
+            event.preventDefault();
+
+            //Check if update mode
+            if ($("#editStreamProxyButton").is(":visible")){
+                confirmEditTCPProxyConfig(event);
+                return;
+            }
+
+            var form = $(this);
+
+            var formValid = validateTCPProxyConfig(form);
+            if (!formValid){
+                return;
+            }
+
+            // Send the AJAX POST request
+            $.ajax({
+                type: 'POST',
+                url: '/api/streamprox/config/add',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.error) {
+                        msgbox(response.error, false, 6000);
+                    }else{
+                        msgbox("Config Added");
+                    }
+                    clearStreamProxyAddEditForm();
+                    initProxyConfigList();
+                },
+                error: function() {
+                    msgbox('An error occurred while processing the request', false);
+                }
+            });
+        });
+            
+        function clearStreamProxyAddEditForm(){
+            $('#streamProxyForm input, #streamProxyForm select').val('');
+            $('#streamProxyForm select').dropdown('clear');
+            $("#streamProxyForm input[name=timeout]").val(10);
+        }
+
+        function cancelStreamProxyEdit(event=undefined) {
+            clearStreamProxyAddEditForm();
+            $("#addStreamProxyButton").show();
+            $("#editStreamProxyButton").hide();
+        }
+
+        function validateTCPProxyConfig(form){
+            //Check if name is filled. If not, generate a random name for it
+            var name = form.find('input[name="name"]').val()
+            if (name == ""){
+                let randomName = "Proxy Rule (#" + Math.round(Date.now()/1000) + ")";
+                form.find('input[name="name"]').val(randomName);
+            }
+
+            // Validate timeout is an integer
+            var timeout = parseInt(form.find('input[name="timeout"]').val());
+            if (form.find('input[name="timeout"]').val() == ""){
+                //Not set. Assign a random one to it
+                form.find('input[name="timeout"]').val("10");
+                timeout = 10;
+            }
+            
+            if (isNaN(timeout)) {
+                form.find('input[name="timeout"]').parent().addClass("error");
+                msgbox('Timeout must be a valid integer', false, 5000);
+                return false;
+            }else{
+                form.find('input[name="timeout"]').parent().removeClass("error");
+            }
+
+            // Validate mode is selected
+            var mode = form.find('select[name="mode"]').val();
+            if (mode === '') {
+                form.find('select[name="mode"]').parent().addClass("error");
+                msgbox('Please select a mode', false, 5000);
+                return false;
+            }else{
+                form.find('select[name="mode"]').parent().removeClass("error");
+            }
+            return true;
+        }
+
+        function renderProxyConfigs(proxyConfigs) {
+            var tableBody = $('#proxyTable tbody');
+            tableBody.empty();
+            if (proxyConfigs.length === 0) {
+            var noResultsRow = $('<tr><td colspan="7"><i class="green check circle icon"></i>No Proxy Configs</td></tr>');
+                tableBody.append(noResultsRow);
+            } else {
+               
+                proxyConfigs.forEach(function(config) {
+                    var runningLogo = 'Stopped';
+                    var runningClass = "stopped";
+                    var startButton = `<button onclick="startStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Start Proxy"><i class="green play icon"></i></button>`;
+                    if (config.Running){
+                        runningLogo = 'Running';
+                        startButton = `<button onclick="stopStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Stop Proxy"><i class="red stop icon"></i></button>`;
+                        runningClass = "running"
+                    }
+
+                    var modeText = [];
+                    if (config.UseTCP){
+                        modeText.push("TCP")
+                    }
+
+                    if (config.UseUDP){
+                        modeText.push("UDP")
+                    }
+
+                    modeText = modeText.join(" & ")
+
+                    var thisConfig = encodeURIComponent(JSON.stringify(config));
+
+                    var row = $(`<tr class="streamproxConfig ${runningClass}" uuid="${config.UUID}" config="${thisConfig}">`);
+                    row.append($('<td>').html(`
+                        ${config.Name}
+                        <div class="statusText">${runningLogo}</div>`));
+                    row.append($('<td>').text(config.ListeningAddress));
+                    row.append($('<td>').text(config.ProxyTargetAddr));
+                    row.append($('<td>').text(modeText));
+                    row.append($('<td>').text(config.Timeout));
+                    row.append($('<td>').html(`
+                        ${startButton}
+                        <button onclick="editTCPProxyConfig('${config.UUID}');" class="ui circular basic mini icon button" title="Edit Config"><i class="edit icon"></i></button>
+                        <button onclick="deleteTCPProxyConfig('${config.UUID}');" class="ui circular red basic mini icon button" title="Delete Config"><i class="trash icon"></i></button>
+                    `));
+                    tableBody.append(row);
+                });
+            }
+        }
+
+        function getConfigDetailsFromDOM(configUUID){
+            let thisConfig = null;
+            $(".streamproxConfig").each(function(){
+                let uuid = $(this).attr("uuid");
+                if (configUUID == uuid){
+                    //This is the one we are looking for
+                    thisConfig = JSON.parse(decodeURIComponent($(this).attr("config")));
+                }
+            });
+            return thisConfig;
+        }   
+
+        function editTCPProxyConfig(configUUID){
+            let targetConfig = getConfigDetailsFromDOM(configUUID);
+            if (targetConfig != null){
+                $("#addStreamProxyButton").hide();
+                $("#editStreamProxyButton").show();
+               $.each(targetConfig, function(key, value) {
+                    var field;
+                    if (key == "UseTCP"){
+                        let checkboxEle = $("#streamProxyForm input[name=useTCP]").parent();
+                        if (value === true){
+                            $(checkboxEle).checkbox("set checked");
+                        }else{
+                            $(checkboxEle).checkbox("set unchecked");
+                        }
+                        return;
+                    }else if (key == "UseUDP"){
+                        let checkboxEle = $("#streamProxyForm input[name=useUDP]").parent();
+                        if (value === true){
+                            $(checkboxEle).checkbox("set checked");
+                        }else{
+                            $(checkboxEle).checkbox("set unchecked");
+                        }
+                        return;
+                    }else if (key == "ListeningAddress"){
+                        field = $("#streamProxyForm input[name=listenAddr]");
+                    }else if (key == "ProxyTargetAddr"){
+                        field = $("#streamProxyForm input[name=proxyAddr]");
+                    }else if (key == "UUID"){
+                        field = $("#streamProxyForm input[name=uuid]");
+                    }else if (key == "Name"){
+                        field = $("#streamProxyForm input[name=name]");
+                    }else if (key == "Timeout"){
+                        field = $("#streamProxyForm input[name=timeout]");
+                    }
+
+                    if (field != undefined && field.length > 0) {
+                        field.val(value);  
+                    }
+                });
+                editingStreamProxyConfigUUID = configUUID;
+            }else{
+                msgbox("Unable to load target config", false);
+            }
+        }
+
+        function confirmEditTCPProxyConfig(event){
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            var form = $("#streamProxyForm");
+
+            var formValid = validateTCPProxyConfig(form);
+            if (!formValid){
+                return;
+            }
+
+            // Send the AJAX POST request
+            $.ajax({
+                type: 'POST',
+                url: '/api/streamprox/config/edit',
+                method: "POST",
+                data: {
+                    uuid: $("#streamProxyForm input[name=uuid]").val().trim(),
+                    name: $("#streamProxyForm input[name=name]").val().trim(),
+                    listenAddr: $("#streamProxyForm input[name=listenAddr]").val().trim(),
+                    proxyAddr: $("#streamProxyForm input[name=proxyAddr]").val().trim(),
+                    useTCP: $("#streamProxyForm input[name=useTCP]")[0].checked ,
+                    useUDP: $("#streamProxyForm input[name=useUDP]")[0].checked ,
+                    timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
+                },
+                success: function(response) {
+                    if (response.error) {
+                        msgbox(response.error, false, 6000);
+                    }else{
+                        msgbox("Config Updated");
+                    }
+                    initProxyConfigList();
+                    cancelStreamProxyEdit();
+                    
+                },
+                error: function() {
+                    msgbox('An error occurred while processing the request', false);
+                }
+            });
+        }
+
+        function deleteTCPProxyConfig(configUUID){
+            $.ajax({
+                url: "/api/streamprox/config/delete",
+                method: "POST",
+                data: {uuid: configUUID},
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 6000);
+                    }else{
+                        msgbox("Proxy Config Removed");
+                        initProxyConfigList();
+                    }
+                }
+            })
+        }
+
+        //Start a TCP proxy by their config UUID
+        function startStreamProx(configUUID){
+            $.ajax({
+                url: "/api/streamprox/config/start",
+                method: "POST",
+                data: {uuid: configUUID},
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 6000);
+                    }else{
+                        msgbox("Service Started");
+                        initProxyConfigList();
+                    }
+                }
+
+            });
+        }
+
+        //Stop a TCP proxy by their config UUID
+        function stopStreamProx(configUUID){
+            $.ajax({
+                url: "/api/streamprox/config/stop",
+                method: "POST",
+                data: {uuid: configUUID},
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 6000);
+                    }else{
+                        msgbox("Service Stopped");
+                        initProxyConfigList();
+                    }
+                }
+
+            });
+        }
+
+        function initProxyConfigList(){
+            $.ajax({
+                type: 'GET',
+                url: '/api/streamprox/config/list',
+                success: function(response) {
+                    renderProxyConfigs(response);
+                },
+                error: function() {
+                    msgbox('Unable to load proxy configs', false);
+                }
+            });
+        }
+        initProxyConfigList();
+    </script>
+</div>

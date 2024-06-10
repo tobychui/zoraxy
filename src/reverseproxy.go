@@ -1076,15 +1076,21 @@ func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
 
 // Add a new header to the target endpoint
 func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
-	epType, err := utils.PostPara(r, "type")
+	rewriteType, err := utils.PostPara(r, "type")
 	if err != nil {
-		utils.SendErrorResponse(w, "endpoint type not defined")
+		utils.SendErrorResponse(w, "rewriteType not defined")
 		return
 	}
 
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		utils.SendErrorResponse(w, "domain or matching rule not defined")
+		return
+	}
+
+	direction, err := utils.PostPara(r, "direction")
+	if err != nil {
+		utils.SendErrorResponse(w, "HTTP modifiy direction not set")
 		return
 	}
 
@@ -1095,26 +1101,46 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	value, err := utils.PostPara(r, "value")
-	if err != nil {
+	if err != nil && rewriteType == "add" {
 		utils.SendErrorResponse(w, "HTTP header value not set")
 		return
 	}
 
-	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
-	if epType == "root" {
-		targetProxyEndpoint = dynamicProxyRouter.Root
-	} else {
-		ep, err := dynamicProxyRouter.LoadProxy(domain)
-		if err != nil {
-			utils.SendErrorResponse(w, "target endpoint not exists")
-			return
-		}
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
 
-		targetProxyEndpoint = ep
+	//Create a Custom Header Defination type
+	var rewriteDirection dynamicproxy.HeaderDirection
+	if direction == "toOrigin" {
+		rewriteDirection = dynamicproxy.HeaderDirection_ZoraxyToUpstream
+	} else if direction == "toClient" {
+		rewriteDirection = dynamicproxy.HeaderDirection_ZoraxyToDownstream
+	} else {
+		//Unknown direction
+		utils.SendErrorResponse(w, "header rewrite direction not supported")
+		return
+	}
+
+	isRemove := false
+	if rewriteType == "remove" {
+		isRemove = true
+	}
+	headerRewriteDefination := dynamicproxy.UserDefinedHeader{
+		Key:       name,
+		Value:     value,
+		Direction: rewriteDirection,
+		IsRemove:  isRemove,
 	}
 
 	//Create a new custom header object
-	targetProxyEndpoint.AddUserDefinedHeader(name, value)
+	err = targetProxyEndpoint.AddUserDefinedHeader(&headerRewriteDefination)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to add header rewrite rule: "+err.Error())
+		return
+	}
 
 	//Save it (no need reload as header are not handled by dpcore)
 	err = SaveReverseProxyConfig(targetProxyEndpoint)
@@ -1128,12 +1154,6 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 
 // Remove a header from the target endpoint
 func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
-	epType, err := utils.PostPara(r, "type")
-	if err != nil {
-		utils.SendErrorResponse(w, "endpoint type not defined")
-		return
-	}
-
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		utils.SendErrorResponse(w, "domain or matching rule not defined")
@@ -1146,20 +1166,17 @@ func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
-	if epType == "root" {
-		targetProxyEndpoint = dynamicProxyRouter.Root
-	} else {
-		ep, err := dynamicProxyRouter.LoadProxy(domain)
-		if err != nil {
-			utils.SendErrorResponse(w, "target endpoint not exists")
-			return
-		}
-
-		targetProxyEndpoint = ep
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
 	}
 
-	targetProxyEndpoint.RemoveUserDefinedHeader(name)
+	err = targetProxyEndpoint.RemoveUserDefinedHeader(name)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to remove header rewrite rule: "+err.Error())
+		return
+	}
 
 	err = SaveReverseProxyConfig(targetProxyEndpoint)
 	if err != nil {

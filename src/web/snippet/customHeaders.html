@@ -23,7 +23,7 @@
             <table class="ui very basic compacted unstackable celled table">
                 <thead>
                 <tr>
-                    <th>Name</th>
+                    <th>Key</th>
                     <th>Value</th>
                     <th>Remove</th>
                 </tr></thead>
@@ -34,18 +34,29 @@
                 </tbody>
             </table>
             <div class="ui divider"></div>
-            <h4>Add Custom Header</h4>
-            <p>Add custom header(s) into this proxy target</p>
+            <h4>Edit Custom Header</h4>
+            <p>Add or remove custom header(s) over this proxy target</p>
             <div class="scrolling content ui form">
-                <div class="three small fields credentialEntry">
-                    <div class="field">
-                        <input id="headerName" type="text" placeholder="X-Custom-Header" autocomplete="off">
+                <div class="five small fields credentialEntry">
+                    <div class="field" align="center">
+                        <button id="toOriginButton" title="Downstream to Upstream" class="ui circular basic active button">Zoraxy <i class="angle double right blue icon" style="margin-right: 0.4em;"></i> Origin</button>
+                        <button id="toClientButton" title="Upstream to Downstream" class="ui circular basic button">Client <i class="angle double left orange icon" style="margin-left: 0.4em;"></i> Zoraxy</button>
+                    </div>
+                    <div class="field" align="center">
+                        <button id="headerModeAdd" class="ui circular basic active button"><i class="ui green circle add icon"></i> Add Header</button>
+                        <button id="headerModeRemove" class="ui circular basic button"><i class="ui red circle times icon"></i> Remove Header</button>
                     </div>
                     <div class="field">
+                        <label>Header Key</label>
+                        <input id="headerName" type="text" placeholder="X-Custom-Header" autocomplete="off">
+                        <small>The header key is <b>NOT</b> case sensitive</small>
+                    </div>
+                    <div class="field">
+                        <label>Header Value</label>
                         <input id="headerValue" type="text" placeholder="value1,value2,value3" autocomplete="off">
                     </div>
                     <div class="field" >
-                        <button class="ui basic button" onclick="addCustomHeader();"><i class="green add icon"></i> Add Header</button>
+                        <button class="ui basic button" onclick="addCustomHeader();"><i class="green add icon"></i> Add Header Rewrite Rule</button>
                     </div>
                     <div class="ui divider"></div>
                 </div>
@@ -75,6 +86,48 @@
                 parent.hideSideWrapper(true);
             }
 
+            //Bind events to header mod mode
+            $("#headerModeAdd").on("click", function(){
+                $("#headerModeAdd").addClass("active");
+                $("#headerModeRemove").removeClass("active");
+                $("#headerValue").parent().show();
+            });
+
+            $("#headerModeRemove").on("click", function(){
+                $("#headerModeAdd").removeClass("active");
+                $("#headerModeRemove").addClass("active");
+                $("#headerValue").parent().hide();
+                $("#headerValue").val("");
+            });
+
+            //Bind events to header directions option
+            $("#toOriginButton").on("click", function(){
+                $("#toOriginButton").addClass("active");
+                $("#toClientButton").removeClass("active");
+            });
+
+            $("#toClientButton").on("click", function(){
+                $("#toOriginButton").removeClass("active");
+                $("#toClientButton").addClass("active");
+            });
+
+            //Return "add" or "remove" depending on mode user selected
+            function getHeaderEditMode(){
+                if ($("#headerModeAdd").hasClass("active")){
+                    return "add";
+                }
+
+                return "remove";
+            }
+
+            //Return "toOrigin" or "toClient"
+            function getHeaderDirection(){
+                if ($("#toOriginButton").hasClass("active")){
+                    return "toOrigin";
+                }
+                return "toClient";
+            }
+
             //$("#debug").text(JSON.stringify(editingEndpoint));
 
             function addCustomHeader(){
@@ -88,18 +141,21 @@
                     $("#headerName").parent().removeClass("error");
                 }
 
-                if (value == ""){
-                    $("#headerValue").parent().addClass("error");
-                    return
-                }else{
-                    $("#headerValue").parent().removeClass("error");
+                if (getHeaderEditMode() == "add"){
+                    if (value == ""){
+                        $("#headerValue").parent().addClass("error");
+                        return
+                    }else{
+                        $("#headerValue").parent().removeClass("error");
+                    }
                 }
 
                 $.ajax({
                     url: "/api/proxy/header/add",
                     data: {
-                        "type": editingEndpoint.ept,
+                        "type": getHeaderEditMode(),
                         "domain": editingEndpoint.ep,
+                        "direction":getHeaderDirection(),
                         "name": name,
                         "value": value
                     },
@@ -129,7 +185,7 @@
                 $.ajax({
                     url: "/api/proxy/header/remove",
                     data: {
-                        "type": editingEndpoint.ept,
+                        //"type": editingEndpoint.ept,
                         "domain": editingEndpoint.ep,
                         "name": name,
                     },
@@ -157,10 +213,16 @@
                            
                             $("#headerTable").html("");
                             data.forEach(header => {
+                                let editModeIcon = header.IsRemove?`<i class="ui red times circle icon"></i>`:`<i class="ui green add circle icon"></i>`;
+                                let direction = (header.Direction==0)?`<i class="angle double right blue icon"></i>`:`<i class="angle double left orange icon"></i>`;
+                                let valueField = header.Value;
+                                if (header.IsRemove){
+                                    valueField = "<small style='color: grey;'>(Field Removed)</small>";
+                                }
                                 $("#headerTable").append(`
                                 <tr>
-                                    <td>${header.Key}</td>
-                                    <td>${header.Value}</td>
+                                    <td>${direction} ${header.Key}</td>
+                                    <td>${editModeIcon} ${valueField}</td>
                                     <td><button class="ui basic circular mini red icon button" onclick="deleteCustomHeader('${header.Key}');"><i class="ui trash icon"></i></button></td>
                                 </tr>
                                 `);

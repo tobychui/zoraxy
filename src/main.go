@@ -28,7 +28,7 @@ import (
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
-	"imuslab.com/zoraxy/mod/tcpprox"
+	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
@@ -52,7 +52,7 @@ var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.5"
+	version     = "3.0.6"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -79,7 +79,7 @@ var (
 	mdnsScanner        *mdns.MDNSHost          //mDNS discovery services
 	ganManager         *ganserv.NetworkManager //Global Area Network Manager
 	webSshManager      *sshprox.Manager        //Web SSH connection service
-	tcpProxyManager    *tcpprox.Manager        //TCP Proxy Manager
+	streamProxyManager *streamproxy.Manager    //Stream Proxy Manager for TCP / UDP forwarding
 	acmeHandler        *acme.ACMEHandler       //Handler for ACME Certificate renew
 	acmeAutoRenewer    *acme.AutoRenewer       //Handler for ACME auto renew ticking
 	staticWebServer    *webserv.WebServer      //Static web server for hosting simple stuffs

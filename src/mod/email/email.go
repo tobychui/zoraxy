@@ -42,17 +42,22 @@ SendEmail(
 )
 */
 func (s *Sender) SendEmail(to string, subject string, content string) error {
-	//Parse the email content
+	// Parse the email content
 	msg := []byte("To: " + to + "\n" +
 		"From: Zoraxy <" + s.SenderAddr + ">\n" +
 		"Subject: " + subject + "\n" +
 		"MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n" +
 		content + "\n\n")
 
-	//Login to the SMTP server
-	//Username can be username (e.g. admin) or email (e.g. admin@example.com), depending on SMTP service provider
-	auth := smtp.PlainAuth("", s.Username, s.Password, s.Hostname)
+	// Initialize the auth variable
+	var auth smtp.Auth
+	if s.Password != "" {
+		// Login to the SMTP server
+		// Username can be username (e.g. admin) or email (e.g. admin@example.com), depending on SMTP service provider
+		auth = smtp.PlainAuth("", s.Username, s.Password, s.Hostname)
+	}
 
+	// Send the email
 	err := smtp.SendMail(s.Hostname+":"+strconv.Itoa(s.Port), auth, s.SenderAddr, []string{to}, msg)
 	if err != nil {
 		return err
