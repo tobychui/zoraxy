@@ -1,3 +1,20 @@
+# v3.0.6 10 Jun 2024
+
++ Added fastly_client_ip to X-Real-IP auto rewrite
++ Added atomic accumulator to TCP proxy
++ Added white logo for future dark theme
++ Added multi selection for white / blacklist [#176](https://github.com/tobychui/zoraxy/issues/176)
++ Moved custom header rewrite to dpcore
++ Restructure dpcore header rewrite sequence
++ Added advance custom header settings (zoraxy to upstream and zoraxy to downstream mode)
++ Added header remove feature
++ Removed password requirement for SMTP [#162](https://github.com/tobychui/zoraxy/issues/162) [#80](https://github.com/tobychui/zoraxy/issues/80) 
++ Restructured TCP proxy into Stream Proxy (Support both TCP and UDP) [#147](https://github.com/tobychui/zoraxy/issues/147)
++ Added stream proxy auto start [#169](https://github.com/tobychui/zoraxy/issues/169)
++ Optimized UX for reminding user to click Apply after port change
++ Added version number to footer [#160](https://github.com/tobychui/zoraxy/issues/160)
++ Fixed missing / unnecessary error check [PR187](https://github.com/tobychui/zoraxy/pull/187) by [Kirari04](https://github.com/Kirari04)
+
 # v3.0.5 May 26 2024
 
 
