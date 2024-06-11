@@ -20,6 +20,7 @@
                     <th>Destination</th>
                     <th>Virtual Directory</th>
                     <th>Basic Auth</th>
+                    <th>Rate Limit</th>
                     <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
             </thead>
@@ -106,6 +107,9 @@
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
                         <td data-label="" editable="true" datatype="basicauth">
                             ${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}
+                        </td>
+                        <td data-label="" editable="true" datatype="ratelimit">
+                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> ${subd.RateLimit}req/s`:`<i class="ui grey remove icon"></i>`}
                         </td>
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">

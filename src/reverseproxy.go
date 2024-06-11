@@ -233,6 +233,26 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	requireBasicAuth := (rba == "true")
 
+	// Require Rate Limiting?
+	rl, _ := utils.PostPara(r, "rate")
+	if rl == "" {
+		rl = "false"
+	}
+	requireRateLimit := (rl == "true")
+	rlnum, _ := utils.PostPara(r, "ratenum")
+	if rlnum == "" {
+		rlnum = "0"
+	}
+	proxyRateLimit, err := strconv.ParseInt(rlnum, 10, 64)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid rate limit number")
+		return
+	}
+	if proxyRateLimit <= 0 {
+		utils.SendErrorResponse(w, "rate limit number must be greater than 0")
+		return
+	}
+
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
 	if strbpwsorg == "" {
@@ -313,6 +333,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 			DefaultSiteOption:       0,
 			DefaultSiteValue:        "",
+			// Rate Limit
+			RequireRateLimit: requireRateLimit,
+			RateLimit:        proxyRateLimit,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
