@@ -124,6 +124,10 @@ type ProxyEndpoint struct {
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
 
+	// Rate Limiting
+	EnableRateLimiting bool
+	RateLimiting       int // Rate limit in requests per second
+
 	//Access Control
 	AccessFilterUUID string //Access filter ID
 

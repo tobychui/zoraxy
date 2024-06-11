@@ -120,7 +120,7 @@ func handleRateLimit(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 		return errors.New("rate limit exceeded")
 	}
 
-	log.Println("Rate limit check", ip, ipTable.GetCount(ip))
+	// log.Println("Rate limit check", ip, ipTable.GetCount(ip))
 
 	return nil
 }
