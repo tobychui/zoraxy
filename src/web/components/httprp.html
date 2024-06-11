@@ -305,6 +305,23 @@
                     <div>
                 `);
 
+            } else if (datatype == "ratelimit"){
+                let requireRateLimit = payload.RequireRateLimit;
+                let checkstate = "";
+                if (requireRateLimit){
+                    checkstate = "checked";
+                }
+                let rateLimit = payload.RateLimit;
+
+                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
+                    <input type="checkbox" class="RequireRateLimit" ${checkstate}>
+                        <label>Require Rate Limit</label>
+                    </div>
+                    <div class="ui mini fluid input">
+                        <input type="number" class="RateLimit" value="${rateLimit}" placeholder="100" min="1" max="1000" >
+                    </div>
+                `);
+
             }else if (datatype == 'action'){
                 column.empty().append(`
                 <button title="Save" onclick="saveProxyInlineEdit('${uuid.hexEncode()}');" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui green save icon"></i></button>
@@ -352,6 +369,8 @@
         let requireTLS = $(row).find(".RequireTLS")[0].checked;
         let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
         let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
+        let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
+        let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
         let bypassWebsocketOrigin = $(row).find(".SkipWebSocketOriginCheck")[0].checked;
         console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
@@ -368,6 +387,8 @@
                 "tlsval": skipCertValidations,
                 "bpwsorg" : bypassWebsocketOrigin,
                 "bauth" :requireBasicAuth,
+                "rate" :requireRateLimit,
+                "ratenum" :rateLimit,
             },
             success: function(data){
                 if (data.error !== undefined){
