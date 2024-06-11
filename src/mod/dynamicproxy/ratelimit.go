@@ -50,6 +50,14 @@ func (t *IpTable) Clear() {
 
 var ipTable = IpTable{}
 
+func (h *ProxyHandler) handleRateLimitRouting(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
+	err := handleRateLimit(w, r, pe)
+	if err != nil {
+		h.logRequest(r, false, 429, "ratelimit", pe.Domain)
+	}
+	return err
+}
+
 func handleRateLimit(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -60,7 +68,7 @@ func handleRateLimit(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 
 	ipTable.Increment(ip)
 
-	if ipTable.Exceeded(ip, 10) {
+	if ipTable.Exceeded(ip, int64(pe.RateLimit)) {
 		w.WriteHeader(429)
 		return errors.New("rate limit exceeded")
 	}

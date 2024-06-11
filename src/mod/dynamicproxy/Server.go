@@ -73,11 +73,12 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Rate Limit Check
-		// if sep.RequireBasicAuth {
-		if err := handleRateLimit(w, r, sep); err != nil {
-			return
+		if sep.RequireRateLimit {
+			err := h.handleRateLimitRouting(w, r, sep)
+			if err != nil {
+				return
+			}
 		}
-		// }
 
 		//Validate basic auth
 		if sep.RequireBasicAuth {
