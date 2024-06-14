@@ -91,7 +91,6 @@ func addXForwardedForHeader(req *http.Request) {
 					req.Header.Set("X-Real-Ip", strings.TrimSpace(ips[0]))
 				}
 			}
-
 		}
 
 	}

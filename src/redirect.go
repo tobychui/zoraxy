@@ -91,7 +91,7 @@ func handleToggleRedirectRegexpSupport(w http.ResponseWriter, r *http.Request) {
 	//Update the current regex support rule enable state
 	enableRegexSupport := strings.EqualFold(strings.TrimSpace(enabled), "true")
 	redirectTable.AllowRegex = enableRegexSupport
-	err = sysdb.Write("Redirect", "regex", enableRegexSupport)
+	err = sysdb.Write("redirect", "regex", enableRegexSupport)
 
 	if enableRegexSupport {
 		SystemWideLogger.PrintAndLog("redirect", "Regex redirect rule enabled", nil)

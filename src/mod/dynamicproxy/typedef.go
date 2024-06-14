@@ -51,8 +51,9 @@ type Router struct {
 	tlsListener    net.Listener
 	routingRules   []*RoutingRule
 
-	tlsRedirectStop chan bool      //Stop channel for tls redirection server
-	tldMap          map[string]int //Top level domain map, see tld.json
+	tlsRedirectStop  chan bool              //Stop channel for tls redirection server
+	rateLimterStop   chan bool              //Stop channel for rate limiter
+	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
 }
 
 // Auth credential for basic auth on certain endpoints

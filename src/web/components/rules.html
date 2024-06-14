@@ -81,8 +81,13 @@
                                 </div>
                                 <div class="field">
                                     <label>Rate Limit</label>
-                                    <input type="number" id="proxyRateLimit" placeholder="100" min="1" max="1000" value="100">
-                                    <small>The Rate Limit is applied to the whole proxy endpoint. If the number of requests exceeds the limit, the proxy will return a 429 error code.</small>
+                                    <div class="ui fluid right labeled input">
+                                        <input type="number" id="proxyRateLimit" placeholder="100" min="1" max="1000" value="100">
+                                        <div class="ui basic label">
+                                           req / sec / IP
+                                        </div>
+                                    </div>
+                                    <small>Return a 429 error code if request rate exceed the rate limit.</small>
                                 </div>
                                 <div class="field">
                                     <div class="ui checkbox">
@@ -282,9 +287,9 @@
     
     function toggleRateLimit() {
         if ($("#requireRateLimit").parent().checkbox("is checked")) {
-            $("#proxyRateLimit").parent().removeClass("disabled");
+            $("#proxyRateLimit").parent().parent().removeClass("disabled");
         } else {
-            $("#proxyRateLimit").parent().addClass("disabled");
+            $("#proxyRateLimit").parent().parent().addClass("disabled");
         }
     }
     $("#requireRateLimit").on('change', toggleRateLimit);
@@ -422,9 +427,9 @@
         initNewProxyRuleAccessDropdownList();
     }
 
-    $(document).ready(function(){
-        $("#advanceProxyRules").accordion();
-        $("#newProxyRuleAccessFilter").parent().dropdown();
-    });
+   
+    $("#advanceProxyRules").accordion();
+    $("#newProxyRuleAccessFilter").parent().dropdown();
+   
     
 </script>

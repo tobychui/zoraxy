@@ -145,11 +145,6 @@ func ReverseProxtInit() {
 		})
 		SystemWideLogger.Println("Uptime Monitor background service started")
 	}()
-
-	// Init Rate Limit
-	go func() {
-		dynamicproxy.InitRateLimit()
-	}()
 }
 
 func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {

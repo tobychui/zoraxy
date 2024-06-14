@@ -19,8 +19,7 @@
                     <th>Host</th>
                     <th>Destination</th>
                     <th>Virtual Directory</th>
-                    <th>Basic Auth</th>
-                    <th>Rate Limit</th>
+                    <th>Advanced Settings</th>
                     <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
             </thead>
@@ -105,11 +104,9 @@
                         </td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
-                        <td data-label="" editable="true" datatype="basicauth">
-                            ${subd.RequireBasicAuth?`<i class="ui green check icon"></i>`:`<i class="ui grey remove icon"></i>`}
-                        </td>
-                        <td data-label="" editable="true" datatype="ratelimit">
-                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> ${subd.RateLimit}req/s`:`<i class="ui grey remove icon"></i>`}
+                        <td data-label="" editable="true" datatype="advanced">
+                            ${subd.RequireBasicAuth?`<i class="ui green check icon"></i> Basic Auth`:`<i class="ui grey remove icon"></i> Basic Auth`}<br>
+                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:`<i class="ui grey remove icon"></i> Rate Limit`}
                         </td>
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
@@ -267,11 +264,11 @@
                     <i class="ui yellow folder icon"></i> Edit Virtual Directories
                 </button>`);
 
-            }else if (datatype == "basicauth"){
+            }else if (datatype == "advanced"){
                 let requireBasicAuth = payload.RequireBasicAuth;
-                let checkstate = "";
+                let basicAuthCheckstate = "";
                 if (requireBasicAuth){
-                    checkstate = "checked";
+                    basicAuthCheckstate = "checked";
                 }
 
                 let skipWebSocketOriginCheck = payload.SkipWebSocketOriginCheck;
@@ -280,16 +277,36 @@
                     wsCheckstate = "checked";
                 }
 
+                let requireRateLimit = payload.RequireRateLimit;
+                let rateLimitCheckState = "";
+                if (requireRateLimit){
+                    rateLimitCheckState = "checked";
+                }
+                let rateLimit = payload.RateLimit;
+                if (rateLimit == 0){
+                    //This value is not set. Make it default to 100
+                    rateLimit = 100;
+                }
+                let rateLimitDisableState = "";
+                if (!payload.RequireRateLimit){
+                    rateLimitDisableState = "disabled";
+                }
+
                 column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="RequireBasicAuth" ${checkstate}>
+                    <input type="checkbox" class="RequireBasicAuth" ${basicAuthCheckstate}>
                         <label>Require Basic Auth</label>
                     </div>
-                    <button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
+                    <br>
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
+                    <br>
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
+                    <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
+
                     <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
                         <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
                             <div class="title">
                                 <i class="dropdown icon"></i>
-                                Advance Configs
+                                Security Options
                             </div>
                             <div class="content">
                                 <div class="ui checkbox" style="margin-top: 0.4em;">
@@ -298,23 +315,26 @@
                                     <small>Check this to allow cross-origin websocket requests</small></label>
                                 </div>
                                 <br>
-                                <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
-                                <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
+                                    <label>Require Rate Limit</label>
+                                </div><br>
+                                <div class="ui mini right labeled fluid input ${rateLimitDisableState}" style="margin-top: 0.4em;">
+                                    <input type="number" class="RateLimit" value="${rateLimit}" min="1" >
+                                    <label class="ui basic label">
+                                        req / sec / IP
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     <div>
                 `);
 
             } else if (datatype == "ratelimit"){
-                let requireRateLimit = payload.RequireRateLimit;
-                let checkstate = "";
-                if (requireRateLimit){
-                    checkstate = "checked";
-                }
-                let rateLimit = payload.RateLimit;
-
-                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="RequireRateLimit" ${checkstate}>
+               
+                column.empty().append(`
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="RequireRateLimit" ${checkstate}>
                         <label>Require Rate Limit</label>
                     </div>
                     <div class="ui mini fluid input">
@@ -350,6 +370,17 @@
 
         $(".endpointAdvanceConfig").accordion();
         $("#httpProxyList").find(".editBtn").addClass("disabled");
+    }
+
+    //handleToggleRateLimitInput will get trigger if the "require rate limit" checkbox
+    // is changed and toggle the disable state of the rate limit input field
+    function handleToggleRateLimitInput(){
+        let isRateLimitEnabled = $("#httpProxyList input.RequireRateLimit")[0].checked;
+        if (isRateLimitEnabled){
+            $("#httpProxyList input.RateLimit").parent().removeClass("disabled");
+        }else{
+            $("#httpProxyList input.RateLimit").parent().addClass("disabled");
+        }
     }
 
     function exitProxyInlineEdit(){
@@ -462,10 +493,6 @@
             }
         })
     }
-
-    /* Access List handling */
-    
-    
 
     //Bind on tab switch events
     tabSwitchEventBind["httprp"] = function(){
