@@ -75,6 +75,17 @@
                                 </div>
                                 <div class="field">
                                     <div class="ui checkbox">
+                                        <input type="checkbox" id="requireRateLimit">
+                                        <label>Require Rate Limit<br><small>This proxy endpoint will be rate limited.</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label>Rate Limit</label>
+                                    <input type="number" id="proxyRateLimit" placeholder="100" min="1" max="1000" value="100">
+                                    <small>The Rate Limit is applied to the whole proxy endpoint. If the number of requests exceeds the limit, the proxy will return a 429 error code.</small>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
                                         <input type="checkbox" id="requireBasicAuth">
                                         <label>Require Basic Auth<br><small>Require client to login in order to view the page</small></label>
                                     </div>
@@ -147,6 +158,8 @@
         var skipTLSValidation = $("#skipTLSValidation")[0].checked;
         var bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
         var requireBasicAuth = $("#requireBasicAuth")[0].checked;
+        var proxyRateLimit = $("#proxyRateLimit").val();
+        var requireRateLimit = $("#requireRateLimit")[0].checked;
         var skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
         var accessRuleToUse = $("#newProxyRuleAccessFilter").val();
         
@@ -176,6 +189,8 @@
                 bpwsorg: skipWebSocketOriginCheck,
                 bypassGlobalTLS: bypassGlobalTLS,
                 bauth: requireBasicAuth,
+                rate: requireRateLimit,
+                ratenum: proxyRateLimit,
                 cred: JSON.stringify(credentials),
                 access: accessRuleToUse,
             },
@@ -264,6 +279,16 @@
     }
     $("#requireBasicAuth").on('change', toggleBasicAuth);
     toggleBasicAuth();
+    
+    function toggleRateLimit() {
+        if ($("#requireRateLimit").parent().checkbox("is checked")) {
+            $("#proxyRateLimit").parent().removeClass("disabled");
+        } else {
+            $("#proxyRateLimit").parent().addClass("disabled");
+        }
+    }
+    $("#requireRateLimit").on('change', toggleRateLimit);
+    toggleRateLimit();
 
 
     /*

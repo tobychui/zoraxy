@@ -129,6 +129,13 @@ func (router *Router) StartProxyService() error {
 							}
 						}
 
+						// Rate Limit Check
+						// if sep.RequireBasicAuth {
+						if err := handleRateLimit(w, r, sep); err != nil {
+							return
+						}
+						// }
+
 						//Validate basic auth
 						if sep.RequireBasicAuth {
 							err := handleBasicAuth(w, r, sep)

@@ -72,6 +72,14 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Rate Limit Check
+		if sep.RequireRateLimit {
+			err := h.handleRateLimitRouting(w, r, sep)
+			if err != nil {
+				return
+			}
+		}
+
 		//Validate basic auth
 		if sep.RequireBasicAuth {
 			err := h.handleBasicAuthRouting(w, r, sep)
