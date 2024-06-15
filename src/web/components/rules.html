@@ -26,7 +26,10 @@
                     </div>
                     <div class="field">
                         <label>Target IP Address or Domain Name with port</label>
-                        <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
+                        <div class="ui action input">
+                            <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
+                            <button class="ui icon button" onclick="openDockerContainersList();"><i class="blue docker icon"></i></button>
+                        </div>
                         <small>E.g. 192.168.0.101:8000 or example.com</small>
                     </div>
                     <div class="field">
@@ -401,5 +404,15 @@
         $("#advanceProxyRules").accordion();
         $("#newProxyRuleAccessFilter").parent().dropdown();
     });
+
+    function openDockerContainersList(){
+        showSideWrapper('snippet/dockerContainersList.html');
+    }
+
+    function addContainerItem(item) {
+        $('#rootname').val(item.name);
+        $('#proxyDomain').val(`${item.ip}:${item.port}`)
+        hideSideWrapper(true);
+    }
     
 </script>

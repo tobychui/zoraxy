@@ -222,6 +222,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
 
 	//If you got APIs to add, append them here
+	// get available docker containers
+	authRouter.HandleFunc("/api/docker/containers", handleDockerContainersList)
 }
 
 // Function to renders Auth related APIs
