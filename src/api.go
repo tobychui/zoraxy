@@ -70,6 +70,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
 	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
 	authRouter.HandleFunc("/api/proxy/header/remove", HandleCustomHeaderRemove)
+	authRouter.HandleFunc("/api/proxy/header/handleHSTS", HandleHSTSState)
+	authRouter.HandleFunc("/api/proxy/header/handlePermissionPolicy", HandlePermissionPolicy)
 	//Reverse proxy auth related APIs
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
@@ -212,6 +214,10 @@ func initAPIs() {
 		authRouter.HandleFunc("/api/fs/del", staticWebServer.FileManager.HandleFileDelete)
 	}
 
+	//Docker UX Optimizations
+	authRouter.HandleFunc("/api/docker/available", HandleDockerAvailable)
+	authRouter.HandleFunc("/api/docker/containers", HandleDockerContainersList)
+
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
@@ -223,7 +229,7 @@ func initAPIs() {
 
 	//If you got APIs to add, append them here
 	// get available docker containers
-	authRouter.HandleFunc("/api/docker/containers", handleDockerContainersList)
+
 }
 
 // Function to renders Auth related APIs

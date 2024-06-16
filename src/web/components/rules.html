@@ -26,11 +26,13 @@
                     </div>
                     <div class="field">
                         <label>Target IP Address or Domain Name with port</label>
-                        <div class="ui action input">
+                        
                             <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
-                            <button class="ui icon button" onclick="openDockerContainersList();"><i class="blue docker icon"></i></button>
-                        </div>
+                        
                         <small>E.g. 192.168.0.101:8000 or example.com</small>
+                    </div>
+                    <div class="field" class="dockerOptimizations" style="display:none;">
+                        <button class="ui basic button" onclick="openDockerContainersList();"><i class="blue docker icon"></i> Pick from Docker Containers</button>
                     </div>
                     <div class="field">
                         <div class="ui checkbox">
@@ -430,6 +432,15 @@
         initNewProxyRuleAccessDropdownList();
     }
 
+    /* Docker Optimizations */
+    $("/api/docker/available", function(dockerAvailable){
+        if (dockerAvailable){
+            $(".dockerOptimizations").show();
+        }else{
+            $(".dockerOptimizations").hide();
+        }
+    })
+    
     function openDockerContainersList(){
         showSideWrapper('snippet/dockerContainersList.html');
     }
@@ -439,9 +450,9 @@
         $('#proxyDomain').val(`${item.ip}:${item.port}`)
         hideSideWrapper(true);
     }
-   
+    
+    /* UI Element Initialization */
     $("#advanceProxyRules").accordion();
     $("#newProxyRuleAccessFilter").parent().dropdown();
    
-    
 </script>

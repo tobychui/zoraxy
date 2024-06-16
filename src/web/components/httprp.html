@@ -19,7 +19,7 @@
                     <th>Host</th>
                     <th>Destination</th>
                     <th>Virtual Directory</th>
-                    <th>Advanced Settings</th>
+                    <th style="max-width: 300px;">Advanced Settings</th>
                     <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
             </thead>
@@ -78,7 +78,7 @@
                     vdList += `</div>`;
 
                     if (subd.VirtualDirectories.length == 0){
-                        vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;"><i class="check icon"></i> No Virtual Directory</small>`;
+                        vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Virtual Directory</small>`;
                     }
 
                     let enableChecked = "checked";
@@ -104,9 +104,11 @@
                         </td>
                         <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
-                        <td data-label="" editable="true" datatype="advanced">
-                            ${subd.RequireBasicAuth?`<i class="ui green check icon"></i> Basic Auth`:`<i class="ui grey remove icon"></i> Basic Auth`}<br>
-                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:`<i class="ui grey remove icon"></i> Rate Limit`}
+                        <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
+                            ${subd.RequireBasicAuth?`<i class="ui green check icon"></i> Basic Auth`:``}
+                            ${subd.RequireBasicAuth && subd.RequireRateLimit?"<br>":""}
+                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
+                            ${!subd.RequireBasicAuth && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
                         </td>
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
@@ -246,7 +248,7 @@
                     <div class="ui mini fluid input">
                         <input type="text" class="Domain" value="${domain}">
                     </div>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                    <div class="ui checkbox" style="margin-top: 0.6em;">
                         <input type="checkbox" class="RequireTLS" ${tls}>
                         <label>Require TLS<br>
                             <small>Proxy target require HTTPS connection</small></label>
@@ -255,7 +257,8 @@
                         <input type="checkbox" class="SkipCertValidations" ${checkstate}>
                         <label>Skip Verification<br>
                         <small>Check this if proxy target is using self signed certificates</small></label>
-                    </div>
+                    </div><br>
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="purple server icon"></i> Load Balance</button>
                 `;
                 column.empty().append(input);
             }else if (datatype == "vdir"){
@@ -300,7 +303,6 @@
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
                     <br>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
-                    <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="blue server icon"></i> Load Balance</button> -->
 
                     <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
                         <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
@@ -317,7 +319,8 @@
                                 <br>
                                 <div class="ui checkbox" style="margin-top: 0.4em;">
                                     <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
-                                    <label>Require Rate Limit</label>
+                                    <label>Require Rate Limit<br>
+                                    <small>Check this to enable rate limit on this inbound hostname</small></label>
                                 </div><br>
                                 <div class="ui mini right labeled fluid input ${rateLimitDisableState}" style="margin-top: 0.4em;">
                                     <input type="number" class="RateLimit" value="${rateLimit}" min="1" >
@@ -462,12 +465,22 @@
         $("#vdirBaseRoutingRule").parent().dropdown("set selected", uuid);
     }
 
+    //Open the custom header editor
     function editCustomHeaders(uuid){
         let payload = encodeURIComponent(JSON.stringify({
             ept: "host",
             ep: uuid
         }));
         showSideWrapper("snippet/customHeaders.html?t=" + Date.now() + "#" + payload);
+    }
+
+    //Open the load balance option
+    function editLoadBalanceOptions(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/loadBalancer.html?t=" + Date.now() + "#" + payload);
     }
 
     function handleProxyRuleToggle(object){

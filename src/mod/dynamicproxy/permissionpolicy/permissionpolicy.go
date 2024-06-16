@@ -108,13 +108,8 @@ func GetDefaultPermissionPolicy() *PermissionsPolicy {
 	}
 }
 
-// InjectPermissionPolicyHeader inject the permission policy into headers
-func InjectPermissionPolicyHeader(w http.ResponseWriter, policy *PermissionsPolicy) {
-	//Keep the original Permission Policy if exists, or there are no policy given
-	if policy == nil || w.Header().Get("Permissions-Policy") != "" {
-		return
-	}
-
+// ToKeyValueHeader convert a permission policy struct into a key value string header
+func (policy *PermissionsPolicy) ToKeyValueHeader() []string {
 	policyHeader := []string{}
 
 	// Helper function to add policy directives
@@ -187,7 +182,16 @@ func InjectPermissionPolicyHeader(w http.ResponseWriter, policy *PermissionsPoli
 
 	// Join the directives and set the header
 	policyHeaderValue := strings.Join(policyHeader, ", ")
+	return []string{"Permissions-Policy", policyHeaderValue}
+}
 
+// InjectPermissionPolicyHeader inject the permission policy into headers
+func InjectPermissionPolicyHeader(w http.ResponseWriter, policy *PermissionsPolicy) {
+	//Keep the original Permission Policy if exists, or there are no policy given
+	if policy == nil || w.Header().Get("Permissions-Policy") != "" {
+		return
+	}
+	headerKV := policy.ToKeyValueHeader()
 	//Inject the new policy into the header
-	w.Header().Set("Permissions-Policy", policyHeaderValue)
+	w.Header().Set(headerKV[0], headerKV[1])
 }

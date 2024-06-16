@@ -1,5 +1,7 @@
 package dynamicproxy
 
+import "strconv"
+
 /*
 	CustomHeader.go
 
@@ -17,8 +19,9 @@ func (ept *ProxyEndpoint) SplitInboundOutboundHeaders() ([][]string, [][]string)
 	}
 
 	//Use pre-allocation for faster performance
+	//Downstream +2 for Permission Policy and HSTS
 	upstreamHeaders := make([][]string, len(ept.UserDefinedHeaders))
-	downstreamHeaders := make([][]string, len(ept.UserDefinedHeaders))
+	downstreamHeaders := make([][]string, len(ept.UserDefinedHeaders)+2)
 	upstreamHeaderCounter := 0
 	downstreamHeaderCounter := 0
 
@@ -40,6 +43,18 @@ func (ept *ProxyEndpoint) SplitInboundOutboundHeaders() ([][]string, [][]string)
 			downstreamHeaders[downstreamHeaderCounter] = thisHeaderSet
 			downstreamHeaderCounter++
 		}
+	}
+
+	//Check if the endpoint require HSTS headers
+	if ept.HSTSMaxAge > 0 {
+		downstreamHeaders[downstreamHeaderCounter] = []string{"Strict-Transport-Security", "max-age=" + strconv.Itoa(int(ept.HSTSMaxAge))}
+		downstreamHeaderCounter++
+	}
+
+	//Check if the endpoint require Permission Policy
+	if ept.EnablePermissionPolicyHeader && ept.PermissionPolicy != nil {
+		downstreamHeaders[downstreamHeaderCounter] = ept.PermissionPolicy.ToKeyValueHeader()
+		downstreamHeaderCounter++
 	}
 
 	return upstreamHeaders, downstreamHeaders

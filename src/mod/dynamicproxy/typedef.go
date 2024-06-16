@@ -8,6 +8,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/statistic"
@@ -118,7 +119,10 @@ type ProxyEndpoint struct {
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
 	//Custom Headers
-	UserDefinedHeaders []*UserDefinedHeader //Custom headers to append when proxying requests from this endpoint
+	UserDefinedHeaders           []*UserDefinedHeader                //Custom headers to append when proxying requests from this endpoint
+	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
+	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
+	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
 
 	//Authentication
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy

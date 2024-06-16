@@ -11,6 +11,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -1230,4 +1231,91 @@ func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendOK(w)
 
+}
+
+// Handle view or edit HSTS states
+func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Return current HSTS enable state
+		hstsAge := targetProxyEndpoint.HSTSMaxAge
+		js, _ := json.Marshal(hstsAge)
+		utils.SendJSONResponse(w, string(js))
+		return
+	} else if r.Method == http.MethodPost {
+		newMaxAge, err := utils.PostInt(r, "maxage")
+		if err != nil {
+			utils.SendErrorResponse(w, "maxage not defeined")
+			return
+		}
+
+		if newMaxAge == 0 || newMaxAge >= 31536000 {
+			targetProxyEndpoint.HSTSMaxAge = int64(newMaxAge)
+			SaveReverseProxyConfig(targetProxyEndpoint)
+			targetProxyEndpoint.UpdateToRuntime()
+		} else {
+			utils.SendErrorResponse(w, "invalid max age given")
+			return
+		}
+		utils.SendOK(w)
+		return
+	}
+
+	http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// HandlePermissionPolicy handle read or write to permission policy
+func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		type CurrentPolicyState struct {
+			PPEnabled     bool
+			CurrentPolicy *permissionpolicy.PermissionsPolicy
+		}
+
+		currentPolicy := permissionpolicy.GetDefaultPermissionPolicy()
+		if targetProxyEndpoint.PermissionPolicy != nil {
+			currentPolicy = targetProxyEndpoint.PermissionPolicy
+		}
+		result := CurrentPolicyState{
+			PPEnabled:     targetProxyEndpoint.EnablePermissionPolicyHeader,
+			CurrentPolicy: currentPolicy,
+		}
+
+		js, _ := json.Marshal(result)
+		utils.SendJSONResponse(w, string(js))
+		return
+	} else if r.Method == http.MethodPost {
+
+	}
+
+	http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 }
