@@ -51,8 +51,9 @@ type Router struct {
 	tlsListener    net.Listener
 	routingRules   []*RoutingRule
 
-	tlsRedirectStop chan bool      //Stop channel for tls redirection server
-	tldMap          map[string]int //Top level domain map, see tld.json
+	tlsRedirectStop  chan bool              //Stop channel for tls redirection server
+	rateLimterStop   chan bool              //Stop channel for rate limiter
+	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
 }
 
 // Auth credential for basic auth on certain endpoints
@@ -123,6 +124,10 @@ type ProxyEndpoint struct {
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+
+	// Rate Limiting
+	RequireRateLimit bool
+	RateLimit        int64 // Rate limit in requests per second
 
 	//Access Control
 	AccessFilterUUID string //Access filter ID

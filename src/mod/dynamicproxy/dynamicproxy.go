@@ -23,12 +23,12 @@ import (
 func NewDynamicProxy(option RouterOption) (*Router, error) {
 	proxyMap := sync.Map{}
 	thisRouter := Router{
-		Option:         &option,
-		ProxyEndpoints: &proxyMap,
-		Running:        false,
-		server:         nil,
-		routingRules:   []*RoutingRule{},
-		tldMap:         map[string]int{},
+		Option:           &option,
+		ProxyEndpoints:   &proxyMap,
+		Running:          false,
+		server:           nil,
+		routingRules:     []*RoutingRule{},
+		rateLimitCounter: RequestCountPerIpTable{},
 	}
 
 	thisRouter.mux = &ProxyHandler{
@@ -85,6 +85,12 @@ func (router *Router) StartProxyService() error {
 		MinVersion:     uint16(minVersion),
 	}
 
+	//Start rate limitor
+	err := router.startRateLimterCounterResetTicker()
+	if err != nil {
+		return err
+	}
+
 	if router.Option.UseTls {
 		router.server = &http.Server{
 			Addr:      ":" + strconv.Itoa(router.Option.Port),
@@ -125,6 +131,13 @@ func (router *Router) StartProxyService() error {
 						if err == nil {
 							isBlocked, _ := accessRequestBlocked(accessRule, router.Option.WebDirectory, w, r)
 							if isBlocked {
+								return
+							}
+						}
+
+						// Rate Limit
+						if sep.RequireRateLimit {
+							if err := router.handleRateLimit(w, r, sep); err != nil {
 								return
 							}
 						}
@@ -232,10 +245,23 @@ func (router *Router) StopProxyService() error {
 		return err
 	}
 
+	//Stop TLS listener
 	if router.tlsListener != nil {
 		router.tlsListener.Close()
 	}
 
+	//Stop rate limiter
+	if router.rateLimterStop != nil {
+		go func() {
+			// As the rate timer loop has a 1 sec ticker
+			// stop the rate limiter in go routine can prevent
+			// front end from freezing for 1 sec
+			router.rateLimterStop <- true
+		}()
+
+	}
+
+	//Stop TLS redirection (from port 80)
 	if router.tlsRedirectStop != nil {
 		router.tlsRedirectStop <- true
 	}
