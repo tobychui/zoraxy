@@ -118,9 +118,11 @@
                 `Error loading data: ${dockerData.error || hostData.error}`,
                 false
               );
+              $("#containersList").html(`<div class="ui basic segment"><i class="ui red times icon"></i> ${dockerData.error || hostData.error}</div>`);
             }
           })
           .catch((error) => {
+            console.log(error.responseText);
             parent.msgbox("Error loading data: " + error.message, false);
           });
       }

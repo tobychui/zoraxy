@@ -26,13 +26,11 @@
                     </div>
                     <div class="field">
                         <label>Target IP Address or Domain Name with port</label>
-                        
                             <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
-                        
                         <small>E.g. 192.168.0.101:8000 or example.com</small>
                     </div>
-                    <div class="field" class="dockerOptimizations" style="display:none;">
-                        <button class="ui basic button" onclick="openDockerContainersList();"><i class="blue docker icon"></i> Pick from Docker Containers</button>
+                    <div class="field dockerOptimizations" style="display:none;">
+                        <button style="margin-top: -2em;" class="ui basic small button" onclick="openDockerContainersList();"><i class="blue docker icon"></i> Pick from Docker Containers</button>
                     </div>
                     <div class="field">
                         <div class="ui checkbox">
@@ -433,13 +431,16 @@
     }
 
     /* Docker Optimizations */
-    $("/api/docker/available", function(dockerAvailable){
-        if (dockerAvailable){
-            $(".dockerOptimizations").show();
-        }else{
-            $(".dockerOptimizations").hide();
-        }
-    })
+    function initDockerUXOptimizations(){
+        $.get("/api/docker/available", function(dockerAvailable){
+            if (dockerAvailable){
+                $(".dockerOptimizations").show();
+            }else{
+                $(".dockerOptimizations").hide();
+            }
+        });
+    }
+    initDockerUXOptimizations();
     
     function openDockerContainersList(){
         showSideWrapper('snippet/dockerContainersList.html');

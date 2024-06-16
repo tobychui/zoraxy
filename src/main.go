@@ -16,6 +16,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/forwardproxy"
@@ -44,6 +45,7 @@ var allowMdnsScanning = flag.Bool("mdns", true, "Enable mDNS scanner and transpo
 var mdnsName = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
 var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
+var runningInDocker = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
@@ -86,9 +88,10 @@ var (
 	forwardProxy       *forwardproxy.Handler   //HTTP Forward proxy, basically VPN for web browser
 
 	//Helper modules
-	EmailSender      *email.Sender        //Email sender that handle email sending
-	AnalyticLoader   *analytic.DataLoader //Data loader for Zoraxy Analytic
-	SystemWideLogger *logger.Logger       //Logger for Zoraxy
+	EmailSender       *email.Sender         //Email sender that handle email sending
+	AnalyticLoader    *analytic.DataLoader  //Data loader for Zoraxy Analytic
+	DockerUXOptimizer *dockerux.UXOptimizer //Docker user experience optimizer, community contribution only
+	SystemWideLogger  *logger.Logger        //Logger for Zoraxy
 )
 
 // Kill signal handler. Do something before the system the core terminate.

@@ -1314,7 +1314,40 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSONResponse(w, string(js))
 		return
 	} else if r.Method == http.MethodPost {
+		//Update the enable state of permission policy
+		enableState, err := utils.PostBool(r, "enable")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid enable state given")
+			return
+		}
 
+		targetProxyEndpoint.EnablePermissionPolicyHeader = enableState
+		SaveReverseProxyConfig(targetProxyEndpoint)
+		targetProxyEndpoint.UpdateToRuntime()
+		utils.SendOK(w)
+		return
+	} else if r.Method == http.MethodPut {
+		//Store the new permission policy
+		newPermissionPolicyJSONString, err := utils.PostPara(r, "pp")
+		if err != nil {
+			utils.SendErrorResponse(w, "missing pp (permission policy) paramter")
+			return
+		}
+
+		//Parse the permission policy from JSON string
+		newPermissionPolicy := permissionpolicy.GetDefaultPermissionPolicy()
+		err = json.Unmarshal([]byte(newPermissionPolicyJSONString), &newPermissionPolicy)
+		if err != nil {
+			utils.SendErrorResponse(w, "permission policy parse error: "+err.Error())
+			return
+		}
+
+		//Save it to file
+		targetProxyEndpoint.PermissionPolicy = newPermissionPolicy
+		SaveReverseProxyConfig(targetProxyEndpoint)
+		targetProxyEndpoint.UpdateToRuntime()
+		utils.SendOK(w)
+		return
 	}
 
 	http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)

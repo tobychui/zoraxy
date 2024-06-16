@@ -215,8 +215,8 @@ func initAPIs() {
 	}
 
 	//Docker UX Optimizations
-	authRouter.HandleFunc("/api/docker/available", HandleDockerAvailable)
-	authRouter.HandleFunc("/api/docker/containers", HandleDockerContainersList)
+	authRouter.HandleFunc("/api/docker/available", DockerUXOptimizer.HandleDockerAvailable)
+	authRouter.HandleFunc("/api/docker/containers", DockerUXOptimizer.HandleDockerContainersList)
 
 	//Others
 	http.HandleFunc("/api/info/x", HandleZoraxyInfo)

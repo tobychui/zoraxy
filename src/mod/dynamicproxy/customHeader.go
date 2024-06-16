@@ -1,6 +1,10 @@
 package dynamicproxy
 
-import "strconv"
+import (
+	"strconv"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
+)
 
 /*
 	CustomHeader.go
@@ -9,9 +13,9 @@ import "strconv"
 	into the dpcore routing logic
 */
 
-//SplitInboundOutboundHeaders split user defined headers into upstream and downstream headers
-//return upstream header and downstream header key-value pairs
-//if the header is expected to be deleted, the value will be set to empty string
+// SplitInboundOutboundHeaders split user defined headers into upstream and downstream headers
+// return upstream header and downstream header key-value pairs
+// if the header is expected to be deleted, the value will be set to empty string
 func (ept *ProxyEndpoint) SplitInboundOutboundHeaders() ([][]string, [][]string) {
 	if len(ept.UserDefinedHeaders) == 0 {
 		//Early return if there are no defined headers
@@ -52,8 +56,17 @@ func (ept *ProxyEndpoint) SplitInboundOutboundHeaders() ([][]string, [][]string)
 	}
 
 	//Check if the endpoint require Permission Policy
-	if ept.EnablePermissionPolicyHeader && ept.PermissionPolicy != nil {
-		downstreamHeaders[downstreamHeaderCounter] = ept.PermissionPolicy.ToKeyValueHeader()
+	if ept.EnablePermissionPolicyHeader {
+		var usingPermissionPolicy *permissionpolicy.PermissionsPolicy
+		if ept.PermissionPolicy != nil {
+			//Custom permission policy
+			usingPermissionPolicy = ept.PermissionPolicy
+		} else {
+			//Permission policy is enabled but not customized. Use default
+			usingPermissionPolicy = permissionpolicy.GetDefaultPermissionPolicy()
+		}
+
+		downstreamHeaders[downstreamHeaderCounter] = usingPermissionPolicy.ToKeyValueHeader()
 		downstreamHeaderCounter++
 	}
 

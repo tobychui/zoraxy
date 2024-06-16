@@ -16,6 +16,10 @@
                 pointer-events: none;
                 user-select: none;
             }
+
+            #permissionPolicyEditor .experimental{
+                background-color: rgb(241, 241, 241);
+            }
         </style>
     </head>
     <body>
@@ -105,16 +109,14 @@
                         </tr></thead>
                         <tbody id="permissionPolicyEditTable">
                           <tr>
-                            <td>James</td>
-                            <td>24</td>
-                            <td>Engineer</td>
-                            <td>Engineer</td>
+                            <td colspan="4"><i class="ui loading spinner icon"></i> Generating</td>
                           </tr>
                         </tbody>
                       </table>
                 </div>
-                <br>
-                <button class="ui basic button"><i class="green save icon"></i> Save</button>
+                <small><i class="ui yellow exclamation triangle icon"></i> Grey out fields are non-standard permission policies</small>
+                <br><br>
+                <button class="ui basic button" onclick="savePermissionPolicy();"><i class="green save icon"></i> Save</button>
             </div>
            
             <div class="field" >
@@ -126,6 +128,7 @@
 
         <script>
             $('.menu .item').tab();
+            let permissionPolicyKeys = [];
 
             let editingEndpoint = {};
             if (window.location.hash.length > 1){
@@ -331,6 +334,33 @@
             }
             initHSTSState();
 
+            //Return true if this is an proposed permission policy feature
+            function isExperimentalFeature(header) {
+                // List of experimental features
+                const experimentalFeatures = [
+                    "clipboard-read",
+                    "clipboard-write",
+                    "gamepad",
+                    "speaker-selection",
+                    "conversion-measurement",
+                    "focus-without-user-activation",
+                    "hid",
+                    "idle-detection",
+                    "interest-cohort",
+                    "serial",
+                    "sync-script",
+                    "trust-token-redemption",
+                    "unload",
+                    "window-placement",
+                    "vertical-scroll"
+                ];
+
+                header = header.replaceAll("_","-");
+
+                // Check if the header is in the list of experimental features
+                return experimentalFeatures.includes(header);
+            }
+
             /* List permission policy header from server */
             function initPermissionPolicy(){
                 $.get("/api/proxy/header/handlePermissionPolicy?domain=" + editingEndpoint.ep, function(data){
@@ -340,7 +370,7 @@
                         return;
                     }
 
-                    //Set checkbox state
+                    //Set checkbox initial state
                     if (data.PPEnabled){
                         $("#enablePP").parent().checkbox("set checked");
                         $("#permissionPolicyEditor").removeClass("disabled");
@@ -348,6 +378,33 @@
                         $("#enablePP").parent().checkbox("set unchecked");
                         $("#permissionPolicyEditor").addClass("disabled");
                     }
+
+                    //Bind toggle change events
+                    $("#enablePP").on("change", function(evt){
+                        //Set checkbox state
+                        let ppEnabled = $("#enablePP")[0].checked;
+                        if (ppEnabled){
+                            $("#permissionPolicyEditor").removeClass("disabled");
+                        }else{
+                            $("#permissionPolicyEditor").addClass("disabled");
+                        }
+
+                        $.ajax({
+                            url: "/api/proxy/header/handlePermissionPolicy",
+                            method: "POST",
+                            data: {
+                                enable: ppEnabled,
+                                domain: editingEndpoint.ep
+                            },
+                            success: function(data){
+                                if (data.error != undefined){
+                                    parent.msgbox(data.error, false);
+                                }else{
+                                    parent.msgbox(`Permission Policy ${ppEnabled?"Enabled":"Disabled"}`)
+                                }
+                            }
+                        })
+                    });
 
                     //Render the table to list
                     $("#permissionPolicyEditTable").html("");
@@ -363,9 +420,12 @@
 
                         if (value.length == 0){
                             enabled = ""
+                            allowall = "checked"; //default state
                         }
-                        $("#permissionPolicyEditTable").append(`<tr>
-                            <td>${key}</td>
+
+                        let isExperimental = isExperimentalFeature(key);
+                        $("#permissionPolicyEditTable").append(`<tr class="${isExperimental?"experimental":""}">
+                            <td>${key.replaceAll("_","-")}</td>
                             <td>
                                 <div class="ui checkbox">
                                     <input class="enabled" type="checkbox" name="${key}" ${enabled}>
@@ -373,22 +433,84 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="all" name="${key}-target" ${allowall}>
+                                <div class="ui radio checkbox targetinput ${!enabled?"disabled":""}">
+                                    <input type="radio" value="all" name="${key}-target" ${allowall} ${!enabled?"disabled=\"\"":""}>
                                     <label></label>
                                 </div>
                             </td>
                             <td>
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="self" name="${key}-target" ${allowself}>
+                                <div class="ui radio checkbox targetinput ${!enabled?"disabled":""}">
+                                    <input type="radio" value="self" name="${key}-target" ${allowself} ${!enabled?"disabled=\"\"":""}>
                                     <label></label>
                                 </div>
                             </td>
                         </tr>`);
+                        
+                        permissionPolicyKeys.push(key);
                     }
+
+                    $("#permissionPolicyEditTable .enabled").on("change", function(){
+                        console.log($(this)[0].checked);
+                        let fieldGroup = $(this).parent().parent().parent();
+                        if ($(this)[0].checked){
+                            fieldGroup.find(".targetinput").removeClass("disabled");
+                            fieldGroup.find("input[type=radio]").prop('disabled', false);
+                        }else{
+                            fieldGroup.find(".targetinput").addClass("disabled");
+                            fieldGroup.find("input[type=radio]").prop('disabled', true);
+                        }
+                    })
                 });
             }
             initPermissionPolicy();
+
+            //Generate the permission policy object for sending to backend
+            function generatePermissionPolicyObject(){
+                function getStructuredFieldValueFromDOM(fieldKey){
+                    var policyTarget = $(`#permissionPolicyEditTable input[name="${fieldKey}-target"]:checked`).val();
+                    var isPolicyEnabled = $(`#permissionPolicyEditTable input[name="${fieldKey}"]`).is(':checked');
+                    
+                    if (!isPolicyEnabled){
+                        return [];
+                    }
+
+                    if (policyTarget == "all"){
+                        //Rewrite all to correct syntax
+                        policyTarget = "*";
+                    }
+                    return [policyTarget];
+                }
+
+                let newPermissionPolicyKeyValuePair = {};
+                permissionPolicyKeys.forEach(policyKey => {
+                    newPermissionPolicyKeyValuePair[policyKey] = getStructuredFieldValueFromDOM(policyKey);
+                });
+
+                console.log(newPermissionPolicyKeyValuePair);
+                return newPermissionPolicyKeyValuePair;
+            }
+
+            //Handle saving of permission policy
+            function savePermissionPolicy(){
+                let permissionPolicy = generatePermissionPolicyObject();
+                let domain = editingEndpoint.ep;
+
+                $.ajax({
+                    url: "/api/proxy/header/handlePermissionPolicy",
+                    method: "PUT",
+                    data: {
+                        "domain": domain,
+                        "pp": JSON.stringify(permissionPolicy),
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false);
+                        }else{
+                            parent.msgbox("Permission Policy Updated");
+                        }
+                    }
+                })
+            }
         </script>
     </body>
 </html>
