@@ -123,6 +123,7 @@
             $('#streamProxyForm input, #streamProxyForm select').val('');
             $('#streamProxyForm select').dropdown('clear');
             $("#streamProxyForm input[name=timeout]").val(10);
+            $("#streamProxyForm .toggle.checkbox").checkbox("set unchecked");
         }
 
         function cancelStreamProxyEdit(event=undefined) {
@@ -305,6 +306,7 @@
                     }
                     initProxyConfigList();
                     cancelStreamProxyEdit();
+                    clearStreamProxyAddEditForm();
                     
                 },
                 error: function() {

@@ -144,6 +144,10 @@ func ReverseProxtInit() {
 			Interval:        300, //5 minutes
 			MaxRecordsStore: 288, //1 day
 		})
+
+		//Pass the pointer of this uptime monitor into the load balancer
+		loadbalancer.Options.UptimeMonitor = uptimeMonitor
+
 		SystemWideLogger.Println("Uptime Monitor background service started")
 	}()
 }
@@ -221,7 +225,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Require basic auth?
+	// Require basic auth?
 	rba, _ := utils.PostPara(r, "bauth")
 	if rba == "" {
 		rba = "false"
@@ -230,23 +234,26 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	requireBasicAuth := (rba == "true")
 
 	// Require Rate Limiting?
-	rl, _ := utils.PostPara(r, "rate")
-	if rl == "" {
-		rl = "false"
-	}
-	requireRateLimit := (rl == "true")
-	rlnum, _ := utils.PostPara(r, "ratenum")
-	if rlnum == "" {
-		rlnum = "0"
-	}
-	proxyRateLimit, err := strconv.ParseInt(rlnum, 10, 64)
+	requireRateLimit := false
+	proxyRateLimit := 1000
+
+	requireRateLimit, err = utils.PostBool(r, "rate")
 	if err != nil {
-		utils.SendErrorResponse(w, "invalid rate limit number")
-		return
+		requireRateLimit = false
 	}
-	if proxyRateLimit <= 0 {
-		utils.SendErrorResponse(w, "rate limit number must be greater than 0")
-		return
+	if requireRateLimit {
+		proxyRateLimit, err = utils.PostInt(r, "ratenum")
+		if err != nil {
+			proxyRateLimit = 0
+		}
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid rate limit number")
+			return
+		}
+		if proxyRateLimit <= 0 {
+			utils.SendErrorResponse(w, "rate limit number must be greater than 0")
+			return
+		}
 	}
 
 	// Bypass WebSocket Origin Check
@@ -331,7 +338,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			DefaultSiteValue:        "",
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
-			RateLimit:        proxyRateLimit,
+			RateLimit:        int64(proxyRateLimit),
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)

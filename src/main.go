@@ -17,6 +17,7 @@ import (
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/forwardproxy"
@@ -68,24 +69,25 @@ var (
 	/*
 		Handler Modules
 	*/
-	sysdb              *database.Database      //System database
-	authAgent          *auth.AuthAgent         //Authentication agent
-	tlsCertManager     *tlscert.Manager        //TLS / SSL management
-	redirectTable      *redirection.RuleTable  //Handle special redirection rule sets
-	pathRuleHandler    *pathrule.Handler       //Handle specific path blocking or custom headers
-	geodbStore         *geodb.Store            //GeoIP database, for resolving IP into country code
-	accessController   *access.Controller      //Access controller, handle black list and white list
-	netstatBuffers     *netstat.NetStatBuffers //Realtime graph buffers
-	statisticCollector *statistic.Collector    //Collecting statistic from visitors
-	uptimeMonitor      *uptime.Monitor         //Uptime monitor service worker
-	mdnsScanner        *mdns.MDNSHost          //mDNS discovery services
-	ganManager         *ganserv.NetworkManager //Global Area Network Manager
-	webSshManager      *sshprox.Manager        //Web SSH connection service
-	streamProxyManager *streamproxy.Manager    //Stream Proxy Manager for TCP / UDP forwarding
-	acmeHandler        *acme.ACMEHandler       //Handler for ACME Certificate renew
-	acmeAutoRenewer    *acme.AutoRenewer       //Handler for ACME auto renew ticking
-	staticWebServer    *webserv.WebServer      //Static web server for hosting simple stuffs
-	forwardProxy       *forwardproxy.Handler   //HTTP Forward proxy, basically VPN for web browser
+	sysdb              *database.Database        //System database
+	authAgent          *auth.AuthAgent           //Authentication agent
+	tlsCertManager     *tlscert.Manager          //TLS / SSL management
+	redirectTable      *redirection.RuleTable    //Handle special redirection rule sets
+	loadbalancer       *loadbalance.RouteManager //Load balancer manager to get routing targets from proxy rules
+	pathRuleHandler    *pathrule.Handler         //Handle specific path blocking or custom headers
+	geodbStore         *geodb.Store              //GeoIP database, for resolving IP into country code
+	accessController   *access.Controller        //Access controller, handle black list and white list
+	netstatBuffers     *netstat.NetStatBuffers   //Realtime graph buffers
+	statisticCollector *statistic.Collector      //Collecting statistic from visitors
+	uptimeMonitor      *uptime.Monitor           //Uptime monitor service worker
+	mdnsScanner        *mdns.MDNSHost            //mDNS discovery services
+	ganManager         *ganserv.NetworkManager   //Global Area Network Manager
+	webSshManager      *sshprox.Manager          //Web SSH connection service
+	streamProxyManager *streamproxy.Manager      //Stream Proxy Manager for TCP / UDP forwarding
+	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew
+	acmeAutoRenewer    *acme.AutoRenewer         //Handler for ACME auto renew ticking
+	staticWebServer    *webserv.WebServer        //Static web server for hosting simple stuffs
+	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

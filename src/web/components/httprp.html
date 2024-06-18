@@ -246,7 +246,7 @@
 
                 input = `
                     <div class="ui mini fluid input">
-                        <input type="text" class="Domain" value="${domain}">
+                        <input type="text" class="Domain" onchange="cleanProxyTargetValue(this)" value="${domain}">
                     </div>
                     <div class="ui checkbox" style="margin-top: 0.6em;">
                         <input type="checkbox" class="RequireTLS" ${tls}>
@@ -433,6 +433,21 @@
                 }
             }
         })
+    }
+
+    //Clearn the proxy target value, make sure user do not enter http:// or https://
+    //and auto select TLS checkbox if https:// exists
+    function cleanProxyTargetValue(input){
+        let targetDomain = $(input).val().trim();
+        if (targetDomain.startsWith("http://")){
+            targetDomain = targetDomain.substr(7);
+            $(input).val(targetDomain);
+            $("#httpProxyList input.RequireTLS").parent().checkbox("set unchecked");
+        }else if (targetDomain.startsWith("https://")){
+            targetDomain = targetDomain.substr(8);
+            $(input).val(targetDomain);
+            $("#httpProxyList input.RequireTLS").parent().checkbox("set checked");
+        }
     }
     
     /* button events */

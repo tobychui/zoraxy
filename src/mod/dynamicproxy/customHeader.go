@@ -17,7 +17,7 @@ import (
 // return upstream header and downstream header key-value pairs
 // if the header is expected to be deleted, the value will be set to empty string
 func (ept *ProxyEndpoint) SplitInboundOutboundHeaders() ([][]string, [][]string) {
-	if len(ept.UserDefinedHeaders) == 0 {
+	if len(ept.UserDefinedHeaders) == 0 && ept.HSTSMaxAge == 0 && !ept.EnablePermissionPolicyHeader {
 		//Early return if there are no defined headers
 		return [][]string{}, [][]string{}
 	}
