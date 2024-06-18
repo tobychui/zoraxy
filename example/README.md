@@ -15,4 +15,12 @@ The templates folder contains the template for overriding the build in error or 
 
 To use the template, copy and paste the `wwww` folder to the same directory as zoraxy executable (aka the src/ file if you `go build` with the current folder tree). 
 
+
+
+### Other Templates
+
+There are a few pre-built templates that works with Zoraxy where you can find in the `other-templates` folder. Copy the folder into `www` and rename the folder to `templates` to active them. 
+
+
+
 It is worth mentioning that the uwu icons for not-found and access-denied are created by @SAWARATSUKI
