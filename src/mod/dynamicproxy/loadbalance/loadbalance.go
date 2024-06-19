@@ -51,10 +51,10 @@ func NewRouteManager(options *Options, logger *logger.Logger) *RouteManager {
 }
 
 func (b *LoadBalanceRule) GetProxyTargetIP() {
-
+//TODO: Implement get proxy target IP logic here
 }
 
 // Print debug message
 func (m *RouteManager) debugPrint(message string, err error) {
-	m.Logger.PrintAndLog("LoadBalancer", message, err)
+	m.Logger.PrintAndLog("LB", message, err)
 }
