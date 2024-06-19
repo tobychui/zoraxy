@@ -29,7 +29,7 @@ WORKDIR /opt/zoraxy/config/
 ENV VERSION=$VERSION
 ENV ARGS="-noauth=false"
 
-ENTRYPOINT "zoraxy" "-port=:8000" "${ARGS}"
+ENTRYPOINT "zoraxy" "-port=:8000" "-docker=true" "${ARGS}"
 
 HEALTHCHECK --interval=5s --timeout=5s --retries=2 CMD nc -vz 127.0.0.1 8000 || exit 1
 
