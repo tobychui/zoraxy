@@ -10,14 +10,15 @@ Although not required, it is recommended to give Zoraxy a dedicated location on 
 
 You may also need to portforward your 80/443 to allow http and https traffic. If you are accessing the interface from outside of the local network, you may also need to forward your management port. If you know how to do this, great! If not, find the manufacturer of your router and search on how to do that. There are too many to be listed here. </br>
 
+The examples below are not exactly how it should be set up, rather they give a general idea of usage.
+
 ### Using Docker run </br>
 ```
-docker run -d --name (container name) -p (ports) -v (path to storage directory):/opt/zoraxy/data/ -e ARGS='(your arguments)' zoraxydocker/zoraxy:latest
+docker run -d --name (container name) -p 80:80 -p 443:443 -p (management external):(management internal) -v (path to storage directory):/opt/zoraxy/data/ -e (flag)="(value)" zoraxydocker/zoraxy:latest
 ```
 
 ### Using Docker Compose </br>
 ```yml
-version: '3.3'
 services:
   zoraxy-docker:
     image: zoraxydocker/zoraxy:latest
@@ -25,11 +26,11 @@ services:
     ports:
       - 80:80
       - 443:443
-      - (external):8000
+      - (management external):(management internal)
     volumes:
       - (path to storage directory):/opt/zoraxy/config/
     environment:
-      ARGS: '(your arguments)'
+      (flag): "(value)"
 ```
 
 | Operator | Need | Details |
@@ -38,18 +39,21 @@ services:
 | `--name (container name)` | No | Sets the name of the container to the following word. You can change this to whatever you want. |
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
 | `-v (path to storage directory):/opt/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
-| `-e ARGS='(your arguments)'` | No | Sets the arguments to run Zoraxy with. Enter them as you would normally. By default, it is ran with `-noauth=false` but <b>you cannot change the management port.</b> This is required for the healthcheck to work. |
+| `-v /var/run/docker.sock:/var/run/docker.sock` | No | Used for autodiscovery. |
+| `-e (flag)="(value)"` | No | Arguments to run Zoraxy with. They are simply just capitalized Zoraxy flags. `-docker=true` is always set by default. See examples below. |
 | `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that is published. |
+
+> [!IMPORTANT]
+> Docker usage of the port flag should not include the colon. Ex: PORT="8000"
 
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8000/tcp -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -e ARGS='-noauth=false' zoraxydocker/zoraxy:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8005 -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -v /var/run/docker.sock:/var/run/docker.sock -e PORT="8005" -e FASTGEOIP="true" zoraxydocker/zoraxy:latest
 ```
 
 ### Docker Compose </br>
 ```yml
-version: '3.3'
 services:
   zoraxy-docker:
     image: zoraxydocker/zoraxy:latest
@@ -57,9 +61,11 @@ services:
     ports:
       - 80:80
       - 443:443
-      - 8005:8000/tcp
+      - 8005:8005
     volumes:
       - /home/docker/Containers/Zoraxy:/opt/zoraxy/config/
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      ARGS: '-noauth=false'
+      PORT: "8005"
+      FASTGEOIP: "true"
 ```
