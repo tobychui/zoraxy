@@ -30,11 +30,12 @@ type RedirectRules struct {
 	StatusCode       int    //Status Code for redirection
 }
 
-func NewRuleTable(configPath string, allowRegex bool) (*RuleTable, error) {
+func NewRuleTable(configPath string, allowRegex bool, logger *logger.Logger) (*RuleTable, error) {
 	thisRuleTable := RuleTable{
 		rules:      sync.Map{},
 		configPath: configPath,
 		AllowRegex: allowRegex,
+		Logger:     logger,
 	}
 	//Load all the rules from the config path
 	if !utils.FileExists(configPath) {
@@ -67,7 +68,7 @@ func NewRuleTable(configPath string, allowRegex bool) (*RuleTable, error) {
 
 	//Map the rules into the sync map
 	for _, rule := range rules {
-		log.Println("Redirection rule added: " + rule.RedirectURL + " -> " + rule.TargetURL)
+		thisRuleTable.log("Redirection rule added: "+rule.RedirectURL+" -> "+rule.TargetURL, nil)
 		thisRuleTable.rules.Store(rule.RedirectURL, rule)
 	}
 
@@ -92,7 +93,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	// Create a new file for writing the JSON data
 	file, err := os.Create(filepath)
 	if err != nil {
-		log.Printf("Error creating file %s: %s", filepath, err)
+		t.log("Error creating file "+filepath, err)
 		return err
 	}
 	defer file.Close()
@@ -100,7 +101,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	// Encode the RedirectRules object to JSON and write it to the file
 	err = json.NewEncoder(file).Encode(newRule)
 	if err != nil {
-		log.Printf("Error encoding JSON to file %s: %s", filepath, err)
+		t.log("Error encoding JSON to file "+filepath, err)
 		return err
 	}
 
@@ -125,7 +126,7 @@ func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 
 	// Delete the file
 	if err := os.Remove(filepath); err != nil {
-		log.Printf("Error deleting file %s: %s", filepath, err)
+		t.log("Error deleting file "+filepath, err)
 		return err
 	}
 

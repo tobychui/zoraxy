@@ -34,3 +34,9 @@ docker/ImagePublisher.sh
 src/mod/acme/test/stackoverflow.pem
 /tools/dns_challenge_update/code-gen/acmedns
 /tools/dns_challenge_update/code-gen/lego
+src/tmp/localhost.key
+src/tmp/localhost.pem
+src/www/html/index.html
+src/sys.uuid
+src/zoraxy
+src/log/

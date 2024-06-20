@@ -11,6 +11,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -143,9 +144,12 @@ func ReverseProxtInit() {
 			Interval:        300, //5 minutes
 			MaxRecordsStore: 288, //1 day
 		})
+
+		//Pass the pointer of this uptime monitor into the load balancer
+		loadbalancer.Options.UptimeMonitor = uptimeMonitor
+
 		SystemWideLogger.Println("Uptime Monitor background service started")
 	}()
-
 }
 
 func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
@@ -221,13 +225,36 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Require basic auth?
+	// Require basic auth?
 	rba, _ := utils.PostPara(r, "bauth")
 	if rba == "" {
 		rba = "false"
 	}
 
 	requireBasicAuth := (rba == "true")
+
+	// Require Rate Limiting?
+	requireRateLimit := false
+	proxyRateLimit := 1000
+
+	requireRateLimit, err = utils.PostBool(r, "rate")
+	if err != nil {
+		requireRateLimit = false
+	}
+	if requireRateLimit {
+		proxyRateLimit, err = utils.PostInt(r, "ratenum")
+		if err != nil {
+			proxyRateLimit = 0
+		}
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid rate limit number")
+			return
+		}
+		if proxyRateLimit <= 0 {
+			utils.SendErrorResponse(w, "rate limit number must be greater than 0")
+			return
+		}
+	}
 
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
@@ -309,6 +336,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 			DefaultSiteOption:       0,
 			DefaultSiteValue:        "",
+			// Rate Limit
+			RequireRateLimit: requireRateLimit,
+			RateLimit:        int64(proxyRateLimit),
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -430,6 +460,26 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	requireBasicAuth := (rba == "true")
 
+	// Rate Limiting?
+	rl, _ := utils.PostPara(r, "rate")
+	if rl == "" {
+		rl = "false"
+	}
+	requireRateLimit := (rl == "true")
+	rlnum, _ := utils.PostPara(r, "ratenum")
+	if rlnum == "" {
+		rlnum = "0"
+	}
+	proxyRateLimit, err := strconv.ParseInt(rlnum, 10, 64)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid rate limit number")
+		return
+	}
+	if proxyRateLimit <= 0 {
+		utils.SendErrorResponse(w, "rate limit number must be greater than 0")
+		return
+	}
+
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
 	if strbpwsorg == "" {
@@ -451,6 +501,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
 	newProxyEndpoint.SkipCertValidations = skipTlsValidation
 	newProxyEndpoint.RequireBasicAuth = requireBasicAuth
+	newProxyEndpoint.RequireRateLimit = requireRateLimit
+	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.SkipWebSocketOriginCheck = bypassWebsocketOriginCheck
 
 	//Prepare to replace the current routing rule
@@ -1186,4 +1238,124 @@ func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendOK(w)
 
+}
+
+// Handle view or edit HSTS states
+func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Return current HSTS enable state
+		hstsAge := targetProxyEndpoint.HSTSMaxAge
+		js, _ := json.Marshal(hstsAge)
+		utils.SendJSONResponse(w, string(js))
+		return
+	} else if r.Method == http.MethodPost {
+		newMaxAge, err := utils.PostInt(r, "maxage")
+		if err != nil {
+			utils.SendErrorResponse(w, "maxage not defeined")
+			return
+		}
+
+		if newMaxAge == 0 || newMaxAge >= 31536000 {
+			targetProxyEndpoint.HSTSMaxAge = int64(newMaxAge)
+			SaveReverseProxyConfig(targetProxyEndpoint)
+			targetProxyEndpoint.UpdateToRuntime()
+		} else {
+			utils.SendErrorResponse(w, "invalid max age given")
+			return
+		}
+		utils.SendOK(w)
+		return
+	}
+
+	http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// HandlePermissionPolicy handle read or write to permission policy
+func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		type CurrentPolicyState struct {
+			PPEnabled     bool
+			CurrentPolicy *permissionpolicy.PermissionsPolicy
+		}
+
+		currentPolicy := permissionpolicy.GetDefaultPermissionPolicy()
+		if targetProxyEndpoint.PermissionPolicy != nil {
+			currentPolicy = targetProxyEndpoint.PermissionPolicy
+		}
+		result := CurrentPolicyState{
+			PPEnabled:     targetProxyEndpoint.EnablePermissionPolicyHeader,
+			CurrentPolicy: currentPolicy,
+		}
+
+		js, _ := json.Marshal(result)
+		utils.SendJSONResponse(w, string(js))
+		return
+	} else if r.Method == http.MethodPost {
+		//Update the enable state of permission policy
+		enableState, err := utils.PostBool(r, "enable")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid enable state given")
+			return
+		}
+
+		targetProxyEndpoint.EnablePermissionPolicyHeader = enableState
+		SaveReverseProxyConfig(targetProxyEndpoint)
+		targetProxyEndpoint.UpdateToRuntime()
+		utils.SendOK(w)
+		return
+	} else if r.Method == http.MethodPut {
+		//Store the new permission policy
+		newPermissionPolicyJSONString, err := utils.PostPara(r, "pp")
+		if err != nil {
+			utils.SendErrorResponse(w, "missing pp (permission policy) paramter")
+			return
+		}
+
+		//Parse the permission policy from JSON string
+		newPermissionPolicy := permissionpolicy.GetDefaultPermissionPolicy()
+		err = json.Unmarshal([]byte(newPermissionPolicyJSONString), &newPermissionPolicy)
+		if err != nil {
+			utils.SendErrorResponse(w, "permission policy parse error: "+err.Error())
+			return
+		}
+
+		//Save it to file
+		targetProxyEndpoint.PermissionPolicy = newPermissionPolicy
+		SaveReverseProxyConfig(targetProxyEndpoint)
+		targetProxyEndpoint.UpdateToRuntime()
+		utils.SendOK(w)
+		return
+	}
+
+	http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 }

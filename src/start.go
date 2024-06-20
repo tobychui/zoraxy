@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/dockerux"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/ganserv"
@@ -73,15 +76,22 @@ func startupSequence() {
 		panic(err)
 	}
 
+	//Create a system wide logger
+	l, err := logger.NewLogger("zr", "./log", *logOutputToFile)
+	if err == nil {
+		SystemWideLogger = l
+	} else {
+		panic(err)
+	}
+
 	//Create a redirection rule table
 	db.NewTable("redirect")
 	redirectAllowRegexp := false
 	db.Read("redirect", "regex", &redirectAllowRegexp)
-	redirectTable, err = redirection.NewRuleTable("./conf/redirect", redirectAllowRegexp)
+	redirectTable, err = redirection.NewRuleTable("./conf/redirect", redirectAllowRegexp, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
-	redirectTable.Logger = SystemWideLogger
 
 	//Create a geodb store
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
@@ -91,6 +101,11 @@ func startupSequence() {
 	if err != nil {
 		panic(err)
 	}
+
+	//Create a load balance route manager
+	loadbalancer = loadbalance.NewRouteManager(&loadbalance.Options{
+		Geodb: geodbStore,
+	}, SystemWideLogger)
 
 	//Create the access controller
 	accessController, err = access.NewAccessController(&access.Options{
@@ -107,14 +122,6 @@ func startupSequence() {
 		Database: sysdb,
 	})
 	if err != nil {
-		panic(err)
-	}
-
-	//Create a system wide logger
-	l, err := logger.NewLogger("zr", "./log", *logOutputToFile)
-	if err == nil {
-		SystemWideLogger = l
-	} else {
 		panic(err)
 	}
 
@@ -268,6 +275,12 @@ func startupSequence() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	/* Docker UX Optimizer */
+	if runtime.GOOS == "windows" && *runningInDocker {
+		SystemWideLogger.PrintAndLog("WARNING", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
+	}
+	DockerUXOptimizer = dockerux.NewDockerOptimizer(*runningInDocker, SystemWideLogger)
 
 }
 

@@ -1,7 +1,7 @@
 package redirection
 
 import (
-	"log"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -52,7 +52,7 @@ func (t *RuleTable) HandleRedirect(w http.ResponseWriter, r *http.Request) int {
 		//Invalid usage
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("500 - Internal Server Error"))
-		log.Println("Target request URL do not have matching redirect rule. Check with IsRedirectable before calling HandleRedirect!")
+		t.log("Target request URL do not have matching redirect rule. Check with IsRedirectable before calling HandleRedirect!", errors.New("invalid usage"))
 		return 500
 	}
 }

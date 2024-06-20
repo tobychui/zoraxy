@@ -16,6 +16,8 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/dockerux"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/forwardproxy"
@@ -44,6 +46,7 @@ var allowMdnsScanning = flag.Bool("mdns", true, "Enable mDNS scanner and transpo
 var mdnsName = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
 var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
+var runningInDocker = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
@@ -52,7 +55,7 @@ var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.6"
+	version     = "3.0.7"
 	nodeUUID    = "generic"
 	development = false //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -66,29 +69,31 @@ var (
 	/*
 		Handler Modules
 	*/
-	sysdb              *database.Database      //System database
-	authAgent          *auth.AuthAgent         //Authentication agent
-	tlsCertManager     *tlscert.Manager        //TLS / SSL management
-	redirectTable      *redirection.RuleTable  //Handle special redirection rule sets
-	pathRuleHandler    *pathrule.Handler       //Handle specific path blocking or custom headers
-	geodbStore         *geodb.Store            //GeoIP database, for resolving IP into country code
-	accessController   *access.Controller      //Access controller, handle black list and white list
-	netstatBuffers     *netstat.NetStatBuffers //Realtime graph buffers
-	statisticCollector *statistic.Collector    //Collecting statistic from visitors
-	uptimeMonitor      *uptime.Monitor         //Uptime monitor service worker
-	mdnsScanner        *mdns.MDNSHost          //mDNS discovery services
-	ganManager         *ganserv.NetworkManager //Global Area Network Manager
-	webSshManager      *sshprox.Manager        //Web SSH connection service
-	streamProxyManager *streamproxy.Manager    //Stream Proxy Manager for TCP / UDP forwarding
-	acmeHandler        *acme.ACMEHandler       //Handler for ACME Certificate renew
-	acmeAutoRenewer    *acme.AutoRenewer       //Handler for ACME auto renew ticking
-	staticWebServer    *webserv.WebServer      //Static web server for hosting simple stuffs
-	forwardProxy       *forwardproxy.Handler   //HTTP Forward proxy, basically VPN for web browser
+	sysdb              *database.Database        //System database
+	authAgent          *auth.AuthAgent           //Authentication agent
+	tlsCertManager     *tlscert.Manager          //TLS / SSL management
+	redirectTable      *redirection.RuleTable    //Handle special redirection rule sets
+	loadbalancer       *loadbalance.RouteManager //Load balancer manager to get routing targets from proxy rules
+	pathRuleHandler    *pathrule.Handler         //Handle specific path blocking or custom headers
+	geodbStore         *geodb.Store              //GeoIP database, for resolving IP into country code
+	accessController   *access.Controller        //Access controller, handle black list and white list
+	netstatBuffers     *netstat.NetStatBuffers   //Realtime graph buffers
+	statisticCollector *statistic.Collector      //Collecting statistic from visitors
+	uptimeMonitor      *uptime.Monitor           //Uptime monitor service worker
+	mdnsScanner        *mdns.MDNSHost            //mDNS discovery services
+	ganManager         *ganserv.NetworkManager   //Global Area Network Manager
+	webSshManager      *sshprox.Manager          //Web SSH connection service
+	streamProxyManager *streamproxy.Manager      //Stream Proxy Manager for TCP / UDP forwarding
+	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew
+	acmeAutoRenewer    *acme.AutoRenewer         //Handler for ACME auto renew ticking
+	staticWebServer    *webserv.WebServer        //Static web server for hosting simple stuffs
+	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 
 	//Helper modules
-	EmailSender      *email.Sender        //Email sender that handle email sending
-	AnalyticLoader   *analytic.DataLoader //Data loader for Zoraxy Analytic
-	SystemWideLogger *logger.Logger       //Logger for Zoraxy
+	EmailSender       *email.Sender         //Email sender that handle email sending
+	AnalyticLoader    *analytic.DataLoader  //Data loader for Zoraxy Analytic
+	DockerUXOptimizer *dockerux.UXOptimizer //Docker user experience optimizer, community contribution only
+	SystemWideLogger  *logger.Logger        //Logger for Zoraxy
 )
 
 // Kill signal handler. Do something before the system the core terminate.

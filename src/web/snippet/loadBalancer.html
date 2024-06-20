@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+    </head>
+    <body>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Load Balance
+                    <div class="sub header epname"></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            
+            <div class="ui divider"></div>
+            <div class="field" >
+                <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
+            </div>
+        </div>
+            
+        <br><br><br><br>
+
+        </div>
+        <script>
+            let aliasList = [];
+            let editingEndpoint = {};
+
+            if (window.location.hash.length > 1){
+                let payloadHash = window.location.hash.substr(1);
+                try{
+                    payloadHash = JSON.parse(decodeURIComponent(payloadHash));
+                    $(".epname").text(payloadHash.ep);
+                    editingEndpoint = payloadHash;
+                }catch(ex){
+                    console.log("Unable to load endpoint data from hash")
+                }
+            }
+
+            function closeThisWrapper(){
+                parent.hideSideWrapper(true);
+            }
+        </script>
+    </body>
+</html>

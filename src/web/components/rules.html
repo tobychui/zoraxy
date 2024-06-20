@@ -26,8 +26,11 @@
                     </div>
                     <div class="field">
                         <label>Target IP Address or Domain Name with port</label>
-                        <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
+                            <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
                         <small>E.g. 192.168.0.101:8000 or example.com</small>
+                    </div>
+                    <div class="field dockerOptimizations" style="display:none;">
+                        <button style="margin-top: -2em;" class="ui basic small button" onclick="openDockerContainersList();"><i class="blue docker icon"></i> Pick from Docker Containers</button>
                     </div>
                     <div class="field">
                         <div class="ui checkbox">
@@ -72,6 +75,22 @@
                                         <input type="checkbox" id="bypassGlobalTLS">
                                         <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
                                     </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="requireRateLimit">
+                                        <label>Require Rate Limit<br><small>This proxy endpoint will be rate limited.</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label>Rate Limit</label>
+                                    <div class="ui fluid right labeled input">
+                                        <input type="number" id="proxyRateLimit" placeholder="100" min="1" max="1000" value="100">
+                                        <div class="ui basic label">
+                                           req / sec / IP
+                                        </div>
+                                    </div>
+                                    <small>Return a 429 error code if request rate exceed the rate limit.</small>
                                 </div>
                                 <div class="field">
                                     <div class="ui checkbox">
@@ -147,6 +166,8 @@
         var skipTLSValidation = $("#skipTLSValidation")[0].checked;
         var bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
         var requireBasicAuth = $("#requireBasicAuth")[0].checked;
+        var proxyRateLimit = $("#proxyRateLimit").val();
+        var requireRateLimit = $("#requireRateLimit")[0].checked;
         var skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
         var accessRuleToUse = $("#newProxyRuleAccessFilter").val();
         
@@ -176,6 +197,8 @@
                 bpwsorg: skipWebSocketOriginCheck,
                 bypassGlobalTLS: bypassGlobalTLS,
                 bauth: requireBasicAuth,
+                rate: requireRateLimit,
+                ratenum: proxyRateLimit,
                 cred: JSON.stringify(credentials),
                 access: accessRuleToUse,
             },
@@ -264,6 +287,16 @@
     }
     $("#requireBasicAuth").on('change', toggleBasicAuth);
     toggleBasicAuth();
+    
+    function toggleRateLimit() {
+        if ($("#requireRateLimit").parent().checkbox("is checked")) {
+            $("#proxyRateLimit").parent().parent().removeClass("disabled");
+        } else {
+            $("#proxyRateLimit").parent().parent().addClass("disabled");
+        }
+    }
+    $("#requireRateLimit").on('change', toggleRateLimit);
+    toggleRateLimit();
 
 
     /*
@@ -397,9 +430,30 @@
         initNewProxyRuleAccessDropdownList();
     }
 
-    $(document).ready(function(){
-        $("#advanceProxyRules").accordion();
-        $("#newProxyRuleAccessFilter").parent().dropdown();
-    });
+    /* Docker Optimizations */
+    function initDockerUXOptimizations(){
+        $.get("/api/docker/available", function(dockerAvailable){
+            if (dockerAvailable){
+                $(".dockerOptimizations").show();
+            }else{
+                $(".dockerOptimizations").hide();
+            }
+        });
+    }
+    initDockerUXOptimizations();
     
+    function openDockerContainersList(){
+        showSideWrapper('snippet/dockerContainersList.html');
+    }
+
+    function addContainerItem(item) {
+        $('#rootname').val(item.name);
+        $('#proxyDomain').val(`${item.ip}:${item.port}`)
+        hideSideWrapper(true);
+    }
+    
+    /* UI Element Initialization */
+    $("#advanceProxyRules").accordion();
+    $("#newProxyRuleAccessFilter").parent().dropdown();
+   
 </script>

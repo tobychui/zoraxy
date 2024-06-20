@@ -227,7 +227,7 @@ func getWebsiteStatus(url string) (int, error) {
 
 	client := http.Client{
 		Jar:     jar,
-		Timeout: 10 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 
 	req, _ := http.NewRequest("GET", url, nil)

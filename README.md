@@ -96,6 +96,8 @@ See the [/docker](https://github.com/tobychui/zoraxy/tree/main/docker) folder fo
 Usage of zoraxy:
   -autorenew int
         ACME auto TLS/SSL certificate renew check interval (seconds) (default 86400)
+  -docker
+        Run Zoraxy in docker compatibility mode
   -fastgeoip
         Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
   -log
@@ -187,5 +189,4 @@ If you like the project and want to support us, please consider a donation. You 
 ## License
 
 This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **This software is intended to be free of charge. If you have acquired this software from a third-party seller, the authors of this repository bears no responsibility for any technical difficulties assistance or support.**
-
 

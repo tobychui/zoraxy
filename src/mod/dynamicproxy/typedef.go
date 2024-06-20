@@ -8,6 +8,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/statistic"
@@ -51,8 +52,9 @@ type Router struct {
 	tlsListener    net.Listener
 	routingRules   []*RoutingRule
 
-	tlsRedirectStop chan bool      //Stop channel for tls redirection server
-	tldMap          map[string]int //Top level domain map, see tld.json
+	tlsRedirectStop  chan bool              //Stop channel for tls redirection server
+	rateLimterStop   chan bool              //Stop channel for rate limiter
+	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
 }
 
 // Auth credential for basic auth on certain endpoints
@@ -117,12 +119,19 @@ type ProxyEndpoint struct {
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
 	//Custom Headers
-	UserDefinedHeaders []*UserDefinedHeader //Custom headers to append when proxying requests from this endpoint
+	UserDefinedHeaders           []*UserDefinedHeader                //Custom headers to append when proxying requests from this endpoint
+	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
+	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
+	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
 
 	//Authentication
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+
+	// Rate Limiting
+	RequireRateLimit bool
+	RateLimit        int64 // Rate limit in requests per second
 
 	//Access Control
 	AccessFilterUUID string //Access filter ID
