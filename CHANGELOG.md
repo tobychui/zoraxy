@@ -12,31 +12,6 @@ From contributors:
 + Add Rate Limits Limits to Zoraxy fixes [185](https://github.com/tobychui/zoraxy/issues/185) by [Kirari04](https://github.com/Kirari04)
 + Add docker containers list to set rule by [7brend7](https://github.com/7brend7) [PR202](https://github.com/tobychui/zoraxy/pull/202)
 
-### Important for docker users: You need to map `docker.sock` into Zoraxy for easy discovery for your services. The new `docker` startup parameter is needed for future improvements. Here is an example for your docker-compose.yml
-
-```yaml
-
-services:
-  zoraxy:
-    image: zoraxydocker/zoraxy:latest
-    container_name: zoraxy
-    restart: unless-stopped
-
-    ports:
-      - 80:80
-      - 443:443
-      - 8005:8000/tcp
-
-     volumes:
-       - ./config:/opt/zoraxy/config/
-       - /var/run/docker.sock:/var/run/docker.sock
-
-     environment:
-       noauth: false
-       docker: true
-
-```
-
 # v3.0.6 10 Jun 2024
 
 + Added fastly_client_ip to X-Real-IP auto rewrite
