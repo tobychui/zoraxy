@@ -1,6 +1,4 @@
 FROM docker.io/golang:alpine
-# VERSION comes from the main.yml workflow --build-arg
-ARG VERSION
 
 RUN apk add --no-cache bash netcat-openbsd sudo
 
@@ -26,7 +24,6 @@ RUN chmod 755 /usr/local/bin/zoraxy &&\
 
 WORKDIR /opt/zoraxy/config/
 
-ENV VERSION=$VERSION
 ENV ARGS="-noauth=false"
 
 ENTRYPOINT "zoraxy" "-port=:8000" "-docker=true" "${ARGS}"
