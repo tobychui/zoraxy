@@ -475,9 +475,11 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "invalid rate limit number")
 		return
 	}
-	if proxyRateLimit <= 0 {
+	if requireRateLimit && proxyRateLimit <= 0 {
 		utils.SendErrorResponse(w, "rate limit number must be greater than 0")
 		return
+	} else if proxyRateLimit < 0 {
+		proxyRateLimit = 1000
 	}
 
 	// Bypass WebSocket Origin Check
