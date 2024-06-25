@@ -133,6 +133,30 @@ func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint)
 	return readyRoutingRule, nil
 }
 
+// Check if the proxy endpoint hostname or alias name contains subdomain wildcard
+func (ep *ProxyEndpoint) ContainsWildcardName(skipAliasCheck bool) bool {
+	hostname := ep.RootOrMatchingDomain
+	aliasHostnames := ep.MatchingDomainAlias
+
+	wildcardCheck := func(hostname string) bool {
+		return len(hostname) > 0 && hostname[0] == '*'
+	}
+
+	if wildcardCheck(hostname) {
+		return true
+	}
+
+	if !skipAliasCheck {
+		for _, aliasHostname := range aliasHostnames {
+			if wildcardCheck(aliasHostname) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // Create a deep clone object of the proxy endpoint
 // Note the returned object is not activated. Call to prepare function before pushing into runtime
 func (ep *ProxyEndpoint) Clone() *ProxyEndpoint {
