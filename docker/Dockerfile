@@ -14,16 +14,16 @@ COPY ./src/ /opt/zoraxy/source/
 WORKDIR /opt/zoraxy/source/
 
 RUN go mod tidy &&\
-go build -o /usr/local/bin/zoraxy &&\
-rm -r /opt/zoraxy/source/
+    go build -o /usr/local/bin/zoraxy &&\
+    rm -r /opt/zoraxy/source/
 
 FROM docker.io/alpine:3.20
 
 RUN apk add --no-cache bash netcat-openbsd sudo
 
 RUN mkdir -p /opt/zoraxy/source/ &&\
-mkdir -p /opt/zoraxy/config/ &&\
-mkdir -p /usr/local/bin/
+    mkdir -p /opt/zoraxy/config/ &&\
+    mkdir -p /usr/local/bin/
 
 VOLUME [ "/opt/zoraxy/config/" ]
 
