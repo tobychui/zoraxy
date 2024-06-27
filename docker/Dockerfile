@@ -1,14 +1,10 @@
-FROM docker.io/golang:alpine
+FROM docker.io/golang:alpine AS build
 
 RUN apk add --no-cache bash netcat-openbsd sudo
 
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /opt/zoraxy/config/ &&\
     mkdir -p /usr/local/bin/
-
-RUN chmod -R 770 /opt/zoraxy/
-
-VOLUME [ "/opt/zoraxy/config/" ]
 
 # If you build it yourself, you will need to add the src directory into the docker directory.
 COPY ./src/ /opt/zoraxy/source/
@@ -19,8 +15,16 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     rm -r /opt/zoraxy/source/
 
-RUN chmod 755 /usr/local/bin/zoraxy &&\
-    chmod +x /usr/local/bin/zoraxy
+FROM docker.io/golang:alpine AS final
+
+RUN mkdir -p /opt/zoraxy/config/ &&\
+    mkdir -p /usr/local/bin/
+
+RUN chmod -R 770 /opt/zoraxy/
+
+COPY --from=build /usr/local/bin/zoraxy /usr/local/bin/zoraxy
+
+VOLUME [ "/opt/zoraxy/config/" ]
 
 WORKDIR /opt/zoraxy/config/
 
