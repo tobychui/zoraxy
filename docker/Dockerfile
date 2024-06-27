@@ -6,6 +6,8 @@ RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /opt/zoraxy/config/ &&\
     mkdir -p /usr/local/bin/
 
+RUN chmod -R 770 /opt/zoraxy/
+
 # If you build it yourself, you will need to add the src directory into the docker directory.
 COPY ./src/ /opt/zoraxy/source/
 
@@ -15,14 +17,12 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     rm -r /opt/zoraxy/source/
 
-FROM docker.io/golang:alpine AS final
+RUN chmod 755 /usr/local/bin/zoraxy &&\
+    chmod +x /usr/local/bin/zoraxy
 
-RUN mkdir -p /opt/zoraxy/config/ &&\
-    mkdir -p /usr/local/bin/
-
-RUN chmod -R 770 /opt/zoraxy/
-
+FROM alpine
 COPY --from=build /usr/local/bin/zoraxy /usr/local/bin/zoraxy
+COPY --from=build /opt/zoraxy/config/ /opt/zoraxy/config
 
 VOLUME [ "/opt/zoraxy/config/" ]
 
@@ -45,4 +45,3 @@ ENV ZTPORT="9993"
 ENTRYPOINT "zoraxy" "-docker=true" "-autorenew=${AUTORENEW}" "-fastgeoip=${FASTGEOIP}" "-log=${LOG}" "-mdns=${MDNS}" "-mdnsname=${MDNSNAME}" "-noauth=${NOAUTH}" "-port=:${PORT}" "-sshlb=${SSHLB}" "-version=${VERSION}" "-webfm=${WEBFM}" "-webroot=${WEBROOT}" "-ztauth=${ZTAUTH}" "-ztport=${ZTPORT}"
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
-
