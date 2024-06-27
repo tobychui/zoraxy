@@ -21,6 +21,7 @@ RUN chmod 755 /usr/local/bin/zoraxy &&\
     chmod +x /usr/local/bin/zoraxy
 
 FROM alpine
+
 COPY --from=build /usr/local/bin/zoraxy /usr/local/bin/zoraxy
 COPY --from=build /opt/zoraxy/config/ /opt/zoraxy/config
 
