@@ -1,7 +1,5 @@
 FROM docker.io/golang:alpine AS build
 
-RUN apk add --no-cache bash netcat-openbsd sudo
-
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /opt/zoraxy/config/ &&\
     mkdir -p /usr/local/bin/
@@ -17,22 +15,17 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     rm -r /opt/zoraxy/source/
 
+RUN chmod 755 /usr/local/bin/zoraxy &&\
+    chmod +x /usr/local/bin/zoraxy
+
 FROM docker.io/alpine:3.20
 
 RUN apk add --no-cache bash netcat-openbsd sudo
 
-RUN mkdir -p /opt/zoraxy/source/ &&\
-    mkdir -p /opt/zoraxy/config/ &&\
-    mkdir -p /usr/local/bin/
+COPY --from=build /usr/local/bin/zoraxy /usr/local/bin/zoraxy
+COPY --from=build /opt/zoraxy/config/ /opt/zoraxy/config
 
 VOLUME [ "/opt/zoraxy/config/" ]
-
-RUN chmod -R 770 /opt/zoraxy/
-
-COPY --from=build /usr/local/bin/zoraxy /usr/local/bin/zoraxy
-
-RUN chmod 755 /usr/local/bin/zoraxy &&\
-    chmod +x /usr/local/bin/zoraxy
 
 WORKDIR /opt/zoraxy/config/
 
