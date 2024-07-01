@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/uptime"
@@ -124,37 +125,42 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 
 	UptimeTargets := []*uptime.Target{}
 	for hostid, target := range hosts {
-		url := "http://" + target.Domain
-		protocol := "http"
-		if target.RequireTLS {
-			url = "https://" + target.Domain
-			protocol = "https"
-		}
+		for _, origin := range target.ActiveOrigins {
 
-		//Add the root url
-		UptimeTargets = append(UptimeTargets, &uptime.Target{
-			ID:       hostid,
-			Name:     hostid,
-			URL:      url,
-			Protocol: protocol,
-		})
-
-		//Add each virtual directory into the list
-		for _, vdir := range target.VirtualDirectories {
-			url := "http://" + vdir.Domain
+			url := "http://" + origin.OriginIpOrDomain
 			protocol := "http"
-			if target.RequireTLS {
-				url = "https://" + vdir.Domain
+			if origin.RequireTLS {
+				url = "https://" + origin.OriginIpOrDomain
 				protocol = "https"
 			}
+
 			//Add the root url
 			UptimeTargets = append(UptimeTargets, &uptime.Target{
-				ID:       hostid + vdir.MatchingPath,
-				Name:     hostid + vdir.MatchingPath,
-				URL:      url,
-				Protocol: protocol,
+				ID:        hostid,
+				Name:      hostid,
+				URL:       url,
+				Protocol:  protocol,
+				ProxyType: uptime.ProxyType_Host,
 			})
 
+			//Add each virtual directory into the list
+			for _, vdir := range target.VirtualDirectories {
+				url := "http://" + vdir.Domain
+				protocol := "http"
+				if origin.RequireTLS {
+					url = "https://" + vdir.Domain
+					protocol = "https"
+				}
+				//Add the root url
+				UptimeTargets = append(UptimeTargets, &uptime.Target{
+					ID:        hostid + vdir.MatchingPath,
+					Name:      hostid + vdir.MatchingPath,
+					URL:       url,
+					Protocol:  protocol,
+					ProxyType: uptime.ProxyType_Vdir,
+				})
+
+			}
 		}
 	}
 
@@ -187,7 +193,16 @@ func HandleStaticWebServerPortChange(w http.ResponseWriter, r *http.Request) {
 	if dynamicProxyRouter.Root.DefaultSiteOption == dynamicproxy.DefaultSite_InternalStaticWebServer {
 		//Update the root site as well
 		newDraftingRoot := dynamicProxyRouter.Root.Clone()
-		newDraftingRoot.Domain = "127.0.0.1:" + strconv.Itoa(newPort)
+
+		newDraftingRoot.ActiveOrigins = []*loadbalance.Upstream{
+			{
+				OriginIpOrDomain:         "127.0.0.1:" + strconv.Itoa(newPort),
+				RequireTLS:               false,
+				SkipCertValidations:      false,
+				SkipWebSocketOriginCheck: true,
+				Weight:                   0,
+			},
+		}
 		activatedNewRoot, err := dynamicProxyRouter.PrepareProxyRoute(newDraftingRoot)
 		if err != nil {
 			utils.SendErrorResponse(w, "unable to update root routing rule")

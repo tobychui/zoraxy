@@ -28,6 +28,7 @@ func NewDynamicProxy(option RouterOption) (*Router, error) {
 		Running:          false,
 		server:           nil,
 		routingRules:     []*RoutingRule{},
+		loadBalancer:     option.LoadBalancer,
 		rateLimitCounter: RequestCountPerIpTable{},
 	}
 
@@ -150,10 +151,16 @@ func (router *Router) StartProxyService() error {
 							}
 						}
 
-						sep.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-							ProxyDomain:  sep.Domain,
+						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(r, sep.ActiveOrigins)
+						if err != nil {
+							http.ServeFile(w, r, "./web/hosterror.html")
+							log.Println(err.Error())
+							router.logRequest(r, false, 404, "vdir-http", r.Host)
+						}
+						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+							ProxyDomain:  selectedUpstream.OriginIpOrDomain,
 							OriginalHost: originalHostHeader,
-							UseTLS:       sep.RequireTLS,
+							UseTLS:       selectedUpstream.RequireTLS,
 							PathPrefix:   "",
 							Version:      sep.parent.Option.HostVersion,
 						})

@@ -32,6 +32,7 @@ import (
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
+	"imuslab.com/zoraxy/mod/update"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 	"imuslab.com/zoraxy/mod/webserv"
@@ -52,6 +53,7 @@ var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high spee
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
+var updateMode = flag.Int("update", 0, "Version number (usually the version before you update Zoraxy) to start accumulation update. To update v3.0.7 to latest, use -update=307")
 
 var (
 	name        = "Zoraxy"
@@ -69,11 +71,11 @@ var (
 	/*
 		Handler Modules
 	*/
-	sysdb              *database.Database        //System database
-	authAgent          *auth.AuthAgent           //Authentication agent
-	tlsCertManager     *tlscert.Manager          //TLS / SSL management
-	redirectTable      *redirection.RuleTable    //Handle special redirection rule sets
-	loadbalancer       *loadbalance.RouteManager //Load balancer manager to get routing targets from proxy rules
+	sysdb          *database.Database     //System database
+	authAgent      *auth.AuthAgent        //Authentication agent
+	tlsCertManager *tlscert.Manager       //TLS / SSL management
+	redirectTable  *redirection.RuleTable //Handle special redirection rule sets
+
 	pathRuleHandler    *pathrule.Handler         //Handle specific path blocking or custom headers
 	geodbStore         *geodb.Store              //GeoIP database, for resolving IP into country code
 	accessController   *access.Controller        //Access controller, handle black list and white list
@@ -88,6 +90,7 @@ var (
 	acmeAutoRenewer    *acme.AutoRenewer         //Handler for ACME auto renew ticking
 	staticWebServer    *webserv.WebServer        //Static web server for hosting simple stuffs
 	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
+	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending
@@ -141,6 +144,17 @@ func main() {
 	flag.Parse()
 	if *showver {
 		fmt.Println(name + " - Version " + version)
+		os.Exit(0)
+	}
+
+	if *updateMode > 306 {
+		fmt.Println("Entering Update Mode")
+		update.RunConfigUpdate(*updateMode, update.GetVersionIntFromVersionNumber(version))
+		os.Exit(0)
+	}
+
+	if !utils.ValidateListeningAddress(*webUIPort) {
+		fmt.Println("Malformed -port (listening address) paramter. Do you mean -port=:" + *webUIPort + "?")
 		os.Exit(0)
 	}
 

@@ -61,6 +61,12 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/listenPort80", HandleUpdatePort80Listener)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
+	//Reverse proxy upstream (load balance) APIs
+	authRouter.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
+	authRouter.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
+	authRouter.HandleFunc("/api/proxy/upstream/setPriority", ReverseProxyUpstreamSetPriority)
+	authRouter.HandleFunc("/api/proxy/upstream/update", ReverseProxyUpstreamUpdate)
+	authRouter.HandleFunc("/api/proxy/upstream/remove", ReverseProxyUpstreamDelete)
 	//Reverse proxy virtual directory APIs
 	authRouter.HandleFunc("/api/proxy/vdir/list", ReverseProxyListVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)

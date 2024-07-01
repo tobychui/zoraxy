@@ -8,6 +8,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/geodb"
@@ -25,23 +26,26 @@ type ProxyHandler struct {
 	Parent *Router
 }
 
+/* Router Object Options */
 type RouterOption struct {
-	HostUUID           string //The UUID of Zoraxy, use for heading mod
-	HostVersion        string //The version of Zoraxy, use for heading mod
-	Port               int    //Incoming port
-	UseTls             bool   //Use TLS to serve incoming requsts
-	ForceTLSLatest     bool   //Force TLS1.2 or above
-	NoCache            bool   //Force set Cache-Control: no-store
-	ListenOnPort80     bool   //Enable port 80 http listener
-	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
-	TlsManager         *tlscert.Manager
-	RedirectRuleTable  *redirection.RuleTable
-	GeodbStore         *geodb.Store       //GeoIP resolver
-	AccessController   *access.Controller //Blacklist / whitelist controller
-	StatisticCollector *statistic.Collector
-	WebDirectory       string //The static web server directory containing the templates folder
+	HostUUID           string                    //The UUID of Zoraxy, use for heading mod
+	HostVersion        string                    //The version of Zoraxy, use for heading mod
+	Port               int                       //Incoming port
+	UseTls             bool                      //Use TLS to serve incoming requsts
+	ForceTLSLatest     bool                      //Force TLS1.2 or above
+	NoCache            bool                      //Force set Cache-Control: no-store
+	ListenOnPort80     bool                      //Enable port 80 http listener
+	ForceHttpsRedirect bool                      //Force redirection of http to https endpoint
+	TlsManager         *tlscert.Manager          //TLS manager for serving SAN certificates
+	RedirectRuleTable  *redirection.RuleTable    //Redirection rules handler and table
+	GeodbStore         *geodb.Store              //GeoIP resolver
+	AccessController   *access.Controller        //Blacklist / whitelist controller
+	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
+	WebDirectory       string                    //The static web server directory containing the templates folder
+	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
 }
 
+/* Router Object */
 type Router struct {
 	Option         *RouterOption
 	ProxyEndpoints *sync.Map
@@ -50,6 +54,7 @@ type Router struct {
 	mux            http.Handler
 	server         *http.Server
 	tlsListener    net.Listener
+	loadBalancer   *loadbalance.RouteManager //Load balancer routing manager
 	routingRules   []*RoutingRule
 
 	tlsRedirectStop  chan bool              //Stop channel for tls redirection server
@@ -57,6 +62,7 @@ type Router struct {
 	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
 }
 
+/* Basic Auth Related Data structure*/
 // Auth credential for basic auth on certain endpoints
 type BasicAuthCredentials struct {
 	Username     string
@@ -74,6 +80,7 @@ type BasicAuthExceptionRule struct {
 	PathPrefix string
 }
 
+/* Custom Header Related Data structure */
 // Header injection direction type
 type HeaderDirection int
 
@@ -90,6 +97,8 @@ type UserDefinedHeader struct {
 	IsRemove  bool //Instead of set, remove this key instead
 }
 
+/* Routing Rule Data Structures */
+
 // A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better
 // program structure than directly using ProxyEndpoint
 type VirtualDirectoryEndpoint struct {
@@ -104,16 +113,17 @@ type VirtualDirectoryEndpoint struct {
 
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
-	ProxyType            int      //The type of this proxy, see const def
-	RootOrMatchingDomain string   //Matching domain for host, also act as key
-	MatchingDomainAlias  []string //A list of domains that alias to this rule
-	Domain               string   //Domain or IP to proxy to
+	ProxyType            int                     //The type of this proxy, see const def
+	RootOrMatchingDomain string                  //Matching domain for host, also act as key
+	MatchingDomainAlias  []string                //A list of domains that alias to this rule
+	ActiveOrigins        []*loadbalance.Upstream //Activated Upstream or origin servers IP or domain to proxy to
+	InactiveOrigins      []*loadbalance.Upstream //Disabled Upstream or origin servers IP or domain to proxy to
+	UseStickySession     bool                    //Use stick session for load balancing
+	UseActiveLoadBalance bool                    //Use active loadbalancing, default passive
+	Disabled             bool                    //If the rule is disabled
 
-	//TLS/SSL Related
-	RequireTLS               bool //Target domain require TLS
-	BypassGlobalTLS          bool //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
-	SkipCertValidations      bool //Set to true to accept self signed certs
-	SkipWebSocketOriginCheck bool //Skip origin check on websocket upgrade connections
+	//Inbound TLS/SSL Related
+	BypassGlobalTLS bool //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
 
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint
@@ -136,15 +146,12 @@ type ProxyEndpoint struct {
 	//Access Control
 	AccessFilterUUID string //Access filter ID
 
-	Disabled bool //If the rule is disabled
-
 	//Fallback routing logic (Special Rule Sets Only)
 	DefaultSiteOption int    //Fallback routing logic options
 	DefaultSiteValue  string //Fallback routing target, optional
 
 	//Internal Logic Elements
-	parent *Router              `json:"-"`
-	proxy  *dpcore.ReverseProxy `json:"-"`
+	parent *Router `json:"-"`
 }
 
 /*

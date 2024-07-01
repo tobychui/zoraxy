@@ -23,11 +23,19 @@ type Record struct {
 	Latency    int64
 }
 
+type ProxyType string
+
+const (
+	ProxyType_Host ProxyType = "Origin Server"
+	ProxyType_Vdir ProxyType = "Virtual Directory"
+)
+
 type Target struct {
-	ID       string
-	Name     string
-	URL      string
-	Protocol string
+	ID        string
+	Name      string
+	URL       string
+	Protocol  string
+	ProxyType ProxyType
 }
 
 type Config struct {

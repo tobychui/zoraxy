@@ -26,8 +26,8 @@
                     </div>
                     <div class="field">
                         <label>Target IP Address or Domain Name with port</label>
-                            <input type="text" id="proxyDomain" onchange="autoCheckTls(this.value);">
-                        <small>E.g. 192.168.0.101:8000 or example.com</small>
+                            <input type="text" id="proxyDomain" onchange="autoFillTargetTLS(this);">
+                        <small>e.g. 192.168.0.101:8000 or example.com</small>
                     </div>
                     <div class="field dockerOptimizations" style="display:none;">
                         <button style="margin-top: -2em;" class="ui basic small button" onclick="openDockerContainersList();"><i class="blue docker icon"></i> Pick from Docker Containers</button>
@@ -74,6 +74,12 @@
                                     <div class="ui checkbox">
                                         <input type="checkbox" id="bypassGlobalTLS">
                                         <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="useStickySessionLB">
+                                        <label>Sticky Session<br><small>Enable stick session on upstream load balancing</small></label>
                                     </div>
                                 </div>
                                 <div class="field">
@@ -259,7 +265,26 @@
         }
     }
 
+    //Clearn the proxy target value, make sure user do not enter http:// or https://
+    //and auto select TLS checkbox if https:// exists
+    function autoFillTargetTLS(input){
+        let targetDomain = $(input).val().trim();
+        if (targetDomain.startsWith("http://")){
+            targetDomain = targetDomain.substr(7);
+            $(input).val(targetDomain);
+            $("#reqTls").parent().checkbox("set unchecked");
+        }else if (targetDomain.startsWith("https://")){
+            targetDomain = targetDomain.substr(8);
+            $(input).val(targetDomain);
+            $("#reqTls").parent().checkbox("set checked");
+        }else{
+            //No http or https was given. Sniff it
+            autoCheckTls(targetDomain);
+        }
+    }
+    
 
+    //Automatic check if the site require TLS and check the checkbox if needed
     function autoCheckTls(targetDomain){
        $.ajax({
             url: "/api/proxy/tlscheck",
@@ -453,7 +478,25 @@
     }
     
     /* UI Element Initialization */
-    $("#advanceProxyRules").accordion();
-    $("#newProxyRuleAccessFilter").parent().dropdown();
+    function initAdvanceSettingsAccordion(){
+        function hasClickEvent(element) {
+            var events = $._data(element, "events");
+            return events && events.click && events.click.length > 0;
+        }
+
+        if (!hasClickEvent($("#advanceProxyRules"))){
+            // Not sure why sometime the accordion events are not binding
+            // to the DOM element. This makes sure the element is binded
+            // correctly by checking it again after 300ms
+            $("#advanceProxyRules").accordion();
+            $("#newProxyRuleAccessFilter").parent().dropdown();
+            setTimeout(function(){
+                initAdvanceSettingsAccordion();
+            }, 300);
+        }
+    }
+    initAdvanceSettingsAccordion();
+   
+ 
    
 </script>

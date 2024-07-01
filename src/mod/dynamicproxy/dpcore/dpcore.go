@@ -180,7 +180,7 @@ var hopHeaders = []string{
 	"Te",      // canonicalized version of "TE"
 	"Trailer", // not Trailers per URL above; http://www.rfc-editor.org/errata_search.php?eid=4522
 	"Transfer-Encoding",
-	//"Upgrade",
+	//"Upgrade", // handled by websocket proxy in higher layer abstraction
 }
 
 // Copy response from src to dst with given flush interval, reference from httputil.ReverseProxy

@@ -1,9 +1,13 @@
 package loadbalance
 
 import (
+	"strings"
+	"sync"
+	"sync/atomic"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
-	"imuslab.com/zoraxy/mod/uptime"
 )
 
 /*
@@ -12,49 +16,75 @@ import (
 	Handleing load balance request for upstream destinations
 */
 
-type BalancePolicy int
-
-const (
-	BalancePolicy_RoundRobin BalancePolicy = 0 //Round robin, will ignore upstream if down
-	BalancePolicy_Fallback   BalancePolicy = 1 //Fallback only. Will only switch to next node if the first one failed
-	BalancePolicy_Random     BalancePolicy = 2 //Random, randomly pick one from the list that is online
-	BalancePolicy_GeoRegion  BalancePolicy = 3 //Use the one defined for this geo-location, when down, pick the next avaible node
-)
-
-type LoadBalanceRule struct {
-	Upstreams         []string      //Reverse proxy upstream servers
-	LoadBalancePolicy BalancePolicy //Policy in deciding which target IP to proxy
-	UseRegionLock     bool          //If this is enabled with BalancePolicy_Geo, when the main site failed, it will not pick another node
-	UseStickySession  bool          //Use sticky session, if you are serving EU countries, make sure to add the "Do you want cookie" warning
-
-	parent *RouteManager
-}
-
 type Options struct {
-	Geodb         *geodb.Store    //GeoIP resolver for checking incoming request origin country
-	UptimeMonitor *uptime.Monitor //For checking if the target is online, this might be nil when the module starts
+	UseActiveHealthCheck bool         //Use active health check, default to false
+	Geodb                *geodb.Store //GeoIP resolver for checking incoming request origin country
+	Logger               *logger.Logger
 }
 
 type RouteManager struct {
-	Options Options
-	Logger  *logger.Logger
+	LoadBalanceMap         sync.Map  //Sync map to store the last load balance state of a given node
+	OnlineStatusMap        sync.Map  //Sync map to store the online status of a given ip address or domain name
+	onlineStatusTickerStop chan bool //Stopping channel for the online status pinger
+	Options                Options   //Options for the load balancer
 }
 
-// Create a new load balance route manager
-func NewRouteManager(options *Options, logger *logger.Logger) *RouteManager {
-	newManager := RouteManager{
-		Options: *options,
-		Logger:  logger,
+/* Upstream or Origin Server */
+type Upstream struct {
+	//Upstream Proxy Configs
+	OriginIpOrDomain         string //Target IP address or domain name with port
+	RequireTLS               bool   //Require TLS connection
+	SkipCertValidations      bool   //Set to true to accept self signed certs
+	SkipWebSocketOriginCheck bool   //Skip origin check on websocket upgrade connections
+
+	//Load balancing configs
+	Weight  int //Random weight for round robin, 0 for fallback only
+	MaxConn int //Maxmium connection to this server, 0 for unlimited
+
+	currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
+	proxy                   *dpcore.ReverseProxy
+}
+
+// Create a new load balancer
+func NewLoadBalancer(options *Options) *RouteManager {
+	onlineStatusCheckerStopChan := make(chan bool)
+
+	return &RouteManager{
+		LoadBalanceMap:         sync.Map{},
+		OnlineStatusMap:        sync.Map{},
+		onlineStatusTickerStop: onlineStatusCheckerStopChan,
+		Options:                *options,
 	}
-	logger.PrintAndLog("INFO", "Load Balance Route Manager started", nil)
-	return &newManager
 }
 
-func (b *LoadBalanceRule) GetProxyTargetIP() {
-//TODO: Implement get proxy target IP logic here
+// UpstreamsReady checks if the group of upstreams contains at least one
+// origin server that is ready
+func (m *RouteManager) UpstreamsReady(upstreams []*Upstream) bool {
+	for _, upstream := range upstreams {
+		if upstream.IsReady() {
+			return true
+		}
+	}
+	return false
+}
+
+// String format and convert a list of upstream into a string representations
+func GetUpstreamsAsString(upstreams []*Upstream) string {
+	targets := []string{}
+	for _, upstream := range upstreams {
+		targets = append(targets, upstream.String())
+	}
+	return strings.Join(targets, ", ")
+}
+
+func (m *RouteManager) Close() {
+	if m.onlineStatusTickerStop != nil {
+		m.onlineStatusTickerStop <- true
+	}
+
 }
 
 // Print debug message
 func (m *RouteManager) debugPrint(message string, err error) {
-	m.Logger.PrintAndLog("LB", message, err)
+	m.Options.Logger.PrintAndLog("LoadBalancer", message, err)
 }

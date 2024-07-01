@@ -102,10 +102,11 @@ func startupSequence() {
 		panic(err)
 	}
 
-	//Create a load balance route manager
-	loadbalancer = loadbalance.NewRouteManager(&loadbalance.Options{
-		Geodb: geodbStore,
-	}, SystemWideLogger)
+	//Create a load balancer
+	loadBalancer = loadbalance.NewLoadBalancer(&loadbalance.Options{
+		Geodb:  geodbStore,
+		Logger: SystemWideLogger,
+	})
 
 	//Create the access controller
 	accessController, err = access.NewAccessController(&access.Options{
@@ -291,5 +292,4 @@ func finalSequence() {
 
 	//Inject routing rules
 	registerBuildInRoutingRules()
-
 }

@@ -11,6 +11,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
@@ -96,6 +97,7 @@ func ReverseProxtInit() {
 		StatisticCollector: statisticCollector,
 		WebDirectory:       *staticWebServerRoot,
 		AccessController:   accessController,
+		LoadBalancer:       loadBalancer,
 	})
 	if err != nil {
 		SystemWideLogger.PrintAndLog("Proxy", "Unable to create dynamic proxy router", err)
@@ -144,9 +146,6 @@ func ReverseProxtInit() {
 			Interval:        300, //5 minutes
 			MaxRecordsStore: 288, //1 day
 		})
-
-		//Pass the pointer of this uptime monitor into the load balancer
-		loadbalancer.Options.UptimeMonitor = uptimeMonitor
 
 		SystemWideLogger.Println("Uptime Monitor background service started")
 	}()
@@ -319,13 +318,21 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			ProxyType:            dynamicproxy.ProxyType_Host,
 			RootOrMatchingDomain: rootOrMatchingDomain,
 			MatchingDomainAlias:  aliasHostnames,
-			Domain:               endpoint,
+			ActiveOrigins: []*loadbalance.Upstream{
+				{
+					OriginIpOrDomain:         endpoint,
+					RequireTLS:               useTLS,
+					SkipCertValidations:      skipTlsValidation,
+					SkipWebSocketOriginCheck: bypassWebsocketOriginCheck,
+					Weight:                   1,
+				},
+			},
+			InactiveOrigins:  []*loadbalance.Upstream{},
+			UseStickySession: false, //TODO: Move options to webform
+
 			//TLS
-			RequireTLS:               useTLS,
-			BypassGlobalTLS:          useBypassGlobalTLS,
-			SkipCertValidations:      skipTlsValidation,
-			SkipWebSocketOriginCheck: bypassWebsocketOriginCheck,
-			AccessFilterUUID:         accessRuleID,
+			BypassGlobalTLS:  useBypassGlobalTLS,
+			AccessFilterUUID: accessRuleID,
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Custom headers
@@ -375,14 +382,19 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 		//Write the root options to file
 		rootRoutingEndpoint := dynamicproxy.ProxyEndpoint{
-			ProxyType:                dynamicproxy.ProxyType_Root,
-			RootOrMatchingDomain:     "/",
-			Domain:                   endpoint,
-			RequireTLS:               useTLS,
-			BypassGlobalTLS:          false,
-			SkipCertValidations:      false,
-			SkipWebSocketOriginCheck: true,
-
+			ProxyType:            dynamicproxy.ProxyType_Root,
+			RootOrMatchingDomain: "/",
+			ActiveOrigins: []*loadbalance.Upstream{
+				{
+					OriginIpOrDomain:         endpoint,
+					RequireTLS:               useTLS,
+					SkipCertValidations:      true,
+					SkipWebSocketOriginCheck: true,
+					Weight:                   1,
+				},
+			},
+			InactiveOrigins:   []*loadbalance.Upstream{},
+			BypassGlobalTLS:   false,
 			DefaultSiteOption: defaultSiteOption,
 			DefaultSiteValue:  dsVal,
 		}
@@ -392,7 +404,11 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		dynamicProxyRouter.SetProxyRouteAsRoot(preparedRootProxyRoute)
+		err = dynamicProxyRouter.SetProxyRouteAsRoot(preparedRootProxyRoute)
+		if err != nil {
+			utils.SendErrorResponse(w, "unable to update default site: "+err.Error())
+			return
+		}
 		proxyEndpointCreated = &rootRoutingEndpoint
 	} else {
 		//Invalid eptype
@@ -426,24 +442,12 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endpoint, err := utils.PostPara(r, "ep")
-	if err != nil {
-		utils.SendErrorResponse(w, "endpoint not defined")
-		return
-	}
-
 	tls, _ := utils.PostPara(r, "tls")
 	if tls == "" {
 		tls = "false"
 	}
 
-	useTLS := (tls == "true")
-
-	stv, _ := utils.PostPara(r, "tlsval")
-	if stv == "" {
-		stv = "false"
-	}
-	skipTlsValidation := (stv == "true")
+	useStickySession, _ := utils.PostBool(r, "ss")
 
 	//Load bypass TLS option
 	bpgtls, _ := utils.PostPara(r, "bpgtls")
@@ -475,20 +479,22 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "invalid rate limit number")
 		return
 	}
-	
-	if  requireRateLimit && proxyRateLimit <= 0 {
+
+	if requireRateLimit && proxyRateLimit <= 0 {
 		utils.SendErrorResponse(w, "rate limit number must be greater than 0")
 		return
-	}else if proxyRateLimit < 0 {
+	} else if proxyRateLimit < 0 {
 		proxyRateLimit = 1000
 	}
 
 	// Bypass WebSocket Origin Check
-	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
-	if strbpwsorg == "" {
-		strbpwsorg = "false"
-	}
-	bypassWebsocketOriginCheck := (strbpwsorg == "true")
+	/*
+		strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
+		if strbpwsorg == "" {
+			strbpwsorg = "false"
+		}
+		bypassWebsocketOriginCheck := (strbpwsorg == "true")
+	*/
 
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
@@ -499,14 +505,16 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
-	newProxyEndpoint.Domain = endpoint
-	newProxyEndpoint.RequireTLS = useTLS
+	//TODO: Move these into dedicated module
+	//newProxyEndpoint.Domain = endpoint
+	//newProxyEndpoint.RequireTLS = useTLS
+	//newProxyEndpoint.SkipCertValidations = skipTlsValidation
+	//newProxyEndpoint.SkipWebSocketOriginCheck = bypassWebsocketOriginCheck
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
-	newProxyEndpoint.SkipCertValidations = skipTlsValidation
 	newProxyEndpoint.RequireBasicAuth = requireBasicAuth
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
-	newProxyEndpoint.SkipWebSocketOriginCheck = bypassWebsocketOriginCheck
+	newProxyEndpoint.UseStickySession = useStickySession
 
 	//Prepare to replace the current routing rule
 	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
@@ -939,7 +947,7 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 		})
 
 		sort.Slice(results, func(i, j int) bool {
-			return results[i].Domain < results[j].Domain
+			return results[i].RootOrMatchingDomain < results[j].RootOrMatchingDomain
 		})
 
 		js, _ := json.Marshal(results)
@@ -1059,15 +1067,20 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rootProxyTargetOrigin := ""
+	if len(dynamicProxyRouter.Root.ActiveOrigins) > 0 {
+		rootProxyTargetOrigin = dynamicProxyRouter.Root.ActiveOrigins[0].OriginIpOrDomain
+	}
+
 	//Check if it is identical as proxy root (recursion!)
-	if dynamicProxyRouter.Root == nil || dynamicProxyRouter.Root.Domain == "" {
+	if dynamicProxyRouter.Root == nil || rootProxyTargetOrigin == "" {
 		//Check if proxy root is set before checking recursive listen
 		//Fixing issue #43
 		utils.SendErrorResponse(w, "Set Proxy Root before changing inbound port")
 		return
 	}
 
-	proxyRoot := strings.TrimSuffix(dynamicProxyRouter.Root.Domain, "/")
+	proxyRoot := strings.TrimSuffix(rootProxyTargetOrigin, "/")
 	if strings.EqualFold(proxyRoot, "localhost:"+strconv.Itoa(newIncomingPortInt)) || strings.EqualFold(proxyRoot, "127.0.0.1:"+strconv.Itoa(newIncomingPortInt)) {
 		//Listening port is same as proxy root
 		//Not allow recursive settings
