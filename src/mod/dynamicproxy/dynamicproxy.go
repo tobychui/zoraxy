@@ -151,18 +151,19 @@ func (router *Router) StartProxyService() error {
 							}
 						}
 
-						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(r, sep.ActiveOrigins)
+						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession)
 						if err != nil {
 							http.ServeFile(w, r, "./web/hosterror.html")
 							log.Println(err.Error())
 							router.logRequest(r, false, 404, "vdir-http", r.Host)
 						}
 						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-							ProxyDomain:  selectedUpstream.OriginIpOrDomain,
-							OriginalHost: originalHostHeader,
-							UseTLS:       selectedUpstream.RequireTLS,
-							PathPrefix:   "",
-							Version:      sep.parent.Option.HostVersion,
+							ProxyDomain:      selectedUpstream.OriginIpOrDomain,
+							OriginalHost:     originalHostHeader,
+							UseTLS:           selectedUpstream.RequireTLS,
+							NoRemoveHopByHop: sep.DisableHopByHopHeaderRemoval,
+							PathPrefix:       "",
+							Version:          sep.parent.Option.HostVersion,
 						})
 						return
 					}

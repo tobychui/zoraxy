@@ -3,8 +3,9 @@ package loadbalance
 import (
 	"strings"
 	"sync"
-	"sync/atomic"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/sessions"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -17,12 +18,14 @@ import (
 */
 
 type Options struct {
+	SystemUUID           string       //Use for the session store
 	UseActiveHealthCheck bool         //Use active health check, default to false
 	Geodb                *geodb.Store //GeoIP resolver for checking incoming request origin country
 	Logger               *logger.Logger
 }
 
 type RouteManager struct {
+	SessionStore           *sessions.CookieStore
 	LoadBalanceMap         sync.Map  //Sync map to store the last load balance state of a given node
 	OnlineStatusMap        sync.Map  //Sync map to store the online status of a given ip address or domain name
 	onlineStatusTickerStop chan bool //Stopping channel for the online status pinger
@@ -39,20 +42,26 @@ type Upstream struct {
 
 	//Load balancing configs
 	Weight  int //Random weight for round robin, 0 for fallback only
-	MaxConn int //Maxmium connection to this server, 0 for unlimited
+	MaxConn int //TODO: Maxmium connection to this server, 0 for unlimited
 
-	currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
-	proxy                   *dpcore.ReverseProxy
+	//currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
+	proxy *dpcore.ReverseProxy
 }
 
 // Create a new load balancer
 func NewLoadBalancer(options *Options) *RouteManager {
-	onlineStatusCheckerStopChan := make(chan bool)
+	if options.SystemUUID == "" {
+		//System UUID not passed in. Use random key
+		options.SystemUUID = uuid.New().String()
+	}
 
+	//Generate a session store for stickySession
+	store := sessions.NewCookieStore([]byte(options.SystemUUID))
 	return &RouteManager{
+		SessionStore:           store,
 		LoadBalanceMap:         sync.Map{},
 		OnlineStatusMap:        sync.Map{},
-		onlineStatusTickerStop: onlineStatusCheckerStopChan,
+		onlineStatusTickerStop: nil,
 		Options:                *options,
 	}
 }

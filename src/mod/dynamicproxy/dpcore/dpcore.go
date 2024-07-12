@@ -64,6 +64,7 @@ type ResponseRewriteRuleSet struct {
 	PathPrefix        string //Vdir prefix for root, / will be rewrite to this
 	UpstreamHeaders   [][]string
 	DownstreamHeaders [][]string
+	NoRemoveHopByHop  bool   //Do not remove hop-by-hop headers, dangerous
 	Version           string //Version number of Zoraxy, use for X-Proxy-By
 }
 

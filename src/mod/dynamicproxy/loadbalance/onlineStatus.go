@@ -16,10 +16,6 @@ func (m *RouteManager) IsTargetOnline(matchingDomainOrIp string) bool {
 	return ok && isOnline
 }
 
-func (m *RouteManager) SetTargetOffline() {
-
-}
-
 // Ping a target to see if it is online
 func PingTarget(targetMatchingDomainOrIp string, requireTLS bool) bool {
 	client := &http.Client{
@@ -41,30 +37,3 @@ func PingTarget(targetMatchingDomainOrIp string, requireTLS bool) bool {
 
 	return resp.StatusCode >= 200 && resp.StatusCode <= 600
 }
-
-// StartHeartbeats start pinging each server every minutes to make sure all targets are online
-// Active mode only
-/*
-func (m *RouteManager) StartHeartbeats(pingTargets []*FallbackProxyTarget) {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
-
-	fmt.Println("Heartbeat started")
-	go func() {
-		for {
-			select {
-			case <-m.onlineStatusTickerStop:
-				ticker.Stop()
-				return
-			case <-ticker.C:
-				for _, target := range pingTargets {
-					go func(target *FallbackProxyTarget) {
-						isOnline := PingTarget(target.MatchingDomainOrIp, target.RequireTLS)
-						m.LoadBalanceMap.Store(target.MatchingDomainOrIp, isOnline)
-					}(target)
-				}
-			}
-		}
-	}()
-}
-*/

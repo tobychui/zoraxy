@@ -104,8 +104,9 @@ func startupSequence() {
 
 	//Create a load balancer
 	loadBalancer = loadbalance.NewLoadBalancer(&loadbalance.Options{
-		Geodb:  geodbStore,
-		Logger: SystemWideLogger,
+		SystemUUID: nodeUUID,
+		Geodb:      geodbStore,
+		Logger:     SystemWideLogger,
 	})
 
 	//Create the access controller

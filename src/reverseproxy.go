@@ -207,12 +207,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	useBypassGlobalTLS := bypassGlobalTLS == "true"
 
 	//Enable TLS validation?
-	stv, _ := utils.PostPara(r, "tlsval")
-	if stv == "" {
-		stv = "false"
-	}
-
-	skipTlsValidation := (stv == "true")
+	skipTlsValidation, _ := utils.PostBool(r, "tlsval")
 
 	//Get access rule ID
 	accessRuleID, _ := utils.PostPara(r, "access")
@@ -225,12 +220,10 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Require basic auth?
-	rba, _ := utils.PostPara(r, "bauth")
-	if rba == "" {
-		rba = "false"
-	}
+	requireBasicAuth, _ := utils.PostBool(r, "bauth")
 
-	requireBasicAuth := (rba == "true")
+	//Use sticky session?
+	useStickySession, _ := utils.PostBool(r, "stickysess")
 
 	// Require Rate Limiting?
 	requireRateLimit := false
@@ -328,7 +321,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 				},
 			},
 			InactiveOrigins:  []*loadbalance.Upstream{},
-			UseStickySession: false, //TODO: Move options to webform
+			UseStickySession: useStickySession,
 
 			//TLS
 			BypassGlobalTLS:  useBypassGlobalTLS,

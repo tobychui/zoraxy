@@ -53,13 +53,13 @@ var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high spee
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
-var updateMode = flag.Int("update", 0, "Version number (usually the version before you update Zoraxy) to start accumulation update. To update v3.0.7 to latest, use -update=307")
+var enableAutoUpdate = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
 var (
 	name        = "Zoraxy"
 	version     = "3.0.8"
-	nodeUUID    = "generic"
-	development = true //Set this to false to use embedded web fs
+	nodeUUID    = "generic" //System uuid, in uuidv4 format
+	development = true      //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
@@ -123,8 +123,9 @@ func ShutdownSeq() {
 		// Stop the mdns service
 		mdnsTickerStop <- true
 	}
-
 	mdnsScanner.Close()
+	fmt.Println("- Shutting down load balancer")
+	loadBalancer.Close()
 	fmt.Println("- Closing Certificates Auto Renewer")
 	acmeAutoRenewer.Close()
 	//Remove the tmp folder
@@ -147,15 +148,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *updateMode > 306 {
-		fmt.Println("Entering Update Mode")
-		update.RunConfigUpdate(*updateMode, update.GetVersionIntFromVersionNumber(version))
-		os.Exit(0)
-	}
-
 	if !utils.ValidateListeningAddress(*webUIPort) {
 		fmt.Println("Malformed -port (listening address) paramter. Do you mean -port=:" + *webUIPort + "?")
 		os.Exit(0)
+	}
+
+	if *enableAutoUpdate {
+		log.Println("[INFO] Checking required config update")
+		update.RunConfigUpdate(0, update.GetVersionIntFromVersionNumber(version))
 	}
 
 	SetupCloseHandler()

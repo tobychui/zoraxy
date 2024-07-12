@@ -112,7 +112,7 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
-	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(r, target.ActiveOrigins)
+	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession)
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
 		log.Println(err.Error())
@@ -164,6 +164,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		PathPrefix:        "",
 		UpstreamHeaders:   upstreamHeaders,
 		DownstreamHeaders: downstreamHeaders,
+		NoRemoveHopByHop:  target.DisableHopByHopHeaderRemoval,
 		Version:           target.parent.Option.HostVersion,
 	})
 
