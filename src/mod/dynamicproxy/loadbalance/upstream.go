@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
@@ -39,6 +40,7 @@ func (u *Upstream) StartProxy() error {
 
 	proxy := dpcore.NewDynamicProxyCore(path, "", &dpcore.DpcoreOptions{
 		IgnoreTLSVerification: u.SkipCertValidations,
+		FlushInterval:         100 * time.Millisecond,
 	})
 
 	u.proxy = proxy

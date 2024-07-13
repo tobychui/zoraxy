@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
@@ -58,6 +59,7 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 
 		proxy := dpcore.NewDynamicProxyCore(path, vdir.MatchingPath, &dpcore.DpcoreOptions{
 			IgnoreTLSVerification: vdir.SkipCertValidations,
+			FlushInterval:         500 * time.Millisecond,
 		})
 		vdir.proxy = proxy
 		vdir.parent = endpoint

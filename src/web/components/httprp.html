@@ -234,7 +234,6 @@
         var payload = $(row).attr("payload");
         payload = JSON.parse(decodeURIComponent(payload));
         console.log(payload);
-        //console.log(payload);
         columns.each(function(index) {
             var column = $(this);
             var oldValue = column.text().trim();

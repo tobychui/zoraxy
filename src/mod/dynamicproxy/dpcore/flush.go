@@ -3,6 +3,7 @@ package dpcore
 import (
 	"mime"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -14,6 +15,12 @@ func (p *ReverseProxy) getFlushInterval(req *http.Request, res *http.Response) t
 	}
 
 	if req.ContentLength == -1 || p.isBidirectionalStream(req, res) {
+		return -1
+	}
+
+	// Fixed issue #235: Added auto detection for ollama / llm output stream
+	connectionHeader := req.Header["Connection"]
+	if len(connectionHeader) > 0 && strings.Contains(strings.Join(connectionHeader, ","), "keep-alive") {
 		return -1
 	}
 
