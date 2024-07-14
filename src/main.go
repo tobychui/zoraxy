@@ -24,6 +24,7 @@ import (
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/info/logviewer"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -52,14 +53,13 @@ var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL cert
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
-var logOutputToFile = flag.Bool("log", true, "Log terminal output to file")
 var enableAutoUpdate = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
 var (
 	name        = "Zoraxy"
 	version     = "3.0.8"
 	nodeUUID    = "generic" //System uuid, in uuidv4 format
-	development = true      //Set this to false to use embedded web fs
+	development = false     //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
@@ -97,6 +97,7 @@ var (
 	AnalyticLoader    *analytic.DataLoader  //Data loader for Zoraxy Analytic
 	DockerUXOptimizer *dockerux.UXOptimizer //Docker user experience optimizer, community contribution only
 	SystemWideLogger  *logger.Logger        //Logger for Zoraxy
+	LogViewer         *logviewer.Viewer
 )
 
 // Kill signal handler. Do something before the system the core terminate.
@@ -111,33 +112,34 @@ func SetupCloseHandler() {
 }
 
 func ShutdownSeq() {
-	fmt.Println("- Shutting down " + name)
-	fmt.Println("- Closing GeoDB ")
+	SystemWideLogger.Println("Shutting down " + name)
+	SystemWideLogger.Println("Closing GeoDB ")
 	geodbStore.Close()
-	fmt.Println("- Closing Netstats Listener")
+	SystemWideLogger.Println("Closing Netstats Listener")
 	netstatBuffers.Close()
-	fmt.Println("- Closing Statistic Collector")
+	SystemWideLogger.Println("Closing Statistic Collector")
 	statisticCollector.Close()
 	if mdnsTickerStop != nil {
-		fmt.Println("- Stopping mDNS Discoverer (might take a few minutes)")
+		SystemWideLogger.Println("Stopping mDNS Discoverer (might take a few minutes)")
 		// Stop the mdns service
 		mdnsTickerStop <- true
 	}
 	mdnsScanner.Close()
-	fmt.Println("- Shutting down load balancer")
+	SystemWideLogger.Println("Shutting down load balancer")
 	loadBalancer.Close()
-	fmt.Println("- Closing Certificates Auto Renewer")
+	SystemWideLogger.Println("Closing Certificates Auto Renewer")
 	acmeAutoRenewer.Close()
 	//Remove the tmp folder
-	fmt.Println("- Cleaning up tmp files")
+	SystemWideLogger.Println("Cleaning up tmp files")
 	os.RemoveAll("./tmp")
 
-	fmt.Println("- Closing system wide logger")
-	SystemWideLogger.Close()
-
-	//Close database, final
-	fmt.Println("- Stopping system database")
+	//Close database
+	SystemWideLogger.Println("Stopping system database")
 	sysdb.Close()
+
+	//Close logger
+	SystemWideLogger.Println("Closing system wide logger")
+	SystemWideLogger.Close()
 }
 
 func main() {
@@ -154,7 +156,7 @@ func main() {
 	}
 
 	if *enableAutoUpdate {
-		log.Println("[INFO] Checking required config update")
+		fmt.Println("Checking required config update")
 		update.RunConfigUpdate(0, update.GetVersionIntFromVersionNumber(version))
 	}
 

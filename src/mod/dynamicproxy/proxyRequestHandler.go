@@ -136,7 +136,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		if selectedUpstream.RequireTLS {
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
 		}
-		h.Parent.logRequest(r, true, 101, "subdomain-websocket", selectedUpstream.OriginIpOrDomain)
+		h.Parent.logRequest(r, true, 101, "host-websocket", selectedUpstream.OriginIpOrDomain)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation: selectedUpstream.SkipCertValidations,
 			SkipOriginCheck:   selectedUpstream.SkipWebSocketOriginCheck,
@@ -173,15 +173,15 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
 			log.Println(err.Error())
-			h.Parent.logRequest(r, false, 404, "subdomain-http", r.URL.Hostname())
+			h.Parent.logRequest(r, false, 404, "host-http", r.URL.Hostname())
 		} else {
 			http.ServeFile(w, r, "./web/rperror.html")
 			log.Println(err.Error())
-			h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname())
+			h.Parent.logRequest(r, false, 521, "host-http", r.URL.Hostname())
 		}
 	}
 
-	h.Parent.logRequest(r, true, 200, "subdomain-http", r.URL.Hostname())
+	h.Parent.logRequest(r, true, 200, "host-http", r.URL.Hostname())
 }
 
 // Handle vdir type request
@@ -249,6 +249,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 }
 
+// This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
 func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, target string) {
 	if router.Option.StatisticCollector != nil {
 		go func() {
@@ -266,4 +267,5 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 			router.Option.StatisticCollector.RecordRequest(requestInfo)
 		}()
 	}
+	router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode)
 }

@@ -115,7 +115,7 @@ func UpdateUptimeMonitorTargets() {
 			uptimeMonitor.ExecuteUptimeCheck()
 		}()
 
-		SystemWideLogger.PrintAndLog("Uptime", "Uptime monitor config updated", nil)
+		SystemWideLogger.PrintAndLog("uptime-monitor", "Uptime monitor config updated", nil)
 	}
 }
 
@@ -125,8 +125,12 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 
 	UptimeTargets := []*uptime.Target{}
 	for hostid, target := range hosts {
-		for _, origin := range target.ActiveOrigins {
-
+		if target.Disabled {
+			//Skip those proxy rules that is disabled
+			continue
+		}
+		isMultipleUpstreams := len(target.ActiveOrigins) > 1
+		for i, origin := range target.ActiveOrigins {
 			url := "http://" + origin.OriginIpOrDomain
 			protocol := "http"
 			if origin.RequireTLS {
@@ -135,9 +139,13 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 			}
 
 			//Add the root url
+			hostIdAndName := hostid
+			if isMultipleUpstreams {
+				hostIdAndName = hostIdAndName + " (upstream:" + strconv.Itoa(i) + ")"
+			}
 			UptimeTargets = append(UptimeTargets, &uptime.Target{
-				ID:        hostid,
-				Name:      hostid,
+				ID:        hostIdAndName,
+				Name:      hostIdAndName,
 				URL:       url,
 				Protocol:  protocol,
 				ProxyType: uptime.ProxyType_Host,

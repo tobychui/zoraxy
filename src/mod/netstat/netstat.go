@@ -39,7 +39,6 @@ type NetStatBuffers struct {
 
 // Get a new network statistic buffers
 func NewNetStatBuffer(recordCount int) (*NetStatBuffers, error) {
-
 	//Flood fill the stats with 0
 	initialStats := []*FlowStat{}
 	for i := 0; i < recordCount; i++ {

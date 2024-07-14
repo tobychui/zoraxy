@@ -109,6 +109,9 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Update Uptime Monitor
+	UpdateUptimeMonitorTargets()
+
 	utils.SendOK(w)
 }
 
@@ -180,6 +183,9 @@ func ReverseProxyUpstreamUpdate(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Failed to save updated upstream config")
 		return
 	}
+
+	//Update Uptime Monitor
+	UpdateUptimeMonitorTargets()
 	utils.SendOK(w)
 }
 
@@ -269,6 +275,9 @@ func ReverseProxyUpstreamDelete(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Failed to remove upstream from proxy rule")
 		return
 	}
+
+	//Update uptime monitor
+	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
 }

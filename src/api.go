@@ -148,7 +148,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/gan/members/authorize", ganManager.HandleMemberAuthorization)
 	authRouter.HandleFunc("/api/gan/members/delete", ganManager.HandleMemberDelete)
 
-	//TCP Proxy
+	//Stream (TCP / UDP) Proxy
 	authRouter.HandleFunc("/api/streamprox/config/add", streamProxyManager.HandleAddProxyConfig)
 	authRouter.HandleFunc("/api/streamprox/config/edit", streamProxyManager.HandleEditProxyConfigs)
 	authRouter.HandleFunc("/api/streamprox/config/list", streamProxyManager.HandleListConfigs)
@@ -229,12 +229,13 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
+	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)
+	authRouter.HandleFunc("/api/log/read", LogViewer.HandleReadLog)
 
 	//Debug
 	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
 
 	//If you got APIs to add, append them here
-	// get available docker containers
 
 }
 

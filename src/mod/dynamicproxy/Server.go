@@ -77,6 +77,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireRateLimit {
 			err := h.handleRateLimitRouting(w, r, sep)
 			if err != nil {
+				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 429)
 				return
 			}
 		}
@@ -85,6 +86,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireBasicAuth {
 			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
+				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
 				return
 			}
 		}
@@ -101,6 +103,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
 				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+				h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307)
 				return
 			}
 		}

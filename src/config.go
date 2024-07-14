@@ -80,7 +80,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		return errors.New("not supported proxy type")
 	}
 
-	SystemWideLogger.PrintAndLog("Proxy", thisConfigEndpoint.RootOrMatchingDomain+" -> "+loadbalance.GetUpstreamsAsString(thisConfigEndpoint.ActiveOrigins)+" routing rule loaded", nil)
+	SystemWideLogger.PrintAndLog("proxy-config", thisConfigEndpoint.RootOrMatchingDomain+" -> "+loadbalance.GetUpstreamsAsString(thisConfigEndpoint.ActiveOrigins)+" routing rule loaded", nil)
 	return nil
 }
 

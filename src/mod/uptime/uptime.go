@@ -2,14 +2,21 @@ package uptime
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
+	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/net/publicsuffix"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
+)
+
+const (
+	logModuleName = "uptime-monitor"
 )
 
 type Record struct {
@@ -42,6 +49,7 @@ type Config struct {
 	Targets         []*Target
 	Interval        int
 	MaxRecordsStore int
+	Logger          *logger.Logger
 }
 
 type Monitor struct {
@@ -64,6 +72,12 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 		Config:          config,
 		OnlineStatusLog: map[string][]*Record{},
 	}
+
+	if config.Logger == nil {
+		//Use default fmt to log if logger is not provided
+		config.Logger, _ = logger.NewFmtLogger()
+	}
+
 	//Start the endpoint listener
 	ticker := time.NewTicker(time.Duration(config.Interval) * time.Second)
 	done := make(chan bool)
@@ -77,7 +91,7 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 			case <-done:
 				return
 			case t := <-ticker.C:
-				log.Println("Uptime updated - ", t.Unix())
+				thisMonitor.Config.Logger.PrintAndLog(logModuleName, "Uptime updated - "+strconv.Itoa(int(t.Unix())), nil)
 				thisMonitor.ExecuteUptimeCheck()
 			}
 		}
@@ -91,7 +105,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 		//For each target to check online, do the following
 		var thisRecord Record
 		if target.Protocol == "http" || target.Protocol == "https" {
-			online, laterncy, statusCode := getWebsiteStatusWithLatency(target.URL)
+			online, laterncy, statusCode := m.getWebsiteStatusWithLatency(target.URL)
 			thisRecord = Record{
 				Timestamp:  time.Now().Unix(),
 				ID:         target.ID,
@@ -104,7 +118,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 			}
 
 		} else {
-			log.Println("Unknown protocol: " + target.Protocol + ". Skipping")
+			m.Config.Logger.PrintAndLog(logModuleName, "Unknown protocol: "+target.Protocol, errors.New("unsupported protocol"))
 			continue
 		}
 
@@ -124,8 +138,6 @@ func (m *Monitor) ExecuteUptimeCheck() {
 			m.OnlineStatusLog[target.ID] = thisRecords
 		}
 	}
-
-	//TODO: Write results to db
 }
 
 func (m *Monitor) AddTargetToMonitor(target *Target) {
@@ -201,12 +213,12 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 */
 
 // Get website stauts with latency given URL, return is conn succ and its latency and status code
-func getWebsiteStatusWithLatency(url string) (bool, int64, int) {
+func (m *Monitor) getWebsiteStatusWithLatency(url string) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
 	statusCode, err := getWebsiteStatus(url)
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
-		log.Println(err.Error())
+		m.Config.Logger.PrintAndLog(logModuleName, "Ping upstream timeout. Assume offline", err)
 		return false, 0, 0
 	} else {
 		diff := end - start

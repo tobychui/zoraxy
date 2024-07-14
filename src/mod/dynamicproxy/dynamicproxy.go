@@ -154,7 +154,7 @@ func (router *Router) StartProxyService() error {
 						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession)
 						if err != nil {
 							http.ServeFile(w, r, "./web/hosterror.html")
-							log.Println(err.Error())
+							router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
 							router.logRequest(r, false, 404, "vdir-http", r.Host)
 						}
 						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
@@ -195,7 +195,7 @@ func (router *Router) StartProxyService() error {
 				IdleTimeout:  120 * time.Second,
 			}
 
-			log.Println("Starting HTTP-to-HTTPS redirector (port 80)")
+			router.Option.Logger.PrintAndLog("dprouter", "Starting HTTP-to-HTTPS redirector (port 80)", nil)
 
 			//Create a redirection stop channel
 			stopChan := make(chan bool)
@@ -206,7 +206,7 @@ func (router *Router) StartProxyService() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				httpServer.Shutdown(ctx)
-				log.Println("HTTP to HTTPS redirection listener stopped")
+				router.Option.Logger.PrintAndLog("dprouter", "HTTP to HTTPS redirection listener stopped", nil)
 			}()
 
 			//Start the http server that listens to port 80 and redirect to 443
@@ -221,10 +221,10 @@ func (router *Router) StartProxyService() error {
 		}
 
 		//Start the TLS server
-		log.Println("Reverse proxy service started in the background (TLS mode)")
+		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (TLS mode)", nil)
 		go func() {
 			if err := router.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("Could not start proxy server: %v\n", err)
+				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
 			}
 		}()
 	} else {
@@ -232,10 +232,9 @@ func (router *Router) StartProxyService() error {
 		router.tlsListener = nil
 		router.server = &http.Server{Addr: ":" + strconv.Itoa(router.Option.Port), Handler: router.mux}
 		router.Running = true
-		log.Println("Reverse proxy service started in the background (Plain HTTP mode)")
+		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (Plain HTTP mode)", nil)
 		go func() {
 			router.server.ListenAndServe()
-			//log.Println("[DynamicProxy] " + err.Error())
 		}()
 	}
 

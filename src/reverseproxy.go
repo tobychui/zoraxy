@@ -98,9 +98,10 @@ func ReverseProxtInit() {
 		WebDirectory:       *staticWebServerRoot,
 		AccessController:   accessController,
 		LoadBalancer:       loadBalancer,
+		Logger:             SystemWideLogger,
 	})
 	if err != nil {
-		SystemWideLogger.PrintAndLog("Proxy", "Unable to create dynamic proxy router", err)
+		SystemWideLogger.PrintAndLog("proxy-config", "Unable to create dynamic proxy router", err)
 		return
 	}
 
@@ -115,7 +116,7 @@ func ReverseProxtInit() {
 	for _, conf := range confs {
 		err := LoadReverseProxyConfig(conf)
 		if err != nil {
-			SystemWideLogger.PrintAndLog("Proxy", "Failed to load config file: "+filepath.Base(conf), err)
+			SystemWideLogger.PrintAndLog("proxy-config", "Failed to load config file: "+filepath.Base(conf), err)
 			return
 		}
 	}
@@ -124,7 +125,7 @@ func ReverseProxtInit() {
 		//Root config not set (new deployment?), use internal static web server as root
 		defaultRootRouter, err := GetDefaultRootConfig()
 		if err != nil {
-			SystemWideLogger.PrintAndLog("Proxy", "Failed to generate default root routing", err)
+			SystemWideLogger.PrintAndLog("proxy-config", "Failed to generate default root routing", err)
 			return
 		}
 		dynamicProxyRouter.SetProxyRouteAsRoot(defaultRootRouter)
@@ -143,8 +144,9 @@ func ReverseProxtInit() {
 		//This must be done in go routine to prevent blocking on system startup
 		uptimeMonitor, _ = uptime.NewUptimeMonitor(&uptime.Config{
 			Targets:         GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter),
-			Interval:        300, //5 minutes
-			MaxRecordsStore: 288, //1 day
+			Interval:        300,              //5 minutes
+			MaxRecordsStore: 288,              //1 day
+			Logger:          SystemWideLogger, //Logger
 		})
 
 		SystemWideLogger.Println("Uptime Monitor background service started")
@@ -412,7 +414,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Save the config to file
 	err = SaveReverseProxyConfig(proxyEndpointCreated)
 	if err != nil {
-		SystemWideLogger.PrintAndLog("Proxy", "Unable to save new proxy rule to file", err)
+		SystemWideLogger.PrintAndLog("proxy-config", "Unable to save new proxy rule to file", err)
 		return
 	}
 
@@ -480,15 +482,6 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		proxyRateLimit = 1000
 	}
 
-	// Bypass WebSocket Origin Check
-	/*
-		strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
-		if strbpwsorg == "" {
-			strbpwsorg = "false"
-		}
-		bypassWebsocketOriginCheck := (strbpwsorg == "true")
-	*/
-
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -498,11 +491,6 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
-	//TODO: Move these into dedicated module
-	//newProxyEndpoint.Domain = endpoint
-	//newProxyEndpoint.RequireTLS = useTLS
-	//newProxyEndpoint.SkipCertValidations = skipTlsValidation
-	//newProxyEndpoint.SkipWebSocketOriginCheck = bypassWebsocketOriginCheck
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
 	newProxyEndpoint.RequireBasicAuth = requireBasicAuth
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
@@ -520,9 +508,6 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	//Save it to file
 	SaveReverseProxyConfig(newProxyEndpoint)
-
-	//Update uptime monitor
-	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
 }
@@ -555,7 +540,7 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 	newAlias := []string{}
 	err = json.Unmarshal([]byte(newAliasJSON), &newAlias)
 	if err != nil {
-		SystemWideLogger.PrintAndLog("Proxy", "Unable to parse new alias list", err)
+		SystemWideLogger.PrintAndLog("proxy-config", "Unable to parse new alias list", err)
 		utils.SendErrorResponse(w, "Invalid alias list given")
 		return
 	}
@@ -577,7 +562,7 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 	err = SaveReverseProxyConfig(newProxyEndpoint)
 	if err != nil {
 		utils.SendErrorResponse(w, "Alias update failed")
-		SystemWideLogger.PrintAndLog("Proxy", "Unable to save alias update", err)
+		SystemWideLogger.PrintAndLog("proxy-config", "Unable to save alias update", err)
 	}
 
 	utils.SendOK(w)
@@ -881,6 +866,10 @@ func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "unable to save updated rule")
 		return
 	}
+
+	//Update uptime monitor
+	UpdateUptimeMonitorTargets()
+
 	utils.SendOK(w)
 }
 
