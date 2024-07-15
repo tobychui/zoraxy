@@ -31,7 +31,6 @@ WORKDIR /opt/zoraxy/config/
 
 ENV AUTORENEW="86400"
 ENV FASTGEOIP="false"
-ENV LOG="true"
 ENV MDNS="true"
 ENV MDNSNAME="''"
 ENV NOAUTH="false"
@@ -43,6 +42,6 @@ ENV WEBROOT="./www"
 ENV ZTAUTH="''"
 ENV ZTPORT="9993"
 
-ENTRYPOINT "zoraxy" "-docker=true" "-autorenew=${AUTORENEW}" "-fastgeoip=${FASTGEOIP}" "-log=${LOG}" "-mdns=${MDNS}" "-mdnsname=${MDNSNAME}" "-noauth=${NOAUTH}" "-port=:${PORT}" "-sshlb=${SSHLB}" "-version=${VERSION}" "-webfm=${WEBFM}" "-webroot=${WEBROOT}" "-ztauth=${ZTAUTH}" "-ztport=${ZTPORT}"
+ENTRYPOINT "zoraxy" "-docker=true" "-autorenew=${AUTORENEW}" "-fastgeoip=${FASTGEOIP}" "-mdns=${MDNS}" "-mdnsname=${MDNSNAME}" "-noauth=${NOAUTH}" "-port=:${PORT}" "-sshlb=${SSHLB}" "-version=${VERSION}" "-webfm=${WEBFM}" "-webroot=${WEBROOT}" "-ztauth=${ZTAUTH}" "-ztport=${ZTPORT}"
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
