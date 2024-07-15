@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -140,4 +141,36 @@ func StringInArrayIgnoreCase(arr []string, str string) bool {
 	}
 
 	return StringInArray(smallArray, strings.ToLower(str))
+}
+
+// Validate if the listening address is correct
+func ValidateListeningAddress(address string) bool {
+	// Check if the address starts with a colon, indicating it's just a port
+	if strings.HasPrefix(address, ":") {
+		return true
+	}
+
+	// Split the address into host and port parts
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		// Try to parse it as just a port
+		if _, err := strconv.Atoi(address); err == nil {
+			return false // It's just a port number
+		}
+		return false // It's an invalid address
+	}
+
+	// Check if the port part is a valid number
+	if _, err := strconv.Atoi(port); err != nil {
+		return false
+	}
+
+	// Check if the host part is a valid IP address or empty (indicating any IP)
+	if host != "" {
+		if net.ParseIP(host) == nil {
+			return false
+		}
+	}
+
+	return true
 }

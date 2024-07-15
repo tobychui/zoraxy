@@ -64,6 +64,7 @@ type ResponseRewriteRuleSet struct {
 	PathPrefix        string //Vdir prefix for root, / will be rewrite to this
 	UpstreamHeaders   [][]string
 	DownstreamHeaders [][]string
+	NoRemoveHopByHop  bool   //Do not remove hop-by-hop headers, dangerous
 	Version           string //Version number of Zoraxy, use for X-Proxy-By
 }
 
@@ -180,7 +181,7 @@ var hopHeaders = []string{
 	"Te",      // canonicalized version of "TE"
 	"Trailer", // not Trailers per URL above; http://www.rfc-editor.org/errata_search.php?eid=4522
 	"Transfer-Encoding",
-	//"Upgrade",
+	//"Upgrade", // handled by websocket proxy in higher layer abstraction
 }
 
 // Copy response from src to dst with given flush interval, reference from httputil.ReverseProxy

@@ -122,7 +122,7 @@
     function initRootInfo(callback=undefined){
         $.get("/api/proxy/list?type=root", function(data){
             if (data == null){
-
+                msgbox("Default site load failed", false);
             }else{
                 var $radios = $('input:radio[name=defaultsiteOption]');
                 let proxyType = data.DefaultSiteOption;
@@ -140,8 +140,8 @@
                 }
                 updateAvaibleDefaultSiteOptions();
                 
-                $("#proxyRoot").val(data.Domain);
-                checkRootRequireTLS(data.Domain);
+                $("#proxyRoot").val(data.ActiveOrigins[0].OriginIpOrDomain);
+                checkRootRequireTLS(data.ActiveOrigins[0].OriginIpOrDomain);
             }
 
             if (callback != undefined){
@@ -247,7 +247,9 @@
                     msgbox(data.error, false, 5000);
                 }else{
                     //OK
+                    
                     initRootInfo(function(){
+                        
                         //Check if WebServ is enabled
                         isUsingStaticWebServerAsRoot(function(isUsingWebServ){
                             if (isUsingWebServ){
@@ -256,11 +258,7 @@
                                 setWebServerRunningState(true);
                             }
                             
-                            setTimeout(function(){
-                                 //Update the checkbox
-                                msgbox("Default Site Updated");
-                            }, 100);
-                            
+                            msgbox("Default Site Updated");
                         })
                     });
                     
@@ -269,6 +267,9 @@
                 if (btn != undefined){
                     $(btn).removeClass("disabled");
                 }
+            },
+            error: function(){
+                msgbox("Unknown error occured", false);
             }
         });
 

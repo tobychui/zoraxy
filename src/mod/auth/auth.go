@@ -14,10 +14,10 @@ import (
 	"strings"
 
 	"encoding/hex"
-	"log"
 
 	"github.com/gorilla/sessions"
 	db "imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -27,6 +27,7 @@ type AuthAgent struct {
 	SessionStore            *sessions.CookieStore
 	Database                *db.Database
 	LoginRedirectionHandler func(http.ResponseWriter, *http.Request)
+	Logger                  *logger.Logger
 }
 
 type AuthEndpoints struct {
@@ -37,12 +38,12 @@ type AuthEndpoints struct {
 	Autologin     string
 }
 
-//Constructor
-func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, allowReg bool, loginRedirectionHandler func(http.ResponseWriter, *http.Request)) *AuthAgent {
+// Constructor
+func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, allowReg bool, systemLogger *logger.Logger, loginRedirectionHandler func(http.ResponseWriter, *http.Request)) *AuthAgent {
 	store := sessions.NewCookieStore(key)
 	err := sysdb.NewTable("auth")
 	if err != nil {
-		log.Println("Failed to create auth database. Terminating.")
+		systemLogger.Println("Failed to create auth database. Terminating.")
 		panic(err)
 	}
 
@@ -52,13 +53,14 @@ func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, 
 		SessionStore:            store,
 		Database:                sysdb,
 		LoginRedirectionHandler: loginRedirectionHandler,
+		Logger:                  systemLogger,
 	}
 
 	//Return the authAgent
 	return &newAuthAgent
 }
 
-func GetSessionKey(sysdb *db.Database) (string, error) {
+func GetSessionKey(sysdb *db.Database, logger *logger.Logger) (string, error) {
 	sysdb.NewTable("auth")
 	sessionKey := ""
 	if !sysdb.KeyExists("auth", "sessionkey") {
@@ -66,9 +68,9 @@ func GetSessionKey(sysdb *db.Database) (string, error) {
 		rand.Read(key)
 		sessionKey = string(key)
 		sysdb.Write("auth", "sessionkey", sessionKey)
-		log.Println("[Auth] New authentication session key generated")
+		logger.PrintAndLog("auth", "New authentication session key generated", nil)
 	} else {
-		log.Println("[Auth] Authentication session key loaded from database")
+		logger.PrintAndLog("auth", "Authentication session key loaded from database", nil)
 		err := sysdb.Read("auth", "sessionkey", &sessionKey)
 		if err != nil {
 			return "", errors.New("database read error. Is the database file corrupted?")
@@ -77,7 +79,7 @@ func GetSessionKey(sysdb *db.Database) (string, error) {
 	return sessionKey, nil
 }
 
-//This function will handle an http request and redirect to the given login address if not logged in
+// This function will handle an http request and redirect to the given login address if not logged in
 func (a *AuthAgent) HandleCheckAuth(w http.ResponseWriter, r *http.Request, handler func(http.ResponseWriter, *http.Request)) {
 	if a.CheckAuth(r) {
 		//User already logged in
@@ -88,14 +90,14 @@ func (a *AuthAgent) HandleCheckAuth(w http.ResponseWriter, r *http.Request, hand
 	}
 }
 
-//Handle login request, require POST username and password
+// Handle login request, require POST username and password
 func (a *AuthAgent) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	//Get username from request using POST mode
 	username, err := utils.PostPara(r, "username")
 	if err != nil {
 		//Username not defined
-		log.Println("[Auth] " + r.RemoteAddr + " trying to login with username: " + username)
+		a.Logger.PrintAndLog("auth", r.RemoteAddr+" trying to login with username: "+username, nil)
 		utils.SendErrorResponse(w, "Username not defined or empty.")
 		return
 	}
@@ -124,11 +126,11 @@ func (a *AuthAgent) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		a.LoginUserByRequest(w, r, username, rememberme)
 
 		//Print the login message to console
-		log.Println(username + " logged in.")
+		a.Logger.PrintAndLog("auth", username+" logged in.", nil)
 		utils.SendOK(w)
 	} else {
 		//Password incorrect
-		log.Println(username + " login request rejected: " + rejectionReason)
+		a.Logger.PrintAndLog("auth", username+" login request rejected: "+rejectionReason, nil)
 
 		utils.SendErrorResponse(w, rejectionReason)
 		return
@@ -140,14 +142,14 @@ func (a *AuthAgent) ValidateUsernameAndPassword(username string, password string
 	return succ
 }
 
-//validate the username and password, return reasons if the auth failed
+// validate the username and password, return reasons if the auth failed
 func (a *AuthAgent) ValidateUsernameAndPasswordWithReason(username string, password string) (bool, string) {
 	hashedPassword := Hash(password)
 	var passwordInDB string
 	err := a.Database.Read("auth", "passhash/"+username, &passwordInDB)
 	if err != nil {
 		//User not found or db exception
-		log.Println("[Auth] " + username + " login with incorrect password")
+		a.Logger.PrintAndLog("auth", username+" login with incorrect password", nil)
 		return false, "Invalid username or password"
 	}
 
@@ -158,7 +160,7 @@ func (a *AuthAgent) ValidateUsernameAndPasswordWithReason(username string, passw
 	}
 }
 
-//Login the user by creating a valid session for this user
+// Login the user by creating a valid session for this user
 func (a *AuthAgent) LoginUserByRequest(w http.ResponseWriter, r *http.Request, username string, rememberme bool) {
 	session, _ := a.SessionStore.Get(r, a.SessionName)
 
@@ -181,11 +183,15 @@ func (a *AuthAgent) LoginUserByRequest(w http.ResponseWriter, r *http.Request, u
 	session.Save(r, w)
 }
 
-//Handle logout, reply OK after logged out. WILL NOT DO REDIRECTION
+// Handle logout, reply OK after logged out. WILL NOT DO REDIRECTION
 func (a *AuthAgent) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	username, err := a.GetUserName(w, r)
+	if err != nil {
+		utils.SendErrorResponse(w, "user not logged in")
+		return
+	}
 	if username != "" {
-		log.Println(username + " logged out.")
+		a.Logger.PrintAndLog("auth", username+" logged out", nil)
 	}
 	// Revoke users authentication
 	err = a.Logout(w, r)
@@ -194,7 +200,7 @@ func (a *AuthAgent) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("OK"))
+	utils.SendOK(w)
 }
 
 func (a *AuthAgent) Logout(w http.ResponseWriter, r *http.Request) error {
@@ -208,7 +214,7 @@ func (a *AuthAgent) Logout(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-//Get the current session username from request
+// Get the current session username from request
 func (a *AuthAgent) GetUserName(w http.ResponseWriter, r *http.Request) (string, error) {
 	if a.CheckAuth(r) {
 		//This user has logged in.
@@ -220,7 +226,7 @@ func (a *AuthAgent) GetUserName(w http.ResponseWriter, r *http.Request) (string,
 	}
 }
 
-//Get the current session user email from request
+// Get the current session user email from request
 func (a *AuthAgent) GetUserEmail(w http.ResponseWriter, r *http.Request) (string, error) {
 	if a.CheckAuth(r) {
 		//This user has logged in.
@@ -239,7 +245,7 @@ func (a *AuthAgent) GetUserEmail(w http.ResponseWriter, r *http.Request) (string
 	}
 }
 
-//Check if the user has logged in, return true / false in JSON
+// Check if the user has logged in, return true / false in JSON
 func (a *AuthAgent) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	if a.CheckAuth(r) {
 		utils.SendJSONResponse(w, "true")
@@ -248,7 +254,7 @@ func (a *AuthAgent) CheckLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//Handle new user register. Require POST username, password, group.
+// Handle new user register. Require POST username, password, group.
 func (a *AuthAgent) HandleRegister(w http.ResponseWriter, r *http.Request, callback func(string, string)) {
 	//Get username from request
 	newusername, err := utils.PostPara(r, "username")
@@ -291,10 +297,10 @@ func (a *AuthAgent) HandleRegister(w http.ResponseWriter, r *http.Request, callb
 
 	//Return to the client with OK
 	utils.SendOK(w)
-	log.Println("[Auth] New user " + newusername + " added to system.")
+	a.Logger.PrintAndLog("auth", "New user "+newusername+" added to system.", nil)
 }
 
-//Handle new user register without confirmation email. Require POST username, password, group.
+// Handle new user register without confirmation email. Require POST username, password, group.
 func (a *AuthAgent) HandleRegisterWithoutEmail(w http.ResponseWriter, r *http.Request, callback func(string, string)) {
 	//Get username from request
 	newusername, err := utils.PostPara(r, "username")
@@ -324,10 +330,10 @@ func (a *AuthAgent) HandleRegisterWithoutEmail(w http.ResponseWriter, r *http.Re
 
 	//Return to the client with OK
 	utils.SendOK(w)
-	log.Println("[Auth] Admin account created: " + newusername)
+	a.Logger.PrintAndLog("auth", "Admin account created: "+newusername, nil)
 }
 
-//Check authentication from request header's session value
+// Check authentication from request header's session value
 func (a *AuthAgent) CheckAuth(r *http.Request) bool {
 	session, err := a.SessionStore.Get(r, a.SessionName)
 	if err != nil {
@@ -340,8 +346,8 @@ func (a *AuthAgent) CheckAuth(r *http.Request) bool {
 	return true
 }
 
-//Handle de-register of users. Require POST username.
-//THIS FUNCTION WILL NOT CHECK FOR PERMISSION. PLEASE USE WITH PERMISSION HANDLER
+// Handle de-register of users. Require POST username.
+// THIS FUNCTION WILL NOT CHECK FOR PERMISSION. PLEASE USE WITH PERMISSION HANDLER
 func (a *AuthAgent) HandleUnregister(w http.ResponseWriter, r *http.Request) {
 	//Check if the user is logged in
 	if !a.CheckAuth(r) {
@@ -365,7 +371,7 @@ func (a *AuthAgent) HandleUnregister(w http.ResponseWriter, r *http.Request) {
 
 	//Return to the client with OK
 	utils.SendOK(w)
-	log.Println("[Auth] User " + username + " has been removed from the system.")
+	a.Logger.PrintAndLog("auth", "User "+username+" has been removed from the system", nil)
 }
 
 func (a *AuthAgent) UnregisterUser(username string) error {
@@ -381,7 +387,7 @@ func (a *AuthAgent) UnregisterUser(username string) error {
 	return nil
 }
 
-//Get the number of users in the system
+// Get the number of users in the system
 func (a *AuthAgent) GetUserCounts() int {
 	entries, _ := a.Database.ListTable("auth")
 	usercount := 0
@@ -393,12 +399,12 @@ func (a *AuthAgent) GetUserCounts() int {
 	}
 
 	if usercount == 0 {
-		log.Println("There are no user in the database.")
+		a.Logger.PrintAndLog("auth", "There are no user in the database", nil)
 	}
 	return usercount
 }
 
-//List all username within the system
+// List all username within the system
 func (a *AuthAgent) ListUsers() []string {
 	entries, _ := a.Database.ListTable("auth")
 	results := []string{}
@@ -411,7 +417,7 @@ func (a *AuthAgent) ListUsers() []string {
 	return results
 }
 
-//Check if the given username exists
+// Check if the given username exists
 func (a *AuthAgent) UserExists(username string) bool {
 	userpasswordhash := ""
 	err := a.Database.Read("auth", "passhash/"+username, &userpasswordhash)
@@ -421,7 +427,7 @@ func (a *AuthAgent) UserExists(username string) bool {
 	return true
 }
 
-//Update the session expire time given the request header.
+// Update the session expire time given the request header.
 func (a *AuthAgent) UpdateSessionExpireTime(w http.ResponseWriter, r *http.Request) bool {
 	session, _ := a.SessionStore.Get(r, a.SessionName)
 	if session.Values["authenticated"].(bool) {
@@ -446,7 +452,7 @@ func (a *AuthAgent) UpdateSessionExpireTime(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-//Create user account
+// Create user account
 func (a *AuthAgent) CreateUserAccount(newusername string, password string, email string) error {
 	//Check user already exists
 	if a.UserExists(newusername) {
@@ -470,7 +476,7 @@ func (a *AuthAgent) CreateUserAccount(newusername string, password string, email
 	return nil
 }
 
-//Hash the given raw string into sha512 hash
+// Hash the given raw string into sha512 hash
 func Hash(raw string) string {
 	h := sha512.New()
 	h.Write([]byte(raw))

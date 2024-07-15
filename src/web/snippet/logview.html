@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html ng-app="App">
+<head>
+    <title>System Logs</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
+    <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+    <script type="text/javascript" src="../script/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" src="../script/semantic/semantic.min.js"></script>
+    <style>
+        .clickable{
+            cursor: pointer;
+        }
+        .clickable:hover{
+            opacity: 0.7;
+        }
+        .logfile{
+            padding-left: 1em !important;
+            position: relative;
+            padding-right: 1em !important;
+        }
+
+        .loglist{
+            background-color: rgb(250, 250, 250);
+        }
+
+        .logfile .showing{
+            position: absolute;
+            top: 0.18em;
+            right: 0em;
+            margin-right: -0.4em;
+            opacity: 0;
+        }
+
+        .logfile.active .showing{
+            opacity: 1;
+        }
+
+        #logrender{
+            width: 100% !important;
+            height: calc(100% - 1.2em);
+            min-height: calc(90vh - 1.2em) !important;
+            border: 0px solid transparent !important;
+            background-color: #252630;
+            color: white;
+            font-family: monospace;
+            overflow-x: scroll !important;
+            white-space: pre;
+            resize: none;
+            scrollbar-width: thin;
+            font-size: 1.2em;
+        }
+
+        #logrender::selection{ 
+            background:#3643bb; 
+            color:white; 
+        }
+    </style>
+</head>
+
+<body>
+    <br>
+    <div class="ui container">
+        <div class="ui stackable grid">
+            <div class="four wide column loglist">
+                <h3 class="ui header" style="padding-top: 1em;">
+                    <div class="content">
+                        Log View
+                        <div class="sub header">Check System Log in Real Time</div>
+                    </div>
+                </h3>
+                <div class="ui divider"></div>
+                <div id="logList" class="ui accordion">
+                    
+                </div>
+                <div class="ui divider"></div>
+                <small>Notes: Some log files might be huge. Make sure you have checked the log file size before opening</small>
+            </div>
+            <div class="twelve wide column">
+                <textarea id="logrender" spellcheck="false" readonly="true">
+← Pick a log file from the left menu to start debugging
+                </textarea>
+                <a href="#" onclick="openLogInNewTab();">Open In New Tab</a>
+                <br><br>
+            </div>
+        </div>
+    </div>
+    <br>
+</body>
+<script>
+    var currentOpenedLogURL = "";
+
+    function openLogInNewTab(){
+        if (currentOpenedLogURL != ""){
+            window.open(currentOpenedLogURL);
+        }
+    }
+
+    function openLog(object, catergory, filename){
+        $(".logfile.active").removeClass('active');
+        $(object).addClass("active");
+        currentOpenedLogURL = "/api/log/read?file=" + filename;
+        $.get(currentOpenedLogURL, function(data){
+            if (data.error !== undefined){
+                alert(data.error);
+                return;
+            }
+            $("#logrender").val(data);
+        }); 
+    }
+
+    function initLogList(){
+        $("#logList").html("");
+        $.get("/api/log/list", function(data){
+            //console.log(data);
+            for (let [key, value] of Object.entries(data)) {
+                console.log(key, value);
+                value.reverse(); //Default value was from oldest to newest
+                var fileItemList = "";
+                value.forEach(file => {
+                    fileItemList += `<div class="item clickable logfile" onclick="openLog(this, '${key}','${file.Filename}');">
+                            <i class="file outline icon"></i>
+                            <div class="content">
+                                ${file.Title} (${formatBytes(file.Filesize)})
+                                <div class="showing"><i class="green chevron right icon"></i></div>
+                            </div>
+                        </div>`;
+                })
+                $("#logList").append(`<div class="title">
+                    <i class="dropdown icon"></i>
+                        ${key}
+                    </div>
+                    <div class="content">
+                        <div class="ui list">
+                            ${fileItemList}
+                        </div>
+                    </div>`);
+            }
+
+            $(".ui.accordion").accordion();
+        });
+    }
+    initLogList();
+
+    
+    function formatBytes(x){
+        var units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        let l = 0, n = parseInt(x, 10) || 0;
+        while(n >= 1024 && ++l){
+            n = n/1024;
+        }
+        return(n.toFixed(n < 10 && l > 0 ? 1 : 0) + ' ' + units[l]);
+    }
+</script>
+</html>

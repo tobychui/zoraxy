@@ -2,6 +2,7 @@
 <html>
   <head>
       <!-- Notes: This should be open in its original path-->
+      <meta charset="utf-8">
       <link rel="stylesheet" href="../script/semantic/semantic.min.css">
       <script src="../script/jquery-3.6.0.min.js"></script>
       <script src="../script/semantic/semantic.min.js"></script>
@@ -133,11 +134,17 @@
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <div class="ui divider"></div>
-      <p>DNS Credentials (Leave all fields empty to use previous settings)<br>
-      <small><i class="yellow exclamation triangle icon"></i> Note that domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</small></p>
+      <p>DNS Credentials</p>
       <div id="dnsProviderAPIFields">
-
+        <p><i class="ui loading circle notch icon"></i> Generating WebForm</p>
       </div>
+      <h4><i class="yellow exclamation triangle icon"></i> Notes & FAQ</h4>
+      <div class="ui bulleted list">
+        <div class="item">Domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</div>
+        <div class="item">For some DNS providers like CloudFlare, you do not need to fill in all fields.</div>
+        <div class="item">If you are not sure what to fill in, check out the documentation from <a href="https://go-acme.github.io/lego/dns/" target="_blank">lego (DNS challenge library)</a></div>
+      </div>
+      
       <!-- 
         <label>Credentials File Content</label>
         <textarea id="dnsCredentials" placeholder=""></textarea>
@@ -740,6 +747,9 @@
     function toggleDnsChallenge(){
       if ( $("#useDnsChallenge")[0].checked){
         $(".dnsChallengeOnly").show();
+        setTimeout(function(){
+          $("#dnsProvider").dropdown("set text", "Cloudflare");
+        }, 500);
       }else{
         $(".dnsChallengeOnly").hide();
       }

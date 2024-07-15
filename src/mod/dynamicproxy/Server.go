@@ -20,6 +20,7 @@ import (
 		- Access Router
 			- Blacklist
 			- Whitelist
+		- Rate Limitor
 		- Basic Auth
 		- Vitrual Directory Proxy
 		- Subdomain Proxy
@@ -30,7 +31,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
 		Special Routing Rules, bypass most of the limitations
 	*/
-	//Check if there are external routing rule matches.
+	//Check if there are external routing rule (rr) matches.
 	//If yes, route them via external rr
 	matchedRoutingRule := h.Parent.GetMatchingRoutingRule(r)
 	if matchedRoutingRule != nil {
@@ -45,7 +46,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//Check if this is a redirection url
 	if h.Parent.Option.RedirectRuleTable.IsRedirectable(r) {
 		statusCode := h.Parent.Option.RedirectRuleTable.HandleRedirect(w, r)
-		h.logRequest(r, statusCode != 500, statusCode, "redirect", "")
+		h.Parent.logRequest(r, statusCode != 500, statusCode, "redirect", "")
 		return
 	}
 
@@ -76,6 +77,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireRateLimit {
 			err := h.handleRateLimitRouting(w, r, sep)
 			if err != nil {
+				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 429)
 				return
 			}
 		}
@@ -84,6 +86,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireBasicAuth {
 			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
+				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
 				return
 			}
 		}
@@ -100,6 +103,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
 				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+				h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307)
 				return
 			}
 		}
@@ -193,12 +197,12 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		}
 		hostname := parsedURL.Hostname()
 		if hostname == domainOnly {
-			h.logRequest(r, false, 500, "root-redirect", domainOnly)
+			h.Parent.logRequest(r, false, 500, "root-redirect", domainOnly)
 			http.Error(w, "Loopback redirects due to invalid settings", 500)
 			return
 		}
 
-		h.logRequest(r, false, 307, "root-redirect", domainOnly)
+		h.Parent.logRequest(r, false, 307, "root-redirect", domainOnly)
 		http.Redirect(w, r, redirectTarget, http.StatusTemporaryRedirect)
 	case DefaultSite_NotFoundPage:
 		//Serve the not found page, use template if exists

@@ -61,6 +61,12 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/listenPort80", HandleUpdatePort80Listener)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
+	//Reverse proxy upstream (load balance) APIs
+	authRouter.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
+	authRouter.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
+	authRouter.HandleFunc("/api/proxy/upstream/setPriority", ReverseProxyUpstreamSetPriority)
+	authRouter.HandleFunc("/api/proxy/upstream/update", ReverseProxyUpstreamUpdate)
+	authRouter.HandleFunc("/api/proxy/upstream/remove", ReverseProxyUpstreamDelete)
 	//Reverse proxy virtual directory APIs
 	authRouter.HandleFunc("/api/proxy/vdir/list", ReverseProxyListVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
@@ -142,7 +148,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/gan/members/authorize", ganManager.HandleMemberAuthorization)
 	authRouter.HandleFunc("/api/gan/members/delete", ganManager.HandleMemberDelete)
 
-	//TCP Proxy
+	//Stream (TCP / UDP) Proxy
 	authRouter.HandleFunc("/api/streamprox/config/add", streamProxyManager.HandleAddProxyConfig)
 	authRouter.HandleFunc("/api/streamprox/config/edit", streamProxyManager.HandleEditProxyConfigs)
 	authRouter.HandleFunc("/api/streamprox/config/list", streamProxyManager.HandleListConfigs)
@@ -223,12 +229,13 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
+	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)
+	authRouter.HandleFunc("/api/log/read", LogViewer.HandleReadLog)
 
 	//Debug
 	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
 
 	//If you got APIs to add, append them here
-	// get available docker containers
 
 }
 

@@ -3,6 +3,7 @@ package logviewer
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -51,13 +52,7 @@ func (v *Viewer) HandleReadLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	catergory, err := utils.GetPara(r, "catergory")
-	if err != nil {
-		utils.SendErrorResponse(w, "invalid catergory given")
-		return
-	}
-
-	content, err := v.LoadLogFile(strings.TrimSpace(filepath.Base(catergory)), strings.TrimSpace(filepath.Base(filename)))
+	content, err := v.LoadLogFile(strings.TrimSpace(filepath.Base(filename)))
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -106,8 +101,11 @@ func (v *Viewer) ListLogFiles(showFullpath bool) map[string][]*LogFile {
 	return result
 }
 
-func (v *Viewer) LoadLogFile(catergory string, filename string) (string, error) {
-	logFilepath := filepath.Join(v.option.RootFolder, catergory, filename)
+func (v *Viewer) LoadLogFile(filename string) (string, error) {
+	filename = filepath.ToSlash(filename)
+	filename = strings.ReplaceAll(filename, "../", "")
+	logFilepath := filepath.Join(v.option.RootFolder, filename)
+	fmt.Println(logFilepath)
 	if utils.FileExists(logFilepath) {
 		//Load it
 		content, err := os.ReadFile(logFilepath)

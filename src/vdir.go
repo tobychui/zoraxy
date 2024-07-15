@@ -28,7 +28,7 @@ func ReverseProxyListVdir(w http.ResponseWriter, r *http.Request) {
 
 	var targetEndpoint *dynamicproxy.ProxyEndpoint
 	if eptype == "host" {
-		endpoint, err := utils.PostPara(r, "ep") //Support root and host
+		endpoint, err := utils.PostPara(r, "ep")
 		if err != nil {
 			utils.SendErrorResponse(w, "endpoint not defined")
 			return

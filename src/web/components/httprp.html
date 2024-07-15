@@ -51,13 +51,29 @@
                 //Sort by RootOrMatchingDomain field
                 data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0))
                 data.forEach(subd => {
-                    let tlsIcon = "";
                     let subdData = encodeURIComponent(JSON.stringify(subd));
-                    if (subd.RequireTLS){
-                        tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
-                        if (subd.SkipCertValidations){
-                            tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
-                        }
+                    
+                    //Build the upstream list
+                    let upstreams = "";
+                    if (subd.ActiveOrigins.length == 0){
+                        //Invalid config
+                        upstreams = `<i class="ui yellow exclamation triangle icon"></i> No Active Upstream Origin<br>`;
+                    }else{
+                        subd.ActiveOrigins.forEach(upstream => {
+                            console.log(upstream);
+                            //Check if the upstreams require TLS connections
+                            let tlsIcon = "";
+                            if (upstream.RequireTLS){
+                                tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                                if (upstream.SkipCertValidations){
+                                    tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                                }
+                            }
+
+                            let upstreamLink = `${upstream.RequireTLS?"https://":"http://"}${upstream.OriginIpOrDomain}`;
+
+                            upstreams += `<a href="${upstreamLink}" target="_blank">${upstream.OriginIpOrDomain} ${tlsIcon}</a><br>`;
+                        })
                     }
 
                     let inboundTlsIcon = "";
@@ -102,7 +118,11 @@
                             ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
-                        <td data-label="" editable="true" datatype="domain">${subd.Domain} ${tlsIcon}</td>
+                        <td data-label="" editable="true" datatype="domain">
+                            <div class="upstreamList">
+                                ${upstreams}        
+                            </div>
+                        </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.RequireBasicAuth?`<i class="ui green check icon"></i> Basic Auth`:``}
@@ -214,7 +234,6 @@
         var payload = $(row).attr("payload");
         payload = JSON.parse(decodeURIComponent(payload));
         console.log(payload);
-        //console.log(payload);
         columns.each(function(index) {
             var column = $(this);
             var oldValue = column.text().trim();
@@ -228,39 +247,21 @@
             var input;
             var datatype = $(this).attr("datatype");
             if (datatype == "domain"){
-                let domain = payload.Domain;
-                //Target require TLS for proxying
-                let tls = payload.RequireTLS;
-                if (tls){
-                    tls = "checked";
-                }else{
-                    tls = "";
+                let useStickySessionChecked = "";
+                if (payload.UseStickySession){
+                    useStickySessionChecked = "checked";
                 }
+                input = `<button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 1em;" onclick="editUpstreams('${uuid}');"><i class="grey server icon"></i> Edit Upstreams</button>
+                <div class="ui divider"></div>
+                <div class="ui checkbox" style="margin-top: 0.4em;">
+                    <input type="checkbox" class="UseStickySession" ${useStickySessionChecked}>
+                    <label>Use Sticky Session<br>
+                        <small>Enable stick session on load balancing</small></label>
+                </div>
 
-                //Require TLS validation
-                let skipTLSValidation = payload.SkipCertValidations;
-                let checkstate = "";
-                if (skipTLSValidation){
-                    checkstate = "checked";
-                }
-
-                input = `
-                    <div class="ui mini fluid input">
-                        <input type="text" class="Domain" onchange="cleanProxyTargetValue(this)" value="${domain}">
-                    </div>
-                    <div class="ui checkbox" style="margin-top: 0.6em;">
-                        <input type="checkbox" class="RequireTLS" ${tls}>
-                        <label>Require TLS<br>
-                            <small>Proxy target require HTTPS connection</small></label>
-                    </div><br>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="SkipCertValidations" ${checkstate}>
-                        <label>Skip Verification<br>
-                        <small>Check this if proxy target is using self signed certificates</small></label>
-                    </div><br>
-                    <!-- <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editLoadBalanceOptions('${uuid}');"><i class="purple server icon"></i> Load Balance</button> -->
                 `;
-                column.empty().append(input);
+                column.append(input);
+                $(column).find(".upstreamList").addClass("editing");
             }else if (datatype == "vdir"){
                 //Append a quick access button for vdir page
                 column.append(`<button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="quickEditVdir('${uuid}');">
@@ -311,12 +312,6 @@
                                 Security Options
                             </div>
                             <div class="content">
-                                <div class="ui checkbox" style="margin-top: 0.4em;">
-                                    <input type="checkbox" class="SkipWebSocketOriginCheck" ${wsCheckstate}>
-                                    <label>Skip WebSocket Origin Check<br>
-                                    <small>Check this to allow cross-origin websocket requests</small></label>
-                                </div>
-                                <br>
                                 <div class="ui checkbox" style="margin-top: 0.4em;">
                                     <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
                                     <label>Require Rate Limit<br>
@@ -399,15 +394,11 @@
         }
         
         var epttype = "host";
-        let newDomain =  $(row).find(".Domain").val();
-        let requireTLS = $(row).find(".RequireTLS")[0].checked;
-        let skipCertValidations = $(row).find(".SkipCertValidations")[0].checked;
+        let useStickySession =  $(row).find(".UseStickySession")[0].checked;
         let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
         let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
-        let bypassWebsocketOrigin = $(row).find(".SkipWebSocketOriginCheck")[0].checked;
-        console.log(newDomain, requireTLS, skipCertValidations, requireBasicAuth)
 
         $.ajax({
             url: "/api/proxy/edit",
@@ -415,11 +406,8 @@
             data: {
                 "type": epttype,
                 "rootname": uuid,
-                "ep":newDomain,
+                "ss":useStickySession,
                 "bpgtls": bypassGlobalTLS,
-                "tls" :requireTLS,
-                "tlsval": skipCertValidations,
-                "bpwsorg" : bypassWebsocketOrigin,
                 "bauth" :requireBasicAuth,
                 "rate" :requireRateLimit,
                 "ratenum" :rateLimit,
@@ -433,21 +421,6 @@
                 }
             }
         })
-    }
-
-    //Clearn the proxy target value, make sure user do not enter http:// or https://
-    //and auto select TLS checkbox if https:// exists
-    function cleanProxyTargetValue(input){
-        let targetDomain = $(input).val().trim();
-        if (targetDomain.startsWith("http://")){
-            targetDomain = targetDomain.substr(7);
-            $(input).val(targetDomain);
-            $("#httpProxyList input.RequireTLS").parent().checkbox("set unchecked");
-        }else if (targetDomain.startsWith("https://")){
-            targetDomain = targetDomain.substr(8);
-            $(input).val(targetDomain);
-            $("#httpProxyList input.RequireTLS").parent().checkbox("set checked");
-        }
     }
     
     /* button events */
@@ -490,12 +463,12 @@
     }
 
     //Open the load balance option
-    function editLoadBalanceOptions(uuid){
+    function editUpstreams(uuid){
         let payload = encodeURIComponent(JSON.stringify({
             ept: "host",
             ep: uuid
         }));
-        showSideWrapper("snippet/loadBalancer.html?t=" + Date.now() + "#" + payload);
+        showSideWrapper("snippet/upstreams.html?t=" + Date.now() + "#" + payload);
     }
 
     function handleProxyRuleToggle(object){

@@ -51,7 +51,13 @@ func (ept *ProxyEndpoint) SplitInboundOutboundHeaders() ([][]string, [][]string)
 
 	//Check if the endpoint require HSTS headers
 	if ept.HSTSMaxAge > 0 {
-		downstreamHeaders[downstreamHeaderCounter] = []string{"Strict-Transport-Security", "max-age=" + strconv.Itoa(int(ept.HSTSMaxAge))}
+		if ept.ContainsWildcardName(true) {
+			//Endpoint listening domain includes wildcards.
+			downstreamHeaders[downstreamHeaderCounter] = []string{"Strict-Transport-Security", "max-age=" + strconv.Itoa(int(ept.HSTSMaxAge)) + "; includeSubdomains"}
+		} else {
+			downstreamHeaders[downstreamHeaderCounter] = []string{"Strict-Transport-Security", "max-age=" + strconv.Itoa(int(ept.HSTSMaxAge))}
+		}
+
 		downstreamHeaderCounter++
 	}
 

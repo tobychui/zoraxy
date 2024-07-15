@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -79,7 +80,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		return errors.New("not supported proxy type")
 	}
 
-	SystemWideLogger.PrintAndLog("Proxy", thisConfigEndpoint.RootOrMatchingDomain+" -> "+thisConfigEndpoint.Domain+" routing rule loaded", nil)
+	SystemWideLogger.PrintAndLog("proxy-config", thisConfigEndpoint.RootOrMatchingDomain+" -> "+loadbalance.GetUpstreamsAsString(thisConfigEndpoint.ActiveOrigins)+" routing rule loaded", nil)
 	return nil
 }
 
@@ -130,12 +131,18 @@ func RemoveReverseProxyConfig(endpoint string) error {
 func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
 	//Default settings
 	rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&dynamicproxy.ProxyEndpoint{
-		ProxyType:               dynamicproxy.ProxyType_Root,
-		RootOrMatchingDomain:    "/",
-		Domain:                  "127.0.0.1:" + staticWebServer.GetListeningPort(),
-		RequireTLS:              false,
+		ProxyType:            dynamicproxy.ProxyType_Root,
+		RootOrMatchingDomain: "/",
+		ActiveOrigins: []*loadbalance.Upstream{
+			{
+				OriginIpOrDomain:    "127.0.0.1:" + staticWebServer.GetListeningPort(),
+				RequireTLS:          false,
+				SkipCertValidations: false,
+				Weight:              0,
+			},
+		},
+		InactiveOrigins:         []*loadbalance.Upstream{},
 		BypassGlobalTLS:         false,
-		SkipCertValidations:     false,
 		VirtualDirectories:      []*dynamicproxy.VirtualDirectoryEndpoint{},
 		RequireBasicAuth:        false,
 		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},

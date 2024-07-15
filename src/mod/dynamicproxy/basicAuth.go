@@ -18,7 +18,7 @@ import (
 func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
 	err := handleBasicAuth(w, r, pe)
 	if err != nil {
-		h.logRequest(r, false, 401, "host", pe.Domain)
+		h.Parent.logRequest(r, false, 401, "host", r.URL.Hostname())
 	}
 	return err
 }

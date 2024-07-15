@@ -448,7 +448,12 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	domains := strings.Split(domainPara, ",")
-	result, err := a.ObtainCert(domains, filename, email, ca, caUrl, skipTLS, dns)
+	//Clean spaces in front or behind each domain
+	cleanedDomains := []string{}
+	for _, domain := range domains {
+		cleanedDomains = append(cleanedDomains, strings.TrimSpace(domain))
+	}
+	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return

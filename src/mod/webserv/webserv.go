@@ -5,13 +5,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 	"imuslab.com/zoraxy/mod/webserv/filemanager"
 )
@@ -30,6 +30,7 @@ type WebServerOptions struct {
 	EnableDirectoryListing bool               //Enable listing of directory
 	WebRoot                string             //Folder for stroing the static web folders
 	EnableWebDirManager    bool               //Enable web file manager to handle files in web directory
+	Logger                 *logger.Logger     //System logger
 	Sysdb                  *database.Database //Database for storing configs
 }
 
@@ -45,13 +46,16 @@ type WebServer struct {
 
 // NewWebServer creates a new WebServer instance. One instance only
 func NewWebServer(options *WebServerOptions) *WebServer {
+	if options.Logger == nil {
+		options.Logger, _ = logger.NewFmtLogger()
+	}
 	if !utils.FileExists(options.WebRoot) {
 		//Web root folder not exists. Create one with default templates
 		os.MkdirAll(filepath.Join(options.WebRoot, "html"), 0775)
 		os.MkdirAll(filepath.Join(options.WebRoot, "templates"), 0775)
 		indexTemplate, err := templates.ReadFile("templates/index.html")
 		if err != nil {
-			log.Println("Failed to read static wev server template file: ", err.Error())
+			options.Logger.PrintAndLog("static-webserv", "Failed to read static wev server template file: ", err)
 		} else {
 			os.WriteFile(filepath.Join(options.WebRoot, "html", "index.html"), indexTemplate, 0775)
 		}
@@ -102,7 +106,7 @@ func (ws *WebServer) RestorePreviousState() {
 // ChangePort changes the server's port.
 func (ws *WebServer) ChangePort(port string) error {
 	if IsPortInUse(port) {
-		return errors.New("Selected port is used by another process")
+		return errors.New("selected port is used by another process")
 	}
 
 	if ws.isRunning {
@@ -119,6 +123,7 @@ func (ws *WebServer) ChangePort(port string) error {
 		return err
 	}
 
+	ws.option.Logger.PrintAndLog("static-webserv", "Listening port updated to "+port, nil)
 	ws.option.Sysdb.Write("webserv", "port", port)
 
 	return nil
@@ -141,7 +146,7 @@ func (ws *WebServer) Start() error {
 
 	//Check if the port is usable
 	if IsPortInUse(ws.option.Port) {
-		return errors.New("Port already in use or access denied by host OS")
+		return errors.New("port already in use or access denied by host OS")
 	}
 
 	//Dispose the old mux and create a new one
@@ -159,12 +164,12 @@ func (ws *WebServer) Start() error {
 	go func() {
 		if err := ws.server.ListenAndServe(); err != nil {
 			if err != http.ErrServerClosed {
-				fmt.Printf("Web server error: %v\n", err)
+				ws.option.Logger.PrintAndLog("static-webserv", "Web server failed to start", err)
 			}
 		}
 	}()
 
-	log.Println("Static Web Server started. Listeing on :" + ws.option.Port)
+	ws.option.Logger.PrintAndLog("static-webserv", "Static Web Server started. Listeing on :"+ws.option.Port, nil)
 	ws.isRunning = true
 	ws.option.Sysdb.Write("webserv", "enabled", true)
 	return nil
@@ -182,7 +187,7 @@ func (ws *WebServer) Stop() error {
 	if err := ws.server.Close(); err != nil {
 		return err
 	}
-
+	ws.option.Logger.PrintAndLog("static-webserv", "Static Web Server stopped", nil)
 	ws.isRunning = false
 	ws.option.Sysdb.Write("webserv", "enabled", false)
 	return nil

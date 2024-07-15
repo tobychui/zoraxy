@@ -2,7 +2,7 @@ package auth
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"net/http"
 )
 
@@ -28,7 +28,7 @@ func NewManagedHTTPRouter(option RouterOption) *RouterDef {
 func (router *RouterDef) HandleFunc(endpoint string, handler func(http.ResponseWriter, *http.Request)) error {
 	//Check if the endpoint already registered
 	if _, exist := router.endpoints[endpoint]; exist {
-		log.Println("WARNING! Duplicated registering of web endpoint: " + endpoint)
+		fmt.Println("WARNING! Duplicated registering of web endpoint: " + endpoint)
 		return errors.New("endpoint register duplicated")
 	}
 

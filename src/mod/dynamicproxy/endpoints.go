@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 )
 
 /*
@@ -131,6 +132,116 @@ func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint)
 	}
 
 	return readyRoutingRule, nil
+}
+
+/* Upstream related wrapper functions */
+//Check if there already exists another upstream with identical origin
+func (ep *ProxyEndpoint) UpstreamOriginExists(originURL string) bool {
+	for _, origin := range ep.ActiveOrigins {
+		if origin.OriginIpOrDomain == originURL {
+			return true
+		}
+	}
+	for _, origin := range ep.InactiveOrigins {
+		if origin.OriginIpOrDomain == originURL {
+			return true
+		}
+	}
+	return false
+}
+
+// Get a upstream origin from given origin ip or domain
+func (ep *ProxyEndpoint) GetUpstreamOriginByMatchingIP(originIpOrDomain string) (*loadbalance.Upstream, error) {
+	for _, origin := range ep.ActiveOrigins {
+		if origin.OriginIpOrDomain == originIpOrDomain {
+			return origin, nil
+		}
+	}
+
+	for _, origin := range ep.InactiveOrigins {
+		if origin.OriginIpOrDomain == originIpOrDomain {
+			return origin, nil
+		}
+	}
+	return nil, errors.New("target upstream origin not found")
+}
+
+// Add upstream to endpoint and update it to runtime
+func (ep *ProxyEndpoint) AddUpstreamOrigin(newOrigin *loadbalance.Upstream, activate bool) error {
+	//Check if the upstream already exists
+	if ep.UpstreamOriginExists(newOrigin.OriginIpOrDomain) {
+		return errors.New("upstream with same origin already exists")
+	}
+
+	if activate {
+		//Add it to the active origin list
+		err := newOrigin.StartProxy()
+		if err != nil {
+			return err
+		}
+		ep.ActiveOrigins = append(ep.ActiveOrigins, newOrigin)
+	} else {
+		//Add to inactive origin list
+		ep.InactiveOrigins = append(ep.InactiveOrigins, newOrigin)
+	}
+
+	ep.UpdateToRuntime()
+	return nil
+}
+
+// Remove upstream from endpoint and update it to runtime
+func (ep *ProxyEndpoint) RemoveUpstreamOrigin(originIpOrDomain string) error {
+	//Just to make sure there are no spaces
+	originIpOrDomain = strings.TrimSpace(originIpOrDomain)
+
+	//Check if the upstream already been removed
+	if !ep.UpstreamOriginExists(originIpOrDomain) {
+		//Not exists in the first place
+		return nil
+	}
+
+	newActiveOriginList := []*loadbalance.Upstream{}
+	for _, origin := range ep.ActiveOrigins {
+		if origin.OriginIpOrDomain != originIpOrDomain {
+			newActiveOriginList = append(newActiveOriginList, origin)
+		}
+	}
+
+	newInactiveOriginList := []*loadbalance.Upstream{}
+	for _, origin := range ep.InactiveOrigins {
+		if origin.OriginIpOrDomain != originIpOrDomain {
+			newInactiveOriginList = append(newInactiveOriginList, origin)
+		}
+	}
+	//Ok, set the origin list to the new one
+	ep.ActiveOrigins = newActiveOriginList
+	ep.InactiveOrigins = newInactiveOriginList
+	ep.UpdateToRuntime()
+	return nil
+}
+
+// Check if the proxy endpoint hostname or alias name contains subdomain wildcard
+func (ep *ProxyEndpoint) ContainsWildcardName(skipAliasCheck bool) bool {
+	hostname := ep.RootOrMatchingDomain
+	aliasHostnames := ep.MatchingDomainAlias
+
+	wildcardCheck := func(hostname string) bool {
+		return len(hostname) > 0 && hostname[0] == '*'
+	}
+
+	if wildcardCheck(hostname) {
+		return true
+	}
+
+	if !skipAliasCheck {
+		for _, aliasHostname := range aliasHostnames {
+			if wildcardCheck(aliasHostname) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // Create a deep clone object of the proxy endpoint

@@ -20,6 +20,7 @@ import (
 	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/info/logviewer"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -47,6 +48,18 @@ var (
 )
 
 func startupSequence() {
+	//Start a system wide logger and log viewer
+	l, err := logger.NewLogger("zr", "./log")
+	if err == nil {
+		SystemWideLogger = l
+	} else {
+		panic(err)
+	}
+	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
+		RootFolder: "./log",
+		Extension:  ".log",
+	})
+
 	//Create database
 	db, err := database.NewDatabase("sys.db", false)
 	if err != nil {
@@ -61,11 +74,11 @@ func startupSequence() {
 	os.MkdirAll("./conf/proxy/", 0775)
 
 	//Create an auth agent
-	sessionKey, err := auth.GetSessionKey(sysdb)
+	sessionKey, err := auth.GetSessionKey(sysdb, SystemWideLogger)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authAgent = auth.NewAuthenticationAgent(name, []byte(sessionKey), sysdb, true, func(w http.ResponseWriter, r *http.Request) {
+	authAgent = auth.NewAuthenticationAgent(name, []byte(sessionKey), sysdb, true, SystemWideLogger, func(w http.ResponseWriter, r *http.Request) {
 		//Not logged in. Redirecting to login page
 		http.Redirect(w, r, ppf("/login.html"), http.StatusTemporaryRedirect)
 	})
@@ -73,14 +86,6 @@ func startupSequence() {
 	//Create a TLS certificate manager
 	tlsCertManager, err = tlscert.NewManager("./conf/certs", development)
 	if err != nil {
-		panic(err)
-	}
-
-	//Create a system wide logger
-	l, err := logger.NewLogger("zr", "./log", *logOutputToFile)
-	if err == nil {
-		SystemWideLogger = l
-	} else {
 		panic(err)
 	}
 
@@ -102,10 +107,12 @@ func startupSequence() {
 		panic(err)
 	}
 
-	//Create a load balance route manager
-	loadbalancer = loadbalance.NewRouteManager(&loadbalance.Options{
-		Geodb: geodbStore,
-	}, SystemWideLogger)
+	//Create a load balancer
+	loadBalancer = loadbalance.NewLoadBalancer(&loadbalance.Options{
+		SystemUUID: nodeUUID,
+		Geodb:      geodbStore,
+		Logger:     SystemWideLogger,
+	})
 
 	//Create the access controller
 	accessController, err = access.NewAccessController(&access.Options{
@@ -132,6 +139,7 @@ func startupSequence() {
 		WebRoot:                *staticWebServerRoot,
 		EnableDirectoryListing: true,
 		EnableWebDirManager:    *allowWebFileManager,
+		Logger:                 SystemWideLogger,
 	})
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()
@@ -291,5 +299,4 @@ func finalSequence() {
 
 	//Inject routing rules
 	registerBuildInRoutingRules()
-
 }
