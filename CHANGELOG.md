@@ -1,3 +1,17 @@
+# v3.0.8 15 Jul 2024
+
++ Added apache style logging mechanism (and build-in log viewer) [#218](https://github.com/tobychui/zoraxy/issues/218)
++ Fixed keep alive flushing issues [#235](https://github.com/tobychui/zoraxy/issues/235)
++ Added multi-upstream supports [#100](https://github.com/tobychui/zoraxy/issues/100)
++ Added stick session load balancer
++ Added weighted random load balancer
++ Added domain cleaning logic to domain / IP input fields
++ Added HSTS "include subdomain" auto injector
++ Added work-in-progress SSO / Oauth Server UI
++ Fixed uptime monitor not updating on proxy rule change bug
++ Optimized UI for create new proxy rule
++ Removed service expose proxy feature
+
 # v3.0.7 20 Jun 2024
 
 + Fixed redirection enable bug [#199](https://github.com/tobychui/zoraxy/issues/199)
