@@ -21,12 +21,14 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
   - DNS Challenge for Let's Encrypt and [these DNS providers](https://go-acme.github.io/lego/dns/)
 - Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
 - Global Area Network Controller Web UI (ZeroTier not included)
-- TCP Tunneling / Proxy
+- Stream Proxy (TCP & UDP)
 - Integrated Up-time Monitor
 - Web-SSH Terminal
 - Utilities
   - CIDR IP converters
   - mDNS Scanner
+  - Wake-On-Lan
+  - Debug Forward Proxy
   - IP Scanner
 - Others
   - Basic single-admin management mode
@@ -96,12 +98,12 @@ See the [/docker](https://github.com/tobychui/zoraxy/tree/main/docker) folder fo
 Usage of zoraxy:
   -autorenew int
         ACME auto TLS/SSL certificate renew check interval (seconds) (default 86400)
+  -cfgupgrade
+        Enable auto config upgrade if breaking change is detected (default true)
   -docker
         Run Zoraxy in docker compatibility mode
   -fastgeoip
         Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
-  -log
-        Log terminal output to file (default true)
   -mdns
         Enable mDNS scanner and transponder (default true)
   -mdnsname string
