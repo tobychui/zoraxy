@@ -9,7 +9,6 @@ package update
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -56,8 +55,8 @@ func RunConfigUpdate(fromVersion int, toVersion int) {
 
 	//Do iterate update
 	for i := fromVersion; i < toVersion; i++ {
-		oldVersion := fromVersion
-		newVersion := fromVersion + 1
+		oldVersion := i
+		newVersion := i + 1
 		fmt.Println("Updating from v", oldVersion, " to v", newVersion)
 		runUpdateRoutineWithVersion(oldVersion, newVersion)
 		//Write the updated version to file
@@ -92,7 +91,7 @@ func isFirstTimeInitialize(path string) (bool, error) {
 	}
 
 	// Read the directory contents
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return false, err
 	}
