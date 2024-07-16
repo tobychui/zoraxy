@@ -18,7 +18,7 @@ RUN go mod tidy &&\
 RUN chmod 755 /usr/local/bin/zoraxy &&\
     chmod +x /usr/local/bin/zoraxy
 
-FROM docker.io/alpine:3.20
+FROM docker.io/alpine:latest
 
 RUN apk add --no-cache bash netcat-openbsd sudo
 
