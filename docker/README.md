@@ -40,6 +40,7 @@ services:
 | `-p (ports)` | Yes | Depending on how your network is setup, you may need to portforward 80, 443, and the management port. |
 | `-v (path to storage directory):/opt/zoraxy/config/` | Recommend | Sets the folder that holds your files. This should be the place you just chose. By default, it will create a Docker volume for the files for persistency but they will not be accessible. |
 | `-v /var/run/docker.sock:/var/run/docker.sock` | No | Used for autodiscovery. |
+| `-v /etc/localtime:/etc/localtime` | No | Uses the hosts time in the container. |
 | `-e (flag)="(value)"` | No | Arguments to run Zoraxy with. They are simply just capitalized Zoraxy flags. `-docker=true` is always set by default. See examples below. |
 | `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that is published. |
 
@@ -49,7 +50,7 @@ services:
 ## Examples: </br>
 ### Docker Run </br>
 ```
-docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8005 -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -v /var/run/docker.sock:/var/run/docker.sock -e PORT="8005" -e FASTGEOIP="true" zoraxydocker/zoraxy:latest
+docker run -d --name zoraxy -p 80:80 -p 443:443 -p 8005:8005 -v /home/docker/Containers/Zoraxy:/opt/zoraxy/config/ -v /var/run/docker.sock:/var/run/docker.sock -v /etc/localtime:/etc/localtime -e PORT="8005" -e FASTGEOIP="true" zoraxydocker/zoraxy:latest
 ```
 
 ### Docker Compose </br>
@@ -65,6 +66,7 @@ services:
     volumes:
       - /home/docker/Containers/Zoraxy:/opt/zoraxy/config/
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime
     environment:
       PORT: "8005"
       FASTGEOIP: "true"
