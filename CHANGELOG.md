@@ -1,3 +1,12 @@
+# v3.0.9 16 Jul 2024
+
++ Added certificate download [#227](https://github.com/tobychui/zoraxy/issues/227)
++ Updated netcup timeout value [#231](https://github.com/tobychui/zoraxy/issues/231)
++ Updated geoip db
++ Removed debug print from log viewer
++ Upgraded netstat log printing to new log formatter
++ Improved update module implementation
+
 # v3.0.8 15 Jul 2024
 
 + Added apache style logging mechanism (and build-in log viewer) [#218](https://github.com/tobychui/zoraxy/issues/218)
