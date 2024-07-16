@@ -1,11 +1,6 @@
 package acme
 
 import (
-	"errors"
-	"log"
-	"os"
-	"strings"
-
 	"github.com/go-acme/lego/v4/challenge"
 	"imuslab.com/zoraxy/mod/acme/acmedns"
 )
@@ -29,7 +24,7 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string) (c
 /*
 	Original implementation of DNS ACME using OS.Env as payload
 */
-
+/*
 func setCredentialsIntoEnvironmentVariables(credentials map[string]string) {
 	for key, value := range credentials {
 		err := os.Setenv(key, value)
@@ -40,6 +35,7 @@ func setCredentialsIntoEnvironmentVariables(credentials map[string]string) {
 		}
 	}
 }
+
 
 func extractDnsCredentials(input string) (map[string]string, error) {
 	result := make(map[string]string)
@@ -70,3 +66,5 @@ func extractDnsCredentials(input string) (map[string]string, error) {
 
 	return result, nil
 }
+
+*/

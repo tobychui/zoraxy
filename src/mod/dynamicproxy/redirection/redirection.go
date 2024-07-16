@@ -195,6 +195,6 @@ func (t *RuleTable) log(message string, err error) {
 			log.Println("[Redirect] " + message + ": " + err.Error())
 		}
 	} else {
-		t.Logger.PrintAndLog("Redirect", message, err)
+		t.Logger.PrintAndLog("redirect", message, err)
 	}
 }

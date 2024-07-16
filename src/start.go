@@ -145,7 +145,7 @@ func startupSequence() {
 	staticWebServer.RestorePreviousState()
 
 	//Create a netstat buffer
-	netstatBuffers, err = netstat.NewNetStatBuffer(300)
+	netstatBuffers, err = netstat.NewNetStatBuffer(300, SystemWideLogger)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("Network", "Failed to load network statistic info", err)
 		panic(err)

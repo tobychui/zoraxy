@@ -3,8 +3,6 @@ package netstat
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -14,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -35,10 +34,11 @@ type NetStatBuffers struct {
 	Stats           []*FlowStat  //Statistic of the flow
 	StopChan        chan bool    //Channel to stop the ticker
 	EventTicker     *time.Ticker //Ticker for event logging
+	logger          *logger.Logger
 }
 
 // Get a new network statistic buffers
-func NewNetStatBuffer(recordCount int) (*NetStatBuffers, error) {
+func NewNetStatBuffer(recordCount int, systemWideLogger *logger.Logger) (*NetStatBuffers, error) {
 	//Flood fill the stats with 0
 	initialStats := []*FlowStat{}
 	for i := 0; i < recordCount; i++ {
@@ -65,21 +65,22 @@ func NewNetStatBuffer(recordCount int) (*NetStatBuffers, error) {
 		Stats:           initialStats,
 		StopChan:        stopCh,
 		EventTicker:     ticker,
+		logger:          systemWideLogger,
 	}
 
 	//Get the initial measurements of netstats
-	rx, tx, err := GetNetworkInterfaceStats()
+	rx, tx, err := thisNetBuffer.GetNetworkInterfaceStats()
 	if err != nil {
-		log.Println("Unable to get NIC stats: ", err.Error())
+		systemWideLogger.PrintAndLog("netstat", "Unable to get NIC stats: ", err)
 	}
 
 	retryCount := 0
 	for rx == 0 && tx == 0 && retryCount < 10 {
 		//Strange. Retry
-		log.Println("NIC stats return all 0. Retrying...")
-		rx, tx, err = GetNetworkInterfaceStats()
+		systemWideLogger.PrintAndLog("netstat", "NIC stats return all 0. Retrying...", nil)
+		rx, tx, err = thisNetBuffer.GetNetworkInterfaceStats()
 		if err != nil {
-			log.Println("Unable to get NIC stats: ", err.Error())
+			systemWideLogger.PrintAndLog("netstat", "Unable to get NIC stats: ", err)
 		}
 		retryCount++
 	}
@@ -94,20 +95,20 @@ func NewNetStatBuffer(recordCount int) (*NetStatBuffers, error) {
 		for {
 			select {
 			case <-n.StopChan:
-				fmt.Println("- Netstats listener stopped")
+				systemWideLogger.PrintAndLog("netstat", "Netstats listener stopped", nil)
 				return
 
 			case <-ticker.C:
 				if n.PreviousStat.RX == 0 && n.PreviousStat.TX == 0 {
 					//Initiation state is still not done. Ignore request
-					log.Println("No initial states. Waiting")
+					systemWideLogger.PrintAndLog("netstat", "No initial states. Waiting", nil)
 					return
 				}
 				// Get the latest network interface stats
-				rx, tx, err := GetNetworkInterfaceStats()
+				rx, tx, err := thisNetBuffer.GetNetworkInterfaceStats()
 				if err != nil {
 					// Log the error, but don't stop the buffer
-					log.Printf("Failed to get network interface stats: %v", err)
+					systemWideLogger.PrintAndLog("netstat", "Failed to get network interface stats", err)
 					continue
 				}
 
@@ -173,8 +174,8 @@ func (n *NetStatBuffers) Close() {
 	n.EventTicker.Stop()
 }
 
-func HandleGetNetworkInterfaceStats(w http.ResponseWriter, r *http.Request) {
-	rx, tx, err := GetNetworkInterfaceStats()
+func (n *NetStatBuffers) HandleGetNetworkInterfaceStats(w http.ResponseWriter, r *http.Request) {
+	rx, tx, err := n.GetNetworkInterfaceStats()
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -193,7 +194,7 @@ func HandleGetNetworkInterfaceStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get network interface stats, return accumulated rx bits, tx bits and error if any
-func GetNetworkInterfaceStats() (int64, int64, error) {
+func (n *NetStatBuffers) GetNetworkInterfaceStats() (int64, int64, error) {
 	if runtime.GOOS == "windows" {
 		//Windows wmic sometime freeze and not respond.
 		//The safer way is to make a bypass mechanism
@@ -262,7 +263,7 @@ func GetNetworkInterfaceStats() (int64, int64, error) {
 		result = <-callbackChan
 		cmd = nil
 		if result.Err != nil {
-			log.Println("Unable to extract NIC info from wmic: " + result.Err.Error())
+			n.logger.PrintAndLog("netstat", "Unable to extract NIC info from wmic", result.Err)
 		}
 		return result.RX, result.TX, result.Err
 	} else if runtime.GOOS == "linux" {
