@@ -3,7 +3,6 @@ package logviewer
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -105,7 +104,6 @@ func (v *Viewer) LoadLogFile(filename string) (string, error) {
 	filename = filepath.ToSlash(filename)
 	filename = strings.ReplaceAll(filename, "../", "")
 	logFilepath := filepath.Join(v.option.RootFolder, filename)
-	fmt.Println(logFilepath)
 	if utils.FileExists(logFilepath) {
 		//Load it
 		content, err := os.ReadFile(logFilepath)

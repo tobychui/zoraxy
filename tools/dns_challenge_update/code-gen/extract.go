@@ -28,6 +28,7 @@ var defTemplate string = `package acmedns
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
 {{imports}}
@@ -282,6 +283,18 @@ func main() {
 		}
 		return ` + providerName + `.NewDNSProviderConfig(cfg)`
 
+		//Add fixed for Netcup timeout
+		if strings.ToLower(providerName) == "netcup" {
+			codeSegment = `
+		case "` + providerName + `":
+			cfg := ` + providerName + `.NewDefaultConfig()
+			err := json.Unmarshal([]byte(js), &cfg)
+			if err != nil {
+				return nil, err
+			}
+			cfg.PropagationTimeout = 1200 * time.Second
+			return ` + providerName + `.NewDNSProviderConfig(cfg)`
+		}
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"
 	}

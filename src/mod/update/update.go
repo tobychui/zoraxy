@@ -9,11 +9,11 @@ package update
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
-	v308 "imuslab.com/zoraxy/mod/update/v308"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -22,6 +22,13 @@ import (
 // This function support cross versions updates (e.g. 307 -> 310)
 func RunConfigUpdate(fromVersion int, toVersion int) {
 	versionFile := "./conf/version"
+	isFirstTimeInit, _ := isFirstTimeInitialize("./conf/proxy/")
+	if isFirstTimeInit {
+		//Create version file and exit
+		os.MkdirAll("./conf/", 0775)
+		os.WriteFile(versionFile, []byte(strconv.Itoa(toVersion)), 0775)
+		return
+	}
 	if fromVersion == 0 {
 		//Run auto previous version detection
 		fromVersion = 307
@@ -65,12 +72,37 @@ func GetVersionIntFromVersionNumber(version string) int {
 	return versionInt
 }
 
-func runUpdateRoutineWithVersion(fromVersion int, toVersion int) {
-	if fromVersion == 307 && toVersion == 308 {
-		//Updating from v3.0.7 to v3.0.8
-		err := v308.UpdateFrom307To308()
-		if err != nil {
-			panic(err)
-		}
+// Check if the folder "./conf/proxy/" exists and contains files
+func isFirstTimeInitialize(path string) (bool, error) {
+	// Check if the folder exists
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		// The folder does not exist
+		return true, nil
 	}
+	if err != nil {
+		// Some other error occurred
+		return false, err
+	}
+
+	// Check if it is a directory
+	if !info.IsDir() {
+		// The path is not a directory
+		return false, fmt.Errorf("%s is not a directory", path)
+	}
+
+	// Read the directory contents
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if the directory is empty
+	if len(files) == 0 {
+		// The folder exists but is empty
+		return true, nil
+	}
+
+	// The folder exists and contains files
+	return false, nil
 }

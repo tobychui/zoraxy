@@ -57,7 +57,7 @@ var enableAutoUpdate = flag.Bool("cfgupgrade", true, "Enable auto config upgrade
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.8"
+	version     = "3.0.9"
 	nodeUUID    = "generic" //System uuid, in uuidv4 format
 	development = false     //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()

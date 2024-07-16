@@ -87,6 +87,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/cert/tls", handleToggleTLSProxy)
 	authRouter.HandleFunc("/api/cert/tlsRequireLatest", handleSetTlsRequireLatest)
 	authRouter.HandleFunc("/api/cert/upload", handleCertUpload)
+	authRouter.HandleFunc("/api/cert/download", handleCertDownload)
 	authRouter.HandleFunc("/api/cert/list", handleListCertificate)
 	authRouter.HandleFunc("/api/cert/listdomains", handleListDomains)
 	authRouter.HandleFunc("/api/cert/checkDefault", handleDefaultCertCheck)
@@ -127,7 +128,7 @@ func initAPIs() {
 	//Statistic & uptime monitoring API
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
 	authRouter.HandleFunc("/api/stats/countries", HandleCountryDistrSummary)
-	authRouter.HandleFunc("/api/stats/netstat", netstat.HandleGetNetworkInterfaceStats)
+	authRouter.HandleFunc("/api/stats/netstat", netstatBuffers.HandleGetNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/netstatgraph", netstatBuffers.HandleGetBufferedNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/listnic", netstat.HandleListNetworkInterfaces)
 	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)

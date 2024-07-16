@@ -21,6 +21,7 @@ go run ./extract.go
 go run ./extract.go -- "win7"
 
 echo "Cleaning up lego"
+sleep 2
 # Comment the line below if you dont want to pull everytime update
 # This is to help go compiler to not load all the lego source file when compile
 #rm -rf ./lego/

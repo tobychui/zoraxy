@@ -233,6 +233,51 @@ func handleSetTlsRequireLatest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Handle download of the selected certificate
+func handleCertDownload(w http.ResponseWriter, r *http.Request) {
+	// get the certificate name
+	certname, err := utils.GetPara(r, "certname")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid certname given")
+		return
+	}
+	certname = filepath.Base(certname) //prevent path escape
+
+	// check if the cert exists
+	pubKey := filepath.Join(filepath.Join("./conf/certs"), certname+".key")
+	priKey := filepath.Join(filepath.Join("./conf/certs"), certname+".pem")
+
+	if utils.FileExists(pubKey) && utils.FileExists(priKey) {
+		//Zip them and serve them via http download
+		seeking, _ := utils.GetBool(r, "seek")
+		if seeking {
+			//This request only check if the key exists. Do not provide download
+			utils.SendOK(w)
+			return
+		}
+
+		//Serve both file in zip
+		zipTmpFolder := "./tmp/download"
+		os.MkdirAll(zipTmpFolder, 0775)
+		zipFileName := filepath.Join(zipTmpFolder, certname+".zip")
+		err := utils.ZipFiles(zipFileName, pubKey, priKey)
+		if err != nil {
+			http.Error(w, "Failed to create zip file", http.StatusInternalServerError)
+			return
+		}
+		defer os.Remove(zipFileName) // Clean up the zip file after serving
+
+		// Serve the zip file
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+certname+"_export.zip\"")
+		w.Header().Set("Content-Type", "application/zip")
+		http.ServeFile(w, r, zipFileName)
+	} else {
+		//Not both key exists
+		utils.SendErrorResponse(w, "invalid key-pairs: private key or public key not found in key store")
+		return
+	}
+}
+
 // Handle upload of the certificate
 func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 	// check if request method is POST

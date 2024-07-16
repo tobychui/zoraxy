@@ -6,6 +6,7 @@ package acmedns
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
 	"github.com/go-acme/lego/v4/providers/dns/alidns"
@@ -654,13 +655,14 @@ func GetDNSProviderByJsonConfig(name string, js string)(challenge.Provider, erro
 			return nil, err
 		}
 		return nearlyfreespeech.NewDNSProviderConfig(cfg)
-	case "netcup":
-		cfg := netcup.NewDefaultConfig()
-		err := json.Unmarshal([]byte(js), &cfg)
-		if err != nil {
-			return nil, err
-		}
-		return netcup.NewDNSProviderConfig(cfg)
+		case "netcup":
+			cfg := netcup.NewDefaultConfig()
+			err := json.Unmarshal([]byte(js), &cfg)
+			if err != nil {
+				return nil, err
+			}
+			cfg.PropagationTimeout = 1200 * time.Second
+			return netcup.NewDNSProviderConfig(cfg)
 	case "netlify":
 		cfg := netlify.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
