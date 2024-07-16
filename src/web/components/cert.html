@@ -161,6 +161,7 @@
             $(btn).addClass('disabled');
             $(btn).html(`<i class="ui loading spinner icon"></i>`);
         }
+
         obtainCertificate(domain, dns, defaultCA.trim(), function(succ){
             if (btn != undefined){
                 $(btn).removeClass('disabled');
@@ -356,13 +357,16 @@
                 });
                 data.forEach(entry => {
                     let isExpired = entry.RemainingDays <= 0;
-
+                    let entryDomainRenewKey = entry.Domain; 
+                    if (entryDomainRenewKey.includes("_.")){
+                        entryDomainRenewKey = entryDomainRenewKey.replace("_.","*.");
+                    }
                     $("#certifiedDomainList").append(`<tr>
                         <td><a style="cursor: pointer;" title="Download certificate" onclick="handleCertDownload('${entry.Domain}');">${entry.Domain}</a></td>
                         <td>${entry.LastModifiedDate}</td>
                         <td class="${isExpired?"expired":"valid"} certdate">${entry.ExpireDate} (${!isExpired?entry.RemainingDays+" days left":"Expired"})</td>
                         <td><i class="${entry.UseDNS?"green check": "red times"} icon"></i></td>
-                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entry.Domain}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button></td>
+                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entryDomainRenewKey}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button></td>
                         <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
                     </tr>`);
                 });
