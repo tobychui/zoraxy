@@ -509,6 +509,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Save it to file
 	SaveReverseProxyConfig(newProxyEndpoint)
 
+	//Update uptime monitor targets
+	UpdateUptimeMonitorTargets()
+
 	utils.SendOK(w)
 }
 
@@ -587,12 +590,6 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
-	}
-
-	//Update utm if exists
-	if uptimeMonitor != nil {
-		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
-		uptimeMonitor.CleanRecords()
 	}
 
 	//Update uptime monitor

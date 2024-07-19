@@ -111,6 +111,7 @@ func HandleCountryDistrSummary(w http.ResponseWriter, r *http.Request) {
 func UpdateUptimeMonitorTargets() {
 	if uptimeMonitor != nil {
 		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
+		uptimeMonitor.CleanRecords()
 		go func() {
 			uptimeMonitor.ExecuteUptimeCheck()
 		}()
