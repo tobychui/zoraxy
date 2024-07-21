@@ -1235,6 +1235,149 @@ func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func HandleHostOverwrite(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+	//Get the proxy endpoint object dedicated to this domain
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Get the current host header
+		js, _ := json.Marshal(targetProxyEndpoint.RequestHostOverwrite)
+		utils.SendJSONResponse(w, string(js))
+	} else if r.Method == http.MethodPost {
+		//Set the new host header
+		newHostname, _ := utils.PostPara(r, "hostname")
+
+		//As this will require change in the proxy instance we are running
+		//we need to clone and respawn this proxy endpoint
+		newProxyEndpoint := targetProxyEndpoint.Clone()
+		newProxyEndpoint.RequestHostOverwrite = newHostname
+		//Save proxy endpoint
+		err = SaveReverseProxyConfig(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Spawn a new endpoint with updated dpcore
+		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Remove the old endpoint
+		err = targetProxyEndpoint.Remove()
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Add the newly prepared endpoint to runtime
+		err = dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Print log message
+		if newHostname != "" {
+			SystemWideLogger.Println("Updated " + domain + " hostname overwrite to: " + newHostname)
+		} else {
+			SystemWideLogger.Println("Removed " + domain + " hostname overwrite")
+		}
+
+		utils.SendOK(w)
+	} else {
+		//Invalid method
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleHopByHop get and set the hop by hop remover state
+// note that it shows the DISABLE STATE of hop-by-hop remover, not the enable state
+func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Get the current hop by hop header state
+		js, _ := json.Marshal(!targetProxyEndpoint.DisableHopByHopHeaderRemoval)
+		utils.SendJSONResponse(w, string(js))
+	} else if r.Method == http.MethodPost {
+		//Set the hop by hop header state
+		enableHopByHopRemover, _ := utils.PostBool(r, "removeHopByHop")
+
+		//As this will require change in the proxy instance we are running
+		//we need to clone and respawn this proxy endpoint
+		newProxyEndpoint := targetProxyEndpoint.Clone()
+		//Storage file use false as default, so disable removal = not enable remover
+		targetProxyEndpoint.DisableHopByHopHeaderRemoval = !enableHopByHopRemover
+		//Save proxy endpoint
+		err = SaveReverseProxyConfig(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Spawn a new endpoint with updated dpcore
+		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Remove the old endpoint
+		err = targetProxyEndpoint.Remove()
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Add the newly prepared endpoint to runtime
+		err = dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Print log message
+		if enableHopByHopRemover {
+			SystemWideLogger.Println("Enabled hop-by-hop headers removal on " + domain)
+		} else {
+			SystemWideLogger.Println("Disabled hop-by-hop headers removal on " + domain)
+		}
+
+		utils.SendOK(w)
+
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // Handle view or edit HSTS states
 func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 	domain, err := utils.PostPara(r, "domain")

@@ -57,6 +57,7 @@ type ReverseProxy struct {
 }
 
 type ResponseRewriteRuleSet struct {
+	/* Basic Rewrite Rulesets */
 	ProxyDomain       string
 	OriginalHost      string
 	UseTLS            bool
@@ -64,8 +65,13 @@ type ResponseRewriteRuleSet struct {
 	PathPrefix        string //Vdir prefix for root, / will be rewrite to this
 	UpstreamHeaders   [][]string
 	DownstreamHeaders [][]string
-	NoRemoveHopByHop  bool   //Do not remove hop-by-hop headers, dangerous
-	Version           string //Version number of Zoraxy, use for X-Proxy-By
+
+	/* Advance Usecase Options */
+	HostHeaderOverwrite string //Force overwrite of request "Host" header (advanced usecase)
+	NoRemoveHopByHop    bool   //Do not remove hop-by-hop headers (advanced usecase)
+
+	/* System Information Payload */
+	Version string //Version number of Zoraxy, use for X-Proxy-By
 }
 
 type requestCanceler interface {
@@ -73,8 +79,8 @@ type requestCanceler interface {
 }
 
 type DpcoreOptions struct {
-	IgnoreTLSVerification bool
-	FlushInterval         time.Duration
+	IgnoreTLSVerification bool          //Disable all TLS verification when request pass through this proxy router
+	FlushInterval         time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -281,7 +287,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	outreq.Close = false
 
 	//Only skip origin rewrite iff proxy target require TLS and it is external domain name like github.com
-	if !(rrr.UseTLS && isExternalDomainName(rrr.ProxyDomain)) {
+	if rrr.HostHeaderOverwrite != "" {
+		//Use user defined overwrite header value, see issue #255
+		outreq.Host = rrr.HostHeaderOverwrite
+	} else if !(rrr.UseTLS && isExternalDomainName(rrr.ProxyDomain)) {
 		// Always use the original host, see issue #164
 		outreq.Host = rrr.OriginalHost
 	}
@@ -291,7 +300,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	copyHeader(outreq.Header, req.Header)
 
 	// Remove hop-by-hop headers.
-	removeHeaders(outreq.Header, rrr.NoCache)
+	if !rrr.NoRemoveHopByHop {
+		removeHeaders(outreq.Header, rrr.NoCache)
+	}
 
 	// Add X-Forwarded-For Header.
 	addXForwardedForHeader(outreq)
@@ -313,7 +324,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
-	removeHeaders(res.Header, rrr.NoCache)
+	if !rrr.NoRemoveHopByHop {
+		removeHeaders(res.Header, rrr.NoCache)
+	}
 
 	//Remove the User-Agent header if exists
 	if _, ok := res.Header["User-Agent"]; ok {

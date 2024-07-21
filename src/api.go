@@ -77,6 +77,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
 	authRouter.HandleFunc("/api/proxy/header/remove", HandleCustomHeaderRemove)
 	authRouter.HandleFunc("/api/proxy/header/handleHSTS", HandleHSTSState)
+	authRouter.HandleFunc("/api/proxy/header/handleHopByHop", HandleHopByHop)
+	authRouter.HandleFunc("/api/proxy/header/handleHostOverwrite", HandleHostOverwrite)
 	authRouter.HandleFunc("/api/proxy/header/handlePermissionPolicy", HandlePermissionPolicy)
 	//Reverse proxy auth related APIs
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)

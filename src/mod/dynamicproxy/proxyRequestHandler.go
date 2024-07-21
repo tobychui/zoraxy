@@ -157,15 +157,16 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	upstreamHeaders, downstreamHeaders := target.SplitInboundOutboundHeaders()
 
 	err = selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:       selectedUpstream.OriginIpOrDomain,
-		OriginalHost:      originalHostHeader,
-		UseTLS:            selectedUpstream.RequireTLS,
-		NoCache:           h.Parent.Option.NoCache,
-		PathPrefix:        "",
-		UpstreamHeaders:   upstreamHeaders,
-		DownstreamHeaders: downstreamHeaders,
-		NoRemoveHopByHop:  target.DisableHopByHopHeaderRemoval,
-		Version:           target.parent.Option.HostVersion,
+		ProxyDomain:         selectedUpstream.OriginIpOrDomain,
+		OriginalHost:        originalHostHeader,
+		UseTLS:              selectedUpstream.RequireTLS,
+		NoCache:             h.Parent.Option.NoCache,
+		PathPrefix:          "",
+		UpstreamHeaders:     upstreamHeaders,
+		DownstreamHeaders:   downstreamHeaders,
+		HostHeaderOverwrite: target.RequestHostOverwrite,
+		NoRemoveHopByHop:    target.DisableHopByHopHeaderRemoval,
+		Version:             target.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError
@@ -224,13 +225,14 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	upstreamHeaders, downstreamHeaders := target.parent.SplitInboundOutboundHeaders()
 
 	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:       target.Domain,
-		OriginalHost:      originalHostHeader,
-		UseTLS:            target.RequireTLS,
-		PathPrefix:        target.MatchingPath,
-		UpstreamHeaders:   upstreamHeaders,
-		DownstreamHeaders: downstreamHeaders,
-		Version:           target.parent.parent.Option.HostVersion,
+		ProxyDomain:         target.Domain,
+		OriginalHost:        originalHostHeader,
+		UseTLS:              target.RequireTLS,
+		PathPrefix:          target.MatchingPath,
+		UpstreamHeaders:     upstreamHeaders,
+		DownstreamHeaders:   downstreamHeaders,
+		HostHeaderOverwrite: target.parent.RequestHostOverwrite,
+		Version:             target.parent.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError

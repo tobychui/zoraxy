@@ -158,12 +158,13 @@ func (router *Router) StartProxyService() error {
 							router.logRequest(r, false, 404, "vdir-http", r.Host)
 						}
 						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-							ProxyDomain:      selectedUpstream.OriginIpOrDomain,
-							OriginalHost:     originalHostHeader,
-							UseTLS:           selectedUpstream.RequireTLS,
-							NoRemoveHopByHop: sep.DisableHopByHopHeaderRemoval,
-							PathPrefix:       "",
-							Version:          sep.parent.Option.HostVersion,
+							ProxyDomain:         selectedUpstream.OriginIpOrDomain,
+							OriginalHost:        originalHostHeader,
+							UseTLS:              selectedUpstream.RequireTLS,
+							HostHeaderOverwrite: sep.RequestHostOverwrite,
+							NoRemoveHopByHop:    sep.DisableHopByHopHeaderRemoval,
+							PathPrefix:          "",
+							Version:             sep.parent.Option.HostVersion,
 						})
 						return
 					}

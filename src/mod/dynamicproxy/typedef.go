@@ -132,6 +132,7 @@ type ProxyEndpoint struct {
 
 	//Custom Headers
 	UserDefinedHeaders           []*UserDefinedHeader                //Custom headers to append when proxying requests from this endpoint
+	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
 	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
 	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
 	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
