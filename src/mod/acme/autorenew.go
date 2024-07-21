@@ -34,6 +34,7 @@ type AutoRenewer struct {
 	AcmeHandler       *ACMEHandler
 	RenewerConfig     *AutoRenewConfig
 	RenewTickInterval int64
+	EarlyRenewDays    int //How many days before cert expire to renew certificate
 	TickerstopChan    chan bool
 }
 
@@ -44,9 +45,13 @@ type ExpiredCerts struct {
 
 // Create an auto renew agent, require config filepath and auto scan & renew interval (seconds)
 // Set renew check interval to 0 for auto (1 day)
-func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, AcmeHandler *ACMEHandler) (*AutoRenewer, error) {
+func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, earlyRenewDays int, AcmeHandler *ACMEHandler) (*AutoRenewer, error) {
 	if renewCheckInterval == 0 {
 		renewCheckInterval = 86400 //1 day
+	}
+
+	if earlyRenewDays == 0 {
+		earlyRenewDays = 30
 	}
 
 	//Load the config file. If not found, create one
@@ -277,7 +282,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				if err != nil {
 					continue
 				}
-				if CertExpireSoon(certBytes) || CertIsExpired(certBytes) {
+				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
 
 					DNSName, err := ExtractDomains(certBytes)
@@ -305,7 +310,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				if err != nil {
 					continue
 				}
-				if CertExpireSoon(certBytes) || CertIsExpired(certBytes) {
+				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
 
 					DNSName, err := ExtractDomains(certBytes)

@@ -50,6 +50,7 @@ var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local no
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var runningInDocker = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+var acmeCertAutoRenewDays = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")

@@ -81,13 +81,14 @@ func CertIsExpired(certBytes []byte) bool {
 	return false
 }
 
-func CertExpireSoon(certBytes []byte) bool {
+// CertExpireSoon check if the given cert bytes will expires within the given number of days from now
+func CertExpireSoon(certBytes []byte, numberOfDays int) bool {
 	block, _ := pem.Decode(certBytes)
 	if block != nil {
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err == nil {
 			expirationDate := cert.NotAfter
-			threshold := 14 * 24 * time.Hour // 14 days
+			threshold := time.Duration(numberOfDays) * 24 * time.Hour
 
 			timeRemaining := time.Until(expirationDate)
 			if timeRemaining <= threshold {

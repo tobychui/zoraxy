@@ -279,7 +279,13 @@ func startupSequence() {
 	//Create a table just to store acme related preferences
 	sysdb.NewTable("acmepref")
 	acmeHandler = initACME()
-	acmeAutoRenewer, err = acme.NewAutoRenewer("./conf/acme_conf.json", "./conf/certs/", int64(*acmeAutoRenewInterval), acmeHandler)
+	acmeAutoRenewer, err = acme.NewAutoRenewer(
+		"./conf/acme_conf.json",
+		"./conf/certs/",
+		int64(*acmeAutoRenewInterval),
+		*acmeCertAutoRenewDays,
+		acmeHandler,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
