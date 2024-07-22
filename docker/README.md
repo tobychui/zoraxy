@@ -45,7 +45,7 @@ services:
 | `zoraxydocker/zoraxy:latest` | Yes | The repository on Docker hub. By default, it is the latest version that is published. |
 
 > [!IMPORTANT]
-> Docker usage of the port flag should not include the colon. Ex: PORT="8000"
+> Docker usage of the port flag should not include the colon. Ex: `-e PORT="8000"` for Docker run and `PORT: "8000"` for Docker compose.
 
 ## Examples: </br>
 ### Docker Run </br>
