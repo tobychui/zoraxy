@@ -41,12 +41,12 @@ func SendOK(w http.ResponseWriter) {
 
 // Get GET parameter
 func GetPara(r *http.Request, key string) (string, error) {
-	keys, ok := r.URL.Query()[key]
-	if !ok || len(keys[0]) < 1 {
+	// Get first value from the URL query
+	value := r.URL.Query().Get(key)
+	if len(value) == 0 {
 		return "", errors.New("invalid " + key + " given")
-	} else {
-		return keys[0], nil
 	}
+	return value, nil
 }
 
 // Get GET paramter as boolean, accept 1 or true
@@ -56,26 +56,29 @@ func GetBool(r *http.Request, key string) (bool, error) {
 		return false, err
 	}
 
-	x = strings.TrimSpace(x)
-
-	if x == "1" || strings.ToLower(x) == "true" || strings.ToLower(x) == "on" {
+	// Convert to lowercase and trim spaces just once to compare
+	switch strings.ToLower(strings.TrimSpace(x)) {
+	case "1", "true", "on":
 		return true, nil
-	} else if x == "0" || strings.ToLower(x) == "false" || strings.ToLower(x) == "off" {
+	case "0", "false", "off":
 		return false, nil
 	}
 
 	return false, errors.New("invalid boolean given")
 }
 
-// Get POST paramter
+// Get POST parameter
 func PostPara(r *http.Request, key string) (string, error) {
-	r.ParseForm()
-	x := r.Form.Get(key)
-	if x == "" {
-		return "", errors.New("invalid " + key + " given")
-	} else {
-		return x, nil
+	// Try to parse the form
+	if err := r.ParseForm(); err != nil {
+		return "", err
 	}
+	// Get first value from the form
+	x := r.Form.Get(key)
+	if len(x) == 0 {
+		return "", errors.New("invalid " + key + " given")
+	}
+	return x, nil
 }
 
 // Get POST paramter as boolean, accept 1 or true
@@ -85,11 +88,11 @@ func PostBool(r *http.Request, key string) (bool, error) {
 		return false, err
 	}
 
-	x = strings.TrimSpace(x)
-
-	if x == "1" || strings.ToLower(x) == "true" || strings.ToLower(x) == "on" {
+	// Convert to lowercase and trim spaces just once to compare
+	switch strings.ToLower(strings.TrimSpace(x)) {
+	case "1", "true", "on":
 		return true, nil
-	} else if x == "0" || strings.ToLower(x) == "false" || strings.ToLower(x) == "off" {
+	case "0", "false", "off":
 		return false, nil
 	}
 
@@ -114,14 +117,19 @@ func PostInt(r *http.Request, key string) (int, error) {
 
 func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	if err == nil {
+		// File exists
+		return true
+	} else if errors.Is(err, os.ErrNotExist) {
+		// File does not exist
 		return false
 	}
-	return true
+	// Some other error
+	return false
 }
 
 func IsDir(path string) bool {
-	if FileExists(path) == false {
+	if !FileExists(path) {
 		return false
 	}
 	fi, err := os.Stat(path)

@@ -1,9 +1,10 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
-	"sort"
+	"slices"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -33,19 +34,18 @@ func ReverseProxyUpstreamList(w http.ResponseWriter, r *http.Request) {
 
 	activeUpstreams := targetEndpoint.ActiveOrigins
 	inactiveUpstreams := targetEndpoint.InactiveOrigins
-	// Sort the upstreams slice by weight, then by origin domain alphabetically
-	sort.Slice(activeUpstreams, func(i, j int) bool {
-		if activeUpstreams[i].Weight != activeUpstreams[j].Weight {
-			return activeUpstreams[i].Weight > activeUpstreams[j].Weight
+	slices.SortFunc(activeUpstreams, func(i, j *loadbalance.Upstream) int {
+		if i.Weight != j.Weight {
+			return cmp.Compare(j.Weight, i.Weight)
 		}
-		return activeUpstreams[i].OriginIpOrDomain < activeUpstreams[j].OriginIpOrDomain
+		return cmp.Compare(i.OriginIpOrDomain, j.OriginIpOrDomain)
 	})
 
-	sort.Slice(inactiveUpstreams, func(i, j int) bool {
-		if inactiveUpstreams[i].Weight != inactiveUpstreams[j].Weight {
-			return inactiveUpstreams[i].Weight > inactiveUpstreams[j].Weight
+	slices.SortFunc(inactiveUpstreams, func(i, j *loadbalance.Upstream) int {
+		if i.Weight != j.Weight {
+			return cmp.Compare(j.Weight, i.Weight)
 		}
-		return inactiveUpstreams[i].OriginIpOrDomain < inactiveUpstreams[j].OriginIpOrDomain
+		return cmp.Compare(i.OriginIpOrDomain, j.OriginIpOrDomain)
 	})
 
 	type UpstreamCombinedList struct {
