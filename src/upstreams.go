@@ -34,7 +34,7 @@ func ReverseProxyUpstreamList(w http.ResponseWriter, r *http.Request) {
 
 	activeUpstreams := targetEndpoint.ActiveOrigins
 	inactiveUpstreams := targetEndpoint.InactiveOrigins
-	slices.SortFunc(activeUpstreams, func(i, j *loadbalance.Upstream) int {
+	slices.SortStableFunc(activeUpstreams, func(i, j *loadbalance.Upstream) int {
 		if i.Weight != j.Weight {
 			// sort by weight DESC
 			return cmp.Compare(j.Weight, i.Weight)
@@ -43,7 +43,7 @@ func ReverseProxyUpstreamList(w http.ResponseWriter, r *http.Request) {
 		return cmp.Compare(i.OriginIpOrDomain, j.OriginIpOrDomain)
 	})
 
-	slices.SortFunc(inactiveUpstreams, func(i, j *loadbalance.Upstream) int {
+	slices.SortStableFunc(inactiveUpstreams, func(i, j *loadbalance.Upstream) int {
 		if i.Weight != j.Weight {
 			// sort by weight DESC
 			return cmp.Compare(j.Weight, i.Weight)
