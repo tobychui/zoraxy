@@ -106,9 +106,6 @@ func getRandomUpstreamByWeight(upstreams []*Upstream) (*Upstream, int, error) {
 	if totalUpstreams == 1 {
 		return upstreams[0], 0, nil
 	}
-	if totalUpstreams == 0 {
-		return nil, -1, errors.New("no upstream servers available")
-	}
 
 	totalWeight := 0
 	fallbackUpstreams := make([]*Upstream, 0) // List of upstreams with weight 0
