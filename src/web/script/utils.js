@@ -27,3 +27,17 @@ Object.defineProperty(String.prototype, 'capitalize', {
     },
     enumerable: false
 });
+
+//Add a new function to jquery for ajax override with csrf token injected
+$.cjax = function(payload){
+    let requireTokenMethod = ["POST", "PUT", "DELETE"];;
+    if (requireTokenMethod.includes(payload.method) || requireTokenMethod.includes(payload.type)){
+        //csrf token is required
+        let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+        payload.headers = {
+            "X-CSRF-Token": csrfToken,
+        }
+    }
+
+    $.ajax(payload);
+}

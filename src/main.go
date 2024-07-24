@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
@@ -60,7 +61,7 @@ var (
 	name        = "Zoraxy"
 	version     = "3.1.0"
 	nodeUUID    = "generic" //System uuid, in uuidv4 format
-	development = true      //Set this to false to use embedded web fs
+	development = false     //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
@@ -72,10 +73,12 @@ var (
 	/*
 		Handler Modules
 	*/
-	sysdb          *database.Database     //System database
-	authAgent      *auth.AuthAgent        //Authentication agent
-	tlsCertManager *tlscert.Manager       //TLS / SSL management
-	redirectTable  *redirection.RuleTable //Handle special redirection rule sets
+	sysdb          *database.Database              //System database
+	authAgent      *auth.AuthAgent                 //Authentication agent
+	tlsCertManager *tlscert.Manager                //TLS / SSL management
+	redirectTable  *redirection.RuleTable          //Handle special redirection rule sets
+	webminPanelMux *http.ServeMux                  //Server mux for handling webmin panel APIs
+	csrfMiddleware func(http.Handler) http.Handler //CSRF protection middleware
 
 	pathRuleHandler    *pathrule.Handler         //Handle specific path blocking or custom headers
 	geodbStore         *geodb.Store              //GeoIP database, for resolving IP into country code
@@ -176,12 +179,16 @@ func main() {
 	}
 	nodeUUID = string(uuidBytes)
 
+	//Create a new webmin mux and csrf middleware layer
+	webminPanelMux := http.NewServeMux()
+	csrfMiddleware := csrf.Protect([]byte(nodeUUID))
+
 	//Startup all modules
 	startupSequence()
 
 	//Initiate management interface APIs
 	requireAuth = !(*noauth)
-	initAPIs()
+	initAPIs(webminPanelMux)
 
 	//Start the reverse proxy server in go routine
 	go func() {
@@ -194,7 +201,7 @@ func main() {
 	finalSequence()
 
 	SystemWideLogger.Println("Zoraxy started. Visit control panel at http://localhost" + *webUIPort)
-	err = http.ListenAndServe(*webUIPort, nil)
+	err = http.ListenAndServe(*webUIPort, csrfMiddleware(webminPanelMux))
 
 	if err != nil {
 		log.Fatal(err)

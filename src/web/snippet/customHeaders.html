@@ -3,9 +3,11 @@
     <head>
         <!-- Notes: This should be open in its original path-->
         <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <link rel="stylesheet" href="../script/semantic/semantic.min.css">
         <script src="../script/jquery-3.6.0.min.js"></script>
         <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
         <style>
             .ui.tabular.menu .item.narrowpadding{
                 padding: 0.6em !important;
@@ -92,9 +94,6 @@
                         </div>
                         <div class="content">
                             <br>
-                            <div class="ui yellow message">
-                                <p><i class="exclamation triangle icon"></i>Settings in this section are for advanced users. Invalid settings might cause werid, unexpected behavior.</p>
-                            </div>
                             <div class="ui container">
                                 <h4>Overwrite Host Header</h4>
                                 <p>Manual override the automatic "Host" header rewrite logic. Leave empty for automatic.</p>
@@ -112,7 +111,9 @@
                                     <label>Remove Hop-by-hop Header<br>
                                     <small>This should be ON by default</small></label>
                                 </div>
-                                <div class="ui divider"></div>
+                                <div class="ui yellow message">
+                                    <p><i class="exclamation triangle icon"></i>Settings in this section are for advanced users. Invalid settings might cause werid, unexpected behavior.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -247,8 +248,9 @@
                     }
                 }
 
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/add",
+                    method: "POST",
                     data: {
                         "type": getHeaderEditMode(),
                         "domain": editingEndpoint.ep,
@@ -279,10 +281,10 @@
             }
 
             function deleteCustomHeader(name){
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/remove",
+                    method: "POST",
                     data: {
-                        //"type": editingEndpoint.ept,
                         "domain": editingEndpoint.ep,
                         "name": name,
                     },
@@ -299,6 +301,7 @@
                 $("#headerTable").html(`<tr><td colspan="3"><i class="ui loading spinner icon"></i> Loading</td></tr>`);
                 $.ajax({
                     url: "/api/proxy/header/list",
+                    method: "GET",
                     data: {
                         "type": editingEndpoint.ept,
                         "domain": editingEndpoint.ep,
@@ -307,7 +310,6 @@
                         if (data.error != undefined){
                             alert(data.error);
                         }else{
-                           
                             $("#headerTable").html("");
                             data.forEach(header => {
                                 let editModeIcon = header.IsRemove?`<i class="ui red times circle icon"></i>`:`<i class="ui green add circle icon"></i>`;
@@ -351,7 +353,7 @@
                     /* Bind events to toggles */
                     $("#enableHSTS").on("change", function(){
                         let HSTSEnabled = $("#enableHSTS")[0].checked;
-                        $.ajax({
+                        $.cjax({
                             url: "/api/proxy/header/handleHSTS",
                             method: "POST",
                             data: {
@@ -426,7 +428,7 @@
                             $("#permissionPolicyEditor").addClass("disabled");
                         }
 
-                        $.ajax({
+                        $.cjax({
                             url: "/api/proxy/header/handlePermissionPolicy",
                             method: "POST",
                             data: {
@@ -532,7 +534,7 @@
                 let permissionPolicy = generatePermissionPolicyObject();
                 let domain = editingEndpoint.ep;
 
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/handlePermissionPolicy",
                     method: "PUT",
                     data: {
@@ -576,7 +578,7 @@
 
             function updateManualHostOverwriteVal(callback=undefined){
                 let newHostname = $("#manualHostOverwrite").val().trim();
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/handleHostOverwrite",
                     method: "POST",
                     data: {
@@ -615,7 +617,7 @@
                         //Bind event to the checkbox
                         $("#removeHopByHop").on("change", function(evt){
                             let isChecked = $(this)[0].checked;
-                            $.ajax({
+                            $.cjax({
                                 url: "/api/proxy/header/handleHopByHop",
                                 method: "POST",
                                 data: {

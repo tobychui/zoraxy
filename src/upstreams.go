@@ -19,7 +19,7 @@ import (
 
 // List upstreams from a endpoint
 func ReverseProxyUpstreamList(w http.ResponseWriter, r *http.Request) {
-	endpoint, err := utils.PostPara(r, "ep")
+	endpoint, err := utils.GetPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "endpoint not defined")
 		return

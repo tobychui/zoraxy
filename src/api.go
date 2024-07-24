@@ -22,11 +22,11 @@ import (
 
 var requireAuth = true
 
-func initAPIs() {
-
+func initAPIs(targetMux *http.ServeMux) {
 	authRouter := auth.NewManagedHTTPRouter(auth.RouterOption{
 		AuthAgent:   authAgent,
 		RequireAuth: requireAuth,
+		TargetMux:   targetMux,
 		DeniedHandler: func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "401 - Unauthorized", http.StatusUnauthorized)
 		},
@@ -37,12 +37,12 @@ func initAPIs() {
 	if development {
 		fs = http.FileServer(http.Dir("web/"))
 	}
-	//Add a layer of middleware for advance  control
+	//Add a layer of middleware for advance control
 	advHandler := FSHandler(fs)
-	http.Handle("/", advHandler)
+	targetMux.Handle("/", advHandler)
 
 	//Authentication APIs
-	registerAuthAPIs(requireAuth)
+	registerAuthAPIs(requireAuth, targetMux)
 
 	//Reverse proxy
 	authRouter.HandleFunc("/api/proxy/enable", ReverseProxyHandleOnOff)
@@ -187,8 +187,8 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/tools/fwdproxy/port", forwardProxy.HandlePort)
 
 	//Account Reset
-	http.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)
-	http.HandleFunc("/api/account/new", HandleNewPasswordSetup)
+	targetMux.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)
+	targetMux.HandleFunc("/api/account/new", HandleNewPasswordSetup)
 
 	//ACME & Auto Renewer
 	authRouter.HandleFunc("/api/acme/listExpiredDomains", acmeHandler.HandleGetExpiredDomains)
@@ -228,7 +228,7 @@ func initAPIs() {
 	authRouter.HandleFunc("/api/docker/containers", DockerUXOptimizer.HandleDockerContainersList)
 
 	//Others
-	http.HandleFunc("/api/info/x", HandleZoraxyInfo)
+	targetMux.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
@@ -243,18 +243,18 @@ func initAPIs() {
 }
 
 // Function to renders Auth related APIs
-func registerAuthAPIs(requireAuth bool) {
+func registerAuthAPIs(requireAuth bool, targetMux *http.ServeMux) {
 	//Auth APIs
-	http.HandleFunc("/api/auth/login", authAgent.HandleLogin)
-	http.HandleFunc("/api/auth/logout", authAgent.HandleLogout)
-	http.HandleFunc("/api/auth/checkLogin", func(w http.ResponseWriter, r *http.Request) {
+	targetMux.HandleFunc("/api/auth/login", authAgent.HandleLogin)
+	targetMux.HandleFunc("/api/auth/logout", authAgent.HandleLogout)
+	targetMux.HandleFunc("/api/auth/checkLogin", func(w http.ResponseWriter, r *http.Request) {
 		if requireAuth {
 			authAgent.CheckLogin(w, r)
 		} else {
 			utils.SendJSONResponse(w, "true")
 		}
 	})
-	http.HandleFunc("/api/auth/username", func(w http.ResponseWriter, r *http.Request) {
+	targetMux.HandleFunc("/api/auth/username", func(w http.ResponseWriter, r *http.Request) {
 		username, err := authAgent.GetUserName(w, r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -264,12 +264,12 @@ func registerAuthAPIs(requireAuth bool) {
 		js, _ := json.Marshal(username)
 		utils.SendJSONResponse(w, string(js))
 	})
-	http.HandleFunc("/api/auth/userCount", func(w http.ResponseWriter, r *http.Request) {
+	targetMux.HandleFunc("/api/auth/userCount", func(w http.ResponseWriter, r *http.Request) {
 		uc := authAgent.GetUserCounts()
 		js, _ := json.Marshal(uc)
 		utils.SendJSONResponse(w, string(js))
 	})
-	http.HandleFunc("/api/auth/register", func(w http.ResponseWriter, r *http.Request) {
+	targetMux.HandleFunc("/api/auth/register", func(w http.ResponseWriter, r *http.Request) {
 		if authAgent.GetUserCounts() == 0 {
 			//Allow register root admin
 			authAgent.HandleRegisterWithoutEmail(w, r, func(username, reserved string) {
@@ -280,7 +280,7 @@ func registerAuthAPIs(requireAuth bool) {
 			utils.SendErrorResponse(w, "Root management account already exists")
 		}
 	})
-	http.HandleFunc("/api/auth/changePassword", func(w http.ResponseWriter, r *http.Request) {
+	targetMux.HandleFunc("/api/auth/changePassword", func(w http.ResponseWriter, r *http.Request) {
 		username, err := authAgent.GetUserName(w, r)
 		if err != nil {
 			http.Error(w, "401 - Unauthorized", http.StatusUnauthorized)

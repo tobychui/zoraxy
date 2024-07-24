@@ -339,7 +339,7 @@ function setWoLAddress() {
         $("#wol_mac").parent().removeClass("error");
     }
 
-    $.ajax({
+    $.cjax({
         url: wake_on_lan_API,
         type: "POST",
         data: {
@@ -363,7 +363,7 @@ function setWoLAddress() {
 
 function delWoLAddr(mac, name) {
     if (confirm(`Confirm remove WoL record for ${name} (${mac}) ?`)){
-        $.ajax({
+        $.cjax({
             url: wake_on_lan_API,
             type: "POST",
             data: {
@@ -385,7 +385,7 @@ function wakeWoL(mac, object=undefined) {
     if (object != undefined){
         $(object).addClass("loading").addClass("disabled");
     }
-    $.ajax({
+    $.cjax({
         url: wake_on_lan_API,
         type: "POST",
         data: {
@@ -594,7 +594,7 @@ function initForwardProxyInfo(){
 initForwardProxyInfo();
 
 function toggleForwadProxy(enabled){
-    $.ajax({
+    $.cjax({
         url: "/api/tools/fwdproxy/enable",
         method: "POST",
         data: {
@@ -620,7 +620,7 @@ function updateForwardProxyPort(){
         $("#newPortNumber").parent().removeClass('error');
     }
 
-    $.ajax({
+    $.cjax({
         url: "/api/tools/fwdproxy/port",
         method: "POST",
         data: {

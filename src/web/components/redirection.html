@@ -116,7 +116,7 @@
         let forwardChildpath = document.querySelector('input[name="forward-childpath"]').checked;
         let redirectType = document.querySelector('input[name="redirect-type"]:checked').value;
 
-        $.ajax({
+        $.cjax({
             url: "/api/redirect/add", 
             method: "POST",
             data: {
@@ -141,7 +141,7 @@
       let targetURL = $(obj).attr("rurl");
       targetURL = JSON.parse(decodeURIComponent(targetURL));
       if (confirm("Confirm remove redirection from " + targetURL + " ?")){
-        $.ajax({
+        $.cjax({
               url: "/api/redirect/delete", 
               method: "POST",
               data: {
@@ -191,8 +191,9 @@
 
         //Bind event to the checkbox
         $("#redirectRegex").on("change", function(){
-          $.ajax({
+          $.cjax({
             url: "/api/redirect/regex",
+            method: "POST",
             data: {"enable": $(this)[0].checked},
             success: function(data){
               if (data.error != undefined){

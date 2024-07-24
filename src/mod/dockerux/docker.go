@@ -3,8 +3,6 @@
 
 package dockerux
 
-/* Windows docker optimizer*/
-
 import (
 	"context"
 	"encoding/json"
@@ -16,7 +14,6 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
-// Windows build not support docker
 func (d *UXOptimizer) HandleDockerAvailable(w http.ResponseWriter, r *http.Request) {
 	js, _ := json.Marshal(d.RunninInDocker)
 	utils.SendJSONResponse(w, string(js))

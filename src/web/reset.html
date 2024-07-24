@@ -2,6 +2,7 @@
 <html>
     <head>
     <meta charset="UTF-8">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
     <meta name="robots" content="noindex" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="./favicon.png" />
@@ -255,25 +256,36 @@
             }
 
             // Send POST request with input values as data
-            $.post('/api/account/new', { username: username, token: token, newpw: newPassword })
-            .done(function(data) {
-                // Handle successful response
-                if (data.error != undefined){
-                    $("#errmsg").html(`<i class="red circle times icon"></i> ` + data.error);
-                    $("#errmsg").show();
-                }else{
-                    $("#errmsg").hide();
-                    $("#countdown").hide();
-                    $("#succmsg").show();
-                    setTimeout(function(){
-                        window.location.href = "/";
-                    }, 3000);
+            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+            $.ajax({
+                url: "/api/account/new",
+                method: "POST",
+                data: {
+                    username: username, 
+                    token: token, 
+                    newpw: newPassword
+                },
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                },
+                success: function(data){
+                    // Handle successful response
+                    if (data.error != undefined){
+                        $("#errmsg").html(`<i class="red circle times icon"></i> ` + data.error);
+                        $("#errmsg").show();
+                    }else{
+                        $("#errmsg").hide();
+                        $("#countdown").hide();
+                        $("#succmsg").show();
+                        setTimeout(function(){
+                            window.location.href = "/";
+                        }, 3000);
+                    }
+                },
+                error: function(){
+                    console.error(error);
                 }
             })
-            .fail(function(error) {
-                // Handle error response
-                console.error(error);
-            });
         });
 
 

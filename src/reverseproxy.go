@@ -572,7 +572,7 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
-	ep, err := utils.GetPara(r, "ep")
+	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
 		return
@@ -941,18 +941,22 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 
 // Handle port 80 incoming traffics
 func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
-	enabled, err := utils.GetPara(r, "enable")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		//Load the current status
 		currentEnabled := false
-		err = sysdb.Read("settings", "listenP80", &currentEnabled)
+		err := sysdb.Read("settings", "listenP80", &currentEnabled)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
 		}
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	} else if r.Method == http.MethodPost {
+		enabled, err := utils.PostPara(r, "enable")
+		if err != nil {
+			utils.SendErrorResponse(w, "enable state not set")
+			return
+		}
 		if enabled == "true" {
 			sysdb.Write("settings", "listenP80", true)
 			SystemWideLogger.Println("Enabling port 80 listener")
@@ -965,38 +969,48 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
 		}
 		utils.SendOK(w)
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
+
 }
 
 // Handle https redirect
 func HandleUpdateHttpsRedirect(w http.ResponseWriter, r *http.Request) {
-	useRedirect, err := utils.GetPara(r, "set")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		currentRedirectToHttps := false
 		//Load the current status
-		err = sysdb.Read("settings", "redirect", &currentRedirectToHttps)
+		err := sysdb.Read("settings", "redirect", &currentRedirectToHttps)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
 		}
 		js, _ := json.Marshal(currentRedirectToHttps)
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	} else if r.Method == http.MethodPost {
+		useRedirect, err := utils.PostBool(r, "set")
+		if err != nil {
+			utils.SendErrorResponse(w, "status not set")
+			return
+		}
+
 		if dynamicProxyRouter.Option.Port == 80 {
 			utils.SendErrorResponse(w, "This option is not available when listening on port 80")
 			return
 		}
-		if useRedirect == "true" {
+		if useRedirect {
 			sysdb.Write("settings", "redirect", true)
 			SystemWideLogger.Println("Updating force HTTPS redirection to true")
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(true)
-		} else if useRedirect == "false" {
+		} else {
 			sysdb.Write("settings", "redirect", false)
 			SystemWideLogger.Println("Updating force HTTPS redirection to false")
 			dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
 		}
 
 		utils.SendOK(w)
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -1086,13 +1100,13 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 //List all the custom header defined in this proxy rule
 
 func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
-	epType, err := utils.PostPara(r, "type")
+	epType, err := utils.GetPara(r, "type")
 	if err != nil {
 		utils.SendErrorResponse(w, "endpoint type not defined")
 		return
 	}
 
-	domain, err := utils.PostPara(r, "domain")
+	domain, err := utils.GetPara(r, "domain")
 	if err != nil {
 		utils.SendErrorResponse(w, "domain or matching rule not defined")
 		return

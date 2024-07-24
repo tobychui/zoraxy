@@ -400,7 +400,7 @@
         let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
 
-        $.ajax({
+        $.cjax({
             url: "/api/proxy/edit",
             method: "POST",
             data: {
@@ -422,6 +422,28 @@
             }
         })
     }
+
+    //Generic functions for delete rp endpoints 
+    function deleteEndpoint(epoint){
+        epoint = decodeURIComponent(epoint).hexDecode();
+        if (confirm("Confirm remove proxy for :" + epoint + "?")){
+            $.cjax({
+                url: "/api/proxy/del",
+                method: "POST",
+                data: {ep: epoint},
+                success: function(data){
+                    if (data.error == undefined){
+                        listProxyEndpoints();
+                        msgbox("Proxy Rule Deleted", true);
+                        reloadUptimeList();
+                    }else{
+                        msgbox(data.error, false);
+                    }
+                }
+            })
+        }
+    }
+
     
     /* button events */
     function editBasicAuthCredentials(uuid){
@@ -474,7 +496,7 @@
     function handleProxyRuleToggle(object){
         let endpointUUID = $(object).attr("eptuuid");
         let isChecked = object.checked;
-        $.ajax({
+        $.cjax({
             url: "/api/proxy/toggle",
             data: {
                 "ep": endpointUUID,

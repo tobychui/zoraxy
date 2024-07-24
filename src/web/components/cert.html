@@ -257,7 +257,7 @@
     //Delete the certificate by its domain
     function deleteCertificate(domain){
         if (confirm("Confirm delete certificate for " + domain + " ?")){
-            $.ajax({
+            $.cjax({
                 url: "/api/cert/delete",
                 method: "POST",
                 data: {domain: domain},
@@ -316,7 +316,7 @@
             return;
         }
 
-        $.ajax({
+        $.cjax({
             url: "/api/acme/autoRenew/email",
             method: "POST",
             data: {"set": newDefaultEmail},
@@ -330,7 +330,7 @@
             }
         });
 
-        $.ajax({
+        $.cjax({
             url: "/api/acme/autoRenew/ca",
             data: {"set": newDefaultCA},
             method: "POST",

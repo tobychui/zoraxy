@@ -140,7 +140,7 @@ func (a *AutoRenewer) StopAutoRenewTicker() {
 // opr = setSelected -> Enter a list of file names (or matching rules) for auto renew
 // opr = setAuto -> Set to use auto detect certificates and renew
 func (a *AutoRenewer) HandleSetAutoRenewDomains(w http.ResponseWriter, r *http.Request) {
-	opr, err := utils.GetPara(r, "opr")
+	opr, err := utils.PostPara(r, "opr")
 	if err != nil {
 		utils.SendErrorResponse(w, "Operation not set")
 		return
@@ -170,6 +170,8 @@ func (a *AutoRenewer) HandleSetAutoRenewDomains(w http.ResponseWriter, r *http.R
 		a.RenewerConfig.RenewAll = true
 		a.saveRenewConfigToFile()
 		utils.SendOK(w)
+	} else {
+		utils.SendErrorResponse(w, "invalid operation given")
 	}
 
 }
@@ -213,19 +215,22 @@ func (a *AutoRenewer) HandleRenewNow(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+// HandleAutoRenewEnable get and set the auto renew enable state
 func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Request) {
-	val, err := utils.PostPara(r, "enable")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		js, _ := json.Marshal(a.RenewerConfig.Enabled)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if val == "true" {
+	} else if r.Method == http.MethodPost {
+		val, err := utils.PostBool(r, "enable")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid or empty enable state")
+		}
+		if val {
 			//Check if the email is not empty
 			if a.RenewerConfig.Email == "" {
 				utils.SendErrorResponse(w, "Email is not set")
 				return
 			}
-
 			a.RenewerConfig.Enabled = true
 			a.saveRenewConfigToFile()
 			log.Println("[ACME] ACME auto renew enabled")
@@ -236,7 +241,10 @@ func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Reque
 			log.Println("[ACME] ACME auto renew disabled")
 			a.StopAutoRenewTicker()
 		}
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
+
 }
 
 func (a *AutoRenewer) HandleACMEEmail(w http.ResponseWriter, r *http.Request) {

@@ -3,9 +3,11 @@
     <head>
         <!-- Notes: This should be open in its original path-->
         <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <link rel="stylesheet" href="../script/semantic/semantic.min.css">
         <script src="../script/jquery-3.6.0.min.js"></script>
         <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
     </head>
     <body>
         <br>
@@ -71,7 +73,7 @@
             }
 
             function initAliasNames(){
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/detail",
                     method: "POST",
                     data: {
@@ -130,7 +132,7 @@
             }
 
             function saveCurrentAliasList(callback=undefined){
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/setAlias",
                     method: "POST",
                     data:{

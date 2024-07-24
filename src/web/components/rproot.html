@@ -181,8 +181,9 @@
             targetDomain = targetDomain.substring(8);
             $("#proxyRoot").val(targetDomain);
         }
-       $.ajax({
+       $.cjax({
             url: "/api/proxy/tlscheck",
+            method: "POST",
             data: {url: targetDomain},
             success: function(data){
                 if (data.error != undefined){
@@ -232,7 +233,7 @@
         }
 
         //Create the endpoint by calling add
-        $.ajax({
+        $.cjax({
             url: "/api/proxy/add",
             data: {
                 "type": "root", 

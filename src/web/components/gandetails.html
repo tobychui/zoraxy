@@ -214,7 +214,7 @@
         //Get CIDR from selected range group
         var cidr = $(".iprange.active").attr("cidr");
 
-        $.ajax({
+        $.cjax({
             url: "/api/gan/network/setRange",
             metohd: "POST",
             data:{
@@ -240,7 +240,7 @@
         if (object != undefined){
             $(object).addClass("loading");
         }
-        $.ajax({
+        $.cjax({
             url: "/api/gan/network/name",
             method: "POST",
             data: {
@@ -287,7 +287,7 @@
 
     //Handle delete IP from memeber
     function deleteIpFromMemeber(memberid, ip){
-        $.ajax({
+        $.cjax({
             url: "/api/gan/members/ip",
             metohd: "POST",
             data: {
@@ -334,7 +334,7 @@
             return
         }
 
-        $.ajax({
+        $.cjax({
             url: "/api/gan/members/ip",
             metohd: "POST",
             data: {
@@ -461,7 +461,7 @@
         $(".memberName").each(function(){
             let addr = $(this).attr("addr");
             let targetDOM = $(this);
-            $.ajax({
+            $.cjax({
                 url: "/api/gan/members/name",
                 method: "POST",
                 data: {
@@ -487,7 +487,7 @@
 
         let newname = prompt("Enter a easy manageable name for " + targetMemberAddr, "");
         if (newname != null && newname.trim() != "") {
-          $.ajax({
+          $.cjax({
             url: "/api/gan/members/name",
             method: "POST",
             data: {
@@ -553,7 +553,7 @@
     function handleMemberAuth(object){
         let targetMemberAddr = $(object).attr("addr");
         let isAuthed = object.checked;
-        $.ajax({
+        $.cjax({
             url: "/api/gan/members/authorize",
             method: "POST",
             data: {
@@ -580,7 +580,7 @@
 
     function handleMemberDelete(addr){
         if (confirm("Confirm delete member " + addr + " ?")){
-            $.ajax({
+            $.cjax({
                 url: "/api/gan/members/delete",
                 method: "POST",
                 data: {
@@ -605,7 +605,7 @@
         $(".addControllerToNetworkBtn").addClass("disabled");
         $(".addControllerToNetworkBtn").addClass("loading");
     
-        $.ajax({
+        $.cjax({
             url: "/api/gan/network/join",
             method: "POST",
             data: {
@@ -630,7 +630,7 @@
         $(".removeControllerFromNetworkBtn").addClass("disabled");
         $(".removeControllerFromNetworkBtn").addClass("loading");
         
-        $.ajax({
+        $.cjax({
             url: "/api/gan/network/leave",
             method: "POST",
             data: {
