@@ -180,8 +180,14 @@ func main() {
 	nodeUUID = string(uuidBytes)
 
 	//Create a new webmin mux and csrf middleware layer
-	webminPanelMux := http.NewServeMux()
-	csrfMiddleware := csrf.Protect([]byte(nodeUUID))
+	webminPanelMux = http.NewServeMux()
+	csrfMiddleware = csrf.Protect(
+		[]byte(nodeUUID),
+		csrf.CookieName("zoraxy-csrf"),
+		csrf.Secure(false),
+		csrf.Path("/"),
+		csrf.SameSite(csrf.SameSiteLaxMode),
+	)
 
 	//Startup all modules
 	startupSequence()
