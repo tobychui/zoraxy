@@ -130,8 +130,8 @@ func getRandomUpstreamByWeight(upstreams []*Upstream) (*Upstream, int, error) {
 	if totalWeight == 0 {
 		if len(fallbackUpstreams) > 0 {
 			// Randomly select one of the fallback upstreams
-			index := rand.Intn(len(fallbackUpstreams))
-			return fallbackUpstreams[index].Upstream, fallbackUpstreams[index].Index, nil
+			randIndex := rand.Intn(len(fallbackUpstreams))
+			return fallbackUpstreams[randIndex].Upstream, fallbackUpstreams[randIndex].Index, nil
 		}
 		// No upstreams available at all
 		return nil, -1, errors.New("no valid upstream servers available")
@@ -153,8 +153,8 @@ func getRandomUpstreamByWeight(upstreams []*Upstream) (*Upstream, int, error) {
 
 	// If we reach here, it means we should return a fallback upstream if available
 	if len(fallbackUpstreams) > 0 {
-		index := rand.Intn(len(fallbackUpstreams))
-		return fallbackUpstreams[index].Upstream, fallbackUpstreams[index].Index, nil
+		randIndex := rand.Intn(len(fallbackUpstreams))
+		return fallbackUpstreams[randIndex].Upstream, fallbackUpstreams[randIndex].Index, nil
 	}
 
 	return nil, -1, errors.New("failed to pick an upstream origin server")
