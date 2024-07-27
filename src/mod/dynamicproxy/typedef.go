@@ -136,7 +136,8 @@ type ProxyEndpoint struct {
 	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
 	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
 	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
-	DisableHopByHopHeaderRemoval bool                                //TODO: Do not remove hop-by-hop headers
+	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
+	DisableAutoWebSockeyProxy    bool                                //Disable auto sniffing logic for websocket upgrade
 
 	//Authentication
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy

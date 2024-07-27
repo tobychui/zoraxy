@@ -1349,7 +1349,8 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 		//we need to clone and respawn this proxy endpoint
 		newProxyEndpoint := targetProxyEndpoint.Clone()
 		//Storage file use false as default, so disable removal = not enable remover
-		targetProxyEndpoint.DisableHopByHopHeaderRemoval = !enableHopByHopRemover
+		newProxyEndpoint.DisableHopByHopHeaderRemoval = !enableHopByHopRemover
+
 		//Save proxy endpoint
 		err = SaveReverseProxyConfig(newProxyEndpoint)
 		if err != nil {

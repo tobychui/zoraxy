@@ -1,7 +1,10 @@
 package dpcore
 
 import (
+	"bytes"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -91,4 +94,64 @@ func isExternalDomainName(hostname string) bool {
 	}
 
 	return true
+}
+
+// DeepCopyRequest returns a deep copy of the given http.Request.
+func DeepCopyRequest(req *http.Request) (*http.Request, error) {
+	// Copy the URL
+	urlCopy := *req.URL
+
+	// Copy the headers
+	headersCopy := make(http.Header, len(req.Header))
+	for k, vv := range req.Header {
+		vvCopy := make([]string, len(vv))
+		copy(vvCopy, vv)
+		headersCopy[k] = vvCopy
+	}
+
+	// Copy the cookies
+	cookiesCopy := make([]*http.Cookie, len(req.Cookies()))
+	for i, cookie := range req.Cookies() {
+		cookieCopy := *cookie
+		cookiesCopy[i] = &cookieCopy
+	}
+
+	// Copy the body, if present
+	var bodyCopy io.ReadCloser
+	if req.Body != nil {
+		var buf bytes.Buffer
+		if _, err := buf.ReadFrom(req.Body); err != nil {
+			return nil, err
+		}
+		// Reset the request body so it can be read again
+		if err := req.Body.Close(); err != nil {
+			return nil, err
+		}
+		req.Body = io.NopCloser(&buf)
+		bodyCopy = io.NopCloser(bytes.NewReader(buf.Bytes()))
+	}
+
+	// Create the new request
+	reqCopy := &http.Request{
+		Method:           req.Method,
+		URL:              &urlCopy,
+		Proto:            req.Proto,
+		ProtoMajor:       req.ProtoMajor,
+		ProtoMinor:       req.ProtoMinor,
+		Header:           headersCopy,
+		Body:             bodyCopy,
+		ContentLength:    req.ContentLength,
+		TransferEncoding: append([]string(nil), req.TransferEncoding...),
+		Close:            req.Close,
+		Host:             req.Host,
+		Form:             req.Form,
+		PostForm:         req.PostForm,
+		MultipartForm:    req.MultipartForm,
+		Trailer:          req.Trailer,
+		RemoteAddr:       req.RemoteAddr,
+		TLS:              req.TLS,
+		// Cancel and Context are not copied as it might cause issues
+	}
+
+	return reqCopy, nil
 }

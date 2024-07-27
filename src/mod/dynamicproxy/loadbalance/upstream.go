@@ -61,8 +61,8 @@ func (u *Upstream) Clone() *Upstream {
 	return &newUpstream
 }
 
-// ServeHTTP uses this upstream proxy router to route the current request
-func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request, rrr *dpcore.ResponseRewriteRuleSet) error {
+// ServeHTTP uses this upstream proxy router to route the current request, return the status code and error if any
+func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request, rrr *dpcore.ResponseRewriteRuleSet) (int, error) {
 	//Auto rewrite to upstream origin if not set
 	if rrr.ProxyDomain == "" {
 		rrr.ProxyDomain = u.OriginIpOrDomain
