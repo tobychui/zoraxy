@@ -79,27 +79,16 @@ func getExcludedDNSProviders() []string {
 		"selectelv2",   //Not sure why not working with our code generator
 		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
 		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
+		"directadmin",  //Reserve for next dependency update
 	}
 }
 
 // Exclude list for Windows build, due to limitations for lego versions
 func getExcludedDNSProvidersNT61() []string {
-	return []string{
-		"edgedns",      //Too complex data structure
-		"exec",         //Not a DNS provider
-		"httpreq",      //Not a DNS provider
-		"hurricane",    //Multi-credentials arch
-		"oraclecloud",  //Evil company
-		"acmedns",      //Not a DNS provider
-		"selectelv2",   //Not sure why not working with our code generator
-		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
-		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
-
-		//The following suppliers was not in lego v1.15 (Windows 7 last supported version of lego)
-		"cpanel",
+	return append(getExcludedDNSProviders(), []string{"cpanel",
 		"mailinabox",
 		"shellrent",
-	}
+	}...)
 }
 
 func isInSlice(str string, slice []string) bool {
@@ -281,6 +270,7 @@ func main() {
 		if err != nil {
 			return nil, err
 		}
+		cfg.PropagationTimeout = 5*time.Minute
 		return ` + providerName + `.NewDNSProviderConfig(cfg)`
 
 		//Add fixed for Netcup timeout
@@ -292,7 +282,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			cfg.PropagationTimeout = 1200 * time.Second
+			cfg.PropagationTimeout = 20*time.Minute
 			return ` + providerName + `.NewDNSProviderConfig(cfg)`
 		}
 		generatedConvertcode += codeSegment
