@@ -248,15 +248,19 @@ func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Reque
 }
 
 func (a *AutoRenewer) HandleACMEEmail(w http.ResponseWriter, r *http.Request) {
-
-	email, err := utils.PostPara(r, "set")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		//Return the current email to user
 		js, _ := json.Marshal(a.RenewerConfig.Email)
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	} else if r.Method == http.MethodPost {
+		email, err := utils.PostPara(r, "set")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid or empty email given")
+			return
+		}
+
 		//Check if the email is valid
-		_, err := mail.ParseAddress(email)
+		_, err = mail.ParseAddress(email)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -265,8 +269,11 @@ func (a *AutoRenewer) HandleACMEEmail(w http.ResponseWriter, r *http.Request) {
 		//Set the new config
 		a.RenewerConfig.Email = email
 		a.saveRenewConfigToFile()
-	}
 
+		utils.SendOK(w)
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // Check and renew certificates. This check all the certificates in the

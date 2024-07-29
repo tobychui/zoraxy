@@ -123,32 +123,30 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	/* WebSocket automatic proxy */
-	if !target.DisableAutoWebSockeyProxy {
-		requestURL := r.URL.String()
-		if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
-			//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
-			r.Header.Set("Zr-Origin-Upgrade", "websocket")
-			wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
-			if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
-				//Append / to the end of the redirection endpoint if not exists
-				wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
-			}
-			if len(requestURL) > 0 && requestURL[:1] == "/" {
-				//Remove starting / from request URL if exists
-				requestURL = requestURL[1:]
-			}
-			u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
-			if selectedUpstream.RequireTLS {
-				u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
-			}
-			h.Parent.logRequest(r, true, 101, "host-websocket", selectedUpstream.OriginIpOrDomain)
-			wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-				SkipTLSValidation: selectedUpstream.SkipCertValidations,
-				SkipOriginCheck:   selectedUpstream.SkipWebSocketOriginCheck,
-			})
-			wspHandler.ServeHTTP(w, r)
-			return
+	requestURL := r.URL.String()
+	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
+		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
+		r.Header.Set("Zr-Origin-Upgrade", "websocket")
+		wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
+		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
+			//Append / to the end of the redirection endpoint if not exists
+			wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
 		}
+		if len(requestURL) > 0 && requestURL[:1] == "/" {
+			//Remove starting / from request URL if exists
+			requestURL = requestURL[1:]
+		}
+		u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
+		if selectedUpstream.RequireTLS {
+			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
+		}
+		h.Parent.logRequest(r, true, 101, "host-websocket", selectedUpstream.OriginIpOrDomain)
+		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
+			SkipTLSValidation: selectedUpstream.SkipCertValidations,
+			SkipOriginCheck:   selectedUpstream.SkipWebSocketOriginCheck,
+		})
+		wspHandler.ServeHTTP(w, r)
+		return
 	}
 
 	originalHostHeader := r.Host

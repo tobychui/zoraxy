@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -21,15 +22,16 @@ type CertCache struct {
 }
 
 type Manager struct {
-	CertStore   string       //Path where all the certs are stored
-	LoadedCerts []*CertCache //A list of loaded certs
+	CertStore   string         //Path where all the certs are stored
+	LoadedCerts []*CertCache   //A list of loaded certs
+	Logger      *logger.Logger //System wide logger for debug mesage
 	verbal      bool
 }
 
 //go:embed localhost.pem localhost.key
 var buildinCertStore embed.FS
 
-func NewManager(certStore string, verbal bool) (*Manager, error) {
+func NewManager(certStore string, verbal bool, logger *logger.Logger) (*Manager, error) {
 	if !utils.FileExists(certStore) {
 		os.MkdirAll(certStore, 0775)
 	}
@@ -52,6 +54,7 @@ func NewManager(certStore string, verbal bool) (*Manager, error) {
 		CertStore:   certStore,
 		LoadedCerts: []*CertCache{},
 		verbal:      verbal,
+		Logger:      logger,
 	}
 
 	err := thisManager.UpdateLoadedCertList()
@@ -78,7 +81,7 @@ func (m *Manager) UpdateLoadedCertList() error {
 		priKey := filepath.Join(m.CertStore, certname+".key")
 		certificate, err := tls.LoadX509KeyPair(pubKey, priKey)
 		if err != nil {
-			log.Println("Certificate loaded failed: " + certname)
+			m.Logger.PrintAndLog("tls-router", "Certificate load failed: "+certname, err)
 			continue
 		}
 
@@ -86,6 +89,7 @@ func (m *Manager) UpdateLoadedCertList() error {
 			loadedCert, err := x509.ParseCertificate(thisCert)
 			if err != nil {
 				//Error pasring cert, skip this byte segment
+				m.Logger.PrintAndLog("tls-router", "Certificate parse failed: "+certname, err)
 				continue
 			}
 
@@ -171,37 +175,10 @@ func (m *Manager) GetCert(helloInfo *tls.ClientHelloInfo) (*tls.Certificate, err
 		pubKey, priKey = m.GetCertByX509CNHostname(helloInfo.ServerName)
 	} else {
 		//Fallback to legacy method of matching certificates
-		/*
-			domainCerts, _ := m.ListCertDomains()
-			cloestDomainCert := matchClosestDomainCertificate(helloInfo.ServerName, domainCerts)
-			if cloestDomainCert != "" {
-				//There is a matching parent domain for this subdomain. Use this instead.
-				pubKey = filepath.Join(m.CertStore, cloestDomainCert+".pem")
-				priKey = filepath.Join(m.CertStore, cloestDomainCert+".key")
-			} else if m.DefaultCertExists() {
-				//Use default.pem and default.key
-				pubKey = filepath.Join(m.CertStore, "default.pem")
-				priKey = filepath.Join(m.CertStore, "default.key")
-				if m.verbal {
-					log.Println("No matching certificate found. Serving with default")
-				}
-			} else {
-				if m.verbal {
-					log.Println("Matching certificate not found. Serving with build-in certificate. Requesting server name: ", helloInfo.ServerName)
-				}
-			}*/
-
 		if m.DefaultCertExists() {
 			//Use default.pem and default.key
 			pubKey = filepath.Join(m.CertStore, "default.pem")
 			priKey = filepath.Join(m.CertStore, "default.key")
-			//if m.verbal {
-			//	log.Println("No matching certificate found. Serving with default")
-			//}
-		} else {
-			//if m.verbal {
-			//	log.Println("Matching certificate not found. Serving with build-in certificate. Requesting server name: ", helloInfo.ServerName)
-			//}
 		}
 	}
 

@@ -84,7 +84,7 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager("./conf/certs", development)
+	tlsCertManager, err = tlscert.NewManager("./conf/certs", development, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}

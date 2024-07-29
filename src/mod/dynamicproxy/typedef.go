@@ -137,7 +137,6 @@ type ProxyEndpoint struct {
 	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
 	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
 	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
-	DisableAutoWebSockeyProxy    bool                                //Disable auto sniffing logic for websocket upgrade
 
 	//Authentication
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
