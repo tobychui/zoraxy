@@ -154,6 +154,10 @@
   "Name": "azure",
   "ConfigableFields": [
    {
+    "Title": "ZoneName",
+    "Datatype": "string"
+   },
+   {
     "Title": "ClientID",
     "Datatype": "string"
    },
@@ -208,6 +212,10 @@
  "azuredns": {
   "Name": "azuredns",
   "ConfigableFields": [
+   {
+    "Title": "ZoneName",
+    "Datatype": "string"
+   },
    {
     "Title": "SubscriptionID",
     "Datatype": "string"
@@ -343,6 +351,10 @@
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
+   },
+   {
+    "Title": "SkipDeploy",
+    "Datatype": "bool"
    }
   ]
  },
