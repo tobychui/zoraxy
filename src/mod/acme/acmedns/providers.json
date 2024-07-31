@@ -1227,10 +1227,6 @@
   "Name": "gandi",
   "ConfigableFields": [
    {
-    "Title": "BaseURL",
-    "Datatype": "string"
-   },
-   {
     "Title": "APIKey",
     "Datatype": "string"
    }
@@ -1253,10 +1249,6 @@
  "gandiv5": {
   "Name": "gandiv5",
   "ConfigableFields": [
-   {
-    "Title": "BaseURL",
-    "Datatype": "string"
-   },
    {
     "Title": "APIKey",
     "Datatype": "string"
