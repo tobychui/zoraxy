@@ -216,6 +216,11 @@ func main() {
 			case "*url.URL":
 				fallthrough
 			case "string":
+				//Add exception rule for gandi baseURL
+				if (providerName == "gandi" || providerName == "gandiv5") && fields[0] == "BaseURL" {
+					//Not useful stuff. Ignore this field
+					continue
+				}
 				configKeys = append(configKeys, &Field{
 					Title:    fields[0],
 					Datatype: fields[1],
