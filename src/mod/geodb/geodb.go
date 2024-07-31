@@ -19,9 +19,8 @@ type Store struct {
 	geodbIpv6   [][]string //Parsed geodb list for ipv6
 	geotrie     *trie
 	geotrieIpv6 *trie
-	//geoipCache sync.Map
-	sysdb  *database.Database
-	option *StoreOptions
+	sysdb       *database.Database
+	option      *StoreOptions
 }
 
 type StoreOptions struct {

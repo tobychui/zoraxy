@@ -43,7 +43,7 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 	// Create a new store
 	store, err := geodb.NewGeoDb(nil, &geodb.StoreOptions{
 		false,
-		false,
+		true,
 	})
 	if err != nil {
 		t.Errorf("error creating store: %v", err)
@@ -56,6 +56,7 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 		{"176.113.115.113", "RU"},
 		{"65.21.233.213", "FI"},
 		{"94.23.207.193", "FR"},
+		{"77.131.21.232", "FR"},
 	}
 
 	for _, testcase := range knownIpCountryMap {
