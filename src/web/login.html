@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
     <link rel="icon" type="image/png" href="./favicon.png" />
     <title>Login | Zoraxy</title>
     <link rel="stylesheet" href="script/semantic/semantic.min.css">
@@ -250,10 +251,10 @@
         });
 
         $("#regsiterbtn").on("click", function(event){
-            var username = $("#username").val();
-            var magic = $("#magic").val();
-            var repeatMagic = $("#repeatMagic").val();
-
+            let username = $("#username").val();
+            let magic = $("#magic").val();
+            let repeatMagic = $("#repeatMagic").val();
+            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
             if (magic !== repeatMagic) {
                 alert("Password does not match");
                 return;
@@ -262,6 +263,9 @@
             $.ajax({
                 url: "/api/auth/register",
                 method: "POST",
+                beforeSend: function(request) {
+                    request.setRequestHeader("X-CSRF-Token",csrfToken);
+                },
                 data: {
                     username: username,
                     password: magic
@@ -297,29 +301,45 @@
 
         //Login system with the given username and password
         function login(){
-            var username = $("#username").val();
-            var magic = $("#magic").val();
-            var rmbme = document.getElementById("rmbme").checked;
+            let username = $("#username").val();
+            let magic = $("#magic").val();
+            let rmbme = document.getElementById("rmbme").checked;
+            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
             $("#errmsg").stop().finish().slideUp("fast");
             $("input").addClass('disabled');
-            $.post(loginAddress, {"username": username, "password": magic, "rmbme": rmbme}).done(function(data){
-                if (data.error !== undefined){
-                    //Something went wrong during the login
-                    $("#errmsg").html(`<i class="red remove icon"></i> ${data.error}`);
-                    $("#errmsg").stop().finish().slideDown('fast');
-                }else if(data.redirect !== undefined){
-                    //LDAP Related Code
-                    window.location.href = data.redirect;
-                }else{
-                    //Login succeed
-                    if (redirectionAddress == ""){
-                        //Redirect back to index
-                        window.location.href = "./";
+            $.ajax({
+                url: loginAddress, 
+                type: "POST",
+                beforeSend: function(request) {
+                    request.setRequestHeader("X-CSRF-Token",csrfToken);
+                },
+                data: {
+                    "username": username, 
+                    "password": magic, 
+                    "rmbme": rmbme,
+                },
+                success: function(data){
+                    if (data.error !== undefined){
+                        //Something went wrong during the login
+                        $("#errmsg").html(`<i class="red remove icon"></i> ${data.error}`);
+                        $("#errmsg").stop().finish().slideDown('fast');
+                    }else if(data.redirect !== undefined){
+                        //LDAP Related Code
+                        window.location.href = data.redirect;
                     }else{
-                        window.location.href = redirectionAddress;
+                        //Login succeed
+                        if (redirectionAddress == ""){
+                            //Redirect back to index
+                            window.location.href = "./";
+                        }else{
+                            window.location.href = redirectionAddress;
+                        }
                     }
+                    $("input").removeClass('disabled');
+                },
+                error: function(){
+                    alert("Something went wrong.")
                 }
-                $("input").removeClass('disabled');
             });
 
         }

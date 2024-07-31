@@ -233,7 +233,7 @@
         const newPassword = document.getElementsByName('newPassword')[0].value;
         const confirmNewPassword = document.getElementsByName('confirmNewPassword')[0].value;
         
-        $.ajax({
+        $.cjax({
             type: "POST",
             url: "/api/auth/changePassword",
             data: {
@@ -279,7 +279,7 @@
             return;
         }
 
-        $.ajax({
+        $.cjax({
             type: "POST",
             url: "/api/tools/smtp/set",
             data: data,

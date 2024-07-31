@@ -3,9 +3,11 @@
     <head>
         <!-- Notes: This should be open in its original path-->
         <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <link rel="stylesheet" href="../script/semantic/semantic.min.css">
         <script src="../script/jquery-3.6.0.min.js"></script>
         <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
         <style>
             .ui.tabular.menu .item.narrowpadding{
                 padding: 0.6em !important;
@@ -83,6 +85,40 @@
                         <div class="ui divider"></div>
                     </div>
                 </div>
+                <div class="ui divider"></div>
+                <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+                    <div class="ui fluid accordion">
+                        <div class="title">
+                        <i class="dropdown icon" tabindex="0"><div class="menu" tabindex="-1"></div></i>
+                        Advance Settings
+                        </div>
+                        <div class="content">
+                            <br>
+                            <div class="ui container">
+                                <h4>Overwrite Host Header</h4>
+                                <p>Manual override the automatic "Host" header rewrite logic. Leave empty for automatic.</p>
+                                <div class="ui fluid action input">
+                                    <input type="text" id="manualHostOverwrite" placeholder="Overwrite Host name">
+                                    <button onclick="updateManualHostOverwrite();" class="ui basic icon button" title="Update"><i class="ui green save icon"></i></button>
+                                    <button onclick="clearManualHostOverwrite();" class="ui basic icon button" title="Clear"><i class="ui grey remove icon"></i></button>
+                                </div>
+                                
+                                <div class="ui divider"></div>
+                                <h4>Remove Hop-by-hop Headers</h4>
+                                <p>Remove headers like "Connection" and "Keep-Alive" from both upstream and downstream requests. Set to ON by default.</p>
+                                <div class="ui toggle checkbox">
+                                    <input type="checkbox" id="removeHopByHop" name="">
+                                    <label>Remove Hop-by-hop Header<br>
+                                    <small>This should be ON by default</small></label>
+                                </div>
+                                <div class="ui yellow message">
+                                    <p><i class="exclamation triangle icon"></i>Settings in this section are for advanced users. Invalid settings might cause werid, unexpected behavior.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
             </div>
             <div class="ui tab basic segment" data-tab="security">
                 <h4>HTTP Strict Transport Security</h4>
@@ -129,6 +165,7 @@
 
         <script>
             $('.menu .item').tab();
+            $(".accordion").accordion();
             let permissionPolicyKeys = [];
 
             let editingEndpoint = {};
@@ -211,8 +248,9 @@
                     }
                 }
 
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/add",
+                    method: "POST",
                     data: {
                         "type": getHeaderEditMode(),
                         "domain": editingEndpoint.ep,
@@ -243,10 +281,10 @@
             }
 
             function deleteCustomHeader(name){
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/remove",
+                    method: "POST",
                     data: {
-                        //"type": editingEndpoint.ept,
                         "domain": editingEndpoint.ep,
                         "name": name,
                     },
@@ -263,6 +301,7 @@
                 $("#headerTable").html(`<tr><td colspan="3"><i class="ui loading spinner icon"></i> Loading</td></tr>`);
                 $.ajax({
                     url: "/api/proxy/header/list",
+                    method: "GET",
                     data: {
                         "type": editingEndpoint.ept,
                         "domain": editingEndpoint.ep,
@@ -271,7 +310,6 @@
                         if (data.error != undefined){
                             alert(data.error);
                         }else{
-                           
                             $("#headerTable").html("");
                             data.forEach(header => {
                                 let editModeIcon = header.IsRemove?`<i class="ui red times circle icon"></i>`:`<i class="ui green add circle icon"></i>`;
@@ -315,7 +353,7 @@
                     /* Bind events to toggles */
                     $("#enableHSTS").on("change", function(){
                         let HSTSEnabled = $("#enableHSTS")[0].checked;
-                        $.ajax({
+                        $.cjax({
                             url: "/api/proxy/header/handleHSTS",
                             method: "POST",
                             data: {
@@ -390,7 +428,7 @@
                             $("#permissionPolicyEditor").addClass("disabled");
                         }
 
-                        $.ajax({
+                        $.cjax({
                             url: "/api/proxy/header/handlePermissionPolicy",
                             method: "POST",
                             data: {
@@ -496,7 +534,7 @@
                 let permissionPolicy = generatePermissionPolicyObject();
                 let domain = editingEndpoint.ep;
 
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/header/handlePermissionPolicy",
                     method: "PUT",
                     data: {
@@ -512,6 +550,93 @@
                     }
                 })
             }
+
+
+            /* Manual HOST header overwrite */
+            function updateManualHostOverwrite(){
+                updateManualHostOverwriteVal(function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error, false);
+                    }else{
+                        parent.msgbox("Host field Overwrite Updated");
+                        initManualHostOverwriteValue();
+                    }
+                });
+            }
+
+            function clearManualHostOverwrite(){
+                $('#manualHostOverwrite').val(''); 
+                updateManualHostOverwriteVal(function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error, false);
+                    }else{
+                        parent.msgbox("Host field Overwrite Cleared");
+                        initManualHostOverwriteValue();
+                    }
+                })
+            }
+
+            function updateManualHostOverwriteVal(callback=undefined){
+                let newHostname = $("#manualHostOverwrite").val().trim();
+                $.cjax({
+                    url: "/api/proxy/header/handleHostOverwrite",
+                    method: "POST",
+                    data: {
+                        "domain": editingEndpoint.ep,
+                        "hostname": newHostname,
+                    },
+                    success: function(data){
+                        callback(data);
+                    }
+                })
+            }
+
+            function initManualHostOverwriteValue(){
+                $.get("/api/proxy/header/handleHostOverwrite?domain=" + editingEndpoint.ep, function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error, false);
+                    }else{
+                        $("#manualHostOverwrite").val(data);
+                    }
+                });
+            }
+            initManualHostOverwriteValue();
+
+            /* Hop-by-hop headers */
+            function initHopByHopRemoverState(){
+                $.get("/api/proxy/header/handleHopByHop?domain=" + editingEndpoint.ep, function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error);
+                    }else{
+                        if (data == true){
+                            $("#removeHopByHop").parent().checkbox("set checked");
+                        }else{
+                            $("#removeHopByHop").parent().checkbox("set unchecked");
+                        }
+                        
+                        //Bind event to the checkbox
+                        $("#removeHopByHop").on("change", function(evt){
+                            let isChecked = $(this)[0].checked;
+                            $.cjax({
+                                url: "/api/proxy/header/handleHopByHop",
+                                method: "POST",
+                                data: {
+                                    "domain": editingEndpoint.ep,
+                                    "removeHopByHop": isChecked,
+                                },
+                                success: function(data){
+                                    if (data.error != undefined){
+                                        parent.msgbox(data.error, false);
+                                    }else{
+                                        parent.msgbox("Hop-by-Hop header rule updated");
+                                    }
+                                }
+                            })
+                        })
+                    }
+                })
+            }
+            initHopByHopRemoverState();
         </script>
     </body>
 </html>

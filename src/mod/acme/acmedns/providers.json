@@ -154,6 +154,10 @@
   "Name": "azure",
   "ConfigableFields": [
    {
+    "Title": "ZoneName",
+    "Datatype": "string"
+   },
+   {
     "Title": "ClientID",
     "Datatype": "string"
    },
@@ -208,6 +212,10 @@
  "azuredns": {
   "Name": "azuredns",
   "ConfigableFields": [
+   {
+    "Title": "ZoneName",
+    "Datatype": "string"
+   },
    {
     "Title": "SubscriptionID",
     "Datatype": "string"
@@ -343,6 +351,10 @@
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
+   },
+   {
+    "Title": "SkipDeploy",
+    "Datatype": "bool"
    }
   ]
  },
@@ -1215,10 +1227,6 @@
   "Name": "gandi",
   "ConfigableFields": [
    {
-    "Title": "BaseURL",
-    "Datatype": "string"
-   },
-   {
     "Title": "APIKey",
     "Datatype": "string"
    }
@@ -1241,10 +1249,6 @@
  "gandiv5": {
   "Name": "gandiv5",
   "ConfigableFields": [
-   {
-    "Title": "BaseURL",
-    "Datatype": "string"
-   },
    {
     "Title": "APIKey",
     "Datatype": "string"

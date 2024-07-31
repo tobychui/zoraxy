@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
         <meta charset="UTF-8">
@@ -13,6 +14,7 @@
         <script src="../script/semantic/semantic.min.js"></script>
         <script src="../script/tablesort.js"></script>
         <link rel="stylesheet" href="../main.css">
+        <script src="../script/utils.js"></script>
         <style>
             .offlinehost{
                 display: none;
@@ -86,9 +88,14 @@
                         <div class="ui basic segment" align="center">
                             <i class="loading spinner icon"></i> Scanning
                         </div>`);
-                    $.post("/api/tools/ipscan", {start: start, end: end}, function(data) {
-                        displayResults(data);
-                        $(".scanbtn").removeClass("disabled");
+                    $.cjax({
+                        url: "/api/tools/ipscan",
+                        data: {start: start, end: end},
+                        method: "POST",
+                        success: function(data){
+                            displayResults(data);
+                            $(".scanbtn").removeClass("disabled");
+                        }
                     });
                 });
         
@@ -109,9 +116,14 @@
                         <div class="ui basic segment" align="center">
                             <i class="loading spinner icon"></i> Scanning
                         </div>`);
-                    $.post("/api/tools/ipscan", {cidr: cidr}, function(data) {
-                        displayResults(data);
-                        $(".scanbtn").removeClass("disabled");
+                    $.cjax({
+                        url: "/api/tools/ipscan",
+                        method: "POST",
+                        data: {cidr: cidr},
+                        success: function(data) {
+                            displayResults(data);
+                            $(".scanbtn").removeClass("disabled");
+                        }
                     });
                 });
 

@@ -190,7 +190,7 @@
     function updateVDTargetTLSState(){
         var targetDomain = $("#virtualDirectoryDomain").val().trim();
         if (targetDomain != ""){
-            $.ajax({
+            $.cjax({
                 url: "/api/proxy/tlscheck",
                 data: {url: targetDomain},
                 success: function(data){
@@ -252,7 +252,7 @@
         }
 
         //Create a virtual directory endpoint
-        $.ajax({
+        $.cjax({
             url: "/api/proxy/vdir/add",
             method: "POST",
             data: {
@@ -295,7 +295,7 @@
             epType = "root";
             path = "";
         }
-        $.ajax({
+        $.cjax({
             url: "/api/proxy/vdir/del",
             method: "POST",
             data: {
@@ -384,7 +384,7 @@
 
         //console.log(mathingPath, newDomain, requireTLS, skipValidation);
 
-        $.ajax({
+        $.cjax({
             url: "/api/proxy/vdir/edit",
             method: "POST",
             data: {

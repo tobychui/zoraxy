@@ -164,7 +164,7 @@
 
                 $("#webserv_enableDirList").off("change").on("change", function(){
                     let enable = $(this)[0].checked;
-                    $.ajax({
+                    $.cjax({
                         url: "/api/webserv/setDirList",
                         method: "POST",
                         data: {"enable": enable},
@@ -186,7 +186,7 @@
                         confirmBox("This setting might cause port conflict. Continue Anyway?", function(choice){
                             if (choice == true){
                                 //Continue anyway
-                                $.ajax({
+                                $.cjax({
                                     url: "/api/webserv/setPort",
                                     method: "POST",
                                     data: {"port": newPort},
@@ -206,7 +206,7 @@
                             }
                         });
                     }else{
-                        $.ajax({
+                        $.cjax({
                             url: "/api/webserv/setPort",
                             method: "POST",
                             data: {"port": newPort},

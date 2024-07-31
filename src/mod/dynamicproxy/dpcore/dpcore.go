@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 )
 
@@ -50,13 +51,13 @@ type ReverseProxy struct {
 	ModifyResponse func(*http.Response) error
 
 	//Prepender is an optional prepend text for URL rewrite
-	//
 	Prepender string
 
 	Verbal bool
 }
 
 type ResponseRewriteRuleSet struct {
+	/* Basic Rewrite Rulesets */
 	ProxyDomain       string
 	OriginalHost      string
 	UseTLS            bool
@@ -64,8 +65,13 @@ type ResponseRewriteRuleSet struct {
 	PathPrefix        string //Vdir prefix for root, / will be rewrite to this
 	UpstreamHeaders   [][]string
 	DownstreamHeaders [][]string
-	NoRemoveHopByHop  bool   //Do not remove hop-by-hop headers, dangerous
-	Version           string //Version number of Zoraxy, use for X-Proxy-By
+
+	/* Advance Usecase Options */
+	HostHeaderOverwrite string //Force overwrite of request "Host" header (advanced usecase)
+	NoRemoveHopByHop    bool   //Do not remove hop-by-hop headers (advanced usecase)
+
+	/* System Information Payload */
+	Version string //Version number of Zoraxy, use for X-Proxy-By
 }
 
 type requestCanceler interface {
@@ -73,8 +79,8 @@ type requestCanceler interface {
 }
 
 type DpcoreOptions struct {
-	IgnoreTLSVerification bool
-	FlushInterval         time.Duration
+	IgnoreTLSVerification bool          //Disable all TLS verification when request pass through this proxy router
+	FlushInterval         time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -252,7 +258,7 @@ func (p *ReverseProxy) logf(format string, args ...interface{}) {
 	}
 }
 
-func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) error {
+func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	transport := p.Transport
 
 	outreq := new(http.Request)
@@ -281,7 +287,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	outreq.Close = false
 
 	//Only skip origin rewrite iff proxy target require TLS and it is external domain name like github.com
-	if !(rrr.UseTLS && isExternalDomainName(rrr.ProxyDomain)) {
+	if rrr.HostHeaderOverwrite != "" {
+		//Use user defined overwrite header value, see issue #255
+		outreq.Host = rrr.HostHeaderOverwrite
+	} else if !(rrr.UseTLS && isExternalDomainName(rrr.ProxyDomain)) {
 		// Always use the original host, see issue #164
 		outreq.Host = rrr.OriginalHost
 	}
@@ -291,7 +300,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	copyHeader(outreq.Header, req.Header)
 
 	// Remove hop-by-hop headers.
-	removeHeaders(outreq.Header, rrr.NoCache)
+	if !rrr.NoRemoveHopByHop {
+		removeHeaders(outreq.Header, rrr.NoCache)
+	}
 
 	// Add X-Forwarded-For Header.
 	addXForwardedForHeader(outreq)
@@ -302,6 +313,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// Rewrite outbound UA, must be after user headers
 	rewriteUserAgent(outreq.Header, "Zoraxy/"+rrr.Version)
 
+	//Fix proxmox transfer encoding bug if detected Proxmox Cookie
+	if domainsniff.IsProxmox(req) {
+		outreq.TransferEncoding = []string{"identity"}
+	}
+
 	res, err := transport.RoundTrip(outreq)
 	if err != nil {
 		if p.Verbal {
@@ -309,11 +325,13 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		}
 
 		//rw.WriteHeader(http.StatusBadGateway)
-		return err
+		return http.StatusBadGateway, err
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
-	removeHeaders(res.Header, rrr.NoCache)
+	if !rrr.NoRemoveHopByHop {
+		removeHeaders(res.Header, rrr.NoCache)
+	}
 
 	//Remove the User-Agent header if exists
 	if _, ok := res.Header["User-Agent"]; ok {
@@ -328,7 +346,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			}
 
 			//rw.WriteHeader(http.StatusBadGateway)
-			return err
+			return http.StatusBadGateway, err
 		}
 	}
 
@@ -375,7 +393,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	copyHeader(rw.Header(), res.Header)
 
 	// inject permission policy headers
-	//TODO: Load permission policy from rrr
 	permissionpolicy.InjectPermissionPolicyHeader(rw, nil)
 
 	// The "Trailer" header isn't included in the Transport's response, Build it up from Trailer.
@@ -405,14 +422,14 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	res.Body.Close()
 	copyHeader(rw.Header(), res.Trailer)
 
-	return nil
+	return res.StatusCode, nil
 }
 
-func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) error {
+func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
 	hij, ok := rw.(http.Hijacker)
 	if !ok {
 		p.logf("http server does not support hijacker")
-		return errors.New("http server does not support hijacker")
+		return http.StatusNotImplemented, errors.New("http server does not support hijacker")
 	}
 
 	clientConn, _, err := hij.Hijack()
@@ -420,7 +437,7 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) err
 		if p.Verbal {
 			p.logf("http: proxy error: %v", err)
 		}
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	proxyConn, err := net.Dial("tcp", req.URL.Host)
@@ -429,7 +446,7 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) err
 			p.logf("http: proxy error: %v", err)
 		}
 
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	// The returned net.Conn may have read or write deadlines
@@ -448,7 +465,7 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) err
 		if p.Verbal {
 			p.logf("http: proxy error: %v", err)
 		}
-		return err
+		return http.StatusGatewayTimeout, err
 	}
 
 	err = proxyConn.SetDeadline(deadline)
@@ -457,7 +474,7 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) err
 			p.logf("http: proxy error: %v", err)
 		}
 
-		return err
+		return http.StatusGatewayTimeout, err
 	}
 
 	_, err = clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
@@ -466,7 +483,7 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) err
 			p.logf("http: proxy error: %v", err)
 		}
 
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	go func() {
@@ -479,15 +496,13 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) err
 	proxyConn.Close()
 	clientConn.Close()
 
-	return nil
+	return http.StatusOK, nil
 }
 
-func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) error {
+func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	if req.Method == "CONNECT" {
-		err := p.ProxyHTTPS(rw, req)
-		return err
+		return p.ProxyHTTPS(rw, req)
 	} else {
-		err := p.ProxyHTTP(rw, req, rrr)
-		return err
+		return p.ProxyHTTP(rw, req, rrr)
 	}
 }

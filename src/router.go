@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/sshprox"
 )
 
@@ -42,11 +44,15 @@ func FSHandler(handler http.Handler) http.Handler {
 
 		// Allow access to /script/*, /img/pubic/* and /login.html without authentication
 		if strings.HasPrefix(r.URL.Path, ppf("/script/")) || strings.HasPrefix(r.URL.Path, ppf("/img/public/")) || r.URL.Path == ppf("/login.html") || r.URL.Path == ppf("/reset.html") || r.URL.Path == ppf("/favicon.png") {
+			if isHTMLFilePath(r.URL.Path) {
+				handleInjectHTML(w, r, r.URL.Path)
+				return
+			}
 			handler.ServeHTTP(w, r)
 			return
 		}
 
-		// check authentication
+		// Check authentication
 		if !authAgent.CheckAuth(r) && requireAuth {
 			http.Redirect(w, r, ppf("/login.html"), http.StatusTemporaryRedirect)
 			return
@@ -77,6 +83,10 @@ func FSHandler(handler http.Handler) http.Handler {
 		}
 
 		//Authenticated
+		if isHTMLFilePath(r.URL.Path) {
+			handleInjectHTML(w, r, r.URL.Path)
+			return
+		}
 		handler.ServeHTTP(w, r)
 	})
 }
@@ -87,4 +97,54 @@ func ppf(relativeFilepath string) string {
 		return strings.ReplaceAll(filepath.Join("/web/", relativeFilepath), "\\", "/")
 	}
 	return relativeFilepath
+}
+
+func isHTMLFilePath(requestURI string) bool {
+	return strings.HasSuffix(requestURI, ".html") || strings.HasSuffix(requestURI, "/")
+}
+
+// Serve the html file with template token injected
+func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath string) {
+	// Read the HTML file
+	var content []byte
+	var err error
+	if len(relativeFilepath) > 0 && relativeFilepath[len(relativeFilepath)-1:] == "/" {
+		relativeFilepath = relativeFilepath + "index.html"
+	}
+	if development {
+		//Load from disk
+		targetFilePath := strings.ReplaceAll(filepath.Join("web/", relativeFilepath), "\\", "/")
+		content, err = os.ReadFile(targetFilePath)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		//Load from embedded fs, require trimming off the prefix slash for relative path
+		relativeFilepath = strings.TrimPrefix(relativeFilepath, "/")
+		content, err = webres.ReadFile(relativeFilepath)
+		if err != nil {
+			SystemWideLogger.Println("load embedded web file failed: ", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Convert the file content to a string
+	htmlContent := string(content)
+
+	//Defeine the system template for this request
+	templateStrings := map[string]string{
+		".csrfToken": csrf.Token(r),
+	}
+
+	// Replace template tokens in the HTML content
+	for key, value := range templateStrings {
+		placeholder := "{{" + key + "}}"
+		htmlContent = strings.ReplaceAll(htmlContent, placeholder, value)
+	}
+
+	// Write the modified HTML content to the response
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(htmlContent))
 }

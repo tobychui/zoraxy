@@ -74,6 +74,18 @@
                     
                 </div>
                 <div class="ui divider"></div>
+                <h5>Filters</h5>
+                <button style="margin-top: 0.4em;" filter="system" class="ui fluid basic small button filterbtn"><i class="ui blue info circle icon"></i> System</button>
+                <button style="margin-top: 0.4em;" filter="request" class="ui fluid basic small button filterbtn"><i class="green exchange icon"></i> Request</button>
+                <button style="margin-top: 0.4em;" filter="error" class="ui fluid basic small button filterbtn"><i class="red exclamation triangle icon"></i> Error</button>
+                <button style="margin-top: 0.4em;" filter="all" class="ui fluid basic active small button filterbtn">All</button>
+                <div class="ui divider"></div>
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="enableAutoScroll" onchange="handleAutoScrollTicker(event, this.checked);">
+                    <label>Auto Refresh<br>
+                    <small>Refresh the viewing log every 10 seconds</small></label>
+                </div>
+                <div class="ui divider"></div>
                 <small>Notes: Some log files might be huge. Make sure you have checked the log file size before opening</small>
             </div>
             <div class="twelve wide column">
@@ -89,6 +101,10 @@
 </body>
 <script>
     var currentOpenedLogURL = "";
+    var currentFilter = "all";
+    var autoscroll = false;
+
+    $(".checkbox").checkbox();
 
     function openLogInNewTab(){
         if (currentOpenedLogURL != ""){
@@ -105,7 +121,7 @@
                 alert(data.error);
                 return;
             }
-            $("#logrender").val(data);
+            renderLogWithCurrentFilter(data);
         }); 
     }
 
@@ -150,6 +166,68 @@
             n = n/1024;
         }
         return(n.toFixed(n < 10 && l > 0 ? 1 : 0) + ' ' + units[l]);
+    }
+
+    //Filter the log and render it to text area based on current filter choice
+    function renderLogWithCurrentFilter(data){
+        if (currentFilter == "all"){
+            $("#logrender").val(data);
+        }else{
+            let filterLines = data.split("\n");
+            let filteredLogFile = "";
+            for (var i = 0; i < filterLines.length; i++){
+                const thisLine = filterLines[i];
+                if (currentFilter == "system" && thisLine.indexOf("[system:") >= 0){
+                    filteredLogFile += thisLine + "\n";
+                }else if (currentFilter == "request" && thisLine.indexOf("[router:") >= 0){
+                    filteredLogFile += thisLine + "\n";
+                }else if (currentFilter == "error" && thisLine.indexOf(":error]") >= 0){
+                    filteredLogFile += thisLine + "\n";
+                }
+            }
+            $("#logrender").val(filteredLogFile);
+        }
+        var textarea = document.getElementById('logrender');
+        textarea.scrollTop = textarea.scrollHeight;
+    }
+
+    /* Filter related functions */
+    $(".filterbtn").on("click", function(evt){
+        //Set filter type
+        let filterType = $(this).attr("filter");
+        currentFilter = (filterType);
+        $(".filterbtn.active").removeClass("active");
+        $(this).addClass('active');
+
+        //Reload the log with filter
+        if (currentOpenedLogURL != ""){
+            $.get(currentOpenedLogURL, function(data){
+                if (data.error !== undefined){
+                    alert(data.error);
+                    return;
+                }
+                renderLogWithCurrentFilter(data);
+            }); 
+        }
+    });
+
+    /* Auto scroll function */
+    setInterval(function(){
+        if (autoscroll){
+            //Update the log and scroll to bottom
+            if (currentOpenedLogURL != ""){
+                $.get(currentOpenedLogURL, function(data){
+                    if (data.error !== undefined){
+                        console.log(data.error);
+                        return;
+                    }
+                    renderLogWithCurrentFilter(data);
+                }); 
+            }
+        }
+    }, 10000);
+    function handleAutoScrollTicker(event, checked){
+        autoscroll = checked;
     }
 </script>
 </html>

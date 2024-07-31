@@ -2,12 +2,14 @@
     <head>
         <title>File Manager</title>
         <meta charset="UTF-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" />
         <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
         <link rel="stylesheet" href="fs.css">
+        <script src="../script/utils.js"></script>
         <script>
          
         </script>
@@ -199,7 +201,7 @@
                     let counter = $(".fileObject.selected").length;
                     $(".fileObject.selected").each(function(){
                         let thisFilepath = $(this).attr("filepath");
-                        $.ajax({
+                        $.cjax({
                             url: "/api/fs/del?target=" + thisFilepath,
                             method: "POST",
                             success: function(data){
@@ -241,22 +243,9 @@
                     let filename = $(this).attr("filename");
                     if (ftype != "folder"){
                         let ext = filepath.split(".").pop();
-                        if (isCodeFiles(ext)){
-                            editableCodeFiles.push({
-                                "filename": filename,
-                                "filepath": filepath
-                            });
-                        }else{
-                            openthis($(this), evt);
-                        }
-
+                        openthis($(this), evt);
                     }
                 });
-
-                if (editableCodeFiles.length > 0){
-                    let hash = encodeURIComponent(JSON.stringify(editableCodeFiles))
-                    window.open("notepad/index.html#" + hash);
-                }
             }
 
             function refresh(){
@@ -571,12 +560,19 @@
                     return;
                 }
 
-                $.post("/api/fs/newFolder?path=" + currentPath + folderName, function(data){
-                    if (data.error != undefined){
-                        msgbox(data.error, false);
-                    }else{
-                        msgbox("Folder Created");
-                        refresh();
+                $.cjax({
+                    url: "/api/fs/newFolder",
+                    method: "POST",
+                    data: {
+                        "path": currentPath + folderName,
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false);
+                        }else{
+                            msgbox("Folder Created");
+                            refresh();
+                        }
                     }
                 });
             }
@@ -597,8 +593,12 @@
                     if (newName && newName != oldName) {
                         // User entered a new name, perform renaming logic here
                         console.log(oldPath, currentPath + newName);
-                        $.ajax({
-                            url: "/api/fs/move?srcpath=" + oldPath + "&destpath=" + currentPath + newName,
+                        $.cjax({
+                            url: "/api/fs/move",
+                            data: {
+                                "srcpath": oldPath,
+                                "destpath": currentPath + newName
+                            },
                             method: "POST",
                             success: function(data){
                                 if (data.error != undefined){
@@ -826,6 +826,7 @@
                 ajax.addEventListener("error", errorHandler, false);
                 ajax.addEventListener("abort", abortHandler, false);
                 ajax.open("POST", "/api/fs/upload?dir=" + dir);
+                ajax.setRequestHeader("X-CSRF-Token", document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content"));
                 ajax.send(formdata);
             }
 
@@ -914,8 +915,12 @@
                         let filename = fileToPaste.filename;
                         let filepath = fileToPaste.filepath;
 
-                        $.ajax({
-                            url: "/api/fs/move?srcpath=" + filepath + "&destpath=" + currentPath + filename,
+                        $.cjax({
+                            url: "/api/fs/move",
+                            data:{
+                                "srcpath": filepath,
+                                "destpath": currentPath + filename,
+                            },
                             method: "POST",
                             success: function(data){
                                 if (data.error != undefined){
@@ -939,7 +944,7 @@
             function copyFirstItemInQueueUntilAllCopied(){
                 let file = copyPendingFiles.shift();
                 let startingDir = currentPath;
-                $.ajax({
+                $.cjax({
                     url: "/api/fs/copy",
                     method: "POST",
                     data: {

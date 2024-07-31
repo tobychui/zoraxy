@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
@@ -50,6 +51,7 @@ var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local no
 var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
 var runningInDocker = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+var acmeCertAutoRenewDays = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
 var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
@@ -57,7 +59,7 @@ var enableAutoUpdate = flag.Bool("cfgupgrade", true, "Enable auto config upgrade
 
 var (
 	name        = "Zoraxy"
-	version     = "3.0.9"
+	version     = "3.1.0"
 	nodeUUID    = "generic" //System uuid, in uuidv4 format
 	development = false     //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
@@ -71,10 +73,12 @@ var (
 	/*
 		Handler Modules
 	*/
-	sysdb          *database.Database     //System database
-	authAgent      *auth.AuthAgent        //Authentication agent
-	tlsCertManager *tlscert.Manager       //TLS / SSL management
-	redirectTable  *redirection.RuleTable //Handle special redirection rule sets
+	sysdb          *database.Database              //System database
+	authAgent      *auth.AuthAgent                 //Authentication agent
+	tlsCertManager *tlscert.Manager                //TLS / SSL management
+	redirectTable  *redirection.RuleTable          //Handle special redirection rule sets
+	webminPanelMux *http.ServeMux                  //Server mux for handling webmin panel APIs
+	csrfMiddleware func(http.Handler) http.Handler //CSRF protection middleware
 
 	pathRuleHandler    *pathrule.Handler         //Handle specific path blocking or custom headers
 	geodbStore         *geodb.Store              //GeoIP database, for resolving IP into country code
@@ -175,12 +179,22 @@ func main() {
 	}
 	nodeUUID = string(uuidBytes)
 
+	//Create a new webmin mux and csrf middleware layer
+	webminPanelMux = http.NewServeMux()
+	csrfMiddleware = csrf.Protect(
+		[]byte(nodeUUID),
+		csrf.CookieName("zoraxy-csrf"),
+		csrf.Secure(false),
+		csrf.Path("/"),
+		csrf.SameSite(csrf.SameSiteLaxMode),
+	)
+
 	//Startup all modules
 	startupSequence()
 
 	//Initiate management interface APIs
 	requireAuth = !(*noauth)
-	initAPIs()
+	initAPIs(webminPanelMux)
 
 	//Start the reverse proxy server in go routine
 	go func() {
@@ -193,7 +207,7 @@ func main() {
 	finalSequence()
 
 	SystemWideLogger.Println("Zoraxy started. Visit control panel at http://localhost" + *webUIPort)
-	err = http.ListenAndServe(*webUIPort, nil)
+	err = http.ListenAndServe(*webUIPort, csrfMiddleware(webminPanelMux))
 
 	if err != nil {
 		log.Fatal(err)

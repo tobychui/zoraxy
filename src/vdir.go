@@ -197,6 +197,8 @@ func ReverseProxyDeleteVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	UpdateUptimeMonitorTargets()
+
 	utils.SendOK(w)
 }
 

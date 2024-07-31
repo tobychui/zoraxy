@@ -1000,7 +1000,7 @@
     */
     function enableBlacklist() {
         var isChecked = $('#enableBlacklist').is(':checked');
-        $.ajax({
+        $.cjax({
             type: 'POST',
             url: '/api/blacklist/enable',
             data: { enable: isChecked, id: currentEditingAccessRule},
@@ -1028,9 +1028,10 @@
         let counter = 0;
         for(var i = 0; i < ccs.length; i++){
             let thisCountryCode = ccs[i];
-            $.ajax({
+            $.cjax({
                 type: "POST",
                 url: "/api/blacklist/country/add",
+                method: "POST",
                 data: { cc: thisCountryCode, id: currentEditingAccessRule},
                 success: function(response) {
                     if (response.error != undefined){
@@ -1066,7 +1067,7 @@
     function removeFromBannedList(countryCode){
         countryCode = countryCode.toLowerCase();
         let countryName = getCountryName(countryCode);
-        $.ajax({
+        $.cjax({
             url: "/api/blacklist/country/remove",
             method: "POST",
             data: { cc: countryCode, id: currentEditingAccessRule},
@@ -1097,7 +1098,7 @@
             }
         }
 
-        $.ajax({
+        $.cjax({
             url: "/api/blacklist/ip/add",
             type: "POST",
             data: {ip: targetIp.toLowerCase(), id: currentEditingAccessRule},
@@ -1119,7 +1120,7 @@
 
     function removeIpBlacklist(ipaddr){
         if (confirm("Confirm remove blacklist for " + ipaddr + " ?")){
-            $.ajax({
+            $.cjax({
                 url: "/api/blacklist/ip/remove",
                 type: "POST",
                 data: {ip: ipaddr.toLowerCase(), id: currentEditingAccessRule},
@@ -1143,7 +1144,7 @@
     */
     function enableWhitelist() {
         var isChecked = $('#enableWhitelist').is(':checked');
-        $.ajax({
+        $.cjax({
             type: 'POST',
             url: '/api/whitelist/enable',
             data: { enable: isChecked , id: currentEditingAccessRule},
@@ -1165,7 +1166,7 @@
         let counter = 0;
         for(var i = 0; i < ccs.length; i++){
             let thisCountryCode = ccs[i];
-            $.ajax({
+            $.cjax({
                 type: "POST",
                 url: "/api/whitelist/country/add",
                 data: { cc: thisCountryCode , id: currentEditingAccessRule},
@@ -1199,7 +1200,7 @@
     function removeFromWhiteList(countryCode){
         if (confirm("Confirm removing " + getCountryName(countryCode) + " from whitelist?")){
             countryCode = countryCode.toLowerCase(); 
-            $.ajax({
+            $.cjax({
                 url: "/api/whitelist/country/remove",
                 method: "POST",
                 data: { cc: countryCode , id: currentEditingAccessRule},
@@ -1230,7 +1231,7 @@
             }
         }
 
-        $.ajax({
+        $.cjax({
             url: "/api/whitelist/ip/add",
             type: "POST",
             data: {ip: targetIp.toLowerCase(), "comment": remarks, id: currentEditingAccessRule},
@@ -1253,7 +1254,7 @@
 
     function removeIpWhitelist(ipaddr){
         if (confirm("Confirm remove whitelist for " + ipaddr + " ?")){
-            $.ajax({
+            $.cjax({
                 url: "/api/whitelist/ip/remove",
                 type: "POST",
                 data: {ip: ipaddr.toLowerCase(), id: currentEditingAccessRule},

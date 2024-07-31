@@ -34,6 +34,7 @@ type AutoRenewer struct {
 	AcmeHandler       *ACMEHandler
 	RenewerConfig     *AutoRenewConfig
 	RenewTickInterval int64
+	EarlyRenewDays    int //How many days before cert expire to renew certificate
 	TickerstopChan    chan bool
 }
 
@@ -44,9 +45,13 @@ type ExpiredCerts struct {
 
 // Create an auto renew agent, require config filepath and auto scan & renew interval (seconds)
 // Set renew check interval to 0 for auto (1 day)
-func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, AcmeHandler *ACMEHandler) (*AutoRenewer, error) {
+func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, earlyRenewDays int, AcmeHandler *ACMEHandler) (*AutoRenewer, error) {
 	if renewCheckInterval == 0 {
 		renewCheckInterval = 86400 //1 day
+	}
+
+	if earlyRenewDays == 0 {
+		earlyRenewDays = 30
 	}
 
 	//Load the config file. If not found, create one
@@ -135,7 +140,7 @@ func (a *AutoRenewer) StopAutoRenewTicker() {
 // opr = setSelected -> Enter a list of file names (or matching rules) for auto renew
 // opr = setAuto -> Set to use auto detect certificates and renew
 func (a *AutoRenewer) HandleSetAutoRenewDomains(w http.ResponseWriter, r *http.Request) {
-	opr, err := utils.GetPara(r, "opr")
+	opr, err := utils.PostPara(r, "opr")
 	if err != nil {
 		utils.SendErrorResponse(w, "Operation not set")
 		return
@@ -165,6 +170,8 @@ func (a *AutoRenewer) HandleSetAutoRenewDomains(w http.ResponseWriter, r *http.R
 		a.RenewerConfig.RenewAll = true
 		a.saveRenewConfigToFile()
 		utils.SendOK(w)
+	} else {
+		utils.SendErrorResponse(w, "invalid operation given")
 	}
 
 }
@@ -208,19 +215,22 @@ func (a *AutoRenewer) HandleRenewNow(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+// HandleAutoRenewEnable get and set the auto renew enable state
 func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Request) {
-	val, err := utils.PostPara(r, "enable")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		js, _ := json.Marshal(a.RenewerConfig.Enabled)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if val == "true" {
+	} else if r.Method == http.MethodPost {
+		val, err := utils.PostBool(r, "enable")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid or empty enable state")
+		}
+		if val {
 			//Check if the email is not empty
 			if a.RenewerConfig.Email == "" {
 				utils.SendErrorResponse(w, "Email is not set")
 				return
 			}
-
 			a.RenewerConfig.Enabled = true
 			a.saveRenewConfigToFile()
 			log.Println("[ACME] ACME auto renew enabled")
@@ -231,19 +241,26 @@ func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Reque
 			log.Println("[ACME] ACME auto renew disabled")
 			a.StopAutoRenewTicker()
 		}
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
+
 }
 
 func (a *AutoRenewer) HandleACMEEmail(w http.ResponseWriter, r *http.Request) {
-
-	email, err := utils.PostPara(r, "set")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		//Return the current email to user
 		js, _ := json.Marshal(a.RenewerConfig.Email)
 		utils.SendJSONResponse(w, string(js))
-	} else {
+	} else if r.Method == http.MethodPost {
+		email, err := utils.PostPara(r, "set")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid or empty email given")
+			return
+		}
+
 		//Check if the email is valid
-		_, err := mail.ParseAddress(email)
+		_, err = mail.ParseAddress(email)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -252,8 +269,11 @@ func (a *AutoRenewer) HandleACMEEmail(w http.ResponseWriter, r *http.Request) {
 		//Set the new config
 		a.RenewerConfig.Email = email
 		a.saveRenewConfigToFile()
-	}
 
+		utils.SendOK(w)
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // Check and renew certificates. This check all the certificates in the
@@ -277,7 +297,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				if err != nil {
 					continue
 				}
-				if CertExpireSoon(certBytes) || CertIsExpired(certBytes) {
+				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
 
 					DNSName, err := ExtractDomains(certBytes)
@@ -305,7 +325,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				if err != nil {
 					continue
 				}
-				if CertExpireSoon(certBytes) || CertIsExpired(certBytes) {
+				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
 
 					DNSName, err := ExtractDomains(certBytes)

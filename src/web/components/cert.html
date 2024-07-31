@@ -161,6 +161,7 @@
             $(btn).addClass('disabled');
             $(btn).html(`<i class="ui loading spinner icon"></i>`);
         }
+
         obtainCertificate(domain, dns, defaultCA.trim(), function(succ){
             if (btn != undefined){
                 $(btn).removeClass('disabled');
@@ -256,7 +257,7 @@
     //Delete the certificate by its domain
     function deleteCertificate(domain){
         if (confirm("Confirm delete certificate for " + domain + " ?")){
-            $.ajax({
+            $.cjax({
                 url: "/api/cert/delete",
                 method: "POST",
                 data: {domain: domain},
@@ -315,7 +316,7 @@
             return;
         }
 
-        $.ajax({
+        $.cjax({
             url: "/api/acme/autoRenew/email",
             method: "POST",
             data: {"set": newDefaultEmail},
@@ -329,7 +330,7 @@
             }
         });
 
-        $.ajax({
+        $.cjax({
             url: "/api/acme/autoRenew/ca",
             data: {"set": newDefaultCA},
             method: "POST",
@@ -356,13 +357,16 @@
                 });
                 data.forEach(entry => {
                     let isExpired = entry.RemainingDays <= 0;
-
+                    let entryDomainRenewKey = entry.Domain; 
+                    if (entryDomainRenewKey.includes("_.")){
+                        entryDomainRenewKey = entryDomainRenewKey.replace("_.","*.");
+                    }
                     $("#certifiedDomainList").append(`<tr>
                         <td><a style="cursor: pointer;" title="Download certificate" onclick="handleCertDownload('${entry.Domain}');">${entry.Domain}</a></td>
                         <td>${entry.LastModifiedDate}</td>
                         <td class="${isExpired?"expired":"valid"} certdate">${entry.ExpireDate} (${!isExpired?entry.RemainingDays+" days left":"Expired"})</td>
                         <td><i class="${entry.UseDNS?"green check": "red times"} icon"></i></td>
-                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entry.Domain}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button></td>
+                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entryDomainRenewKey}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button></td>
                         <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
                     </tr>`);
                 });
@@ -419,6 +423,8 @@
         }
         if (uploadPendingPublicKey && uploadPendingPrivateKey && typeof uploadPendingPublicKey === 'object' && typeof uploadPendingPrivateKey === 'object') {
             const publicKeyForm = new FormData();
+            const csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
+
             publicKeyForm.append('file', uploadPendingPublicKey, 'publicKey');
 
             const privateKeyForm = new FormData();
@@ -426,6 +432,7 @@
 
             const publicKeyRequest = new XMLHttpRequest();
             publicKeyRequest.open('POST', '/api/cert/upload?ktype=pub&domain=' + domain);
+            publicKeyRequest.setRequestHeader('X-CSRF-Token', csrfToken);
             publicKeyRequest.onreadystatechange = function() {
             if (publicKeyRequest.readyState === XMLHttpRequest.DONE) {
                 if (publicKeyRequest.status !== 200) {
@@ -442,6 +449,7 @@
 
             const privateKeyRequest = new XMLHttpRequest();
             privateKeyRequest.open('POST', '/api/cert/upload?ktype=pri&domain=' + domain);
+            privateKeyRequest.setRequestHeader('X-CSRF-Token', csrfToken);
             privateKeyRequest.onreadystatechange = function() {
             if (privateKeyRequest.readyState === XMLHttpRequest.DONE) {
                 if (privateKeyRequest.status !== 200) {
@@ -462,15 +470,11 @@
     //ktype = {"pub" / "pri"}
     function handleFileSelect(event, ktype="pub") {
         const file = event.target.files[0];
-        //const fileNameInput = document.getElementById('selected-file-name');
         if (ktype == "pub"){
             uploadPendingPublicKey = file;
         }else if (ktype == "pri"){
             uploadPendingPrivateKey = file;
         }
-        
-        
-        //fileNameInput.value = file.name;
     }
 
     //Check if the default keypairs exists
@@ -493,14 +497,18 @@
         input.addEventListener('change', () => {
             // create form data object
             const formData = new FormData();
-            
+            const csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
+
             // add selected file to form data
             formData.append('file', input.files[0]);
 
             // send form data to server
             fetch('/api/cert/upload?ktype=pri', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
             })
             .then(response => {
                 initDefaultKeypairCheck();
@@ -527,6 +535,7 @@
     function uploadPublicKey() {
         // create file input element
         const input = document.createElement('input');
+        const csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
         input.type = 'file';
         
         // add change listener to file input
@@ -540,7 +549,10 @@
             // send form data to server
             fetch('/api/cert/upload?ktype=pub', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
             })
             .then(response => {
                 if (response.ok) {

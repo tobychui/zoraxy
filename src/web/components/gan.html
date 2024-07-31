@@ -87,7 +87,7 @@
     }
 
     function addGANet() {
-        $.ajax({
+        $.cjax({
             url: "/api/gan/network/add",
             type: "POST",
             dataType: "json",
@@ -191,7 +191,7 @@
     //Remove the given GANet
     function removeGANet(netid){
         if (confirm("Confirm remove Network " + netid + " PERMANENTLY ?"))
-        $.ajax({
+        $.cjax({
             url: "/api/gan/network/remove",
             type: "POST",
             dataType: "json",

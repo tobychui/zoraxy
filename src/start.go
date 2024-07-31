@@ -84,7 +84,7 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager("./conf/certs", development)
+	tlsCertManager, err = tlscert.NewManager("./conf/certs", development, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -279,14 +279,20 @@ func startupSequence() {
 	//Create a table just to store acme related preferences
 	sysdb.NewTable("acmepref")
 	acmeHandler = initACME()
-	acmeAutoRenewer, err = acme.NewAutoRenewer("./conf/acme_conf.json", "./conf/certs/", int64(*acmeAutoRenewInterval), acmeHandler)
+	acmeAutoRenewer, err = acme.NewAutoRenewer(
+		"./conf/acme_conf.json",
+		"./conf/certs/",
+		int64(*acmeAutoRenewInterval),
+		*acmeCertAutoRenewDays,
+		acmeHandler,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	/* Docker UX Optimizer */
 	if runtime.GOOS == "windows" && *runningInDocker {
-		SystemWideLogger.PrintAndLog("WARNING", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
+		SystemWideLogger.PrintAndLog("warning", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
 	}
 	DockerUXOptimizer = dockerux.NewDockerOptimizer(*runningInDocker, SystemWideLogger)
 

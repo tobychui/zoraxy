@@ -100,7 +100,7 @@
             }
 
             // Send the AJAX POST request
-            $.ajax({
+            $.cjax({
                 type: 'POST',
                 url: '/api/streamprox/config/add',
                 data: form.serialize(),
@@ -285,7 +285,7 @@
             }
 
             // Send the AJAX POST request
-            $.ajax({
+            $.cjax({
                 type: 'POST',
                 url: '/api/streamprox/config/edit',
                 method: "POST",
@@ -316,7 +316,7 @@
         }
 
         function deleteTCPProxyConfig(configUUID){
-            $.ajax({
+            $.cjax({
                 url: "/api/streamprox/config/delete",
                 method: "POST",
                 data: {uuid: configUUID},
@@ -333,7 +333,7 @@
 
         //Start a TCP proxy by their config UUID
         function startStreamProx(configUUID){
-            $.ajax({
+            $.cjax({
                 url: "/api/streamprox/config/start",
                 method: "POST",
                 data: {uuid: configUUID},
@@ -351,7 +351,7 @@
 
         //Stop a TCP proxy by their config UUID
         function stopStreamProx(configUUID){
-            $.ajax({
+            $.cjax({
                 url: "/api/streamprox/config/stop",
                 method: "POST",
                 data: {uuid: configUUID},

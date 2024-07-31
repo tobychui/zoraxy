@@ -112,6 +112,8 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint) {
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
+
+	/* Load balancing */
 	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession)
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
@@ -119,6 +121,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname())
 		return
 	}
+
+	/* WebSocket automatic proxy */
 	requestURL := r.URL.String()
 	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
@@ -156,16 +160,17 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	//Build downstream and upstream header rules
 	upstreamHeaders, downstreamHeaders := target.SplitInboundOutboundHeaders()
 
-	err = selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:       selectedUpstream.OriginIpOrDomain,
-		OriginalHost:      originalHostHeader,
-		UseTLS:            selectedUpstream.RequireTLS,
-		NoCache:           h.Parent.Option.NoCache,
-		PathPrefix:        "",
-		UpstreamHeaders:   upstreamHeaders,
-		DownstreamHeaders: downstreamHeaders,
-		NoRemoveHopByHop:  target.DisableHopByHopHeaderRemoval,
-		Version:           target.parent.Option.HostVersion,
+	statusCode, err := selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+		ProxyDomain:         selectedUpstream.OriginIpOrDomain,
+		OriginalHost:        originalHostHeader,
+		UseTLS:              selectedUpstream.RequireTLS,
+		NoCache:             h.Parent.Option.NoCache,
+		PathPrefix:          "",
+		UpstreamHeaders:     upstreamHeaders,
+		DownstreamHeaders:   downstreamHeaders,
+		HostHeaderOverwrite: target.RequestHostOverwrite,
+		NoRemoveHopByHop:    target.DisableHopByHopHeaderRemoval,
+		Version:             target.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError
@@ -181,7 +186,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		}
 	}
 
-	h.Parent.logRequest(r, true, 200, "host-http", r.URL.Hostname())
+	h.Parent.logRequest(r, true, statusCode, "host-http", r.URL.Hostname())
 }
 
 // Handle vdir type request
@@ -223,14 +228,15 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	//Build downstream and upstream header rules
 	upstreamHeaders, downstreamHeaders := target.parent.SplitInboundOutboundHeaders()
 
-	err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:       target.Domain,
-		OriginalHost:      originalHostHeader,
-		UseTLS:            target.RequireTLS,
-		PathPrefix:        target.MatchingPath,
-		UpstreamHeaders:   upstreamHeaders,
-		DownstreamHeaders: downstreamHeaders,
-		Version:           target.parent.parent.Option.HostVersion,
+	statusCode, err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+		ProxyDomain:         target.Domain,
+		OriginalHost:        originalHostHeader,
+		UseTLS:              target.RequireTLS,
+		PathPrefix:          target.MatchingPath,
+		UpstreamHeaders:     upstreamHeaders,
+		DownstreamHeaders:   downstreamHeaders,
+		HostHeaderOverwrite: target.parent.RequestHostOverwrite,
+		Version:             target.parent.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError
@@ -245,7 +251,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			h.Parent.logRequest(r, false, 521, "vdir-http", target.Domain)
 		}
 	}
-	h.Parent.logRequest(r, true, 200, "vdir-http", target.Domain)
+	h.Parent.logRequest(r, true, statusCode, "vdir-http", target.Domain)
 
 }
 

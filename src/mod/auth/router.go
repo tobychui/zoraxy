@@ -10,7 +10,7 @@ type RouterOption struct {
 	AuthAgent     *AuthAgent
 	RequireAuth   bool                                     //This router require authentication
 	DeniedHandler func(http.ResponseWriter, *http.Request) //Things to do when request is rejected
-
+	TargetMux     *http.ServeMux
 }
 
 type RouterDef struct {
@@ -35,17 +35,31 @@ func (router *RouterDef) HandleFunc(endpoint string, handler func(http.ResponseW
 	authAgent := router.option.AuthAgent
 
 	//OK. Register handler
-	http.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
-		//Check authentication of the user
-		if router.option.RequireAuth {
-			authAgent.HandleCheckAuth(w, r, func(w http.ResponseWriter, r *http.Request) {
+	if router.option.TargetMux == nil {
+		http.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+			//Check authentication of the user
+			if router.option.RequireAuth {
+				authAgent.HandleCheckAuth(w, r, func(w http.ResponseWriter, r *http.Request) {
+					handler(w, r)
+				})
+			} else {
 				handler(w, r)
-			})
-		} else {
-			handler(w, r)
-		}
+			}
 
-	})
+		})
+	} else {
+		router.option.TargetMux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+			//Check authentication of the user
+			if router.option.RequireAuth {
+				authAgent.HandleCheckAuth(w, r, func(w http.ResponseWriter, r *http.Request) {
+					handler(w, r)
+				})
+			} else {
+				handler(w, r)
+			}
+
+		})
+	}
 
 	router.endpoints[endpoint] = handler
 

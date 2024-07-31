@@ -173,7 +173,7 @@ func (fm *FileManager) HandleDownload(w http.ResponseWriter, r *http.Request) {
 // HandleNewFolder creates a new folder in the specified directory
 func (fm *FileManager) HandleNewFolder(w http.ResponseWriter, r *http.Request) {
 	// Parse the directory name from the request
-	dirName, err := utils.GetPara(r, "path")
+	dirName, err := utils.PostPara(r, "path")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid directory name")
 		return
@@ -268,13 +268,13 @@ func (fm *FileManager) HandleFileCopy(w http.ResponseWriter, r *http.Request) {
 
 func (fm *FileManager) HandleFileMove(w http.ResponseWriter, r *http.Request) {
 	// Parse the source and destination paths from the request
-	srcPath, err := utils.GetPara(r, "srcpath")
+	srcPath, err := utils.PostPara(r, "srcpath")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid source path")
 		return
 	}
 
-	destPath, err := utils.GetPara(r, "destpath")
+	destPath, err := utils.PostPara(r, "destpath")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid destination path")
 		return

@@ -3,9 +3,11 @@
     <head>
         <!-- Notes: This should be open in its original path-->
         <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <link rel="stylesheet" href="../script/semantic/semantic.min.css">
         <script src="../script/jquery-3.6.0.min.js"></script>
         <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
         <style>
             .upstreamActions{
                 position: absolute;
@@ -133,7 +135,7 @@
             function initOriginList(){
                 $.ajax({
                     url: "/api/proxy/upstream/list",
-                    method: "POST",
+                    method: "GET",
                     data: {
                         "type":"host",
                         "ep": editingEndpoint.ep
@@ -284,8 +286,9 @@
                 }else{
                     //URL does not contains https or http protocol tag
                     //sniff header
-                    $.ajax({
+                    $.cjax({
                             url: "/api/proxy/tlscheck",
+                            method: "POST",
                             data: {url: targetDomain},
                             success: function(data){
                                 if (data.error != undefined){
@@ -313,7 +316,7 @@
                     return;
                 }
 
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/upstream/add",
                     method: "POST",
                     data:{
@@ -365,7 +368,7 @@
                 let newConfig = getUpstreamSettingFromDOM(targetDOM);
                 let isActive = $(targetDOM).find(".enableState")[0].checked;
                 console.log(newConfig);
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/upstream/update",
                     method: "POST",
                     data: {
@@ -418,8 +421,9 @@
                 }else{
                     //URL does not contains https or http protocol tag
                     //sniff header
-                    $.ajax({
+                    $.cjax({
                             url: "/api/proxy/tlscheck",
+                            method: "POST",
                             data: {url: targetDomain},
                             success: function(data){
                                 if (data.error != undefined){
@@ -460,7 +464,7 @@
 
             //Set a weight of a upstream
             function setUpstreamWeight(originIP, newWeight){
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/upstream/setPriority",
                     method: "POST",
                     data: {
@@ -489,7 +493,7 @@
                     return;
                 }
                 //Remove the upstream
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/upstream/remove",
                     method: "POST",
                     data: {

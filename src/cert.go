@@ -182,27 +182,28 @@ func handleToggleTLSProxy(w http.ResponseWriter, r *http.Request) {
 		sysdb.Read("settings", "usetls", &currentTlsSetting)
 	}
 
-	newState, err := utils.PostPara(r, "set")
-	if err != nil {
-		//No setting. Get the current status
+	if r.Method == http.MethodGet {
+		//Get the current status
 		js, _ := json.Marshal(currentTlsSetting)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		if newState == "true" {
+	} else if r.Method == http.MethodPost {
+		newState, err := utils.PostBool(r, "set")
+		if err != nil {
+			utils.SendErrorResponse(w, "new state not set or invalid")
+			return
+		}
+		if newState {
 			sysdb.Write("settings", "usetls", true)
 			SystemWideLogger.Println("Enabling TLS mode on reverse proxy")
 			dynamicProxyRouter.UpdateTLSSetting(true)
-		} else if newState == "false" {
+		} else {
 			sysdb.Write("settings", "usetls", false)
 			SystemWideLogger.Println("Disabling TLS mode on reverse proxy")
 			dynamicProxyRouter.UpdateTLSSetting(false)
-		} else {
-			utils.SendErrorResponse(w, "invalid state given. Only support true or false")
-			return
 		}
-
 		utils.SendOK(w)
-
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 

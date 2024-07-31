@@ -1,7 +1,6 @@
 package geodb
 
 import (
-	"math"
 	"net"
 )
 
@@ -41,14 +40,10 @@ func (t *trie) insert(ipAddr string, cc string) {
 	ipBytes := ipToBytes(ipAddr)
 	current := t.root
 	for _, b := range ipBytes {
-		//For each byte in the ip address
+		//For each byte in the ip address (4 / 16 bytes)
 		//each byte is 8 bit
-		for j := 0; j < 8; j++ {
-			bitwise := (b&uint8(math.Pow(float64(2), float64(j))) > 0)
-			bit := 0b0000
-			if bitwise {
-				bit = 0b0001
-			}
+		for j := 7; j >= 0; j-- {
+			bit := int(b >> j & 1)
 			if current.childrens[bit] == nil {
 				current.childrens[bit] = &trie_Node{
 					childrens: [2]*trie_Node{},
@@ -58,21 +53,9 @@ func (t *trie) insert(ipAddr string, cc string) {
 			current = current.childrens[bit]
 		}
 	}
-
-	/*
-		for i := 63; i >= 0; i-- {
-			bit := (ipInt64 >> uint(i)) & 1
-			if current.childrens[bit] == nil {
-				current.childrens[bit] = &trie_Node{
-					childrens: [2]*trie_Node{},
-					cc:        cc,
-				}
-			}
-			current = current.childrens[bit]
-		}
-	*/
 }
 
+// isReservedIP check if the given ip address is NOT a public ip address
 func isReservedIP(ip string) bool {
 	parsedIP := net.ParseIP(ip)
 	if parsedIP == nil {
@@ -86,12 +69,10 @@ func isReservedIP(ip string) bool {
 	if parsedIP.IsLinkLocalUnicast() || parsedIP.IsLinkLocalMulticast() {
 		return true
 	}
-
+	//Check if the IP is in the reserved private range
 	if parsedIP.IsPrivate() {
 		return true
 	}
-
-	// If the IP address is not a reserved address, return false
 	return false
 }
 
@@ -106,27 +87,15 @@ func (t *trie) search(ipAddr string) string {
 	for _, b := range ipBytes {
 		//For each byte in the ip address
 		//each byte is 8 bit
-		for j := 0; j < 8; j++ {
-			bitwise := (b&uint8(math.Pow(float64(2), float64(j))) > 0)
-			bit := 0b0000
-			if bitwise {
-				bit = 0b0001
-			}
+		for j := 7; j >= 0; j-- {
+			bit := int(b >> j & 1)
 			if current.childrens[bit] == nil {
 				return current.cc
 			}
 			current = current.childrens[bit]
 		}
 	}
-	/*
-		for i := 63; i >= 0; i-- {
-			bit := (ipInt64 >> uint(i)) & 1
-			if current.childrens[bit] == nil {
-				return current.cc
-			}
-			current = current.childrens[bit]
-		}
-	*/
+
 	if len(current.childrens) == 0 {
 		return current.cc
 	}

@@ -16,13 +16,6 @@ func (s *Store) search(ip string) string {
 		ip = strings.Split(ip, ",")[0]
 		ip = strings.TrimSpace(ip)
 	}
-	//See if there are cached country code for this ip
-	/*
-		ccc, ok := s.geoipCache.Load(ip)
-		if ok {
-			return ccc.(string)
-		}
-	*/
 
 	//Search in geotrie tree
 	cc := ""

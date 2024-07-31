@@ -3,9 +3,11 @@
     <head>
         <!-- Notes: This should be open in its original path-->
         <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
         <link rel="stylesheet" href="../script/semantic/semantic.min.css">
         <script src="../script/jquery-3.6.0.min.js"></script>
         <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
     </head>
     <body>
         <br>
@@ -174,7 +176,7 @@
                     parent.msgbox("Matching prefix cannot be empty!", false, 5000);
                     return;
                 }
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/auth/exceptions/add",
                     data:{
                         ep: editingEndpoint.ep,
@@ -195,7 +197,7 @@
 
             function removeExceptionPath(object){
                 let matchingPrefix = $(object).attr("prefix");
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/auth/exceptions/delete",
                     data:{
                         ep: editingEndpoint.ep,
@@ -290,7 +292,7 @@
             }
 
             function saveCredentials(){
-                $.ajax({
+                $.cjax({
                     url: "/api/proxy/updateCredentials",
                     method: "POST",
                     data: {
