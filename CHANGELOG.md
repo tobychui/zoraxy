@@ -1,3 +1,16 @@
+# v3.1.0 31 Jul 2024
+
++ Updated log viewer with filter and auto refresh [#243](https://github.com/tobychui/zoraxy/issues/243)
++ Fixed csrf vulnerability [#267](https://github.com/tobychui/zoraxy/issues/267)
++ Fixed promox issue
++ Fixed status code bug in upstream log [#254](https://github.com/tobychui/zoraxy/issues/254)
++ Added host overwrite and hop-by-hop header remover
++ Added early renew days settings [#256](https://github.com/tobychui/zoraxy/issues/256)
++ Updated make file to force no CGO in cicd process
++ Fixed bug in updater
++ Fixed wildcard certificate renew bug [#249](https://github.com/tobychui/zoraxy/issues/249)
++ Added certificate download function [#227](https://github.com/tobychui/zoraxy/issues/227)
+
 # v3.0.9 16 Jul 2024
 
 + Added certificate download [#227](https://github.com/tobychui/zoraxy/issues/227)
