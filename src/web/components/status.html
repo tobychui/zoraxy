@@ -583,14 +583,14 @@
             url: '/api/stats/netstatgraph?array=true',
             success: function(data){
                 if (rxValues.length == 0){
-                    rxValues = JSON.parse(JSON.stringify(data.Rx));
+                    rxValues.push(...data.Rx);
                 }else{
                     rxValues.push(data.Rx[dataCount-1]);
                     rxValues.shift();
                 }
 
                 if (txValues.length == 0){
-                    txValues = JSON.parse(JSON.stringify(data.Tx));
+                    txValues.push(...data.Tx);
                 }else{
                     txValues.push(data.Tx[dataCount-1]);
                     txValues.shift();
@@ -698,8 +698,8 @@
     }
 
     function updateChart() {
-        networkStatisticChart.data.datasets[0].data = rxValues;
-        networkStatisticChart.data.datasets[1].data = txValues;
+        //networkStatisticChart.data.datasets[0].data = rxValues;
+        //networkStatisticChart.data.datasets[1].data = txValues;
         if (networkStatisticChart != undefined){
             networkStatisticChart.update();
         }
