@@ -102,39 +102,62 @@ func (m *RouteManager) getSessionHandler(r *http.Request, upstreams []*Upstream)
 /* Functions related to random upstream picking */
 // Get a random upstream by the weights defined in Upstream struct, return the upstream, index value and any error
 func getRandomUpstreamByWeight(upstreams []*Upstream) (*Upstream, int, error) {
-	var ret *Upstream
-	sum := 0
-	for _, c := range upstreams {
-		sum += c.Weight
-	}
-	r, err := intRange(0, sum)
-	if err != nil {
-		return ret, -1, err
-	}
-	counter := 0
-	for _, c := range upstreams {
-		r -= c.Weight
-		if r < 0 {
-			return c, counter, nil
-		}
-		counter++
+	// If there is only one upstream, return it
+	if len(upstreams) == 1 {
+		return upstreams[0], 0, nil
 	}
 
-	if ret == nil {
-		//All fallback
-		//use the first one that is with weight = 0
-		fallbackUpstreams := []*Upstream{}
-		fallbackUpstreamsOriginalID := []int{}
-		for ix, upstream := range upstreams {
-			if upstream.Weight == 0 {
-				fallbackUpstreams = append(fallbackUpstreams, upstream)
-				fallbackUpstreamsOriginalID = append(fallbackUpstreamsOriginalID, ix)
-			}
-		}
-		upstreamID := rand.Intn(len(fallbackUpstreams))
-		return fallbackUpstreams[upstreamID], fallbackUpstreamsOriginalID[upstreamID], nil
+	// Preserve the index with upstreams
+	type upstreamWithIndex struct {
+		Upstream *Upstream
+		Index    int
 	}
-	return ret, -1, errors.New("failed to pick an upstream origin server")
+
+	// Calculate total weight for upstreams with weight > 0
+	totalWeight := 0
+	fallbackUpstreams := make([]upstreamWithIndex, 0, len(upstreams))
+
+	for index, upstream := range upstreams {
+		if upstream.Weight > 0 {
+			totalWeight += upstream.Weight
+		} else {
+			// Collect fallback upstreams
+			fallbackUpstreams = append(fallbackUpstreams, upstreamWithIndex{upstream, index})
+		}
+	}
+
+	// If there are no upstreams with weight > 0, return a fallback upstream if available
+	if totalWeight == 0 {
+		if len(fallbackUpstreams) > 0 {
+			// Randomly select one of the fallback upstreams
+			randIndex := rand.Intn(len(fallbackUpstreams))
+			return fallbackUpstreams[randIndex].Upstream, fallbackUpstreams[randIndex].Index, nil
+		}
+		// No upstreams available at all
+		return nil, -1, errors.New("no valid upstream servers available")
+	}
+
+	// Random weight between 0 and total weight
+	randomWeight := rand.Intn(totalWeight)
+
+	// Select an upstream based on the random weight
+	for index, upstream := range upstreams {
+		if upstream.Weight > 0 { // Only consider upstreams with weight > 0
+			if randomWeight < upstream.Weight {
+				// Return the selected upstream and its index
+				return upstream, index, nil
+			}
+			randomWeight -= upstream.Weight
+		}
+	}
+
+	// If we reach here, it means we should return a fallback upstream if available
+	if len(fallbackUpstreams) > 0 {
+		randIndex := rand.Intn(len(fallbackUpstreams))
+		return fallbackUpstreams[randIndex].Upstream, fallbackUpstreams[randIndex].Index, nil
+	}
+
+	return nil, -1, errors.New("failed to pick an upstream origin server")
 }
 
 // IntRange returns a random integer in the range from min to max.
