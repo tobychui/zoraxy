@@ -68,6 +68,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime
     environment:
-      PORT: "8005"
-      FASTGEOIP: "true"
+      - PORT=8005
+      - FASTGEOIP=true
 ```
