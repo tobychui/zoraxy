@@ -42,6 +42,10 @@ func (fm *FileManager) HandleList(w http.ResponseWriter, r *http.Request) {
 	// Construct the absolute path to the target directory
 	targetDir := filepath.Join(fm.Directory, directory)
 
+	// Clean path to prevent path escape #274
+	targetDir = filepath.ToSlash(filepath.Clean(targetDir))
+	targetDir = strings.ReplaceAll(targetDir, "../", "")
+
 	// Open the target directory
 	dirEntries, err := os.ReadDir(targetDir)
 	if err != nil {

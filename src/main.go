@@ -59,9 +59,9 @@ var enableAutoUpdate = flag.Bool("cfgupgrade", true, "Enable auto config upgrade
 
 var (
 	name        = "Zoraxy"
-	version     = "3.1.0"
+	version     = "3.1.1"
 	nodeUUID    = "generic" //System uuid, in uuidv4 format
-	development = false     //Set this to false to use embedded web fs
+	development = true      //Set this to false to use embedded web fs
 	bootTime    = time.Now().Unix()
 
 	/*
@@ -117,8 +117,8 @@ func SetupCloseHandler() {
 
 func ShutdownSeq() {
 	SystemWideLogger.Println("Shutting down " + name)
-	SystemWideLogger.Println("Closing GeoDB ")
-	geodbStore.Close()
+	//SystemWideLogger.Println("Closing GeoDB")
+	//geodbStore.Close()
 	SystemWideLogger.Println("Closing Netstats Listener")
 	netstatBuffers.Close()
 	SystemWideLogger.Println("Closing Statistic Collector")

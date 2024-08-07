@@ -34,7 +34,7 @@
 
     <script>
       const lines = {};
-      const linesAded = [];
+      const linesAded = {};
 
       function getDockerContainers() {
         const hostRequest = $.get("/api/proxy/list?type=host");
@@ -54,7 +54,9 @@
                   Config: [{ Gateway: gateway }],
                 },
               } = bridge;
-              const existedDomains = hostData.map(({ Domain }) => Domain);
+              const existedDomains = hostData.reduce((acc, { ActiveOrigins }) => {
+                return acc.concat(ActiveOrigins.map(({ OriginIpOrDomain }) => OriginIpOrDomain));
+              }, []);
 
               for (const container of containers) {
                 const {
@@ -63,19 +65,20 @@
                 } = container;
 
                 for (const portObject of Ports.filter(
-                  ({ IP: ip }) => ip === "::"
+                  ({ IP: ip }) => ip === "::" || ip === '0.0.0.0'
                 )) {
                   const { IP: ip, PublicPort: port } = portObject;
                   const key = `${name}-${port}`;
 
                   if (
-                    existedDomains.some((item) => item === `${gateway}:${port}`)
+                    existedDomains.some((item) => item === `${gateway}:${port}`) &&
+                    !linesAded[key]
                   ) {
-                    linesAded.push({
+                    linesAded[key] = {
                       name: name.replace(/^\//, ""),
                       ip: gateway,
                       port,
-                    });
+                    };
                   } else if (!lines[key]) {
                     lines[key] = {
                       name: name.replace(/^\//, ""),
@@ -100,7 +103,7 @@
                     </div>`
                 );
               }
-              for (const line of linesAded) {
+              for (const [key, line] of Object.entries(linesAded)) {
                 $("#containersAddedList").append(
                   `<div class="item">
                     <div class="content">
@@ -111,7 +114,7 @@
                     </div>`
                 );
               }
-              linesAded.length &&
+              Object.entries(linesAded).length &&
                 $("#containersAddedListHeader").removeAttr("hidden");
               $("#containersList .loader").removeClass("active");
             } else {
