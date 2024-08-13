@@ -44,7 +44,9 @@ func (fm *FileManager) HandleList(w http.ResponseWriter, r *http.Request) {
 
 	// Clean path to prevent path escape #274
 	targetDir = filepath.ToSlash(filepath.Clean(targetDir))
-	targetDir = strings.ReplaceAll(targetDir, "../", "")
+	for strings.Contains(targetDir, "../") {
+		targetDir = strings.ReplaceAll(targetDir, "../", "")
+	}
 
 	// Open the target directory
 	dirEntries, err := os.ReadDir(targetDir)
