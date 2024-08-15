@@ -46,7 +46,7 @@ body.darkTheme{
     --button_border_color: #646464;
 }
 
-/* Theme Toggle Css */
+/* Theme Toggle CSS */
 #themeColorButton{
     background-color: black;
     color: var(--text_color_inverted);
@@ -85,7 +85,6 @@ body{
     top: 0;
     width: 100%;
     z-index: 10;
-    
 }
 
 .menubar .logo{
@@ -154,7 +153,7 @@ body{
     right: 1em;
     display:none;
     max-width: 300px;
-    z-index: 999;
+    z-index: 1000;
 }
 
 /* Confirm Box */
@@ -519,6 +518,14 @@ body{
     display:none;
   }
 
+/* 
+  Default Site
+*/
+
+#setroot{
+    border-radius: 0.6em;
+}
+
 /*
   HTTP Proxy & Virtual Directory
 */
@@ -710,4 +717,153 @@ body{
 
 #traceroute_results::selection {
     background: #a9d1f3; 
-  }
+}
+
+/*
+    Quick Start Overview
+*/
+
+#quickstart .serviceOption{
+    position: relative;
+    overflow: hidden;
+    padding: 1em;
+    background-color: rgb(240, 240, 240);
+    border-radius: 0.6em;
+    cursor: pointer;
+    min-height: 250px;
+    transition: opacity 0.1s ease-in-out;
+}
+
+
+#quickstart .serviceOption .activeOption{
+    position: absolute;
+    bottom: 0.2em;
+    left: 0.2em;
+    display:none;
+}
+
+#quickstart .serviceOption.active .activeOption{
+    display: block;
+}
+
+
+#quickstart .serviceOption .titleWrapper{
+    text-align: center;
+    width: 100%;
+    font-weight: bolder;
+    font-size: 1.3em;
+}
+
+#quickstart .serviceOption :not(.titleWrapper){
+    font-weight: bold;
+}
+
+#quickstart .serviceOption .themebackground{
+    opacity: 0.2;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    margin-right: -1em;
+    margin-bottom: -2em;
+    pointer-events: none;
+    user-select: none;
+}
+
+#quickstart .serviceOption:not(.active):hover{
+    opacity: 0.8;
+}
+
+#quickstart .serviceOption.tls{
+    background: var(--theme_green);
+    color: white;
+}
+
+#quickstart .serviceOption.subdomain{
+    background: var(--theme_background);
+    color: white;
+}
+
+#quickstart .serviceOption.homepage{
+    background: var(--theme_background_inverted);
+    color: white;
+}
+
+
+#quickstart .finished.ui.button{
+    background: var(--theme_green);
+    color: white;
+}
+
+#tourModal{
+    background-color: white;
+    border-radius: 0.6em;
+    padding: 1.4em;
+    position: fixed;
+    z-index: 999;
+    width: 380px;
+    display:none;
+    border: 1px solid rgb(230, 230, 230);
+    box-shadow: 3px 3px 11px -3px rgba(0,0,0,0.3);
+}
+
+/* Locations of tourModal */
+#tourModal[position="center"]{
+    top: 200px;
+    left: calc(50% - 190px);
+}
+
+#tourModal[position="topleft"]{
+    top: 4em;
+    left: 4em;
+}
+
+#tourModal[position="topright"]{
+    top: 4em;
+    right: 4em;
+}
+
+#tourModal[position="bottomleft"]{
+    bottom: 4em;
+    left: 4em;
+}
+
+#tourModal[position="bottomright"]{
+    bottom: 4em;
+    right: 4em;
+}
+
+
+#tourModal .tourStepButtonFinish{
+    background: var(--theme_green) !important;
+    color: white;
+}
+
+
+#tourModal .tourCloseButton{
+    position: absolute;
+    top: 0em;
+    right: 0em;
+    margin-top: -0.6em;
+    margin-right: -0.6em;
+}
+
+#tourModal .nextStepFinish{
+    display: none;
+}
+
+#tourModal.nofocus{
+    box-shadow: 0 0 0 max(100vh, 100vw) rgba(0, 0, 0, .3);
+}
+
+
+#tourModalOverlay{
+    position: fixed;
+    top: 10em;
+    left: 10em;
+    width: 300px;
+    height: 200px;
+    pointer-events: none;
+    z-index: 199;
+    border-radius: 0.6em;
+    box-shadow: 0 0 0 max(100vh, 100vw) rgba(0, 0, 0, .3);
+}

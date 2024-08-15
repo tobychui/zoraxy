@@ -1,0 +1,77 @@
+
+<div id="quickstart" class="standardContainer">
+    <div class="ui container">
+        <h1 class="ui header">
+            <img src="img/res/1F387.png">
+            <div class="content">
+              Welcome to Zoraxy!
+              <div class="sub header">What services are you planning to setup today?</div>
+            </div>
+        </h1>
+        <br>
+        <div class="ui stackable equal width grid">
+            <div class="column">
+                <div class="serviceOption homepage" name="homepage">
+                    <div class="titleWrapper">
+                        <p>Basic Homepage</p>
+                    </div>
+                    <div class="ui divider"></div>
+                    <p>Host a static homepage with Zoraxy and point your domain name to your web server.</p>
+                    <img class="themebackground ui small image" src="img/res/1F310.png">
+                    <div class="activeOption">
+                        <i class="ui white huge circle check icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="serviceOption subdomain" name="subdomain">
+                    <div class="titleWrapper">
+                        <p>Sub-domains Routing</p>
+                    </div>
+                    <div class="ui divider"></div>
+                    <p>Add and handle traffic from your subdomains and point them to a dedicated web services somewhere else.</p>
+                    <img class="themebackground ui small image" src="img/res/1F500.png">
+                    <div class="activeOption">
+                        <i class="ui white huge circle check icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="serviceOption tls" name="tls">
+                    <div class="titleWrapper">
+                        <p>HTTPS Green Lock(s)</p>
+                    </div>
+                    <div class="ui divider"></div>
+                    <p>Turn your unsafe HTTP website into HTTPS using free certificate from public certificate authorities organizations.</p>
+                    <img class="themebackground ui small image" src="img/res/1F512.png">
+                    <div class="activeOption">
+                        <i class="ui white huge circle check icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <div style="width: 100%;" align="center">
+            <button onclick="startQuickStartTour();" class="ui finished button quickstartControlButton">
+                Start Walkthrough
+            </button>
+        </div>
+    </div>
+    
+</div>
+<script>
+    var currentQuickSetupClass = "";
+    var currentQuickSetupTourStep = 0;
+    //For tour logic, see quicksetup.js
+
+
+    //Bind selecting events to serviceOption
+    $("#quickstart .serviceOption").on("click", function(data){
+        $(".serviceOption.active").removeClass("active");
+        $(this).addClass("active");
+        let tourType = $(this).attr("name");
+        currentQuickSetupClass = tourType;
+    });
+   
+</script>
+<script src="script/quicksetup.js"></script>

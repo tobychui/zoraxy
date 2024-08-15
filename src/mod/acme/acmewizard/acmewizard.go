@@ -75,6 +75,15 @@ func HandleGuidedStepCheck(w http.ResponseWriter, r *http.Request) {
 		httpServerReachable := isHTTPServerAvailable(domain)
 		js, _ := json.Marshal(httpServerReachable)
 		utils.SendJSONResponse(w, string(js))
+	} else if stepNo == 10 {
+		//Resolve public Ip address for tour
+		publicIp, err := getPublicIPAddress()
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+		js, _ := json.Marshal(publicIp)
+		utils.SendJSONResponse(w, string(js))
 	} else {
 		utils.SendErrorResponse(w, "invalid step number")
 	}

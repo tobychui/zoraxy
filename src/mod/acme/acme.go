@@ -144,7 +144,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		} else {
 			// (caName == "" || caUrl == "") will use default acme
 			config.CADirURL = a.DefaultAcmeServer
-			a.Logf("[INFO] Using Default ACME "+a.DefaultAcmeServer+" for CA Directory URL", nil)
+			a.Logf("Using Default ACME "+a.DefaultAcmeServer+" for CA Directory URL", nil)
 		}
 	}
 

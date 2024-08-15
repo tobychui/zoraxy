@@ -53,8 +53,10 @@
 </div>
 <div class="standardContainer" style="padding-bottom: 0 !important;">
     <!-- Power Buttons-->
-    <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
-    <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
+    <div class="poweroptions" style="display:inline-block;">
+        <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
+        <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
+    </div>
     <div class="ui divider"></div>
     <h4>Network Status</h4>
     <p>Overall Network I/O in Current Host Server</p>

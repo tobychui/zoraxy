@@ -54,6 +54,9 @@ type ReverseProxy struct {
 	Prepender string
 
 	Verbal bool
+
+	//Appended by Zoraxy project
+
 }
 
 type ResponseRewriteRuleSet struct {

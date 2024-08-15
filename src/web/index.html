@@ -36,6 +36,9 @@
         <div class="wrapper">
             <div class="toolbar">
                 <div id="mainmenu" class="ui secondary vertical menu">
+                    <a class="item" tag="qstart">
+                        <i class="simplistic magic icon"></i>Quick Start
+                    </a>
                     <a class="item active" tag="status">
                         <i class="simplistic info circle icon"></i>Status
                     </a>
@@ -92,6 +95,9 @@
                 </div>
             </div>
             <div class="contentWindow">
+                <!-- Quick Start -->
+                <div id="qstart" class="functiontab" target="quickstart.html"></div>
+
                 <!-- Status Tab -->
                 <div id="status" class="functiontab" target="status.html" style="display: block ;">
                     <br><br><div class="ui active centered inline loader"></div>
@@ -171,6 +177,22 @@
                 <div class="questionToConfirm">Confirm Exit?</div>
             </div>
         </div>
+
+        <div id="tourModal" class="nofocus" position="center">
+            <h4 class="tourStepTitle">Welcome to Zoraxy Tour</h4>
+            <p class="tourStepContent">This is a simplified tour to show some of what it can do.
+                Use your keyboard or click the next button to get going.</p>
+            <div class="ui divider"></div>
+            <div class="ui equal width grid" align="center">
+                <div class="column"><button onclick="previousTourStep();" class="ui basic small disabled button tourStepButtonBack">Back</button></div>
+                <div class="column"><p style="margin-top: 0.4em">Steps <span class="tourStepCounter">1 / 9</span></p></div>
+                <div class="column nextStepAvaible"><button onclick="nextTourStep();" class="ui basic right floated small button tourStepButtonNext">Next</button></div>
+                <div class="column nextStepFinish"><button onclick="endTourFocus();" class="ui right floated small button tourStepButtonFinish">Finish</button></div>
+            </div>
+            <button onclick="endTourFocus();" class="ui circular small icon button tourCloseButton"><i class="ui times icon"></i></button>
+        </div>
+        <div id="tourModalOverlay" style="display:none;"></div>
+
         <br><br>
         <script>
             $(".year").text(new Date().getFullYear());
