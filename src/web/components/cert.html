@@ -59,7 +59,7 @@
         </div>
     </div>
     <p>Current list of loaded certificates</p>
-    <div>
+    <div tourstep="certTable">
         <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
             <table class="ui sortable unstackable basic celled table">
                 <thead>
@@ -79,7 +79,8 @@
         <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
     </div>
     <div class="ui divider"></div>
-    <h3>Fallback Certificate</h3>
+    <div tourstep="defaultCertificate">
+        <h3>Fallback Certificate</h3>
         <p>When there are no matching certificate for the requested server name, reverse proxy router will always fallback to this one.<br>Note that you need both of them uploaded for it to fallback properly</p>
         <table class="ui very basic unstackable celled table">
             <thead>
@@ -102,43 +103,46 @@
             <button class="ui basic grey button" onclick="uploadPublicKey();"><i class="globe icon"></i> Public Key</button>
             <button class="ui basic black button" onclick="uploadPrivateKey();"><i class="black lock icon"></i> Private Key</button>
         </div>
+    </div>
     <div class="ui divider"></div>
-    <h3>Certificate Authority (CA) and Auto Renew (ACME)</h3>
-    <p>Management features regarding CA and ACME</p>
-    <h4>Prefered Certificate Authority</h4>
-    <p>The default CA to use when create a new subdomain proxy endpoint with TLS certificate</p>
-    <div class="ui fluid form">
-        <div class="field">
-            <label>Preferred CA</label>
-            <div class="ui selection dropdown" id="defaultCA">
-                <input type="hidden" name="defaultCA">
-                <i class="dropdown icon"></i>
-                <div class="default text">Let's Encrypt</div>
-                <div class="menu">
-                  <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
-                  <div class="item" data-value="Buypass">Buypass</div>
-                  <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+    <div tourstep="acmeSettings">
+        <h3>Certificate Authority (CA) and Auto Renew (ACME)</h3>
+        <p>Management features regarding CA and ACME</p>
+        <h4>Prefered Certificate Authority</h4>
+        <p>The default CA to use when create a new subdomain proxy endpoint with TLS certificate</p>
+        <div class="ui fluid form">
+            <div class="field">
+                <label>Preferred CA</label>
+                <div class="ui selection dropdown" id="defaultCA">
+                    <input type="hidden" name="defaultCA">
+                    <i class="dropdown icon"></i>
+                    <div class="default text">Let's Encrypt</div>
+                    <div class="menu">
+                    <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
+                    <div class="item" data-value="Buypass">Buypass</div>
+                    <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="field">
-            <label>ACME Email</label>
-            <input id="prefACMEEmail" type="text" placeholder="ACME Email">
-        </div>
-        <button class="ui basic icon button" onclick="saveDefaultCA();"><i class="ui blue save icon"></i> Save Settings</button>
-    </div><br>
-    <h5>Certificate Renew / Generation (ACME) Settings</h5>
-    <div class="ui basic segment acmeRenewStateWrapper">
-        <h4 class="ui header" id="acmeAutoRenewer">
-            <i class="white remove icon"></i>
-            <div class="content">
-                <span id="acmeAutoRenewerStatus">Disabled</span>
-                <div class="sub header">ACME Auto-Renewer</div>
+            <div class="field">
+                <label>ACME Email</label>
+                <input id="prefACMEEmail" type="text" placeholder="ACME Email">
             </div>
-        </h4>
+            <button class="ui basic icon button" onclick="saveDefaultCA();"><i class="ui blue save icon"></i> Save Settings</button>
+        </div><br>
+        <h5>Certificate Renew / Generation (ACME) Settings</h5>
+        <div class="ui basic segment acmeRenewStateWrapper">
+            <h4 class="ui header" id="acmeAutoRenewer">
+                <i class="white remove icon"></i>
+                <div class="content">
+                    <span id="acmeAutoRenewerStatus">Disabled</span>
+                    <div class="sub header">ACME Auto-Renewer</div>
+                </div>
+            </h4>
+        </div>
+        <p>This tool provide you a graphical interface to setup auto certificate renew on your (sub)domains. You can also manually generate a certificate if one of your domain do not have certificate.</p>
+        <button class="ui basic button" tourstep="openACMEManager" onclick="openACMEManager();"><i class="yellow external icon"></i> Open ACME Tool</button>
     </div>
-    <p>This tool provide you a graphical interface to setup auto certificate renew on your (sub)domains. You can also manually generate a certificate if one of your domain do not have certificate.</p>
-    <button class="ui basic button" onclick="openACMEManager();"><i class="yellow external icon"></i> Open ACME Tool</button>
 </div>
 <script>
     var uploadPendingPublicKey = undefined;

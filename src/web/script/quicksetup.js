@@ -11,6 +11,7 @@
 //      tab -> Tab ID to switch pages
 //      pos -> Where to display the tour modal, {topleft, topright, bottomleft, bottomright, center}
 //      scrollto -> Element (selector) to scroll to, can be different from elements
+//      ignoreVisiableCheck -> Force highlight even if element is currently not visable
 function adjustTourModalOverlayToElement(element){;
     if ($(element) == undefined || $(element).offset() == undefined){
         return;
@@ -34,8 +35,12 @@ function tourStepFactory(config){
             //This tour require tab swap. call to openTabById
             openTabById(config.tab);
         }
+
+        if (config.ignoreVisiableCheck == undefined){
+            config.ignoreVisiableCheck = false;
+        }
         
-        if (config.element == undefined){
+        if (config.element == undefined || (!$(config.element).is(":visible") && !config.ignoreVisiableCheck)){
             //No focused element in this step.
             $(".tourFocusObject").removeClass("tourFocusObject");
             $("#tourModal").addClass("nofocus");
@@ -60,7 +65,7 @@ function tourStepFactory(config){
                 }
                 tourOverlayUpdateTicker = setInterval(function(){
                     adjustTourModalOverlayToElement(config.element);
-                }, 300);
+                }, 500);
                 adjustTourModalOverlayToElement(config.element);
                 $("#tourModalOverlay").fadeIn();
             }
@@ -74,7 +79,7 @@ function tourStepFactory(config){
              if (config.scrollto != undefined){
                 $('html, body').animate({
                     scrollTop: $(config.scrollto).offset().top - 100
-                }, 500, function(){
+                }, 300, function(){
                     setTimeout(elementHighligher, 300);
                 });
             }else{
@@ -98,6 +103,13 @@ function tourStepFactory(config){
 
        
     }
+}
+
+//Hide the side warpper in tour mode and prevent body from restoring to
+//overflow scroll mode
+function hideSideWrapperInTourMode(){
+    hideSideWrapper(); //Call to index.html hide side wrapper function
+    $("body").css("overflow", "hidden"); //Restore overflow state
 }
 
 function startQuickStartTour(){
@@ -260,7 +272,7 @@ var tourSteps = {
             title: "📤 Upload Static Website",
             desc: `Upload your static website files (e.g. HTML files) to the web directory. If remote access is not avaible, you can also upload it with the web server file manager here.`,
             tab: "webserv",
-            element: "#webserv",
+            element: "#webserv_dirManager",
             pos: "bottomright",
             scrollto: "#webserv_dirManager"
         }),
@@ -348,6 +360,7 @@ var tourSteps = {
             element: "#rules #advanceProxyRules .field[tourstep='skipTLSValidation']",
             scrollto: "#rules #advanceProxyRules",
             pos: "bottomright",
+            ignoreVisiableCheck: true,
             callback: function(){
                 $("#advanceProxyRules").accordion();
                 if (!$("#rules #advanceProxyRules .content").is(":visible")){
@@ -382,6 +395,112 @@ var tourSteps = {
 
     //TLS and ACME tour steps
     "tls":[
+        tourStepFactory({
+            title: "🔐 Enable HTTPS (TLS) for your site",
+            desc: `Some technologies only work with HTTPS for security reasons. In this tour, you will be guided through the steps to enable HTTPS in Zoraxy.`,
+            pos: "center",
+        }),
+        tourStepFactory({
+            title: "➡️ Change Listening Port",
+            desc: `HTTPS listen on port 443 instead of 80. If your Zoraxy is currently listening to ports other than 443, change it to 443 in incoming port option and click "Apply"`,
+            tab: "status",
+            element: "#status div[tourstep='incomingPort']",
+            scrollto: "#status div[tourstep='incomingPort']",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🔑 Enable TLS Serving",
+            desc: `Next, you can enable TLS by checking the "Use TLS to serve proxy request"`,
+            element: "#tls",
+            scrollto: "#tls",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "💻 Enable HTTP Server on Port 80",
+            desc: `As we might want some proxy rules to be accessible by HTTP, turn on the HTTP server listener on port 80 as well.`,
+            element: "#listenP80",
+            scrollto: "#tls",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "↩️ Force redirect HTTP request to HTTPS",
+            desc: `By default, if a HTTP host-name is not found, 404 error page will be returned. However, in common scenerio for self-hosting, you might want to redirect that request to your HTTPS server instead. <br><br>Enabling this option allows such redirection to be done automatically.`,
+            element: "#status div[tourstep='forceHttpsRedirect']",
+            scrollto: "#tls",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🎉 HTTPS Enabled!",
+            desc: `Now, your Zoraxy instance is ready to serve HTTPS requests. 
+            <br><br>By default, Zoraxy serve all your host-names by its internal self-signed certificate which is not a proper setup. That is why you will need to request a proper certificate for your site from your ISP or CA. `,
+            tab: "status",
+            pos: "center",
+        }),
+        tourStepFactory({
+            title: "🔐 TLS / SSL Certificates",
+            desc: `Zoraxy come with a simple and handy TLS management interface, where you can upload or request your certificates with a web form. You can click "TLS / SSL Certificate" from the side menu to open this page.`,
+            tab: "cert",
+            element: "#mainmenu",
+            pos: "center",
+        }),
+        tourStepFactory({
+            title: "📤 Uploading Fallback (Default) Certificate",
+            desc: `If you are using Cloudflare, you can upload the Cloudflare (full) strict mode certificate in the "Fallback Certificate" section and let Cloudflare handle all the remaining certificate dispatch. <br><br>
+            Public key usually use a file extension of .pub or .pem, and private key usually ends with .key.`,
+            element: "#cert div[tourstep='defaultCertificate']",
+            scrollto: "#cert div[tourstep='defaultCertificate']",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "⚙️ Setup ACME",
+            desc: `If you didn't want to pay for a certificate, there are free CA where you can use to obtain a certificate. By default, Let's Encrypt is used and in order to use their service, you will need to fill in your webmin contact email in the "ACME EMAIL" field.
+            <br><br> After you are done, click "Save Settings" and continue.`,
+            element: "#cert div[tourstep='acmeSettings']",
+            scrollto: "#cert div[tourstep='acmeSettings']",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "👉 Open ACME Tool",
+            desc: `Open the ACME Tool by pressing the button below the ACME settings. You will see a tool window popup from the side.`,
+            element: ".sideWrapper",
+            pos: "center",
+            callback: function(){
+                //Call to function in cert.html
+                openACMEManager();
+            }
+        }),
+        tourStepFactory({
+            title: "📃 Obtain Certificate with ACME",
+            desc: `Now, we can finally start requesting a free certificate from the selected CA. Fill in the "Generate New Certificate" web-form and click <b>"Get Certificate"</b>.
+            This usually will takes a few minutes. Wait until the spinning icon disappear before moving on the next step. 
+            <br><br>Tips: You can check the "Use DNS Challenge" if you are trying to request a certificate containing wildcard character (*).`,
+            element: ".sideWrapper",
+            pos: "topleft",
+        }),
+        tourStepFactory({
+            title: "🔄 Enable Auto Renew",
+            desc:`Free certificate only last for a few months. If you want Zoraxy to help you automate the certificate renew process, enable "Auto Renew" by clicking the <b>"Enable Certificate Auto Renew"</b> toggle switch.
+            <br><br>You can fine tune which certificate to renew in the "Advance Renew Policy" dropdown.`,
+            element: ".sideWrapper",
+            pos: "bottomleft",
+            callback: function(){
+                //If the user arrive this step from "Back"
+                if (!$(".sideWrapper").is(":visible")){
+                    openACMEManager();
+                }
+            }
+        }),
+        tourStepFactory({
+            title: "🎉 Certificate Installed!",
+            desc:`Now, your certificate is loaded into the database and it is ready to use! In Zoraxy, you do not need to manually assign the certificate to a domain. Zoraxy will do that automatically for you. 
+                <br><br>Now, you can try to visit your website with https:// and see your green lock shows up next to your domain name!`,
+            element: "#cert div[tourstep='certTable']",
+            scrollto: "#cert div[tourstep='certTable']",
+            pos: "bottomright",
+            callback: function(){
+                hideSideWrapperInTourMode();
+            }
+        }),
 
     ],
 }
