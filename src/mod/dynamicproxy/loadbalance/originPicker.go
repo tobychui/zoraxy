@@ -2,8 +2,6 @@ package loadbalance
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 )
@@ -29,7 +27,7 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 			//No valid session found. Assign a new upstream
 			targetOrigin, index, err := getRandomUpstreamByWeight(origins)
 			if err != nil {
-				fmt.Println("Oops. Unable to get random upstream")
+				m.println("Unable to get random upstream", err)
 				targetOrigin = origins[0]
 				index = 0
 			}
@@ -44,7 +42,7 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 		var err error
 		targetOrigin, _, err = getRandomUpstreamByWeight(origins)
 		if err != nil {
-			log.Println(err)
+			m.println("Failed to get next origin", err)
 			targetOrigin = origins[0]
 		}
 
@@ -161,6 +159,7 @@ func getRandomUpstreamByWeight(upstreams []*Upstream) (*Upstream, int, error) {
 }
 
 // IntRange returns a random integer in the range from min to max.
+/*
 func intRange(min, max int) (int, error) {
 	var result int
 	switch {
@@ -175,3 +174,4 @@ func intRange(min, max int) (int, error) {
 	}
 	return result, nil
 }
+*/

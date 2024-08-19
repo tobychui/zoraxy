@@ -70,6 +70,11 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 
 // Add Proxy Route to current runtime. Call to PrepareProxyRoute before adding to runtime
 func (router *Router) AddProxyRouteToRuntime(endpoint *ProxyEndpoint) error {
+	if len(endpoint.ActiveOrigins) == 0 {
+		//There are no active origins. No need to check for ready
+		router.ProxyEndpoints.Store(endpoint.RootOrMatchingDomain, endpoint)
+		return nil
+	}
 	if !router.loadBalancer.UpstreamsReady(endpoint.ActiveOrigins) {
 		//This endpoint is not prepared
 		return errors.New("proxy endpoint not ready. Use PrepareProxyRoute before adding to runtime")

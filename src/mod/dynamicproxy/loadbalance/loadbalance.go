@@ -83,6 +83,10 @@ func GetUpstreamsAsString(upstreams []*Upstream) string {
 	for _, upstream := range upstreams {
 		targets = append(targets, upstream.String())
 	}
+	if len(targets) == 0 {
+		//No upstream
+		return "(no upstream config)"
+	}
 	return strings.Join(targets, ", ")
 }
 
@@ -93,7 +97,7 @@ func (m *RouteManager) Close() {
 
 }
 
-// Print debug message
-func (m *RouteManager) debugPrint(message string, err error) {
+// Log Println, replace all log.Println or fmt.Println with this
+func (m *RouteManager) println(message string, err error) {
 	m.Options.Logger.PrintAndLog("LoadBalancer", message, err)
 }

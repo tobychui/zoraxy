@@ -910,7 +910,6 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 		results := []*dynamicproxy.ProxyEndpoint{}
 		dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
 			thisEndpoint := dynamicproxy.CopyEndpoint(value.(*dynamicproxy.ProxyEndpoint))
-
 			//Clear the auth passwords before showing to front-end
 			cleanedCredentials := []*dynamicproxy.BasicAuthCredentials{}
 			for _, user := range thisEndpoint.BasicAuthCredentials {
@@ -919,7 +918,6 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 					PasswordHash: "",
 				})
 			}
-
 			thisEndpoint.BasicAuthCredentials = cleanedCredentials
 			results = append(results, thisEndpoint)
 			return true
