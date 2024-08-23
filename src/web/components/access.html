@@ -1110,7 +1110,7 @@
                 }
 
                 $("#ipAddressInput").val("");
-                $("#ipAddressInput").parent().remvoeClass("error");
+                $("#ipAddressInput").parent().removeClass("error");
             },
             error: function() {
                 alert("Failed to add IP address to blacklist");
@@ -1244,7 +1244,7 @@
 
                 $("#ipAddressInputWhitelist").val("");
                 $("#ipAddressCommentsWhitelist").val("");
-                $("#ipAddressInputWhitelist").parent().remvoeClass("error");
+                $("#ipAddressInputWhitelist").parent().removeClass("error");
             },
             error: function() {
                 alert("Failed to add IP address to whitelist");
