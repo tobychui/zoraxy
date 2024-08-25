@@ -496,7 +496,6 @@ var tourSteps = {
                 <br><br>Now, you can try to visit your website with https:// and see your green lock shows up next to your domain name!`,
             element: "#cert div[tourstep='certTable']",
             scrollto: "#cert div[tourstep='certTable']",
-            tab: "cert",
             pos: "bottomright",
             callback: function(){
                 hideSideWrapperInTourMode();
