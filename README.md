@@ -4,7 +4,6 @@
 
 A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
 
-
 ### Features
 
 - Simple to use interface with detail in-system instructions
@@ -38,15 +37,16 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
 ## Downloads
 
 [Windows](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_windows_amd64.exe)
-/[Linux (amd64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_amd64)
-/[Linux (arm64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_arm64)
+/ [Linux (amd64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_amd64)
+/ [Linux (arm64)](https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_arm64)
 
-For other systems or architectures, please see [Release](https://github.com/tobychui/zoraxy/releases/latest/) 
+For other systems or architectures, please see [Releases](https://github.com/tobychui/zoraxy/releases/latest/) 
 
 ## Getting Started
+
 [Installing Zoraxy Reverse Proxy: Your Gateway to Efficient Web Routing](https://geekscircuit.com/installing-zoraxy-reverse-proxy-your-gateway-to-efficient-web-routing/)
 
-Thank you for the well written and easy to follow tutorial by Reddit users [itsvmn](https://www.reddit.com/user/itsvmn/)! 
+Thank you for the well written and easy to follow tutorial by Reddit user [itsvmn](https://www.reddit.com/user/itsvmn/)! 
 If you have no background in setting up reverse proxy or web routing, you should check this out before you start setting up your Zoraxy. 
 
 ## Build from Source
@@ -92,7 +92,7 @@ The installation method is same as Linux. For other ARM SBCs, please refer to yo
 
 See the [/docker](https://github.com/tobychui/zoraxy/tree/main/docker) folder for more details.
 
-### Start Paramters
+### Start Parameters
 
 ```
 Usage of zoraxy:
@@ -119,7 +119,7 @@ Usage of zoraxy:
   -webfm
         Enable web file manager for static web server root folder (default true)
   -webroot string
-        Static web server root folder. Only allow chnage in start paramters (default "./www")
+        Static web server root folder. Only allow change in start parameters (default "./www")
   -ztauth string
         ZeroTier authtoken for the local node
   -ztport int
