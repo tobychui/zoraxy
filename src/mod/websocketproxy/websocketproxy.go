@@ -3,6 +3,7 @@ package websocketproxy
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
+	"imuslab.com/zoraxy/mod/info/logger"
 )
 
 var (
@@ -54,8 +56,9 @@ type WebsocketProxy struct {
 
 // Additional options for websocket proxy runtime
 type Options struct {
-	SkipTLSValidation bool //Skip backend TLS validation
-	SkipOriginCheck   bool //Skip origin check
+	SkipTLSValidation bool           //Skip backend TLS validation
+	SkipOriginCheck   bool           //Skip origin check
+	Logger            *logger.Logger //Logger, can be nil
 }
 
 // ProxyHandler returns a new http.Handler interface that reverse proxies the
@@ -78,17 +81,26 @@ func NewProxy(target *url.URL, options Options) *WebsocketProxy {
 	return &WebsocketProxy{Backend: backend, Verbal: false, Options: options}
 }
 
+// Utilities function for log printing
+func (w *WebsocketProxy) Println(messsage string, err error) {
+	if w.Options.Logger != nil {
+		w.Options.Logger.PrintAndLog("websocket", messsage, err)
+		return
+	}
+	log.Println("[websocketproxy] [system:info]"+messsage, err)
+}
+
 // ServeHTTP implements the http.Handler that proxies WebSocket connections.
 func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if w.Backend == nil {
-		log.Println("websocketproxy: backend function is not defined")
+		w.Println("Invalid websocket backend configuration", errors.New("backend function not found"))
 		http.Error(rw, "internal server error (code: 1)", http.StatusInternalServerError)
 		return
 	}
 
 	backendURL := w.Backend(req)
 	if backendURL == nil {
-		log.Println("websocketproxy: backend URL is nil")
+		w.Println("Invalid websocket backend configuration", errors.New("backend URL is nil"))
 		http.Error(rw, "internal server error (code: 2)", http.StatusInternalServerError)
 		return
 	}
@@ -158,13 +170,13 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// http://tools.ietf.org/html/draft-ietf-hybi-websocket-multiplexing-01
 	connBackend, resp, err := dialer.Dial(backendURL.String(), requestHeader)
 	if err != nil {
-		log.Printf("websocketproxy: couldn't dial to remote backend url %s", err)
+		w.Println("Couldn't dial to remote backend url "+backendURL.String(), err)
 		if resp != nil {
 			// If the WebSocket handshake fails, ErrBadHandshake is returned
 			// along with a non-nil *http.Response so that callers can handle
 			// redirects, authentication, etcetera.
 			if err := copyResponse(rw, resp); err != nil {
-				log.Printf("websocketproxy: couldn't write response after failed remote backend handshake: %s", err)
+				w.Println("Couldn't write response after failed remote backend handshake to "+backendURL.String(), err)
 			}
 		} else {
 			http.Error(rw, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
@@ -198,7 +210,7 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Also pass the header that we gathered from the Dial handshake.
 	connPub, err := upgrader.Upgrade(rw, req, upgradeHeader)
 	if err != nil {
-		log.Printf("websocketproxy: couldn't upgrade %s", err)
+		w.Println("Couldn't upgrade incoming request", err)
 		return
 	}
 	defer connPub.Close()

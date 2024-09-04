@@ -285,6 +285,7 @@ func startupSequence() {
 		int64(*acmeAutoRenewInterval),
 		*acmeCertAutoRenewDays,
 		acmeHandler,
+		SystemWideLogger,
 	)
 	if err != nil {
 		log.Fatal(err)

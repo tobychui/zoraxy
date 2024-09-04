@@ -64,7 +64,7 @@ sudo ./zoraxy -port=:8000
 
 ## Usage
 
-Zoraxy provides basic authentication system for standalone mode. To use it in standalone mode, follow the instructionss below for your desired deployment platform.
+Zoraxy provides basic authentication system for standalone mode. To use it in standalone mode, follow the instructions below for your desired deployment platform.
 
 ### Standalone Mode
 
@@ -134,7 +134,7 @@ If you already have an upstream reverse proxy server in place with permission ma
 ./zoraxy -noauth=true
 ```
 
-*Note: For security reaons, you should only enable no-auth if you are running Zoraxy in a trusted environment or with another authentication management proxy in front.*
+*Note: For security reasons, you should only enable no-auth if you are running Zoraxy in a trusted environment or with another authentication management proxy in front.*
 
 ## Screenshots
 

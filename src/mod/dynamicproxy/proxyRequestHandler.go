@@ -117,7 +117,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession)
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
-		log.Println(err.Error())
+		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
 		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname())
 		return
 	}
@@ -144,6 +144,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation: selectedUpstream.SkipCertValidations,
 			SkipOriginCheck:   selectedUpstream.SkipWebSocketOriginCheck,
+			Logger:            h.Parent.Option.Logger,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return
@@ -177,11 +178,10 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	if err != nil {
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
-			log.Println(err.Error())
 			h.Parent.logRequest(r, false, 404, "host-http", r.URL.Hostname())
 		} else {
 			http.ServeFile(w, r, "./web/rperror.html")
-			log.Println(err.Error())
+			//TODO: Take this upstream offline automatically
 			h.Parent.logRequest(r, false, 521, "host-http", r.URL.Hostname())
 		}
 	}
@@ -212,6 +212,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation: target.SkipCertValidations,
 			SkipOriginCheck:   true, //You should not use websocket via virtual directory. But keep this to true for compatibility
+			Logger:            h.Parent.Option.Logger,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return

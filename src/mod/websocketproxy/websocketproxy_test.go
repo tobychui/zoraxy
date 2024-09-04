@@ -31,6 +31,7 @@ func TestProxy(t *testing.T) {
 	proxy := NewProxy(u, Options{
 		SkipTLSValidation: false,
 		SkipOriginCheck:   false,
+		Logger:            nil,
 	})
 	proxy.Upgrader = upgrader
 

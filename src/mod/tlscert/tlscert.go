@@ -6,7 +6,6 @@ import (
 	"embed"
 	"encoding/pem"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -185,7 +184,6 @@ func (m *Manager) GetCert(helloInfo *tls.ClientHelloInfo) (*tls.Certificate, err
 	//Load the cert and serve it
 	cer, err := tls.LoadX509KeyPair(pubKey, priKey)
 	if err != nil {
-		log.Println(err)
 		return nil, nil
 	}
 

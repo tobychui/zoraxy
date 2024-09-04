@@ -11,7 +11,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -26,6 +25,7 @@ import (
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -68,25 +68,31 @@ type ACMEHandler struct {
 	DefaultAcmeServer string
 	Port              string
 	Database          *database.Database
+	Logger            *logger.Logger
 }
 
 // NewACME creates a new ACMEHandler instance.
-func NewACME(acmeServer string, port string, database *database.Database) *ACMEHandler {
+func NewACME(defaultAcmeServer string, port string, database *database.Database, logger *logger.Logger) *ACMEHandler {
 	return &ACMEHandler{
-		DefaultAcmeServer: acmeServer,
+		DefaultAcmeServer: defaultAcmeServer,
 		Port:              port,
 		Database:          database,
+		Logger:            logger,
 	}
+}
+
+func (a *ACMEHandler) Logf(message string, err error) {
+	a.Logger.PrintAndLog("ACME", message, err)
 }
 
 // ObtainCert obtains a certificate for the specified domains.
 func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool) (bool, error) {
-	log.Println("[ACME] Obtaining certificate...")
+	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
 
 	// generate private key
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Private key generation failed", err)
 		return false, err
 	}
 
@@ -102,7 +108,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	// skip TLS verify if need
 	// Ref: https://github.com/go-acme/lego/blob/6af2c756ac73a9cb401621afca722d0f4112b1b8/lego/client_config.go#L74
 	if skipTLS {
-		log.Println("[INFO] Ignore TLS/SSL Verification Error for ACME Server")
+		a.Logf("Ignoring TLS/SSL Verification Error for ACME Server", nil)
 		config.HTTPClient.Transport = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
@@ -129,16 +135,16 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// if not custom ACME url, load it from ca.json
 	if caName == "custom" {
-		log.Println("[INFO] Using Custom ACME " + caUrl + " for CA Directory URL")
+		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
 	} else {
 		caLinkOverwrite, err := loadCAApiServerFromName(caName)
 		if err == nil {
 			config.CADirURL = caLinkOverwrite
-			log.Println("[INFO] Using " + caLinkOverwrite + " for CA Directory URL")
+			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
 		} else {
 			// (caName == "" || caUrl == "") will use default acme
 			config.CADirURL = a.DefaultAcmeServer
-			log.Println("[INFO] Using Default ACME " + a.DefaultAcmeServer + " for CA Directory URL")
+			a.Logf("Using Default ACME "+a.DefaultAcmeServer+" for CA Directory URL", nil)
 		}
 	}
 
@@ -146,7 +152,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	client, err := lego.NewClient(config)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Failed to spawn new ACME client from current config", err)
 		return false, err
 	}
 
@@ -164,32 +170,32 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		var dnsCredentials string
 		err := a.Database.Read("acme", certificateName+"_dns_credentials", &dnsCredentials)
 		if err != nil {
-			log.Println(err)
+			a.Logf("Read DNS credential failed", err)
 			return false, err
 		}
 
 		var dnsProvider string
 		err = a.Database.Read("acme", certificateName+"_dns_provider", &dnsProvider)
 		if err != nil {
-			log.Println(err)
+			a.Logf("Read DNS Provider failed", err)
 			return false, err
 		}
 
 		provider, err := GetDnsChallengeProviderByName(dnsProvider, dnsCredentials)
 		if err != nil {
-			log.Println(err)
+			a.Logf("Unable to resolve DNS challenge provider", err)
 			return false, err
 		}
 
 		err = client.Challenge.SetDNS01Provider(provider)
 		if err != nil {
-			log.Println(err)
+			a.Logf("Failed to resolve DNS01 Provider", err)
 			return false, err
 		}
 	} else {
 		err = client.Challenge.SetHTTP01Provider(http01.NewProviderServer("", a.Port))
 		if err != nil {
-			log.Println(err)
+			a.Logf("Failed to resolve HTTP01 Provider", err)
 			return false, err
 		}
 	}
@@ -205,7 +211,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	var reg *registration.Resource
 	// New users will need to register
 	if client.GetExternalAccountRequired() {
-		log.Println("External Account Required for this ACME Provider.")
+		a.Logf("External Account Required for this ACME Provider", nil)
 		// IF KID and HmacEncoded is overidden
 
 		if !a.Database.TableExists("acme") {
@@ -220,20 +226,18 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		var kid string
 		var hmacEncoded string
 		err := a.Database.Read("acme", config.CADirURL+"_kid", &kid)
-
 		if err != nil {
-			log.Println(err)
+			a.Logf("Failed to read kid from database", err)
 			return false, err
 		}
 
 		err = a.Database.Read("acme", config.CADirURL+"_hmacEncoded", &hmacEncoded)
-
 		if err != nil {
-			log.Println(err)
+			a.Logf("Failed to read HMAC from database", err)
 			return false, err
 		}
 
-		log.Println("EAB Credential retrieved.", kid, hmacEncoded)
+		a.Logf("EAB Credential retrieved: "+kid+" / "+hmacEncoded, nil)
 		if kid != "" && hmacEncoded != "" {
 			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
 				TermsOfServiceAgreed: true,
@@ -242,14 +246,14 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			})
 		}
 		if err != nil {
-			log.Println(err)
+			a.Logf("Register with external account binder failed", err)
 			return false, err
 		}
 		//return false, errors.New("External Account Required for this ACME Provider.")
 	} else {
 		reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 		if err != nil {
-			log.Println(err)
+			a.Logf("Unable to register client", err)
 			return false, err
 		}
 	}
@@ -262,7 +266,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 	certificates, err := client.Certificate.Obtain(request)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Obtain certificate failed", err)
 		return false, err
 	}
 
@@ -270,12 +274,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	// private key, and a certificate URL.
 	err = os.WriteFile("./conf/certs/"+certificateName+".pem", certificates.Certificate, 0777)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Failed to write public key to disk", err)
 		return false, err
 	}
 	err = os.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Failed to write private key to disk", err)
 		return false, err
 	}
 
@@ -289,13 +293,13 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	certInfoBytes, err := json.Marshal(certInfo)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Marshal certificate renew config failed", err)
 		return false, err
 	}
 
 	err = os.WriteFile("./conf/certs/"+certificateName+".json", certInfoBytes, 0777)
 	if err != nil {
-		log.Println(err)
+		a.Logf("Failed to write certificate renew config to file", err)
 		return false, err
 	}
 
@@ -313,7 +317,7 @@ func (a *ACMEHandler) CheckCertificate() []string {
 	expiredCerts := []string{}
 
 	if err != nil {
-		log.Println(err)
+		a.Logf("Failed to load certificate folder", err)
 		return []string{}
 	}
 
@@ -410,14 +414,14 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 
 	ca, err := utils.PostPara(r, "ca")
 	if err != nil {
-		log.Println("[INFO] CA not set. Using default")
+		a.Logf("CA not set. Using default", nil)
 		ca, caUrl = "", ""
 	}
 
 	if ca == "custom" {
 		caUrl, err = utils.PostPara(r, "caURL")
 		if err != nil {
-			log.Println("[INFO] Custom CA set but no URL provide, Using default")
+			a.Logf("Custom CA set but no URL provide, Using default", nil)
 			ca, caUrl = "", ""
 		}
 	}
@@ -465,7 +469,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 func jsonEscape(i string) string {
 	b, err := json.Marshal(i)
 	if err != nil {
-		log.Println("Unable to escape json data: " + err.Error())
+		//log.Println("Unable to escape json data: " + err.Error())
 		return i
 	}
 	s := string(b)

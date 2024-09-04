@@ -54,6 +54,9 @@ type ReverseProxy struct {
 	Prepender string
 
 	Verbal bool
+
+	//Appended by Zoraxy project
+
 }
 
 type ResponseRewriteRuleSet struct {
@@ -349,13 +352,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			return http.StatusBadGateway, err
 		}
 	}
-
-	//TODO: Figure out a way to proxy for proxmox
-	//if res.StatusCode == 501 || res.StatusCode == 500 {
-	//	fmt.Println(outreq.Proto, outreq.RemoteAddr, outreq.RequestURI)
-	//	fmt.Println(">>>", outreq.Method, res.Header, res.ContentLength, res.StatusCode)
-	//	fmt.Println(outreq.Header, req.Host)
-	//}
 
 	//Add debug X-Proxy-By tracker
 	res.Header.Set("x-proxy-by", "zoraxy/"+rrr.Version)

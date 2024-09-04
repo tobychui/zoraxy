@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/mail"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -36,6 +36,7 @@ type AutoRenewer struct {
 	RenewTickInterval int64
 	EarlyRenewDays    int //How many days before cert expire to renew certificate
 	TickerstopChan    chan bool
+	Logger            *logger.Logger //System wide logger
 }
 
 type ExpiredCerts struct {
@@ -45,7 +46,7 @@ type ExpiredCerts struct {
 
 // Create an auto renew agent, require config filepath and auto scan & renew interval (seconds)
 // Set renew check interval to 0 for auto (1 day)
-func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, earlyRenewDays int, AcmeHandler *ACMEHandler) (*AutoRenewer, error) {
+func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, earlyRenewDays int, AcmeHandler *ACMEHandler, logger *logger.Logger) (*AutoRenewer, error) {
 	if renewCheckInterval == 0 {
 		renewCheckInterval = 86400 //1 day
 	}
@@ -87,6 +88,7 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 		AcmeHandler:       AcmeHandler,
 		RenewerConfig:     &renewerConfig,
 		RenewTickInterval: renewCheckInterval,
+		Logger:            logger,
 	}
 
 	if thisRenewer.RenewerConfig.Enabled {
@@ -98,6 +100,10 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 	}
 
 	return &thisRenewer, nil
+}
+
+func (a *AutoRenewer) Logf(message string, err error) {
+	a.Logger.PrintAndLog("CertRenew", message, err)
 }
 
 func (a *AutoRenewer) StartAutoRenewTicker() {
@@ -118,7 +124,7 @@ func (a *AutoRenewer) StartAutoRenewTicker() {
 			case <-done:
 				return
 			case <-ticker.C:
-				log.Println("Check and renew certificates in progress")
+				a.Logf("Check and renew certificates in progress", nil)
 				a.CheckAndRenewCertificates()
 			}
 		}
@@ -233,12 +239,12 @@ func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Reque
 			}
 			a.RenewerConfig.Enabled = true
 			a.saveRenewConfigToFile()
-			log.Println("[ACME] ACME auto renew enabled")
+			a.Logf("ACME auto renew enabled", nil)
 			a.StartAutoRenewTicker()
 		} else {
 			a.RenewerConfig.Enabled = false
 			a.saveRenewConfigToFile()
-			log.Println("[ACME] ACME auto renew disabled")
+			a.Logf("ACME auto renew disabled", nil)
 			a.StopAutoRenewTicker()
 		}
 	} else {
@@ -283,7 +289,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 	certFolder := a.CertFolder
 	files, err := os.ReadDir(certFolder)
 	if err != nil {
-		log.Println("Unable to renew certificates: " + err.Error())
+		a.Logf("Read certificate store failed", err)
 		return []string{}, err
 	}
 
@@ -303,7 +309,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 					DNSName, err := ExtractDomains(certBytes)
 					if err != nil {
 						//Maybe self signed. Ignore this
-						log.Println("Encounted error when trying to resolve DNS name for cert " + file.Name())
+						a.Logf("Encounted error when trying to resolve DNS name for cert "+file.Name(), err)
 						continue
 					}
 
@@ -327,11 +333,10 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				}
 				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
-
 					DNSName, err := ExtractDomains(certBytes)
 					if err != nil {
 						//Maybe self signed. Ignore this
-						log.Println("Encounted error when trying to resolve DNS name for cert " + file.Name())
+						a.Logf("Encounted error when trying to resolve DNS name for cert "+file.Name(), err)
 						continue
 					}
 
@@ -358,7 +363,7 @@ func (a *AutoRenewer) Close() {
 func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, error) {
 	renewedCertFiles := []string{}
 	for _, expiredCert := range certs {
-		log.Println("Renewing " + expiredCert.Filepath + " (Might take a few minutes)")
+		a.Logf("Renewing "+expiredCert.Filepath+" (Might take a few minutes)", nil)
 		fileName := filepath.Base(expiredCert.Filepath)
 		certName := fileName[:len(fileName)-len(filepath.Ext(fileName))]
 
@@ -366,10 +371,10 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 		certInfoFilename := fmt.Sprintf("%s/%s.json", filepath.Dir(expiredCert.Filepath), certName)
 		certInfo, err := LoadCertInfoJSON(certInfoFilename)
 		if err != nil {
-			log.Printf("Renew %s certificate error, can't get the ACME detail for cert: %v, trying org section as ca", certName, err)
+			a.Logf("Renew "+certName+"certificate error, can't get the ACME detail for certificate, trying org section as ca", err)
 
 			if CAName, extractErr := ExtractIssuerNameFromPEM(expiredCert.Filepath); extractErr != nil {
-				log.Printf("extract issuer name for cert error: %v, using default ca", extractErr)
+				a.Logf("Extract issuer name for cert error, using default ca", err)
 				certInfo = &CertificateInfoJSON{}
 			} else {
 				certInfo = &CertificateInfoJSON{AcmeName: CAName}
@@ -378,9 +383,9 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 
 		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS)
 		if err != nil {
-			log.Println("Renew " + fileName + "(" + strings.Join(expiredCert.Domains, ",") + ") failed: " + err.Error())
+			a.Logf("Renew "+fileName+"("+strings.Join(expiredCert.Domains, ",")+") failed", err)
 		} else {
-			log.Println("Successfully renewed " + filepath.Base(expiredCert.Filepath))
+			a.Logf("Successfully renewed "+filepath.Base(expiredCert.Filepath), nil)
 			renewedCertFiles = append(renewedCertFiles, filepath.Base(expiredCert.Filepath))
 		}
 	}

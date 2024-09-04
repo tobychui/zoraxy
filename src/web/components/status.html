@@ -53,8 +53,10 @@
 </div>
 <div class="standardContainer" style="padding-bottom: 0 !important;">
     <!-- Power Buttons-->
-    <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
-    <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
+    <div class="poweroptions" style="display:inline-block;">
+        <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
+        <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
+    </div>
     <div class="ui divider"></div>
     <h4>Network Status</h4>
     <p>Overall Network I/O in Current Host Server</p>
@@ -69,7 +71,7 @@
     <div class="ui divider"></div>
     <h4>Global Settings</h4>
     <p>Inbound Port (Reverse Proxy Listening Port)</p>
-    <div class="ui action fluid notloopbackOnly input">
+    <div class="ui action fluid notloopbackOnly input" tourstep="incomingPort">
         <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
         <input type="text" id="incomingPort" placeholder="Incoming Port" value="80">
         <button class="ui green notloopbackOnly button" style="background: linear-gradient(60deg, #27e7ff, #00ca52);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
@@ -86,9 +88,11 @@
         <small>(Only apply when TLS enabled and not using port 80)</small></label>
     </div>
     <br>
-    <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em; padding-left: 2em;">
-        <input type="checkbox">
-        <label>Force redirect HTTP request to HTTPS</label>
+    <div tourstep="forceHttpsRedirect" style="display: inline-block;">
+        <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em; padding-left: 2em;">
+            <input type="checkbox">
+            <label>Force redirect HTTP request to HTTPS</label>
+        </div>
     </div>
     <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
         <div class="ui accordion advanceSettings">

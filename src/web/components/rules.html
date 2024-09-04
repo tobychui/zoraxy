@@ -30,12 +30,12 @@
                 <h2>New Proxy Rule</h2>
                 <p>You can add more proxy rules to support more site via domain / subdomains</p>
                 <div class="ui form">
-                    <div class="field">
+                    <div class="field" tourstep="matchingkeyword">
                         <label>Matching Keyword / Domain</label>
                         <input type="text" id="rootname" placeholder="mydomain.com">
                         <small>Support subdomain and wildcard, e.g. s1.mydomain.com or *.test.mydomain.com. Use comma (,) for alias hostnames. </small>
                     </div>
-                    <div class="field">
+                    <div class="field" tourstep="targetdomain">
                         <label>Target IP Address or Domain Name with port</label>
                             <input type="text" id="proxyDomain" onchange="autoFillTargetTLS(this);">
                         <small>e.g. 192.168.0.101:8000 or example.com</small>
@@ -43,7 +43,7 @@
                     <div class="field dockerOptimizations" style="display:none;">
                         <button style="margin-top: -2em;" class="ui basic small button" onclick="openDockerContainersList();"><i class="blue docker icon"></i> Pick from Docker Containers</button>
                     </div>
-                    <div class="field">
+                    <div class="field" tourstep="requireTLS">
                         <div class="ui checkbox">
                             <input type="checkbox" id="reqTls">
                             <label>Proxy Target require TLS Connection <br><small>(i.e. Your proxy target starts with https://)</small></label>
@@ -67,7 +67,7 @@
                                     <i class="ui green lock icon"></i>
                                     Security
                                 </div>
-                                <div class="field">
+                                <div class="field" tourstep="skipTLSValidation">
                                     <div class="ui checkbox">
                                         <input type="checkbox" id="skipTLSValidation">
                                         <label>Ignore TLS/SSL Verification Error<br><small>For targets that is using self-signed, expired certificate (Not Recommended)</small></label>
@@ -154,7 +154,9 @@
                         </div>
                     </div>
                     <br>
-                    <button class="ui basic button" onclick="newProxyEndpoint();"><i class="green add icon"></i> Create Endpoint</button>
+                    <div tourstep="newProxyRule" style="display: inline-block;">
+                        <button class="ui basic button" onclick="newProxyEndpoint();"><i class="green add icon"></i> Create Endpoint</button>
+                    </div>
                     <br><br>
                 </div>
             </div>

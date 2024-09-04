@@ -13,34 +13,35 @@
             </div>
         </h4>
     </div>
-    
-    <h3>Web Server Settings</h3>
-    <div class="ui form">
-        <div class="inline field">
-            <div class="ui toggle checkbox webservRootDisabled">
-                <input id="webserv_enable" type="checkbox" class="hidden">
-                <label>Enable Static Web Server</label>
+    <div>
+        <h3>Web Server Settings</h3>
+        <div class="ui form">
+            <div class="inline field">
+                <div class="ui toggle checkbox webservRootDisabled">
+                    <input id="webserv_enable" type="checkbox" class="hidden">
+                    <label>Enable Static Web Server</label>
+                </div>
             </div>
-        </div>
-        <div class="inline field">
-            <div class="ui toggle checkbox">
-                <input id="webserv_enableDirList" type="checkbox" class="hidden">
-                <label>Enable Directory Listing</label>
-                <small>If this folder do not contains any index files, list the directory of this folder.</small>
+            <div class="inline field">
+                <div class="ui toggle checkbox">
+                    <input id="webserv_enableDirList" type="checkbox" class="hidden">
+                    <label>Enable Directory Listing</label>
+                    <small>If this folder do not contains any index files, list the directory of this folder.</small>
+                </div>
             </div>
-        </div>
-        <div class="field">
-            <label>Document Root Folder</label>
-            <input id="webserv_docRoot" type="text" readonly="true">
-            <small>
-                The web server root folder can only be changed via startup flags of zoraxy for security reasons. 
-                See the -webserv flag for more details.
-            </small>
-        </div>
-        <div class="field webservRootDisabled">
-            <label>Port Number</label>
-            <input id="webserv_listenPort" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
-            <small>Use <code>http://127.0.0.1:<span class="webserv_port">8081</span></code> in proxy rules to access the web server</small>
+            <div class="field">
+                <label>Document Root Folder</label>
+                <input id="webserv_docRoot" type="text" readonly="true">
+                <small>
+                    The web server root folder can only be changed via startup flags of zoraxy for security reasons. 
+                    See the -webserv flag for more details.
+                </small>
+            </div>
+            <div class="field webservRootDisabled">
+                <label>Port Number</label>
+                <input id="webserv_listenPort" type="number" step="1" min="0" max="65535" value="8081" onchange="updateWebServLinkExample(this.value);">
+                <small>Use <code>http://127.0.0.1:<span class="webserv_port">8081</span></code> in proxy rules to access the web server</small>
+            </div>
         </div>
     </div>
     <small><i class="ui blue save icon"></i> Changes are saved automatically</small>

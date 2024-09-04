@@ -3,7 +3,6 @@ package uptime
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"strconv"
@@ -242,7 +241,7 @@ func getWebsiteStatus(url string) (int, error) {
 	// Create a one-time use cookie jar to store cookies
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 
 	client := http.Client{

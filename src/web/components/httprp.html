@@ -348,6 +348,20 @@
                 `);
             }else if (datatype == "inbound"){
                 let originalContent = $(column).html();
+
+                //Check if this host is covered within one of the certificates. If not, show the icon
+                let domainIsCovered = true;
+                let domains = [payload.RootOrMatchingDomain]; //Domain for getting certificate if needed
+                for (var i = 0; i < payload.MatchingDomainAlias.length; i++){
+                    let thisAliasName = payload.MatchingDomainAlias[i];
+                    domains.push(thisAliasName);
+                }
+                if (true){
+                    domainIsCovered = false;
+                }
+                //encode the domain to DOM
+                let certificateDomains = encodeURIComponent(JSON.stringify(domains));
+                
                 column.empty().append(`${originalContent}
                     <div class="ui divider"></div>
                     <div class="ui checkbox" style="margin-top: 0.4em;">
@@ -355,10 +369,11 @@
                         <label>Allow plain HTTP access<br>
                             <small>Allow inbound connections without TLS/SSL</small></label>
                     </div><br>
-                    <button class="ui basic compact tiny  button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
-                    <button class="ui basic compact tiny  button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
-                    
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
+                    <button class="ui basic compact tiny ${domainIsCovered?"disabled":""} button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="requestCertificateForExistingHost('${uuid}', '${certificateDomains}');"><i class="green lock icon"></i> Get Certificate</button>
                 `);
+                
 
                 $(".hostAccessRuleSelector").dropdown();
             }else{
@@ -515,6 +530,15 @@
                 }
             }
         })
+    }
+
+    /* 
+        Certificate Shortcut
+    */
+
+    function requestCertificateForExistingHost(hostUUID, RootAndAliasDomains){
+        RootAndAliasDomains = JSON.parse(decodeURIComponent(RootAndAliasDomains))
+        alert(RootAndAliasDomains.join(", "))
     }
 
     //Bind on tab switch events

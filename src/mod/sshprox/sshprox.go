@@ -88,6 +88,7 @@ func (m *Manager) HandleHttpByInstanceId(instanceId string, w http.ResponseWrite
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation: false,
 			SkipOriginCheck:   false,
+			Logger:            nil,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return
