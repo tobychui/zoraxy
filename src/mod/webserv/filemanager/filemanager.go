@@ -43,9 +43,10 @@ func (fm *FileManager) HandleList(w http.ResponseWriter, r *http.Request) {
 	targetDir := filepath.Join(fm.Directory, directory)
 
 	// Clean path to prevent path escape #274
-	targetDir = filepath.ToSlash(filepath.Clean(targetDir))
-	for strings.Contains(targetDir, "../") {
-		targetDir = strings.ReplaceAll(targetDir, "../", "")
+	isValidRequest := validatePathEscape(targetDir, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
 	}
 
 	// Open the target directory
@@ -124,6 +125,14 @@ func (fm *FileManager) HandleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Specify the directory where you want to save the uploaded file
 	uploadDir := filepath.Join(fm.Directory, dir)
+
+	// Clean path to prevent path escape #274
+	isValidRequest := validatePathEscape(uploadDir, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
+
 	if !utils.FileExists(uploadDir) {
 		utils.SendErrorResponse(w, "upload target directory not exists")
 		return
@@ -163,14 +172,20 @@ func (fm *FileManager) HandleDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filePath := filepath.Join(fm.Directory, filename)
+	// Clean path to prevent path escape #274
+	isValidRequest := validatePathEscape(filePath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
+
 	previewMode, _ := utils.GetPara(r, "preview")
 	if previewMode == "true" {
 		// Serve the file using http.ServeFile
-		filePath := filepath.Join(fm.Directory, filename)
 		http.ServeFile(w, r, filePath)
 	} else {
 		// Trigger a download with content disposition headers
-		filePath := filepath.Join(fm.Directory, filename)
 		w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(filename))
 		http.ServeFile(w, r, filePath)
 	}
@@ -191,6 +206,11 @@ func (fm *FileManager) HandleNewFolder(w http.ResponseWriter, r *http.Request) {
 
 	// Specify the directory where you want to create the new folder
 	newFolderPath := filepath.Join(fm.Directory, dirName)
+	isValidRequest := validatePathEscape(newFolderPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
 
 	// Check if the folder already exists
 	if _, err := os.Stat(newFolderPath); os.IsNotExist(err) {
@@ -231,6 +251,18 @@ func (fm *FileManager) HandleFileCopy(w http.ResponseWriter, r *http.Request) {
 	// Construct the absolute paths
 	absSrcPath := filepath.Join(fm.Directory, srcPath)
 	absDestPath := filepath.Join(fm.Directory, destPath)
+
+	//Make sure the copy source and dest are within web directory folder
+	isValidRequest := validatePathEscape(absSrcPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
+	isValidRequest = validatePathEscape(absDestPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
 
 	// Check if the source path exists
 	if _, err := os.Stat(absSrcPath); os.IsNotExist(err) {
@@ -294,6 +326,18 @@ func (fm *FileManager) HandleFileMove(w http.ResponseWriter, r *http.Request) {
 	absSrcPath := filepath.Join(fm.Directory, srcPath)
 	absDestPath := filepath.Join(fm.Directory, destPath)
 
+	//Make sure move source and target are within web server directory
+	isValidRequest := validatePathEscape(absSrcPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
+	isValidRequest = validatePathEscape(absDestPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
+
 	// Check if the source path exists
 	if _, err := os.Stat(absSrcPath); os.IsNotExist(err) {
 		utils.SendErrorResponse(w, "source path does not exist")
@@ -325,6 +369,11 @@ func (fm *FileManager) HandleFileProperties(w http.ResponseWriter, r *http.Reque
 
 	// Construct the absolute path to the target file or directory
 	absPath := filepath.Join(fm.Directory, filePath)
+	isValidRequest := validatePathEscape(absPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
 
 	// Check if the target path exists
 	_, err = os.Stat(absPath)
@@ -392,6 +441,11 @@ func (fm *FileManager) HandleFileDelete(w http.ResponseWriter, r *http.Request) 
 
 	// Construct the absolute path to the target file or directory
 	absPath := filepath.Join(fm.Directory, filePath)
+	isValidRequest := validatePathEscape(absPath, fm.Directory)
+	if !isValidRequest {
+		http.Error(w, "403 - Forbidden", http.StatusForbidden)
+		return
+	}
 
 	// Check if the target path exists
 	_, err = os.Stat(absPath)
@@ -409,4 +463,26 @@ func (fm *FileManager) HandleFileDelete(w http.ResponseWriter, r *http.Request) 
 
 	// Respond with a success message or appropriate response
 	utils.SendOK(w)
+}
+
+// Return true if the path is within the root path
+func validatePathEscape(reqestPath string, rootPath string) bool {
+	reqestPath = filepath.ToSlash(filepath.Clean(reqestPath))
+	rootPath = filepath.ToSlash(filepath.Clean(rootPath))
+
+	requestPathAbs, err := filepath.Abs(reqestPath)
+	if err != nil {
+		return false
+	}
+
+	rootPathAbs, err := filepath.Abs(rootPath)
+	if err != nil {
+		return false
+	}
+
+	if strings.HasPrefix(requestPathAbs, rootPathAbs) {
+		return true
+	}
+
+	return false
 }
