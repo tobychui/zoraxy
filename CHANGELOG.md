@@ -1,3 +1,19 @@
+# v3.1.1. 09 Sep 2024
+
++ Updated country name in access list [#287](https://github.com/tobychui/zoraxy/issues/287)
++ Added tour for basic operations
++ Updated acme log to system wide logger implementation
++ Fixed path traversal in file manager [#274](https://github.com/tobychui/zoraxy/issues/274)
++ Removed Proxmox debug code
++ Fixed trie tree implementations
+
+**Thanks to all contributors**
+
++ Fix existing containers list in docker popup [7brend7](https://github.com/tobychui/zoraxy/issues?q=is%3Apr+author%3A7brend7)
++ Fix network I/O chart not rendering [JokerQyou](https://github.com/tobychui/zoraxy/issues?q=is%3Apr+author%3AJokerQyou)
++ Fix typo remvoeClass to removeClass [Aahmadsyamim](https://github.com/tobychui/zoraxy/issues?q=is%3Apr+author%3Aahmadsyamim)
++ Updated weighted random upstream implementation [bouroo](https://github.com/tobychui/zoraxy/issues?q=is%3Apr+author%3Abouroo)
+
 # v3.1.0 31 Jul 2024
 
 + Updated log viewer with filter and auto refresh [#243](https://github.com/tobychui/zoraxy/issues/243)
