@@ -28,11 +28,17 @@ type NodeInfo struct {
 	Clock   int64  `json:"clock"`
 	Config  struct {
 		Settings struct {
-			AllowTCPFallbackRelay bool   `json:"allowTcpFallbackRelay"`
-			PortMappingEnabled    bool   `json:"portMappingEnabled"`
-			PrimaryPort           int    `json:"primaryPort"`
-			SoftwareUpdate        string `json:"softwareUpdate"`
-			SoftwareUpdateChannel string `json:"softwareUpdateChannel"`
+			AllowTCPFallbackRelay bool     `json:"allowTcpFallbackRelay,omitempty"`
+			ForceTCPRelay         bool     `json:"forceTcpRelay,omitempty"`
+			HomeDir               string   `json:"homeDir,omitempty"`
+			ListeningOn           []string `json:"listeningOn,omitempty"`
+			PortMappingEnabled    bool     `json:"portMappingEnabled,omitempty"`
+			PrimaryPort           int      `json:"primaryPort,omitempty"`
+			SecondaryPort         int      `json:"secondaryPort,omitempty"`
+			SoftwareUpdate        string   `json:"softwareUpdate,omitempty"`
+			SoftwareUpdateChannel string   `json:"softwareUpdateChannel,omitempty"`
+			SurfaceAddresses      []string `json:"surfaceAddresses,omitempty"`
+			TertiaryPort          int      `json:"tertiaryPort,omitempty"`
 		} `json:"settings"`
 	} `json:"config"`
 	Online               bool   `json:"online"`
@@ -46,7 +52,6 @@ type NodeInfo struct {
 	VersionMinor         int    `json:"versionMinor"`
 	VersionRev           int    `json:"versionRev"`
 }
-
 type ErrResp struct {
 	Message string `json:"message"`
 }

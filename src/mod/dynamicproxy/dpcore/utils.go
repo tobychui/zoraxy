@@ -60,7 +60,7 @@ func replaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS b
 	return u.String(), nil
 }
 
-// Debug functions
+// Debug functions for replaceLocationHost
 func ReplaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS bool) (string, error) {
 	return replaceLocationHost(urlString, rrr, useTLS)
 }

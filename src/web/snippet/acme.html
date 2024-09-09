@@ -91,8 +91,11 @@
   <div class="ui form">
     <div class="field">
       <label>Domain(s)</label>
-      <input id="domainsInput" type="text" placeholder="example.com" onkeyup="checkIfInputDomainIsMultiple();">
-      <small>If you have more than one domain in a single certificate, enter the domains separated by commas (e.g. s1.dev.example.com,s2.dev.example.com)</small>
+      <input id="domainsInput" type="text" placeholder="example.com" onkeyup="handlePostInputAutomation();">
+      <small>If you have more than one domain in a single certificate, enter the domains separated by commas (e.g. s1.dev.example.com,s2.dev.example.com)
+        <span id="caNoDNSSupportWarning" style="color: #ffaf2e; display:none;"><br> <i class="exclamation triangle icon"></i> Current selected CA do not support DNS challenge</span>
+      </small>
+      
     </div>
     <div class="field multiDomainOnly" style="display:none;">
       <label>Matching Rule</label>
@@ -113,7 +116,6 @@
           <div class="item" data-value="Buypass">Buypass</div>
           <div class="item" data-value="ZeroSSL">ZeroSSL</div>
           <div class="item" data-value="Custom ACME Server">Custom ACME Server</div>
-          <!-- <div class="item" data-value="Google">Google</div> -->
         </div>
       </div>
     </div>
@@ -389,7 +391,7 @@
       
       
     });
-
+    
     //On CA change in dropdown
     $("input[name=ca]").on('change', function() {
       if(this.value == "Custom ACME Server") {
@@ -740,6 +742,7 @@
       });
     }
 
+    //Check if the entered domain contains multiple domains
     function checkIfInputDomainIsMultiple(){
       var inputDomains = $("#domainsInput").val();
       if (inputDomains.includes(",")){
@@ -748,6 +751,35 @@
         $(".multiDomainOnly").hide();
       }
     }
+
+    //Validate if the current combinations of domain and CA supports DNS challenge
+    function validateDNSChallengeSupport(){
+      if ($("#domainsInput").val().includes("*")){
+        var ca = $("#ca").dropdown("get value");
+        if (ca == "Let's Encrypt" || ca == ""){
+          $("#caNoDNSSupportWarning").hide();
+        }else{
+          $("#caNoDNSSupportWarning").show();
+        }
+      }else{
+        $("#caNoDNSSupportWarning").hide();
+      }
+    }
+
+    //call to validateDNSChallengeSupport() on #ca value change
+    $("#ca").dropdown({
+      onChange: function(value, text, $selectedItem) {
+        validateDNSChallengeSupport();
+      }
+    });
+
+    //Handle the input change event on domain input
+    function handlePostInputAutomation(){
+      checkIfInputDomainIsMultiple();
+      validateDNSChallengeSupport();
+    }
+
+    
 
     function toggleDnsChallenge(){
       if ( $("#useDnsChallenge")[0].checked){

@@ -1,6 +1,7 @@
 package ganserv
 
 import (
+	"log"
 	"net"
 
 	"imuslab.com/zoraxy/mod/database"
@@ -85,6 +86,7 @@ func NewNetworkManager(option *NetworkManagerOptions) *NetworkManager {
 	//Get controller info
 	instanceInfo, err := getControllerInfo(option.AuthToken, option.ApiPort)
 	if err != nil {
+		log.Println("ZeroTier connection failed: ", err.Error())
 		return &NetworkManager{
 			authToken:        option.AuthToken,
 			apiPort:          option.ApiPort,
