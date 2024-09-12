@@ -1,10 +1,104 @@
 <div class="standardContainer">
     <div class="ui basic segment">
-        <h2>Single-Sign-On</h2>
-        <p>Create and manage accounts with Zoraxy!</p>
+        <h2>Zoraxy SSO / Oauth</h2>
+        <p>A centralized authentication system for all your subdomains</p>
+        <div class="ui divider"></div>
+        <div class="ui basic segment enabled ssoRunningState">
+            <h4 class="ui header" id="ssoRunningState">
+                <i class="circle check icon"></i>
+                <div class="content">
+                    <span class="webserv_status">Running</span>
+                    <div class="sub header">Listen port :<span class="webserv_port">8081</span></div>
+                </div>
+            </h4>
+        </div>
+        <div class="ui form">
+            <h4 class="ui dividing header">Oauth2 Server</h4>
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" name="enableOauth2">
+                    <label>Enable Oauth2 Server<br>
+                    <small>Oauth2 server for handling external authentication requests</small></label>
+                </div>
+            </div>
+            <div class="field">
+                <label>Oauth2 Server Port</label>
+                <div class="ui action input">
+                    <input type="number" name="oauth2Port" placeholder="Port" value="5488">
+                    <button id="saveOauthServerPortBtn" class="ui basic green button"><i class="ui green circle check icon"></i> Update</button>         
+                </div>
+                <small>Listening port of the Zoraxy internal Oauth2 Server.You can create a subdomain proxy rule to <code>127.0.0.1:<span class="ssoPort">5488</span></code></small>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <div>
+            <h3 class="ui header">
+                <i class="ui blue user circle icon"></i>
+                <div class="content">
+                    Registered Users
+                  <div class="sub header">A list of users that are registered with the SSO server</div>
+                </div>
+            </h3>
+        </div>
+        <div class="ui divider"></div>
+        <div>
+            <h3 class="ui header">
+                <i class="ui green th icon"></i>
+                <div class="content">
+                    Registered Apps
+                  <div class="sub header">A list of apps that are registered with the SSO server</div>
+                </div>
+            </h3>
+            <p></p>
+        </div>
     </div>
-    <div class="ui message">
-        <h4>Work In Progress</h4>
-        We are looking for someone to help with implementing this feature in Zoraxy. <br>If you know how to write Golang and want to contribute, feel free to create a pull request to this feature!
-    </div>
-</div>  
+</div>
+
+<script>
+    $("input[name=oauth2Port]").on("change", function() {
+        $(".ssoPort").text($(this).val());
+    });
+
+    function initSSOStatus(){
+        $.get("/api/sso/status", function(data){
+            if(data.error != undefined){
+                //Show error message
+                $(".ssoRunningState").removeClass("enabled").addClass("disabled");
+                $("#ssoRunningState .webserv_status").html('Error: '+data.error);
+            }else{
+                if (data.Enabled){
+                    $(".ssoRunningState").addClass("enabled");
+                    $("#ssoRunningState .webserv_status").html('Running');
+                    $(".ssoRunningState i").attr("class", "circle check icon");
+                }else{
+                    $(".ssoRunningState").removeClass("enabled");
+                    $("#ssoRunningState .webserv_status").html('Stopped');
+                    $(".ssoRunningState i").attr("class", "circle times icon");
+                }
+                $("input[name=enableZoraxySSO]").prop("checked", data.Enabled);
+                $("input[name=oauth2Port]").val(data.ListeningPort);
+
+            }
+        });
+    }
+    initSSOStatus();
+
+    $("#saveOauthServerPortBtn").on("click", function() {
+        var port = $("input[name=oauth2Port]").val();
+        //Use cjax to send the port to the server with csrf token
+        $.cjax({
+            url: "/api/sso/oauth2/setPort",
+            method: "POST",
+            data: {
+                port: port
+            },
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox("Oauth server port updated", true);
+                } else {
+                    msgbox("Failed to update Oauth server port", false);
+                }
+            }
+        });
+    });
+</script>

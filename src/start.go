@@ -12,6 +12,7 @@ import (
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/auth/sso"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -36,7 +37,10 @@ import (
 	Startup Sequence
 
 	This function starts the startup sequence of all
-	required modules
+	required modules. Their startup sequences are inter-dependent
+	and must be started in a specific order.
+
+	Don't touch this function unless you know what you are doing
 */
 
 var (
@@ -123,6 +127,21 @@ func startupSequence() {
 	if err != nil {
 		panic(err)
 	}
+
+	//Create an SSO handler
+	sysdb.NewTable("sso_conf")
+	ssoHandler, err = sso.NewSSOHandler(&sso.SSOConfig{
+		SystemUUID:       nodeUUID,
+		PortalServerPort: 5488,
+		AuthURL:          "http://auth.localhost",
+		Database:         sysdb,
+		Logger:           SystemWideLogger,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	//Restore the SSO handler to previous state before shutdown
+	ssoHandler.RestorePreviousRunningState()
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{
@@ -296,7 +315,6 @@ func startupSequence() {
 		SystemWideLogger.PrintAndLog("warning", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
 	}
 	DockerUXOptimizer = dockerux.NewDockerOptimizer(*runningInDocker, SystemWideLogger)
-
 }
 
 // This sequence start after everything is initialized

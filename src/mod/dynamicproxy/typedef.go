@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/auth/sso"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -44,6 +45,7 @@ type RouterOption struct {
 	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
 	WebDirectory       string                    //The static web server directory containing the templates folder
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
+	SSOHandler         *sso.SSOHandler           //SSO handler for handling SSO requests, interception mode only
 	Logger             *logger.Logger            //Logger for reverse proxy requets
 }
 
@@ -142,6 +144,7 @@ type ProxyEndpoint struct {
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+	UseSSOIntercept         bool                      //Allow SSO to intercept this endpoint and provide authentication via Oauth2 credentials
 
 	// Rate Limiting
 	RequireRateLimit bool

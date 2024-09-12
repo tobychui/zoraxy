@@ -8,6 +8,7 @@ require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/docker/docker v27.0.0+incompatible
 	github.com/go-acme/lego/v4 v4.16.1
+	github.com/go-oauth2/oauth2 v3.9.2+incompatible
 	github.com/go-ping/ping v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.2.2
@@ -18,6 +19,19 @@ require (
 	golang.org/x/net v0.25.0
 	golang.org/x/sys v0.20.0
 	golang.org/x/text v0.15.0
+)
+
+require (
+	github.com/go-session/session v3.1.2+incompatible // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/tidwall/btree v0.0.0-20191029221954-400434d76274 // indirect
+	github.com/tidwall/buntdb v1.1.2 // indirect
+	github.com/tidwall/gjson v1.12.1 // indirect
+	github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/rtree v0.0.0-20180113144539-6cd427091e0e // indirect
+	github.com/tidwall/tinyqueue v0.0.0-20180302190814-1e39f5511563 // indirect
 )
 
 require (
@@ -82,10 +96,11 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-resty/resty/v2 v2.11.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/gofrs/uuid v4.4.0+incompatible // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -95,7 +110,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
 	github.com/gophercloud/gophercloud v1.0.0 // indirect
-	github.com/gorilla/csrf v1.7.2 // indirect
+	github.com/gorilla/csrf v1.7.2
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
@@ -161,6 +176,7 @@ require (
 	github.com/ultradns/ultradns-go-sdk v1.6.1-20231103022937-8589b6a // indirect
 	github.com/vinyldns/go-vinyldns v0.9.16 // indirect
 	github.com/vultr/govultr/v2 v2.17.2 // indirect
+	github.com/xlzd/gotp v0.1.0
 	github.com/yandex-cloud/go-genproto v0.0.0-20220805142335-27b56ddae16f // indirect
 	github.com/yandex-cloud/go-sdk v0.0.0-20220805164847-cf028e604997 // indirect
 	go.opencensus.io v0.24.0 // indirect

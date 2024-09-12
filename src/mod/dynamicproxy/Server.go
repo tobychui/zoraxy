@@ -21,6 +21,7 @@ import (
 			- Blacklist
 			- Whitelist
 		- Rate Limitor
+		- SSO Auth
 		- Basic Auth
 		- Vitrual Directory Proxy
 		- Subdomain Proxy
@@ -77,7 +78,16 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireRateLimit {
 			err := h.handleRateLimitRouting(w, r, sep)
 			if err != nil {
-				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 429)
+				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 307)
+				return
+			}
+		}
+
+		//SSO Interception Mode
+		if sep.UseSSOIntercept {
+			allowPass := h.Parent.Option.SSOHandler.ServeForwardAuth(w, r)
+			if !allowPass {
+				h.Parent.Option.Logger.LogHTTPRequest(r, "sso-x", 307)
 				return
 			}
 		}

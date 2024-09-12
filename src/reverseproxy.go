@@ -98,6 +98,7 @@ func ReverseProxtInit() {
 		WebDirectory:       *staticWebServerRoot,
 		AccessController:   accessController,
 		LoadBalancer:       loadBalancer,
+		SSOHandler:         ssoHandler,
 		Logger:             SystemWideLogger,
 	})
 	if err != nil {
