@@ -1,4 +1,4 @@
-FROM docker.io/golang:alpine AS build
+FROM docker.io/golang:alpine AS build-zoraxy
 
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /usr/local/bin/
@@ -12,17 +12,31 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     chmod 755 /usr/local/bin/zoraxy
 
-FROM docker.io/alpine:latest
+FROM docker.io/ubuntu:latest AS build-zerotier
 
-WORKDIR /opt/zoraxy/source/
+RUN mkdir -p /opt/zerotier/source/ &&\
+    mkdir -p /usr/local/bin/
 
-RUN apk add --no-cache bash netcat-openbsd sudo &&\
-    wget https://dl-cdn.alpinelinux.org/alpine/v3.17/community/x86_64/zerotier-one-1.10.2-r0.apk &&\
-    apk add --no-cache zerotier-one-1.10.2-r0.apk &&\
-    rm -r /opt/zoraxy/source/
+WORKDIR /opt/zerotier/source/
 
-COPY --from=build /usr/local/bin/zoraxy /usr/local/bin/zoraxy
+RUN apt-get update -y &&\
+    apt-get install -y curl jq build-essential pkg-config clang cargo libssl-dev
+
+RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.10.6 &&\
+    tar -xzvf ZeroTierOne.tar.gz &&\
+    cd ZeroTierOne-* &&\
+    make &&\
+    mv ./zerotier-one /usr/local/bin/zerotier-one &&\
+    chmod 755 /usr/local/bin/zerotier-one
+
+FROM docker.io/ubuntu:latest
+
+RUN apt-get update -y &&\
+    apt-get install -y bash sudo netcat-openbsd libssl-dev
+
 COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
+COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
+COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
 
 WORKDIR /opt/zoraxy/config/
 
