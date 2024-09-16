@@ -32,7 +32,7 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
 FROM docker.io/ubuntu:latest
 
 RUN apt-get update -y &&\
-    apt-get install -y bash sudo netcat-openbsd libssl-dev
+    apt-get install -y bash sudo netcat-openbsd libssl-dev ca-certificates
 
 COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+update-ca-certificates
+echo "CA certificates updated"
+
 if [ "$ZEROTIER" = "true" ]; then
-  echo "Starting ZeroTier daemon..."
   zerotier-one -d
+  echo "ZeroTier daemon started"
 fi
 
 echo "Starting Zoraxy..."
