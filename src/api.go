@@ -97,11 +97,13 @@ func initAPIs(targetMux *http.ServeMux) {
 
 	//SSO and Oauth
 	authRouter.HandleFunc("/api/sso/status", ssoHandler.HandleSSOStatus)
-	authRouter.HandleFunc("/api/sso/start", ssoHandler.HandleStartSSOPortal)
-	authRouter.HandleFunc("/api/sso/stop", ssoHandler.HandleStopSSOPortal)
+	authRouter.HandleFunc("/api/sso/enable", ssoHandler.HandleSSOEnable)
 	authRouter.HandleFunc("/api/sso/setPort", ssoHandler.HandlePortChange)
 	authRouter.HandleFunc("/api/sso/setAuthURL", ssoHandler.HandleSetAuthURL)
-	//authRouter.HandleFunc("/api/sso/registerApp", ssoHandler.HandleRegisterApp)
+
+	authRouter.HandleFunc("/api/sso/app/register", ssoHandler.HandleRegisterApp)
+	//authRouter.HandleFunc("/api/sso/app/list", ssoHandler.HandleListApp)
+	//authRouter.HandleFunc("/api/sso/app/remove", ssoHandler.HandleRemoveApp)
 
 	authRouter.HandleFunc("/api/sso/user/list", ssoHandler.HandleListUser)
 	authRouter.HandleFunc("/api/sso/user/add", ssoHandler.HandleAddUser)

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-oauth2/oauth2/v4/errors"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -30,21 +31,26 @@ func (h *SSOHandler) InitSSOPortal(portalServerPort int) {
 	//Register API endpoint for the SSO portal
 	pmux.HandleFunc("/sso/login", h.HandleLogin)
 
+	//Register API endpoint for autodiscovery
+	pmux.HandleFunc("/.well-known/openid-configuration", h.HandleDiscoveryRequest)
+
 	//Register OAuth2 endpoints
 	h.Oauth2Server.RegisterOauthEndpoints(pmux)
-
 	h.ssoPortalMux = pmux
 }
 
 // StartSSOPortal start the SSO portal server
 // This function will block the main thread, call it in a goroutine
 func (h *SSOHandler) StartSSOPortal() error {
+	if h.ssoPortalServer != nil {
+		return errors.New("SSO portal server already running")
+	}
 	h.ssoPortalServer = &http.Server{
 		Addr:    ":" + strconv.Itoa(h.Config.PortalServerPort),
 		Handler: h.ssoPortalMux,
 	}
 	err := h.ssoPortalServer.ListenAndServe()
-	if err != nil {
+	if err != nil && err != http.ErrServerClosed {
 		h.Log("Failed to start SSO portal server", err)
 	}
 	return err
@@ -59,14 +65,17 @@ func (h *SSOHandler) StopSSOPortal() error {
 		h.Log("Failed to stop SSO portal server", err)
 		return err
 	}
+	h.ssoPortalServer = nil
 	return nil
 }
 
 // StartSSOPortal start the SSO portal server
 func (h *SSOHandler) RestartSSOServer() error {
-	err := h.StopSSOPortal()
-	if err != nil {
-		return err
+	if h.ssoPortalServer != nil {
+		err := h.StopSSOPortal()
+		if err != nil {
+			return err
+		}
 	}
 	go h.StartSSOPortal()
 	return nil

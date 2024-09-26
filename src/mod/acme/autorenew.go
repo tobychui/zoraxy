@@ -88,8 +88,11 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 		AcmeHandler:       AcmeHandler,
 		RenewerConfig:     &renewerConfig,
 		RenewTickInterval: renewCheckInterval,
+		EarlyRenewDays:    earlyRenewDays,
 		Logger:            logger,
 	}
+
+	thisRenewer.Logf("ACME early renew set to "+fmt.Sprint(earlyRenewDays)+" days and check interval set to "+fmt.Sprint(renewCheckInterval)+" seconds", nil)
 
 	if thisRenewer.RenewerConfig.Enabled {
 		//Start the renew ticker
@@ -103,7 +106,7 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 }
 
 func (a *AutoRenewer) Logf(message string, err error) {
-	a.Logger.PrintAndLog("CertRenew", message, err)
+	a.Logger.PrintAndLog("cert-renew", message, err)
 }
 
 func (a *AutoRenewer) StartAutoRenewTicker() {

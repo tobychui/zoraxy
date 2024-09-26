@@ -5,14 +5,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 )
 
 // Get the issuer name from pem file
 func ExtractIssuerNameFromPEM(pemFilePath string) (string, error) {
 	// Read the PEM file
-	pemData, err := ioutil.ReadFile(pemFilePath)
+	pemData, err := os.ReadFile(pemFilePath)
 	if err != nil {
 		return "", err
 	}

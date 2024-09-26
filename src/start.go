@@ -129,7 +129,6 @@ func startupSequence() {
 	}
 
 	//Create an SSO handler
-	sysdb.NewTable("sso_conf")
 	ssoHandler, err = sso.NewSSOHandler(&sso.SSOConfig{
 		SystemUUID:       nodeUUID,
 		PortalServerPort: 5488,

@@ -23,13 +23,27 @@ type SubdomainAccessRule struct {
 }
 
 type UserEntry struct {
-	UserID       string                          //User ID, in UUIDv4 format
-	Username     string                          //Username
-	PasswordHash string                          //Password hash
-	TOTPCode     string                          //2FA TOTP code
-	Enable2FA    bool                            //Enable 2FA for this user
-	Subdomains   map[string]*SubdomainAccessRule //Subdomain and access rule
-	parent       *SSOHandler                     //Parent SSO handler
+	UserID           string                          `json:sub`                //User ID
+	Username         string                          `json:"name"`             //Username
+	Email            string                          `json:"email"`            //Email
+	PasswordHash     string                          `json:"passwordhash"`     //Password hash
+	TOTPCode         string                          `json:"totpcode"`         //TOTP code
+	Enable2FA        bool                            `json:"enable2fa"`        //Enable 2FA
+	Subdomains       map[string]*SubdomainAccessRule `json:"subdomains"`       //Subdomain access rules
+	LastLogin        int64                           `json:"lastlogin"`        //Last login time
+	LastLoginIP      string                          `json:"lastloginip"`      //Last login IP
+	LastLoginCountry string                          `json:"lastlogincountry"` //Last login country
+	parent           *SSOHandler                     //Parent SSO handler
+}
+
+type ClientResponse struct {
+	Sub               string `json:"sub"`                //User ID
+	Name              string `json:"name"`               //Username
+	Nickname          string `json:"nickname"`           //Nickname
+	PreferredUsername string `json:"preferred_username"` //Preferred Username
+	Email             string `json:"email"`              //Email
+	Locale            string `json:"locale"`             //Locale
+	Website           string `json:"website"`            //Website
 }
 
 func (s *SSOHandler) SSOUserExists(userid string) bool {
@@ -112,4 +126,16 @@ func (u *UserEntry) ResetTotp(accountName string, issuerName string) (string, er
 func (u *UserEntry) VerifyTotp(enteredCode string) bool {
 	totp := gotp.NewDefaultTOTP(u.TOTPCode)
 	return totp.Verify(enteredCode, time.Now().Unix())
+}
+
+func (u *UserEntry) GetClientResponse() ClientResponse {
+	return ClientResponse{
+		Sub:               u.UserID,
+		Name:              u.Username,
+		Nickname:          u.Username,
+		PreferredUsername: u.Username,
+		Email:             u.Email,
+		Locale:            "en",
+		Website:           "",
+	}
 }

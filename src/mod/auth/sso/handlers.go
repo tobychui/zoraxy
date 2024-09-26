@@ -37,16 +37,46 @@ func (s *SSOHandler) HandleSSOStatus(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
-// HandleStartSSOPortal handle the request to start the SSO portal server
-func (s *SSOHandler) HandleStartSSOPortal(w http.ResponseWriter, r *http.Request) {
-	err := s.StartSSOPortal()
+// Wrapper for starting and stopping the SSO portal server
+// require POST request with key "enable" and value "true" or "false"
+func (s *SSOHandler) HandleSSOEnable(w http.ResponseWriter, r *http.Request) {
+	enable, err := utils.PostBool(r, "enable")
 	if err != nil {
-		s.Log("Failed to start SSO portal server", err)
-		utils.SendErrorResponse(w, "failed to start SSO portal server")
+		utils.SendErrorResponse(w, "invalid enable value")
 		return
 	}
+
+	if enable {
+		s.HandleStartSSOPortal(w, r)
+	} else {
+		s.HandleStopSSOPortal(w, r)
+	}
+}
+
+// HandleStartSSOPortal handle the request to start the SSO portal server
+func (s *SSOHandler) HandleStartSSOPortal(w http.ResponseWriter, r *http.Request) {
+	if s.ssoPortalServer != nil {
+		//Already enabled. Do restart instead.
+		err := s.RestartSSOServer()
+		if err != nil {
+			utils.SendErrorResponse(w, "failed to start SSO server")
+			return
+		}
+		utils.SendOK(w)
+		return
+	}
+
+	//Check if the authURL is set correctly. If not, return error
+	if s.Config.AuthURL == "" {
+		utils.SendErrorResponse(w, "auth URL not set")
+		return
+	}
+
+	//Start the SSO portal server in go routine
+	go s.StartSSOPortal()
+
 	//Write current state to database
-	err = s.Config.Database.Write("sso_conf", "enabled", true)
+	err := s.Config.Database.Write("sso_conf", "enabled", true)
 	if err != nil {
 		utils.SendErrorResponse(w, "failed to update SSO state")
 		return
@@ -56,6 +86,12 @@ func (s *SSOHandler) HandleStartSSOPortal(w http.ResponseWriter, r *http.Request
 
 // HandleStopSSOPortal handle the request to stop the SSO portal server
 func (s *SSOHandler) HandleStopSSOPortal(w http.ResponseWriter, r *http.Request) {
+	if s.ssoPortalServer == nil {
+		//Already disabled
+		utils.SendOK(w)
+		return
+	}
+
 	err := s.ssoPortalServer.Close()
 	if err != nil {
 		s.Log("Failed to stop SSO portal server", err)
@@ -68,13 +104,6 @@ func (s *SSOHandler) HandleStopSSOPortal(w http.ResponseWriter, r *http.Request)
 	err = s.Config.Database.Write("sso_conf", "enabled", false)
 	if err != nil {
 		utils.SendErrorResponse(w, "failed to update SSO state")
-		return
-	}
-
-	//Clear the cookie store and restart the server
-	err = s.RestartSSOServer()
-	if err != nil {
-		utils.SendErrorResponse(w, "failed to restart SSO server")
 		return
 	}
 	utils.SendOK(w)
@@ -104,11 +133,13 @@ func (s *SSOHandler) HandlePortChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Clear the cookie store and restart the server
-	err = s.RestartSSOServer()
-	if err != nil {
-		utils.SendErrorResponse(w, "failed to restart SSO server")
-		return
+	if s.IsRunning() {
+		//Restart the server if it is running
+		err = s.RestartSSOServer()
+		if err != nil {
+			utils.SendErrorResponse(w, "failed to restart SSO server")
+			return
+		}
 	}
 	utils.SendOK(w)
 }
