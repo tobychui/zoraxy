@@ -16,7 +16,7 @@ type Sender struct {
 	Port       int    //E.g. 587
 	Username   string //Username of the email account
 	Password   string //Password of the email account
-	SenderAddr string //e.g. admin@arozos.com
+	SenderAddr string //e.g. admin@aroz.org
 }
 
 // Create a new email sender object

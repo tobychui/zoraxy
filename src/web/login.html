@@ -140,7 +140,7 @@
                         <div class="field registerOnly">
                             <div class="ui left icon input">
                                 <i class="lock icon"></i>
-                                <input id="repeatMagic" type="password" name="passwordconfirm" placeholder="Confirm Password">
+                                <input id="repeatMagic" type="password" name="passwordconfirm" placeholder="Confirm Password" >
                             </div>
                         </div>
                         <div class="field loginOnly" style="text-align: left;">
@@ -175,11 +175,11 @@
             </svg>
         </div>
         <div class="wavebase">
-            <p>Proudly powered by <a href="https://zoraxy.arozos.com" target="_blank">Zoraxy</a></p>
+            <p>Proudly powered by <a href="https://zoraxy.aroz.org" target="_blank">Zoraxy</a></p>
         </div>
     <script>
         AOS.init();
-
+        var registerMode = false;
         var redirectionAddress = "/";
         var loginAddress = "/api/auth/login";
         $(".checkbox").checkbox();
@@ -197,6 +197,7 @@
             $.get("/api/auth/userCount", function(data){
                 if (data == 0){
                     //Allow user creation
+                    registerMode = true;
                     $(".loginOnly").hide();
                     $(".registerOnly").show();
                 }
@@ -240,13 +241,23 @@
         $("input").on("keydown",function(event){
             if (event.keyCode === 13) {
                 event.preventDefault();
-                if ($(this).attr("id") == "magic"){
-                    login();
+                if (registerMode){
+                    //Register mode
+                    if ($(this).attr("id") == "repeatMagic"){
+                        $("#regsiterbtn").click();
+                    }else{
+                        //Focus to next field
+                        $(this).next().focus();
+                    }
                 }else{
-                    //Fuocus to password field
-                    $("#magic").focus();
+                    //Login mode
+                    if ($(this).attr("id") == "magic"){
+                        login();
+                    }else{
+                        //Fuocus to password field
+                        $("#magic").focus();
+                    }
                 }
-                
             }
         });
 

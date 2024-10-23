@@ -205,7 +205,7 @@ func startupSequence() {
 		mdnsScanner, err = mdns.NewMDNS(mdns.NetworkHost{
 			HostName:     hostName,
 			Port:         portInt,
-			Domain:       "zoraxy.arozos.com",
+			Domain:       "zoraxy.aroz.org",
 			Model:        "Network Gateway",
 			UUID:         nodeUUID,
 			Vendor:       "imuslab.com",

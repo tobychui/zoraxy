@@ -61,7 +61,7 @@
     <p>Current list of loaded certificates</p>
     <div tourstep="certTable">
         <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
-            <table class="ui sortable unstackable basic celled table">
+            <table class="ui unstackable basic celled table">
                 <thead>
                 <tr><th>Domain</th>
                 <th>Last Update</th>
@@ -161,7 +161,9 @@
         msgbox("Requesting certificate via " + defaultCA  +"...");
 
         //Request ACME for certificate
+        let buttonOriginalHTML = "";
         if (btn != undefined){
+            buttonOriginalHTML = $(btn).html();
             $(btn).addClass('disabled');
             $(btn).html(`<i class="ui loading spinner icon"></i>`);
         }
@@ -169,11 +171,26 @@
         obtainCertificate(domain, dns, defaultCA.trim(), function(succ){
             if (btn != undefined){
                 $(btn).removeClass('disabled');
-                if (succ){
-                    $(btn).html(`<i class="ui green check icon"></i>`);
+                if ($(btn).hasClass("icon")){
+                    //Only change the button icon
+                    if (succ){
+                        $(btn).html(`<i class="ui green check icon"></i>`);
+                    }else{
+                        $(btn).html(`<i class="ui red times icon"></i>`);
+                    }
                 }else{
-                    $(btn).html(`<i class="ui red times icon"></i>`);
+                    //Show error or success icon with text
+                    if (succ){
+                        $(btn).html(`<i class="ui green check icon"></i> Requested`);
+                    }else{
+                        $(btn).html(`<i class="ui red times icon"></i> Error`);
+                    }
                 }
+
+                //Restore the button after 3 seconds
+                setTimeout(function(){
+                    $(btn).html(buttonOriginalHTML);
+                }, 3000);
                 
                 setTimeout(function(){
                     initManagedDomainCertificateList();
