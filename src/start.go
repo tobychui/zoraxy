@@ -262,10 +262,14 @@ func startupSequence() {
 	webSshManager = sshprox.NewSSHProxyManager()
 
 	//Create TCP Proxy Manager
-	streamProxyManager = streamproxy.NewStreamProxy(&streamproxy.Options{
-		Database:             sysdb,
+	streamProxyManager, err = streamproxy.NewStreamProxy(&streamproxy.Options{
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
+		ConfigStore:          "./conf/streamproxy",
+		Logger:               SystemWideLogger,
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	//Create WoL MAC storage table
 	sysdb.NewTable("wolmac")
