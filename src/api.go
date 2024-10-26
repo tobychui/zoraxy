@@ -8,6 +8,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme/acmedns"
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/utils"
@@ -187,7 +188,8 @@ func initAPIs(targetMux *http.ServeMux) {
 	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
 
 	//Network utilities
-	authRouter.HandleFunc("/api/tools/ipscan", HandleIpScan)
+	authRouter.HandleFunc("/api/tools/ipscan", ipscan.HandleIpScan)
+	authRouter.HandleFunc("/api/tools/portscan", ipscan.HandleScanPort)
 	authRouter.HandleFunc("/api/tools/traceroute", netutils.HandleTraceRoute)
 	authRouter.HandleFunc("/api/tools/ping", netutils.HandlePing)
 	authRouter.HandleFunc("/api/tools/whois", netutils.HandleWhois)

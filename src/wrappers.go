@@ -26,7 +26,6 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
-	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
@@ -265,44 +264,6 @@ func HandleMdnsScanning(w http.ResponseWriter, r *http.Request) {
 
 	js, _ := json.Marshal(hosts)
 	utils.SendJSONResponse(w, string(js))
-}
-
-// handle ip scanning
-func HandleIpScan(w http.ResponseWriter, r *http.Request) {
-	cidr, err := utils.PostPara(r, "cidr")
-	if err != nil {
-		//Ip range mode
-		start, err := utils.PostPara(r, "start")
-		if err != nil {
-			utils.SendErrorResponse(w, "missing start ip")
-			return
-		}
-
-		end, err := utils.PostPara(r, "end")
-		if err != nil {
-			utils.SendErrorResponse(w, "missing end ip")
-			return
-		}
-
-		discoveredHosts, err := ipscan.ScanIpRange(start, end)
-		if err != nil {
-			utils.SendErrorResponse(w, err.Error())
-			return
-		}
-
-		js, _ := json.Marshal(discoveredHosts)
-		utils.SendJSONResponse(w, string(js))
-	} else {
-		//CIDR mode
-		discoveredHosts, err := ipscan.ScanCIDRRange(cidr)
-		if err != nil {
-			utils.SendErrorResponse(w, err.Error())
-			return
-		}
-
-		js, _ := json.Marshal(discoveredHosts)
-		utils.SendJSONResponse(w, string(js))
-	}
 }
 
 /*
