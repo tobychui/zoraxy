@@ -173,7 +173,6 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		fallthrough
 	case DefaultSite_ReverseProxy:
 		//They both share the same behavior
-
 		//Check if any virtual directory rules matches
 		proxyingPath := strings.TrimSpace(r.RequestURI)
 		targetProxyEndpoint := proot.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
@@ -198,8 +197,13 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 			redirectTarget = "about:blank"
 		}
 
+		//Check if the default site values start with http or https
+		if !strings.HasPrefix(redirectTarget, "http://") && !strings.HasPrefix(redirectTarget, "https://") {
+			redirectTarget = "http://" + redirectTarget
+		}
+
 		//Check if it is an infinite loopback redirect
-		parsedURL, err := url.Parse(proot.DefaultSiteValue)
+		parsedURL, err := url.Parse(redirectTarget)
 		if err != nil {
 			//Error when parsing target. Send to root
 			h.hostRequest(w, r, h.Parent.Root)

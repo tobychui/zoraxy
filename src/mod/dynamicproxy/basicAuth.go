@@ -49,6 +49,9 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 	for _, cred := range pe.BasicAuthCredentials {
 		if u == cred.Username && hashedPassword == cred.PasswordHash {
 			matchingFound = true
+
+			//Set the X-Remote-User header
+			r.Header.Set("X-Remote-User", u)
 			break
 		}
 	}
