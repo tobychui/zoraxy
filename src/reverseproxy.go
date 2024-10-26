@@ -1171,7 +1171,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Create a Custom Header Defination type
+	//Create a Custom Header Definition type
 	var rewriteDirection dynamicproxy.HeaderDirection
 	if direction == "toOrigin" {
 		rewriteDirection = dynamicproxy.HeaderDirection_ZoraxyToUpstream
@@ -1187,7 +1187,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	if rewriteType == "remove" {
 		isRemove = true
 	}
-	headerRewriteDefination := dynamicproxy.UserDefinedHeader{
+	headerRewriteDefinition := dynamicproxy.UserDefinedHeader{
 		Key:       name,
 		Value:     value,
 		Direction: rewriteDirection,
@@ -1195,7 +1195,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Create a new custom header object
-	err = targetProxyEndpoint.AddUserDefinedHeader(&headerRewriteDefination)
+	err = targetProxyEndpoint.AddUserDefinedHeader(&headerRewriteDefinition)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to add header rewrite rule: "+err.Error())
 		return
