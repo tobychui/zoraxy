@@ -12,7 +12,6 @@ import (
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
-	"imuslab.com/zoraxy/mod/auth/sso"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -128,19 +127,21 @@ func startupSequence() {
 		panic(err)
 	}
 
-	//Create an SSO handler
-	ssoHandler, err = sso.NewSSOHandler(&sso.SSOConfig{
-		SystemUUID:       nodeUUID,
-		PortalServerPort: 5488,
-		AuthURL:          "http://auth.localhost",
-		Database:         sysdb,
-		Logger:           SystemWideLogger,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	//Restore the SSO handler to previous state before shutdown
-	ssoHandler.RestorePreviousRunningState()
+	/*
+		//Create an SSO handler
+		ssoHandler, err = sso.NewSSOHandler(&sso.SSOConfig{
+			SystemUUID:       nodeUUID,
+			PortalServerPort: 5488,
+			AuthURL:          "http://auth.localhost",
+			Database:         sysdb,
+			Logger:           SystemWideLogger,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		//Restore the SSO handler to previous state before shutdown
+		ssoHandler.RestorePreviousRunningState()
+	*/
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{

@@ -220,6 +220,11 @@ func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr
 }
 
 func (m *Manager) RemoveConfig(configUUID string) error {
+	//Remove the config from file
+	err := os.Remove(filepath.Join(m.Options.ConfigStore, configUUID+".config"))
+	if err != nil {
+		return err
+	}
 	// Find and remove the config with the specified UUID
 	for i, config := range m.Configs {
 		if config.UUID == configUUID {
