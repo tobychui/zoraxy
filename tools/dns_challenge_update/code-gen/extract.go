@@ -36,9 +36,10 @@ import (
 
 //name is the DNS provider name, e.g. cloudflare or gandi
 //JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"far","Password":"boo"}
-func GetDNSProviderByJsonConfig(name string, js string)(challenge.Provider, error){
+func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64)(challenge.Provider, error){
+	pgDuration := time.Duration(propagationTimeout) * time.Second
 	switch name {
-{{magic}}
+	{{magic}}
 	default:
 		return nil, fmt.Errorf("unrecognized DNS provider: %s", name)
 	}
@@ -79,12 +80,19 @@ func getExcludedDNSProviders() []string {
 		"selectelv2",   //Not sure why not working with our code generator
 		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
 		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
-		"directadmin",  //Reserve for next dependency update
+
+		//The following are incomaptible with Zoraxy due to dependencies issue,
+		//might be resolved in future
+		"corenetworks",
+		"timewebcloud",
+		"volcengine",
+		"exoscale",
 	}
 }
 
 // Exclude list for Windows build, due to limitations for lego versions
 func getExcludedDNSProvidersNT61() []string {
+	fmt.Println("Windows 7 support is deprecated, please consider upgrading to a newer version of Windows.")
 	return append(getExcludedDNSProviders(), []string{"cpanel",
 		"mailinabox",
 		"shellrent",
@@ -251,6 +259,14 @@ func main() {
 						Datatype: fields[1],
 					})
 				}
+			case "time.Duration":
+				if fields[0] == "PropagationTimeout" || fields[0] == "PollingInterval" {
+					configKeys = append(configKeys, &Field{
+						Title:    fields[0],
+						Datatype: fields[1],
+					})
+				}
+
 			default:
 				//Not used fields
 				hiddenKeys = append(hiddenKeys, &Field{
@@ -275,21 +291,8 @@ func main() {
 		if err != nil {
 			return nil, err
 		}
-		cfg.PropagationTimeout = 5*time.Minute
+		cfg.PropagationTimeout = pgDuration
 		return ` + providerName + `.NewDNSProviderConfig(cfg)`
-
-		//Add fixed for Netcup timeout
-		if strings.ToLower(providerName) == "netcup" {
-			codeSegment = `
-		case "` + providerName + `":
-			cfg := ` + providerName + `.NewDefaultConfig()
-			err := json.Unmarshal([]byte(js), &cfg)
-			if err != nil {
-				return nil, err
-			}
-			cfg.PropagationTimeout = 20*time.Minute
-			return ` + providerName + `.NewDNSProviderConfig(cfg)`
-		}
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"
 	}

@@ -51,7 +51,7 @@ If you have no background in setting up reverse proxy or web routing, you should
 
 ## Build from Source
 
-Requires Go 1.22 or higher
+Requires Go 1.23 or higher
 
 ```bash
 git clone https://github.com/tobychui/zoraxy
