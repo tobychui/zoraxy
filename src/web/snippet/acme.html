@@ -138,7 +138,7 @@
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <div class="ui divider"></div>
-      <p>DNS Credentials</p>
+        <p>DNS Credentials</p>
       <div id="dnsProviderAPIFields">
         <p><i class="ui loading circle notch icon"></i> Generating WebForm</p>
       </div>
@@ -434,6 +434,7 @@
         $("#dnsProviderAPIFields").html("");
         //Generate a form for this config
         let booleanFieldsHTML = "";
+        let optionalFieldsHTML = "";
         for (const [key, datatype] of Object.entries(data)) {
           if (datatype == "int"){
             $("#dnsProviderAPIFields").append(`<div class="ui fluid labeled dnsConfigField input" key="${key}" style="margin-top: 0.2em;">
@@ -447,6 +448,26 @@
               <input type="checkbox">
               <label>${key}</label>
             </div>`);
+          }else if (datatype == "time.Duration"){
+            let defaultIntValue = 300;
+            let defaultMinValue = 60;
+            if (key == "PollingInterval"){
+              defaultIntValue = 30;
+              defaultMinValue = 10;
+            }else if (key == "PropagationTimeout"){
+              defaultIntValue = 300;
+              defaultMinValue = 60;
+            }
+            optionalFieldsHTML += (`<div class="ui fluid labeled dnsConfigField small input" key="${key}" style="margin-top: 0.2em;">
+              <div class="ui basic blue label" style="font-weight: 300;">
+                ${key}
+              </div>
+              <input type="number" min="${defaultMinValue}" value="${defaultIntValue}">
+              <div class="ui basic label" style="font-weight: 300;">
+                secs
+              </div>
+            </div>`);
+          
           }else{
             //Default to string
             $("#dnsProviderAPIFields").append(`<div class="ui fluid labeled input dnsConfigField" key="${key}" style="margin-top: 0.2em;">
@@ -463,6 +484,9 @@
         if (booleanFieldsHTML != ""){
           $(".dnsConfigField.checkbox").checkbox();
         }
+
+        //Append the optional fields at the bottom, if exists
+        $("#dnsProviderAPIFields").append(optionalFieldsHTML);
       });
     });
 

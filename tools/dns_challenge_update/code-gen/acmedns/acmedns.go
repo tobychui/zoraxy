@@ -139,8 +139,9 @@ import (
 
 //name is the DNS provider name, e.g. cloudflare or gandi
 //JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"far","Password":"boo"}
-func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64)(challenge.Provider, error){
+func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64)(challenge.Provider, error){
 	pgDuration := time.Duration(propagationTimeout) * time.Second
+	plInterval := time.Duration(pollingInterval) * time.Second
 	switch name {
 	
 	case "alidns":
@@ -150,6 +151,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return alidns.NewDNSProviderConfig(cfg)
 	case "allinkl":
 		cfg := allinkl.NewDefaultConfig()
@@ -158,6 +160,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return allinkl.NewDNSProviderConfig(cfg)
 	case "arvancloud":
 		cfg := arvancloud.NewDefaultConfig()
@@ -166,6 +169,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return arvancloud.NewDNSProviderConfig(cfg)
 	case "auroradns":
 		cfg := auroradns.NewDefaultConfig()
@@ -174,6 +178,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return auroradns.NewDNSProviderConfig(cfg)
 	case "autodns":
 		cfg := autodns.NewDefaultConfig()
@@ -182,6 +187,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return autodns.NewDNSProviderConfig(cfg)
 	case "azure":
 		cfg := azure.NewDefaultConfig()
@@ -190,6 +196,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return azure.NewDNSProviderConfig(cfg)
 	case "azuredns":
 		cfg := azuredns.NewDefaultConfig()
@@ -198,6 +205,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return azuredns.NewDNSProviderConfig(cfg)
 	case "bindman":
 		cfg := bindman.NewDefaultConfig()
@@ -206,6 +214,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return bindman.NewDNSProviderConfig(cfg)
 	case "bluecat":
 		cfg := bluecat.NewDefaultConfig()
@@ -214,6 +223,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return bluecat.NewDNSProviderConfig(cfg)
 	case "brandit":
 		cfg := brandit.NewDefaultConfig()
@@ -222,6 +232,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return brandit.NewDNSProviderConfig(cfg)
 	case "bunny":
 		cfg := bunny.NewDefaultConfig()
@@ -230,6 +241,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return bunny.NewDNSProviderConfig(cfg)
 	case "checkdomain":
 		cfg := checkdomain.NewDefaultConfig()
@@ -238,6 +250,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return checkdomain.NewDNSProviderConfig(cfg)
 	case "civo":
 		cfg := civo.NewDefaultConfig()
@@ -246,6 +259,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return civo.NewDNSProviderConfig(cfg)
 	case "clouddns":
 		cfg := clouddns.NewDefaultConfig()
@@ -254,6 +268,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return clouddns.NewDNSProviderConfig(cfg)
 	case "cloudflare":
 		cfg := cloudflare.NewDefaultConfig()
@@ -262,6 +277,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return cloudflare.NewDNSProviderConfig(cfg)
 	case "cloudns":
 		cfg := cloudns.NewDefaultConfig()
@@ -270,6 +286,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return cloudns.NewDNSProviderConfig(cfg)
 	case "cloudru":
 		cfg := cloudru.NewDefaultConfig()
@@ -278,6 +295,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return cloudru.NewDNSProviderConfig(cfg)
 	case "cloudxns":
 		cfg := cloudxns.NewDefaultConfig()
@@ -286,6 +304,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return cloudxns.NewDNSProviderConfig(cfg)
 	case "conoha":
 		cfg := conoha.NewDefaultConfig()
@@ -294,6 +313,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return conoha.NewDNSProviderConfig(cfg)
 	case "constellix":
 		cfg := constellix.NewDefaultConfig()
@@ -302,6 +322,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return constellix.NewDNSProviderConfig(cfg)
 	case "cpanel":
 		cfg := cpanel.NewDefaultConfig()
@@ -310,6 +331,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return cpanel.NewDNSProviderConfig(cfg)
 	case "derak":
 		cfg := derak.NewDefaultConfig()
@@ -318,6 +340,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return derak.NewDNSProviderConfig(cfg)
 	case "desec":
 		cfg := desec.NewDefaultConfig()
@@ -326,6 +349,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return desec.NewDNSProviderConfig(cfg)
 	case "digitalocean":
 		cfg := digitalocean.NewDefaultConfig()
@@ -334,6 +358,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return digitalocean.NewDNSProviderConfig(cfg)
 	case "directadmin":
 		cfg := directadmin.NewDefaultConfig()
@@ -342,6 +367,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return directadmin.NewDNSProviderConfig(cfg)
 	case "dnshomede":
 		cfg := dnshomede.NewDefaultConfig()
@@ -350,6 +376,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dnshomede.NewDNSProviderConfig(cfg)
 	case "dnsimple":
 		cfg := dnsimple.NewDefaultConfig()
@@ -358,6 +385,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dnsimple.NewDNSProviderConfig(cfg)
 	case "dnsmadeeasy":
 		cfg := dnsmadeeasy.NewDefaultConfig()
@@ -366,6 +394,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dnsmadeeasy.NewDNSProviderConfig(cfg)
 	case "dnspod":
 		cfg := dnspod.NewDefaultConfig()
@@ -374,6 +403,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dnspod.NewDNSProviderConfig(cfg)
 	case "dode":
 		cfg := dode.NewDefaultConfig()
@@ -382,6 +412,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dode.NewDNSProviderConfig(cfg)
 	case "domeneshop":
 		cfg := domeneshop.NewDefaultConfig()
@@ -390,6 +421,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return domeneshop.NewDNSProviderConfig(cfg)
 	case "dreamhost":
 		cfg := dreamhost.NewDefaultConfig()
@@ -398,6 +430,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dreamhost.NewDNSProviderConfig(cfg)
 	case "duckdns":
 		cfg := duckdns.NewDefaultConfig()
@@ -406,6 +439,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return duckdns.NewDNSProviderConfig(cfg)
 	case "dyn":
 		cfg := dyn.NewDefaultConfig()
@@ -414,6 +448,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dyn.NewDNSProviderConfig(cfg)
 	case "dynu":
 		cfg := dynu.NewDefaultConfig()
@@ -422,6 +457,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return dynu.NewDNSProviderConfig(cfg)
 	case "easydns":
 		cfg := easydns.NewDefaultConfig()
@@ -430,6 +466,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return easydns.NewDNSProviderConfig(cfg)
 	case "efficientip":
 		cfg := efficientip.NewDefaultConfig()
@@ -438,6 +475,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return efficientip.NewDNSProviderConfig(cfg)
 	case "epik":
 		cfg := epik.NewDefaultConfig()
@@ -446,6 +484,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return epik.NewDNSProviderConfig(cfg)
 	case "freemyip":
 		cfg := freemyip.NewDefaultConfig()
@@ -454,6 +493,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return freemyip.NewDNSProviderConfig(cfg)
 	case "gandi":
 		cfg := gandi.NewDefaultConfig()
@@ -462,6 +502,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return gandi.NewDNSProviderConfig(cfg)
 	case "gandiv5":
 		cfg := gandiv5.NewDefaultConfig()
@@ -470,6 +511,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return gandiv5.NewDNSProviderConfig(cfg)
 	case "gcore":
 		cfg := gcore.NewDefaultConfig()
@@ -478,6 +520,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return gcore.NewDNSProviderConfig(cfg)
 	case "glesys":
 		cfg := glesys.NewDefaultConfig()
@@ -486,6 +529,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return glesys.NewDNSProviderConfig(cfg)
 	case "godaddy":
 		cfg := godaddy.NewDefaultConfig()
@@ -494,6 +538,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return godaddy.NewDNSProviderConfig(cfg)
 	case "googledomains":
 		cfg := googledomains.NewDefaultConfig()
@@ -502,6 +547,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return googledomains.NewDNSProviderConfig(cfg)
 	case "hetzner":
 		cfg := hetzner.NewDefaultConfig()
@@ -510,6 +556,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return hetzner.NewDNSProviderConfig(cfg)
 	case "hostingde":
 		cfg := hostingde.NewDefaultConfig()
@@ -518,6 +565,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return hostingde.NewDNSProviderConfig(cfg)
 	case "hosttech":
 		cfg := hosttech.NewDefaultConfig()
@@ -526,6 +574,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return hosttech.NewDNSProviderConfig(cfg)
 	case "httpnet":
 		cfg := httpnet.NewDefaultConfig()
@@ -534,6 +583,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return httpnet.NewDNSProviderConfig(cfg)
 	case "huaweicloud":
 		cfg := huaweicloud.NewDefaultConfig()
@@ -542,6 +592,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return huaweicloud.NewDNSProviderConfig(cfg)
 	case "hyperone":
 		cfg := hyperone.NewDefaultConfig()
@@ -550,6 +601,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return hyperone.NewDNSProviderConfig(cfg)
 	case "ibmcloud":
 		cfg := ibmcloud.NewDefaultConfig()
@@ -558,6 +610,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ibmcloud.NewDNSProviderConfig(cfg)
 	case "iij":
 		cfg := iij.NewDefaultConfig()
@@ -566,6 +619,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return iij.NewDNSProviderConfig(cfg)
 	case "iijdpf":
 		cfg := iijdpf.NewDefaultConfig()
@@ -574,6 +628,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return iijdpf.NewDNSProviderConfig(cfg)
 	case "infoblox":
 		cfg := infoblox.NewDefaultConfig()
@@ -582,6 +637,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return infoblox.NewDNSProviderConfig(cfg)
 	case "infomaniak":
 		cfg := infomaniak.NewDefaultConfig()
@@ -590,6 +646,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return infomaniak.NewDNSProviderConfig(cfg)
 	case "internetbs":
 		cfg := internetbs.NewDefaultConfig()
@@ -598,6 +655,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return internetbs.NewDNSProviderConfig(cfg)
 	case "inwx":
 		cfg := inwx.NewDefaultConfig()
@@ -606,6 +664,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return inwx.NewDNSProviderConfig(cfg)
 	case "ionos":
 		cfg := ionos.NewDefaultConfig()
@@ -614,6 +673,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ionos.NewDNSProviderConfig(cfg)
 	case "ipv64":
 		cfg := ipv64.NewDefaultConfig()
@@ -622,6 +682,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ipv64.NewDNSProviderConfig(cfg)
 	case "iwantmyname":
 		cfg := iwantmyname.NewDefaultConfig()
@@ -630,6 +691,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return iwantmyname.NewDNSProviderConfig(cfg)
 	case "joker":
 		cfg := joker.NewDefaultConfig()
@@ -638,6 +700,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return joker.NewDNSProviderConfig(cfg)
 	case "liara":
 		cfg := liara.NewDefaultConfig()
@@ -646,6 +709,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return liara.NewDNSProviderConfig(cfg)
 	case "lightsail":
 		cfg := lightsail.NewDefaultConfig()
@@ -654,6 +718,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return lightsail.NewDNSProviderConfig(cfg)
 	case "limacity":
 		cfg := limacity.NewDefaultConfig()
@@ -662,6 +727,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return limacity.NewDNSProviderConfig(cfg)
 	case "linode":
 		cfg := linode.NewDefaultConfig()
@@ -670,6 +736,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return linode.NewDNSProviderConfig(cfg)
 	case "liquidweb":
 		cfg := liquidweb.NewDefaultConfig()
@@ -678,6 +745,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return liquidweb.NewDNSProviderConfig(cfg)
 	case "loopia":
 		cfg := loopia.NewDefaultConfig()
@@ -686,6 +754,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return loopia.NewDNSProviderConfig(cfg)
 	case "luadns":
 		cfg := luadns.NewDefaultConfig()
@@ -694,6 +763,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return luadns.NewDNSProviderConfig(cfg)
 	case "mailinabox":
 		cfg := mailinabox.NewDefaultConfig()
@@ -702,6 +772,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return mailinabox.NewDNSProviderConfig(cfg)
 	case "metaname":
 		cfg := metaname.NewDefaultConfig()
@@ -710,6 +781,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return metaname.NewDNSProviderConfig(cfg)
 	case "mijnhost":
 		cfg := mijnhost.NewDefaultConfig()
@@ -718,6 +790,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return mijnhost.NewDNSProviderConfig(cfg)
 	case "mittwald":
 		cfg := mittwald.NewDefaultConfig()
@@ -726,6 +799,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return mittwald.NewDNSProviderConfig(cfg)
 	case "mydnsjp":
 		cfg := mydnsjp.NewDefaultConfig()
@@ -734,6 +808,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return mydnsjp.NewDNSProviderConfig(cfg)
 	case "namecheap":
 		cfg := namecheap.NewDefaultConfig()
@@ -742,6 +817,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return namecheap.NewDNSProviderConfig(cfg)
 	case "namedotcom":
 		cfg := namedotcom.NewDefaultConfig()
@@ -750,6 +826,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return namedotcom.NewDNSProviderConfig(cfg)
 	case "namesilo":
 		cfg := namesilo.NewDefaultConfig()
@@ -758,6 +835,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return namesilo.NewDNSProviderConfig(cfg)
 	case "nearlyfreespeech":
 		cfg := nearlyfreespeech.NewDefaultConfig()
@@ -766,6 +844,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return nearlyfreespeech.NewDNSProviderConfig(cfg)
 	case "netcup":
 		cfg := netcup.NewDefaultConfig()
@@ -774,6 +853,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return netcup.NewDNSProviderConfig(cfg)
 	case "netlify":
 		cfg := netlify.NewDefaultConfig()
@@ -782,6 +862,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return netlify.NewDNSProviderConfig(cfg)
 	case "nicmanager":
 		cfg := nicmanager.NewDefaultConfig()
@@ -790,6 +871,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return nicmanager.NewDNSProviderConfig(cfg)
 	case "nifcloud":
 		cfg := nifcloud.NewDefaultConfig()
@@ -798,6 +880,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return nifcloud.NewDNSProviderConfig(cfg)
 	case "njalla":
 		cfg := njalla.NewDefaultConfig()
@@ -806,6 +889,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return njalla.NewDNSProviderConfig(cfg)
 	case "nodion":
 		cfg := nodion.NewDefaultConfig()
@@ -814,6 +898,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return nodion.NewDNSProviderConfig(cfg)
 	case "ns1":
 		cfg := ns1.NewDefaultConfig()
@@ -822,6 +907,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ns1.NewDNSProviderConfig(cfg)
 	case "otc":
 		cfg := otc.NewDefaultConfig()
@@ -830,6 +916,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return otc.NewDNSProviderConfig(cfg)
 	case "ovh":
 		cfg := ovh.NewDefaultConfig()
@@ -838,6 +925,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ovh.NewDNSProviderConfig(cfg)
 	case "pdns":
 		cfg := pdns.NewDefaultConfig()
@@ -846,6 +934,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return pdns.NewDNSProviderConfig(cfg)
 	case "plesk":
 		cfg := plesk.NewDefaultConfig()
@@ -854,6 +943,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return plesk.NewDNSProviderConfig(cfg)
 	case "porkbun":
 		cfg := porkbun.NewDefaultConfig()
@@ -862,6 +952,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return porkbun.NewDNSProviderConfig(cfg)
 	case "rackspace":
 		cfg := rackspace.NewDefaultConfig()
@@ -870,6 +961,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return rackspace.NewDNSProviderConfig(cfg)
 	case "rcodezero":
 		cfg := rcodezero.NewDefaultConfig()
@@ -878,6 +970,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return rcodezero.NewDNSProviderConfig(cfg)
 	case "regru":
 		cfg := regru.NewDefaultConfig()
@@ -886,6 +979,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return regru.NewDNSProviderConfig(cfg)
 	case "rfc2136":
 		cfg := rfc2136.NewDefaultConfig()
@@ -894,6 +988,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return rfc2136.NewDNSProviderConfig(cfg)
 	case "rimuhosting":
 		cfg := rimuhosting.NewDefaultConfig()
@@ -902,6 +997,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return rimuhosting.NewDNSProviderConfig(cfg)
 	case "route53":
 		cfg := route53.NewDefaultConfig()
@@ -910,6 +1006,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return route53.NewDNSProviderConfig(cfg)
 	case "safedns":
 		cfg := safedns.NewDefaultConfig()
@@ -918,6 +1015,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return safedns.NewDNSProviderConfig(cfg)
 	case "sakuracloud":
 		cfg := sakuracloud.NewDefaultConfig()
@@ -926,6 +1024,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return sakuracloud.NewDNSProviderConfig(cfg)
 	case "scaleway":
 		cfg := scaleway.NewDefaultConfig()
@@ -934,6 +1033,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return scaleway.NewDNSProviderConfig(cfg)
 	case "selectel":
 		cfg := selectel.NewDefaultConfig()
@@ -942,6 +1042,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return selectel.NewDNSProviderConfig(cfg)
 	case "selfhostde":
 		cfg := selfhostde.NewDefaultConfig()
@@ -950,6 +1051,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return selfhostde.NewDNSProviderConfig(cfg)
 	case "servercow":
 		cfg := servercow.NewDefaultConfig()
@@ -958,6 +1060,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return servercow.NewDNSProviderConfig(cfg)
 	case "shellrent":
 		cfg := shellrent.NewDefaultConfig()
@@ -966,6 +1069,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return shellrent.NewDNSProviderConfig(cfg)
 	case "simply":
 		cfg := simply.NewDefaultConfig()
@@ -974,6 +1078,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return simply.NewDNSProviderConfig(cfg)
 	case "sonic":
 		cfg := sonic.NewDefaultConfig()
@@ -982,6 +1087,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return sonic.NewDNSProviderConfig(cfg)
 	case "stackpath":
 		cfg := stackpath.NewDefaultConfig()
@@ -990,6 +1096,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return stackpath.NewDNSProviderConfig(cfg)
 	case "tencentcloud":
 		cfg := tencentcloud.NewDefaultConfig()
@@ -998,6 +1105,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return tencentcloud.NewDNSProviderConfig(cfg)
 	case "transip":
 		cfg := transip.NewDefaultConfig()
@@ -1006,6 +1114,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return transip.NewDNSProviderConfig(cfg)
 	case "ultradns":
 		cfg := ultradns.NewDefaultConfig()
@@ -1014,6 +1123,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ultradns.NewDNSProviderConfig(cfg)
 	case "variomedia":
 		cfg := variomedia.NewDefaultConfig()
@@ -1022,6 +1132,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return variomedia.NewDNSProviderConfig(cfg)
 	case "vegadns":
 		cfg := vegadns.NewDefaultConfig()
@@ -1030,6 +1141,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return vegadns.NewDNSProviderConfig(cfg)
 	case "vercel":
 		cfg := vercel.NewDefaultConfig()
@@ -1038,6 +1150,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return vercel.NewDNSProviderConfig(cfg)
 	case "versio":
 		cfg := versio.NewDefaultConfig()
@@ -1046,6 +1159,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return versio.NewDNSProviderConfig(cfg)
 	case "vinyldns":
 		cfg := vinyldns.NewDefaultConfig()
@@ -1054,6 +1168,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return vinyldns.NewDNSProviderConfig(cfg)
 	case "vkcloud":
 		cfg := vkcloud.NewDefaultConfig()
@@ -1062,6 +1177,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return vkcloud.NewDNSProviderConfig(cfg)
 	case "vscale":
 		cfg := vscale.NewDefaultConfig()
@@ -1070,6 +1186,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return vscale.NewDNSProviderConfig(cfg)
 	case "vultr":
 		cfg := vultr.NewDefaultConfig()
@@ -1078,6 +1195,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return vultr.NewDNSProviderConfig(cfg)
 	case "webnames":
 		cfg := webnames.NewDefaultConfig()
@@ -1086,6 +1204,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return webnames.NewDNSProviderConfig(cfg)
 	case "websupport":
 		cfg := websupport.NewDefaultConfig()
@@ -1094,6 +1213,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return websupport.NewDNSProviderConfig(cfg)
 	case "wedos":
 		cfg := wedos.NewDefaultConfig()
@@ -1102,6 +1222,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return wedos.NewDNSProviderConfig(cfg)
 	case "yandex":
 		cfg := yandex.NewDefaultConfig()
@@ -1110,6 +1231,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return yandex.NewDNSProviderConfig(cfg)
 	case "yandex360":
 		cfg := yandex360.NewDefaultConfig()
@@ -1118,6 +1240,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return yandex360.NewDNSProviderConfig(cfg)
 	case "yandexcloud":
 		cfg := yandexcloud.NewDefaultConfig()
@@ -1126,6 +1249,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return yandexcloud.NewDNSProviderConfig(cfg)
 	case "zoneee":
 		cfg := zoneee.NewDefaultConfig()
@@ -1134,6 +1258,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return zoneee.NewDNSProviderConfig(cfg)
 	case "zonomi":
 		cfg := zonomi.NewDefaultConfig()
@@ -1142,6 +1267,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return zonomi.NewDNSProviderConfig(cfg)
 	default:
 		return nil, fmt.Errorf("unrecognized DNS provider: %s", name)

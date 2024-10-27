@@ -36,8 +36,9 @@ import (
 
 //name is the DNS provider name, e.g. cloudflare or gandi
 //JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"far","Password":"boo"}
-func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64)(challenge.Provider, error){
+func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64)(challenge.Provider, error){
 	pgDuration := time.Duration(propagationTimeout) * time.Second
+	plInterval := time.Duration(pollingInterval) * time.Second
 	switch name {
 	{{magic}}
 	default:
@@ -292,6 +293,7 @@ func main() {
 			return nil, err
 		}
 		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
 		return ` + providerName + `.NewDNSProviderConfig(cfg)`
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"
