@@ -159,9 +159,12 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
+	//Populate the user-defined headers with the values from the request
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.UserDefinedHeaders)
+
 	//Build downstream and upstream header rules
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
-		UserDefinedHeaders:           target.UserDefinedHeaders,
+		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
 		HSTSMaxAge:                   target.HSTSMaxAge,
 		HSTSIncludeSubdomains:        target.ContainsWildcardName(true),
 		EnablePermissionPolicyHeader: target.EnablePermissionPolicyHeader,
@@ -234,9 +237,12 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
+	//Populate the user-defined headers with the values from the request
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.parent.UserDefinedHeaders)
+
 	//Build downstream and upstream header rules, use the parent (subdomain) endpoint's headers
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
-		UserDefinedHeaders:           target.parent.UserDefinedHeaders,
+		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
 		HSTSMaxAge:                   target.parent.HSTSMaxAge,
 		HSTSIncludeSubdomains:        target.parent.ContainsWildcardName(true),
 		EnablePermissionPolicyHeader: target.parent.EnablePermissionPolicyHeader,

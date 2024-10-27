@@ -1,6 +1,10 @@
 package rewrite
 
-import "imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
+import (
+	"encoding/json"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
+)
 
 /*
 	typdef.go
@@ -31,4 +35,17 @@ type HeaderRewriteOptions struct {
 	HSTSIncludeSubdomains        bool                                //Include subdomains in HSTS header
 	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
 	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
+}
+
+// Utilities for header rewrite
+func (h *UserDefinedHeader) GetDirection() HeaderDirection {
+	return h.Direction
+}
+
+// Copy eturns a deep copy of the UserDefinedHeader
+func (h *UserDefinedHeader) Copy() *UserDefinedHeader {
+	result := UserDefinedHeader{}
+	js, _ := json.Marshal(h)
+	json.Unmarshal(js, &result)
+	return &result
 }

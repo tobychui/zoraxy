@@ -318,6 +318,7 @@ func startupSequence() {
 		SystemWideLogger.PrintAndLog("warning", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
 	}
 	DockerUXOptimizer = dockerux.NewDockerOptimizer(*runningInDocker, SystemWideLogger)
+
 }
 
 // This sequence start after everything is initialized
