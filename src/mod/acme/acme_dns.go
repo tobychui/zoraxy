@@ -18,7 +18,7 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 	}
 
 	//Clear the PollingInterval and PropagationTimeout field and conert to int
-	userDefinedPollingInterval := 30
+	userDefinedPollingInterval := 2
 	if dnsCredentialsMap["PollingInterval"] != nil {
 		userDefinedPollingIntervalRaw := dnsCredentialsMap["PollingInterval"].(string)
 		delete(dnsCredentialsMap, "PollingInterval")
