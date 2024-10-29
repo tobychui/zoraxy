@@ -164,7 +164,7 @@
         $.get("/api/redirect/list", function(data){
             data.forEach(function(entry){
                 $("#redirectionRuleList").append(`<tr>
-                    <td><a href="${entry.RedirectURL}" target="_blank">${entry.RedirectURL}</a></td>
+                    <td><a href="//${entry.RedirectURL}" target="_blank">${entry.RedirectURL}</a></td>
                     <td>${entry.TargetURL}</td>
                     <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                     <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
