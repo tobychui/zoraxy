@@ -1189,6 +1189,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	if rewriteType == "remove" {
 		isRemove = true
 	}
+
 	headerRewriteDefination := rewrite.UserDefinedHeader{
 		Key:       name,
 		Value:     value,
@@ -1197,7 +1198,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Create a new custom header object
-	err = targetProxyEndpoint.AddUserDefinedHeader(&headerRewriteDefination)
+	err = targetProxyEndpoint.AddUserDefinedHeader(&headerRewriteDefinition)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to add header rewrite rule: "+err.Error())
 		return
