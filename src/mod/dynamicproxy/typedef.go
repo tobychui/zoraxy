@@ -7,10 +7,12 @@ import (
 	"sync"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/auth/sso"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
+	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/statistic"
@@ -44,6 +46,7 @@ type RouterOption struct {
 	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
 	WebDirectory       string                    //The static web server directory containing the templates folder
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
+	SSOHandler         *sso.SSOHandler           //SSO handler for handling SSO requests, interception mode only
 	Logger             *logger.Logger            //Logger for reverse proxy requets
 }
 
@@ -82,23 +85,6 @@ type BasicAuthExceptionRule struct {
 	PathPrefix string
 }
 
-/* Custom Header Related Data structure */
-// Header injection direction type
-type HeaderDirection int
-
-const (
-	HeaderDirection_ZoraxyToUpstream   HeaderDirection = 0 //Inject (or remove) header to request out-going from Zoraxy to backend server
-	HeaderDirection_ZoraxyToDownstream HeaderDirection = 1 //Inject (or remove) header to request out-going from Zoraxy to client (e.g. browser)
-)
-
-// User defined headers to add into a proxy endpoint
-type UserDefinedHeader struct {
-	Direction HeaderDirection
-	Key       string
-	Value     string
-	IsRemove  bool //Instead of set, remove this key instead
-}
-
 /* Routing Rule Data Structures */
 
 // A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better
@@ -131,7 +117,7 @@ type ProxyEndpoint struct {
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
 	//Custom Headers
-	UserDefinedHeaders           []*UserDefinedHeader                //Custom headers to append when proxying requests from this endpoint
+	UserDefinedHeaders           []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
 	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
 	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
 	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
@@ -142,6 +128,7 @@ type ProxyEndpoint struct {
 	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+	UseSSOIntercept         bool                      //Allow SSO to intercept this endpoint and provide authentication via Oauth2 credentials
 
 	// Rate Limiting
 	RequireRateLimit bool

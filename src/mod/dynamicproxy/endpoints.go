@@ -8,6 +8,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
+	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 )
 
 /*
@@ -36,7 +37,7 @@ func (ep *ProxyEndpoint) UserDefinedHeaderExists(key string) bool {
 
 // Remvoe a user defined header from the list
 func (ep *ProxyEndpoint) RemoveUserDefinedHeader(key string) error {
-	newHeaderList := []*UserDefinedHeader{}
+	newHeaderList := []*rewrite.UserDefinedHeader{}
 	for _, header := range ep.UserDefinedHeaders {
 		if !strings.EqualFold(header.Key, key) {
 			newHeaderList = append(newHeaderList, header)
@@ -49,7 +50,7 @@ func (ep *ProxyEndpoint) RemoveUserDefinedHeader(key string) error {
 }
 
 // Add a user defined header to the list, duplicates will be automatically removed
-func (ep *ProxyEndpoint) AddUserDefinedHeader(newHeaderRule *UserDefinedHeader) error {
+func (ep *ProxyEndpoint) AddUserDefinedHeader(newHeaderRule *rewrite.UserDefinedHeader) error {
 	if ep.UserDefinedHeaderExists(newHeaderRule.Key) {
 		ep.RemoveUserDefinedHeader(newHeaderRule.Key)
 	}

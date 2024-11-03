@@ -91,8 +91,11 @@
   <div class="ui form">
     <div class="field">
       <label>Domain(s)</label>
-      <input id="domainsInput" type="text" placeholder="example.com" onkeyup="checkIfInputDomainIsMultiple();">
-      <small>If you have more than one domain in a single certificate, enter the domains separated by commas (e.g. s1.dev.example.com,s2.dev.example.com)</small>
+      <input id="domainsInput" type="text" placeholder="example.com" onkeyup="handlePostInputAutomation();">
+      <small>If you have more than one domain in a single certificate, enter the domains separated by commas (e.g. s1.dev.example.com,s2.dev.example.com)
+        <span id="caNoDNSSupportWarning" style="color: #ffaf2e; display:none;"><br> <i class="exclamation triangle icon"></i> Current selected CA do not support DNS challenge</span>
+      </small>
+      
     </div>
     <div class="field multiDomainOnly" style="display:none;">
       <label>Matching Rule</label>
@@ -113,7 +116,6 @@
           <div class="item" data-value="Buypass">Buypass</div>
           <div class="item" data-value="ZeroSSL">ZeroSSL</div>
           <div class="item" data-value="Custom ACME Server">Custom ACME Server</div>
-          <!-- <div class="item" data-value="Google">Google</div> -->
         </div>
       </div>
     </div>
@@ -136,7 +138,7 @@
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <div class="ui divider"></div>
-      <p>DNS Credentials</p>
+        <p>DNS Credentials</p>
       <div id="dnsProviderAPIFields">
         <p><i class="ui loading circle notch icon"></i> Generating WebForm</p>
       </div>
@@ -389,7 +391,7 @@
       
       
     });
-
+    
     //On CA change in dropdown
     $("input[name=ca]").on('change', function() {
       if(this.value == "Custom ACME Server") {
@@ -432,6 +434,7 @@
         $("#dnsProviderAPIFields").html("");
         //Generate a form for this config
         let booleanFieldsHTML = "";
+        let optionalFieldsHTML = "";
         for (const [key, datatype] of Object.entries(data)) {
           if (datatype == "int"){
             $("#dnsProviderAPIFields").append(`<div class="ui fluid labeled dnsConfigField input" key="${key}" style="margin-top: 0.2em;">
@@ -445,6 +448,26 @@
               <input type="checkbox">
               <label>${key}</label>
             </div>`);
+          }else if (datatype == "time.Duration"){
+            let defaultIntValue = 120;
+            let defaultMinValue = 30;
+            if (key == "PollingInterval"){
+              defaultIntValue = 2;
+              defaultMinValue = 1;
+            }else if (key == "PropagationTimeout"){
+              defaultIntValue = 120;
+              defaultMinValue = 30;
+            }
+            optionalFieldsHTML += (`<div class="ui fluid labeled dnsConfigField small input" key="${key}" style="margin-top: 0.2em;">
+              <div class="ui basic blue label" style="font-weight: 300;">
+                ${key}
+              </div>
+              <input type="number" min="${defaultMinValue}" value="${defaultIntValue}">
+              <div class="ui basic label" style="font-weight: 300;">
+                secs
+              </div>
+            </div>`);
+          
           }else{
             //Default to string
             $("#dnsProviderAPIFields").append(`<div class="ui fluid labeled input dnsConfigField" key="${key}" style="margin-top: 0.2em;">
@@ -461,6 +484,9 @@
         if (booleanFieldsHTML != ""){
           $(".dnsConfigField.checkbox").checkbox();
         }
+
+        //Append the optional fields at the bottom, if exists
+        $("#dnsProviderAPIFields").append(optionalFieldsHTML);
       });
     });
 
@@ -740,6 +766,7 @@
       });
     }
 
+    //Check if the entered domain contains multiple domains
     function checkIfInputDomainIsMultiple(){
       var inputDomains = $("#domainsInput").val();
       if (inputDomains.includes(",")){
@@ -748,6 +775,35 @@
         $(".multiDomainOnly").hide();
       }
     }
+
+    //Validate if the current combinations of domain and CA supports DNS challenge
+    function validateDNSChallengeSupport(){
+      if ($("#domainsInput").val().includes("*")){
+        var ca = $("#ca").dropdown("get value");
+        if (ca == "Let's Encrypt" || ca == ""){
+          $("#caNoDNSSupportWarning").hide();
+        }else{
+          $("#caNoDNSSupportWarning").show();
+        }
+      }else{
+        $("#caNoDNSSupportWarning").hide();
+      }
+    }
+
+    //call to validateDNSChallengeSupport() on #ca value change
+    $("#ca").dropdown({
+      onChange: function(value, text, $selectedItem) {
+        validateDNSChallengeSupport();
+      }
+    });
+
+    //Handle the input change event on domain input
+    function handlePostInputAutomation(){
+      checkIfInputDomainIsMultiple();
+      validateDNSChallengeSupport();
+    }
+
+    
 
     function toggleDnsChallenge(){
       if ( $("#useDnsChallenge")[0].checked){

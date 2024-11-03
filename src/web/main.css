@@ -615,6 +615,29 @@ body{
 }
 
 /*
+    SSO Panel
+*/
+
+.ssoRunningState{
+    padding: 1em;
+    border-radius: 1em !important;
+}
+
+
+.ssoRunningState .ui.header, .ssoRunningState .sub.header{
+    color: white !important;
+}
+
+.ssoRunningState:not(.enabled){
+    background: var(--theme_red) !important;
+}
+
+.ssoRunningState.enabled{
+    background: var(--theme_green) !important;
+}
+
+
+/*
     Static Web Server
 */
 

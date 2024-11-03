@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/websocketproxy"
@@ -158,9 +159,19 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
-	//Build downstream and upstream header rules
-	upstreamHeaders, downstreamHeaders := target.SplitInboundOutboundHeaders()
+	//Populate the user-defined headers with the values from the request
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.UserDefinedHeaders)
 
+	//Build downstream and upstream header rules
+	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
+		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
+		HSTSMaxAge:                   target.HSTSMaxAge,
+		HSTSIncludeSubdomains:        target.ContainsWildcardName(true),
+		EnablePermissionPolicyHeader: target.EnablePermissionPolicyHeader,
+		PermissionPolicy:             target.PermissionPolicy,
+	})
+
+	//Handle the request reverse proxy
 	statusCode, err := selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:         selectedUpstream.OriginIpOrDomain,
 		OriginalHost:        originalHostHeader,
@@ -226,9 +237,19 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
-	//Build downstream and upstream header rules
-	upstreamHeaders, downstreamHeaders := target.parent.SplitInboundOutboundHeaders()
+	//Populate the user-defined headers with the values from the request
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.parent.UserDefinedHeaders)
 
+	//Build downstream and upstream header rules, use the parent (subdomain) endpoint's headers
+	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
+		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
+		HSTSMaxAge:                   target.parent.HSTSMaxAge,
+		HSTSIncludeSubdomains:        target.parent.ContainsWildcardName(true),
+		EnablePermissionPolicyHeader: target.parent.EnablePermissionPolicyHeader,
+		PermissionPolicy:             target.parent.PermissionPolicy,
+	})
+
+	//Handle the virtual directory reverse proxy request
 	statusCode, err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:         target.Domain,
 		OriginalHost:        originalHostHeader,

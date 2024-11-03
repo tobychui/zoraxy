@@ -13,6 +13,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -98,6 +99,7 @@ func ReverseProxtInit() {
 		WebDirectory:       *staticWebServerRoot,
 		AccessController:   accessController,
 		LoadBalancer:       loadBalancer,
+		SSOHandler:         ssoHandler,
 		Logger:             SystemWideLogger,
 	})
 	if err != nil {
@@ -331,7 +333,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Custom headers
-			UserDefinedHeaders: []*dynamicproxy.UserDefinedHeader{},
+			UserDefinedHeaders: []*rewrite.UserDefinedHeader{},
 			//Auth
 			RequireBasicAuth:        requireBasicAuth,
 			BasicAuthCredentials:    basicAuthCredentials,
@@ -1126,7 +1128,7 @@ func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
 	//List all custom headers
 	customHeaderList := targetProxyEndpoint.UserDefinedHeaders
 	if customHeaderList == nil {
-		customHeaderList = []*dynamicproxy.UserDefinedHeader{}
+		customHeaderList = []*rewrite.UserDefinedHeader{}
 	}
 	js, _ := json.Marshal(customHeaderList)
 	utils.SendJSONResponse(w, string(js))
@@ -1171,12 +1173,12 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Create a Custom Header Definition type
-	var rewriteDirection dynamicproxy.HeaderDirection
+	//Create a Custom Header Defination type
+	var rewriteDirection rewrite.HeaderDirection
 	if direction == "toOrigin" {
-		rewriteDirection = dynamicproxy.HeaderDirection_ZoraxyToUpstream
+		rewriteDirection = rewrite.HeaderDirection_ZoraxyToUpstream
 	} else if direction == "toClient" {
-		rewriteDirection = dynamicproxy.HeaderDirection_ZoraxyToDownstream
+		rewriteDirection = rewrite.HeaderDirection_ZoraxyToDownstream
 	} else {
 		//Unknown direction
 		utils.SendErrorResponse(w, "header rewrite direction not supported")
@@ -1187,7 +1189,8 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	if rewriteType == "remove" {
 		isRemove = true
 	}
-	headerRewriteDefinition := dynamicproxy.UserDefinedHeader{
+
+	headerRewriteDefinition := rewrite.UserDefinedHeader{
 		Key:       name,
 		Value:     value,
 		Direction: rewriteDirection,

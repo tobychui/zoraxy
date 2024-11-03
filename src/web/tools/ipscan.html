@@ -10,7 +10,6 @@
         <title>IP Scanner | Zoraxy</title>
         <link rel="stylesheet" href="../script/semantic/semantic.min.css">
         <script src="../script/jquery-3.6.0.min.js"></script>
-        <script src="../../script/ao_module.js"></script>
         <script src="../script/semantic/semantic.min.js"></script>
         <script src="../script/tablesort.js"></script>
         <link rel="stylesheet" href="../main.css">
@@ -149,13 +148,23 @@
 
                 function displayResults(data) {
                     var table = $('<table class="ui celled unstackable table"></table>');
-                    var header = $('<thead><tr><th>IP Address</th><th>Ping</th><th>Hostname</th><th>HTTP Detected</th><th>HTTPS Detected</th></tr></thead>');
+                    var header = $(`<thead>
+                        <tr>
+                            <th>IP Address</th>
+                            <th>Ping</th>
+                            <th>Hostname</th>
+                            <th>HTTP Detected</th>
+                            <th>HTTPS Detected</th>
+                            <th>Port Scan</th>
+                        </tr>
+                    </thead>`);
                     table.append(header);
                     var body = $('<tbody></tbody>');
                     var offlineHostCounter = 0;
                     for (var i = 0; i < data.length; i++) {
                         var classname = "offlinehost";
-                        if (data[i].Ping>=0){
+                        let hostIsOnline = data[i].Ping >= 0;
+                        if (hostIsOnline){
                             classname = "onlinehost";
                         }else{
                             offlineHostCounter++;
@@ -167,6 +176,7 @@
                         row.append($('<td>' + data[i].Hostname + '</td>'));
                         row.append($('<td>' + (data[i].HttpPortDetected ? '<i class="green check icon"></i>' : '') + '</td>'));
                         row.append($('<td>' + (data[i].HttpsPortDetected ? '<i class="green check icon"></i>' : '') + '</td>'));
+                        row.append($(`<td>${hostIsOnline ? `<button class="ui small basic button" onclick='launchToolWithSize("portscan.html?ip=${data[i].IP}", 1000, 640);'>Scan</button>`:''}</td>`));
                         body.append(row);
                     }
 
@@ -198,6 +208,21 @@
             function toggleOfflineHost(){
                 $(".offlinehost").toggle();
             }
+
+            function launchToolWithSize(url, width, height){
+                let windowName = Date.now();
+                window.open(url,'w'+windowName,
+                `toolbar=no,
+                location=no,
+                status=no,
+                menubar=no,
+                scrollbars=yes,
+                resizable=yes,
+                width=${width},
+                height=${height}`);
+            }
+
+
         </script>
     </body>
 </html>

@@ -350,15 +350,27 @@
                 let originalContent = $(column).html();
 
                 //Check if this host is covered within one of the certificates. If not, show the icon
-                let domainIsCovered = true;
+                let enableQuickRequestButton = true;
                 let domains = [payload.RootOrMatchingDomain]; //Domain for getting certificate if needed
                 for (var i = 0; i < payload.MatchingDomainAlias.length; i++){
                     let thisAliasName = payload.MatchingDomainAlias[i];
                     domains.push(thisAliasName);
                 }
-                if (true){
-                    domainIsCovered = false;
+
+                //Check if the domain or alias contains wildcard, if yes, disabled the get certificate button
+                if (payload.RootOrMatchingDomain.indexOf("*") > -1){
+                    enableQuickRequestButton = false;
                 }
+                
+                if (payload.MatchingDomainAlias != undefined){
+                    for (var i = 0; i < payload.MatchingDomainAlias.length; i++){
+                        if (payload.MatchingDomainAlias[i].indexOf("*") > -1){
+                            enableQuickRequestButton = false;
+                            break;
+                        }
+                    }
+                }
+
                 //encode the domain to DOM
                 let certificateDomains = encodeURIComponent(JSON.stringify(domains));
                 
@@ -371,9 +383,8 @@
                     </div><br>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
-                    <button class="ui basic compact tiny ${domainIsCovered?"disabled":""} button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="requestCertificateForExistingHost('${uuid}', '${certificateDomains}');"><i class="green lock icon"></i> Get Certificate</button>
+                    <button class="ui basic compact tiny ${enableQuickRequestButton?"":"disabled"} button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="requestCertificateForExistingHost('${uuid}', '${certificateDomains}', this);"><i class="green lock icon"></i> Get Certificate</button>
                 `);
-                
 
                 $(".hostAccessRuleSelector").dropdown();
             }else{
@@ -536,9 +547,29 @@
         Certificate Shortcut
     */
 
-    function requestCertificateForExistingHost(hostUUID, RootAndAliasDomains){
+    function requestCertificateForExistingHost(hostUUID, RootAndAliasDomains, btn=undefined){
         RootAndAliasDomains = JSON.parse(decodeURIComponent(RootAndAliasDomains))
-        alert(RootAndAliasDomains.join(", "))
+        let renewDomainKey = RootAndAliasDomains.join(",");
+        let preferedACMEEmail = $("#prefACMEEmail").val();
+        if (preferedACMEEmail == ""){
+            msgbox("Preferred email for ACME registration not set", false);
+            return;
+        }
+        let defaultCA = $("#defaultCA").dropdown("get value");
+        if (defaultCA == ""){
+            defaultCA = "Let's Encrypt";
+        }
+
+        //Check if the root or the alias domain contain wildcard character, if yes, return error
+        for (var i = 0; i < RootAndAliasDomains.length; i++){
+            if (RootAndAliasDomains[i].indexOf("*") != -1){
+                msgbox("Wildcard domain can only be setup via ACME tool", false);
+                return;
+            }
+        }
+        
+        //Renew the certificate
+        renewCertificate(renewDomainKey, false, btn);
     }
 
     //Bind on tab switch events

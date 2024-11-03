@@ -27,7 +27,7 @@ type DiscoveredHost struct {
 	HttpsPortDetected bool
 }
 
-//Scan an IP range given the start and ending ip address
+// Scan an IP range given the start and ending ip address
 func ScanIpRange(start, end string) ([]*DiscoveredHost, error) {
 	ipStart := net.ParseIP(start)
 	ipEnd := net.ParseIP(end)
@@ -57,7 +57,6 @@ func ScanIpRange(start, end string) ([]*DiscoveredHost, error) {
 			host.CheckHostname()
 			host.CheckPort("http", 80, &host.HttpPortDetected)
 			host.CheckPort("https", 443, &host.HttpsPortDetected)
-			fmt.Println("OK", host)
 			hosts = append(hosts, host)
 
 		}(thisIp)
@@ -118,7 +117,7 @@ func (host *DiscoveredHost) CheckPing() error {
 func (host *DiscoveredHost) CheckHostname() {
 	// lookup the hostname for the IP address
 	names, err := net.LookupAddr(host.IP)
-	fmt.Println(names, err)
+	//fmt.Println(names, err)
 	if err == nil && len(names) > 0 {
 		host.Hostname = names[0]
 	}

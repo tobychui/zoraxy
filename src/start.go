@@ -36,7 +36,10 @@ import (
 	Startup Sequence
 
 	This function starts the startup sequence of all
-	required modules
+	required modules. Their startup sequences are inter-dependent
+	and must be started in a specific order.
+
+	Don't touch this function unless you know what you are doing
 */
 
 var (
@@ -124,6 +127,22 @@ func startupSequence() {
 		panic(err)
 	}
 
+	/*
+		//Create an SSO handler
+		ssoHandler, err = sso.NewSSOHandler(&sso.SSOConfig{
+			SystemUUID:       nodeUUID,
+			PortalServerPort: 5488,
+			AuthURL:          "http://auth.localhost",
+			Database:         sysdb,
+			Logger:           SystemWideLogger,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		//Restore the SSO handler to previous state before shutdown
+		ssoHandler.RestorePreviousRunningState()
+	*/
+
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{
 		Database: sysdb,
@@ -187,7 +206,7 @@ func startupSequence() {
 		mdnsScanner, err = mdns.NewMDNS(mdns.NetworkHost{
 			HostName:     hostName,
 			Port:         portInt,
-			Domain:       "zoraxy.arozos.com",
+			Domain:       "zoraxy.aroz.org",
 			Model:        "Network Gateway",
 			UUID:         nodeUUID,
 			Vendor:       "imuslab.com",
@@ -244,10 +263,14 @@ func startupSequence() {
 	webSshManager = sshprox.NewSSHProxyManager()
 
 	//Create TCP Proxy Manager
-	streamProxyManager = streamproxy.NewStreamProxy(&streamproxy.Options{
-		Database:             sysdb,
+	streamProxyManager, err = streamproxy.NewStreamProxy(&streamproxy.Options{
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
+		ConfigStore:          "./conf/streamproxy",
+		Logger:               SystemWideLogger,
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	//Create WoL MAC storage table
 	sysdb.NewTable("wolmac")

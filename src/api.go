@@ -8,6 +8,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme/acmedns"
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/utils"
@@ -95,6 +96,21 @@ func initAPIs(targetMux *http.ServeMux) {
 	authRouter.HandleFunc("/api/cert/checkDefault", handleDefaultCertCheck)
 	authRouter.HandleFunc("/api/cert/delete", handleCertRemove)
 
+	//SSO and Oauth
+	authRouter.HandleFunc("/api/sso/status", ssoHandler.HandleSSOStatus)
+	authRouter.HandleFunc("/api/sso/enable", ssoHandler.HandleSSOEnable)
+	authRouter.HandleFunc("/api/sso/setPort", ssoHandler.HandlePortChange)
+	authRouter.HandleFunc("/api/sso/setAuthURL", ssoHandler.HandleSetAuthURL)
+
+	authRouter.HandleFunc("/api/sso/app/register", ssoHandler.HandleRegisterApp)
+	//authRouter.HandleFunc("/api/sso/app/list", ssoHandler.HandleListApp)
+	//authRouter.HandleFunc("/api/sso/app/remove", ssoHandler.HandleRemoveApp)
+
+	authRouter.HandleFunc("/api/sso/user/list", ssoHandler.HandleListUser)
+	authRouter.HandleFunc("/api/sso/user/add", ssoHandler.HandleAddUser)
+	authRouter.HandleFunc("/api/sso/user/edit", ssoHandler.HandleEditUser)
+	authRouter.HandleFunc("/api/sso/user/remove", ssoHandler.HandleRemoveUser)
+
 	//Redirection config
 	authRouter.HandleFunc("/api/redirect/list", handleListRedirectionRules)
 	authRouter.HandleFunc("/api/redirect/add", handleAddRedirectionRule)
@@ -172,7 +188,8 @@ func initAPIs(targetMux *http.ServeMux) {
 	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
 
 	//Network utilities
-	authRouter.HandleFunc("/api/tools/ipscan", HandleIpScan)
+	authRouter.HandleFunc("/api/tools/ipscan", ipscan.HandleIpScan)
+	authRouter.HandleFunc("/api/tools/portscan", ipscan.HandleScanPort)
 	authRouter.HandleFunc("/api/tools/traceroute", netutils.HandleTraceRoute)
 	authRouter.HandleFunc("/api/tools/ping", netutils.HandlePing)
 	authRouter.HandleFunc("/api/tools/whois", netutils.HandleWhois)

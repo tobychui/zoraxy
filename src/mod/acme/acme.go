@@ -30,10 +30,11 @@ import (
 )
 
 type CertificateInfoJSON struct {
-	AcmeName string `json:"acme_name"`
-	AcmeUrl  string `json:"acme_url"`
-	SkipTLS  bool   `json:"skip_tls"`
-	UseDNS   bool   `json:"dns"`
+	AcmeName    string `json:"acme_name"` //ACME provider name
+	AcmeUrl     string `json:"acme_url"`  //Custom ACME URL (if any)
+	SkipTLS     bool   `json:"skip_tls"`  //Skip TLS verification of upstream
+	UseDNS      bool   `json:"dns"`       //Use DNS challenge
+	PropTimeout int    `json:"prop_time"` //Propagation timeout
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -86,7 +87,7 @@ func (a *ACMEHandler) Logf(message string, err error) {
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int) (bool, error) {
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
 
 	// generate private key
@@ -181,7 +182,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			return false, err
 		}
 
-		provider, err := GetDnsChallengeProviderByName(dnsProvider, dnsCredentials)
+		provider, err := GetDnsChallengeProviderByName(dnsProvider, dnsCredentials, propagationTimeout)
 		if err != nil {
 			a.Logf("Unable to resolve DNS challenge provider", err)
 			return false, err
@@ -285,10 +286,11 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Save certificate's ACME info for renew usage
 	certInfo := &CertificateInfoJSON{
-		AcmeName: caName,
-		AcmeUrl:  caUrl,
-		SkipTLS:  skipTLS,
-		UseDNS:   useDNS,
+		AcmeName:    caName,
+		AcmeUrl:     caUrl,
+		SkipTLS:     skipTLS,
+		UseDNS:      useDNS,
+		PropTimeout: propagationTimeout,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -452,12 +454,30 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	domains := strings.Split(domainPara, ",")
+
+	// Default propagation timeout is 300 seconds
+	propagationTimeout := 300
+	if dns {
+		ppgTimeout, err := utils.PostPara(r, "ppgTimeout")
+		if err == nil {
+			propagationTimeout, err = strconv.Atoi(ppgTimeout)
+			if err != nil {
+				utils.SendErrorResponse(w, "Invalid propagation timeout value")
+				return
+			}
+			if propagationTimeout < 60 {
+				//Minimum propagation timeout is 60 seconds
+				propagationTimeout = 60
+			}
+		}
+	}
+
 	//Clean spaces in front or behind each domain
 	cleanedDomains := []string{}
 	for _, domain := range domains {
 		cleanedDomains = append(cleanedDomains, strings.TrimSpace(domain))
 	}
-	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns)
+	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return

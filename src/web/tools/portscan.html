@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1"/>
+    <meta name="theme-color" content="#4b75ff">
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <title>Port Scanner | Zoraxy</title>
+    <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+    <script src="../script/jquery-3.6.0.min.js"></script>
+    <script src="../script/semantic/semantic.min.js"></script>
+    <script src="../script/tablesort.js"></script>
+    <link rel="stylesheet" href="../main.css">
+    <script src="../script/utils.js"></script>
+    </head>
+</head>
+<body>
+    <div class="ui container">
+        <br>
+            <div class="ui segment">
+                <p>Enter the IP address you want to scan for open ports. This tool only scans for open TCP ports.</p>
+                <div class="ui fluid action input">
+                    <input id="scanningIP" type="text" placeholder="IP Address">
+                    <button class="ui basic blue button" onclick="startScan()">Start Scan</button>
+                </div>
+                <div class="ui yellow message">
+                    <h4 class="ui header">
+                        <i class="exclamation triangle icon"></i>
+                        <div class="content">
+                            Port Scan Warning
+                            <div class="sub header">Please ensure that you only scan IP addresses that you own or have explicit permission to scan. Unauthorized scanning may be considered a network attack and could result in legal consequences.</div>
+                        </div>
+                    </h4>
+                </div>
+                
+                <table class="ui celled compact table">
+                    <thead>
+                        <tr>
+                            <th>Port</th>
+                            <th>TCP Port Open</th>
+                            <th>Full Path</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTable">
+                        <tr>
+                            <td colspan="3"><i class="ui green circle check icon"></i> Click the "Start Scan" to start port scan on given IP address</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="ui right floated basic button" onclick="exitTool();">Exit</button>
+                <br><br>
+            </div>
+        </div>
+        <br>
+        <br>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script>
+
+        //If the URL has a query parameter, fill the input box with that value
+        $(document).ready(function(){
+            let urlParams = new URLSearchParams(window.location.search);
+            let ipToScan = urlParams.get("ip");
+            if (ipToScan != null){
+                $("#scanningIP").val(ipToScan);
+                startScan();
+            }
+        });
+
+        function startScan(button=undefined){
+            let ipToScan = $("#scanningIP").val();
+            ipToScan = ipToScan.trim();
+            let table = $("#resultTable");
+            table.empty();
+            table.append($("<tr><td colspan='3'><i class='ui loading spinner icon'></i> Scanning</td></tr>"));
+
+            if (button != undefined){
+                button.addClass("loading");
+            }
+            $.get("/api/tools/portscan?ip=" + ipToScan, function(data){
+                if (button != undefined){
+                    button.removeClass("loading");
+                }
+
+                if (data.error != undefined){
+                    alert(data.error);
+                    return;
+                }else{
+                    table.empty();
+
+                    //Entries are in the form of {Port: 80, IsTCP: true, IsUDP: false}
+                    //if both TCP and UDP are open, there will be two entries
+                    for (let i = 0; i < data.length; i++){
+                        let row = $("<tr></tr>");
+                        row.append($("<td></td>").text(data[i].Port));
+                        row.append($("<td><i class='ui green check icon'></i></td>"));
+                        row.append($("<td></td>").html(`<a href="//${ipToScan + ":" + data[i].Port}" target="_blank">${ipToScan + ":" + data[i].Port}</a>`));
+                        table.append(row);
+                    }
+
+                    if (data.length == 0){
+                        table.append($("<tr><td colspan='3'><i class='ui green circle check icon'></i> No open ports found on given IP address</td></tr>"));
+                    }
+                }
+                console.log(data);
+            });
+        }
+
+        function exitTool(){
+            //Close the current window
+            window.open('', '_self', '');
+            window.close();
+        }
+    </script>
+</body>
+</html>

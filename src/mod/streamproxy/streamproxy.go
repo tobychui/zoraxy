@@ -1,15 +1,18 @@
 package streamproxy
 
 import (
+	"encoding/json"
 	"errors"
-	"log"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
-	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/utils"
 )
 
 /*
@@ -48,9 +51,10 @@ type ProxyRelayConfig struct {
 }
 
 type Options struct {
-	Database             *database.Database
 	DefaultTimeout       int
 	AccessControlHandler func(net.Conn) bool
+	ConfigStore          string         //Folder to store the config files, will be created if not exists
+	Logger               *logger.Logger //Logger for the stream proxy
 }
 
 type Manager struct {
@@ -63,13 +67,37 @@ type Manager struct {
 
 }
 
-func NewStreamProxy(options *Options) *Manager {
-	options.Database.NewTable("tcprox")
+func NewStreamProxy(options *Options) (*Manager, error) {
+	if !utils.FileExists(options.ConfigStore) {
+		err := os.MkdirAll(options.ConfigStore, 0775)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	//Load relay configs from db
 	previousRules := []*ProxyRelayConfig{}
-	if options.Database.KeyExists("tcprox", "rules") {
-		options.Database.Read("tcprox", "rules", &previousRules)
+	streamProxyConfigFiles, err := filepath.Glob(options.ConfigStore + "/*.config")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, configFile := range streamProxyConfigFiles {
+		//Read file into bytes
+		configBytes, err := os.ReadFile(configFile)
+		if err != nil {
+			options.Logger.PrintAndLog("stream-prox", "Read stream proxy config failed", err)
+			continue
+		}
+		thisRelayConfig := &ProxyRelayConfig{}
+		err = json.Unmarshal(configBytes, thisRelayConfig)
+		if err != nil {
+			options.Logger.PrintAndLog("stream-prox", "Unmarshal stream proxy config failed", err)
+			continue
+		}
+
+		//Append the config to the list
+		previousRules = append(previousRules, thisRelayConfig)
 	}
 
 	//Check if the AccessControlHandler is empty. If yes, set it to always allow access
@@ -91,14 +119,27 @@ func NewStreamProxy(options *Options) *Manager {
 		rule.parent = &thisManager
 		if rule.Running {
 			//This was previously running. Start it again
-			log.Println("[Stream Proxy] Resuming stream proxy rule " + rule.Name)
+			thisManager.logf("Resuming stream proxy rule "+rule.Name, nil)
 			rule.Start()
 		}
 	}
 
 	thisManager.Configs = previousRules
 
-	return &thisManager
+	return &thisManager, nil
+}
+
+// Wrapper function to log error
+func (m *Manager) logf(message string, originalError error) {
+	if m.Options.Logger == nil {
+		//Print to fmt
+		if originalError != nil {
+			message += ": " + originalError.Error()
+		}
+		println(message)
+		return
+	}
+	m.Options.Logger.PrintAndLog("stream-prox", message, originalError)
 }
 
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
@@ -179,6 +220,11 @@ func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr
 }
 
 func (m *Manager) RemoveConfig(configUUID string) error {
+	//Remove the config from file
+	err := os.Remove(filepath.Join(m.Options.ConfigStore, configUUID+".config"))
+	if err != nil {
+		return err
+	}
 	// Find and remove the config with the specified UUID
 	for i, config := range m.Configs {
 		if config.UUID == configUUID {
@@ -190,8 +236,19 @@ func (m *Manager) RemoveConfig(configUUID string) error {
 	return errors.New("config not found")
 }
 
+// Save all configs to ConfigStore folder
 func (m *Manager) SaveConfigToDatabase() {
-	m.Options.Database.Write("tcprox", "rules", m.Configs)
+	for _, config := range m.Configs {
+		configBytes, err := json.Marshal(config)
+		if err != nil {
+			m.logf("Failed to marshal stream proxy config", err)
+			continue
+		}
+		err = os.WriteFile(m.Options.ConfigStore+"/"+config.UUID+".config", configBytes, 0775)
+		if err != nil {
+			m.logf("Failed to save stream proxy config", err)
+		}
+	}
 }
 
 /*
@@ -217,9 +274,10 @@ func (c *ProxyRelayConfig) Start() error {
 			if err != nil {
 				if !c.UseTCP {
 					c.Running = false
+					c.udpStopChan = nil
 					c.parent.SaveConfigToDatabase()
 				}
-				log.Println("[TCP] Error starting stream proxy " + c.Name + "(" + c.UUID + "): " + err.Error())
+				c.parent.logf("[proto:udp] Error starting stream proxy "+c.Name+"("+c.UUID+")", err)
 			}
 		}()
 	}
@@ -231,8 +289,9 @@ func (c *ProxyRelayConfig) Start() error {
 			err := c.Port2host(c.ListeningAddress, c.ProxyTargetAddr, tcpStopChan)
 			if err != nil {
 				c.Running = false
+				c.tcpStopChan = nil
 				c.parent.SaveConfigToDatabase()
-				log.Println("[TCP] Error starting stream proxy " + c.Name + "(" + c.UUID + "): " + err.Error())
+				c.parent.logf("[proto:tcp] Error starting stream proxy "+c.Name+"("+c.UUID+")", err)
 			}
 		}()
 	}
@@ -253,27 +312,27 @@ func (c *ProxyRelayConfig) Restart() {
 	if c.IsRunning() {
 		c.Stop()
 	}
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(3000 * time.Millisecond)
 	c.Start()
 }
 
 // Stop a running proxy if running
 func (c *ProxyRelayConfig) Stop() {
-	log.Println("[STREAM PROXY] Stopping Stream Proxy " + c.Name)
+	c.parent.logf("Stopping Stream Proxy "+c.Name, nil)
 
 	if c.udpStopChan != nil {
-		log.Println("[STREAM PROXY] Stopping UDP for " + c.Name)
+		c.parent.logf("Stopping UDP for "+c.Name, nil)
 		c.udpStopChan <- true
 		c.udpStopChan = nil
 	}
 
 	if c.tcpStopChan != nil {
-		log.Println("[STREAM PROXY] Stopping TCP for " + c.Name)
+		c.parent.logf("Stopping TCP for "+c.Name, nil)
 		c.tcpStopChan <- true
 		c.tcpStopChan = nil
 	}
 
-	log.Println("[STREAM PROXY] Stopped Stream Proxy " + c.Name)
+	c.parent.logf("Stopped Stream Proxy "+c.Name, nil)
 	c.Running = false
 
 	//Update the running status

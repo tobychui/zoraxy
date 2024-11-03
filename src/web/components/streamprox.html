@@ -74,7 +74,7 @@
                 </div>
             </div>
             <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
-            <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
+            <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event, this);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
             <button class="ui basic red button" onclick="event.preventDefault(); cancelStreamProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>  
         </form>
     </div>
@@ -88,7 +88,7 @@
 
             //Check if update mode
             if ($("#editStreamProxyButton").is(":visible")){
-                confirmEditTCPProxyConfig(event);
+                confirmEditTCPProxyConfig(event,$("#editStreamProxyButton")[0]);
                 return;
             }
 
@@ -274,13 +274,18 @@
             }
         }
 
-        function confirmEditTCPProxyConfig(event){
+        function confirmEditTCPProxyConfig(event, btn){
             event.preventDefault();
             event.stopImmediatePropagation();
             var form = $("#streamProxyForm");
+            let originalButtonHTML = $(btn).html();
+            $(btn).html(`<i class="ui loading spinner icon"></i> Updating`);
+            $(btn).addClass("disabled");
 
             var formValid = validateTCPProxyConfig(form);
             if (!formValid){
+                $(btn).html(originalButtonHTML);
+                $(btn).removeClass("disabled");
                 return;
             }
 
@@ -299,6 +304,8 @@
                     timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
                 },
                 success: function(response) {
+                    $(btn).html(originalButtonHTML);
+                    $(btn).removeClass("disabled");
                     if (response.error) {
                         msgbox(response.error, false, 6000);
                     }else{
@@ -310,6 +317,8 @@
                     
                 },
                 error: function() {
+                    $(btn).html(originalButtonHTML);
+                    $(btn).removeClass("disabled");
                     msgbox('An error occurred while processing the request', false);
                 }
             });

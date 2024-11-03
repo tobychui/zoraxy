@@ -88,8 +88,11 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 		AcmeHandler:       AcmeHandler,
 		RenewerConfig:     &renewerConfig,
 		RenewTickInterval: renewCheckInterval,
+		EarlyRenewDays:    earlyRenewDays,
 		Logger:            logger,
 	}
+
+	thisRenewer.Logf("ACME early renew set to "+fmt.Sprint(earlyRenewDays)+" days and check interval set to "+fmt.Sprint(renewCheckInterval)+" seconds", nil)
 
 	if thisRenewer.RenewerConfig.Enabled {
 		//Start the renew ticker
@@ -103,7 +106,7 @@ func NewAutoRenewer(config string, certFolder string, renewCheckInterval int64, 
 }
 
 func (a *AutoRenewer) Logf(message string, err error) {
-	a.Logger.PrintAndLog("CertRenew", message, err)
+	a.Logger.PrintAndLog("cert-renew", message, err)
 }
 
 func (a *AutoRenewer) StartAutoRenewTicker() {
@@ -381,7 +384,13 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 			}
 		}
 
-		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS)
+		//For upgrading config from older version of Zoraxy which don't have timeout
+		if certInfo.PropTimeout == 0 {
+			//Set default timeout
+			certInfo.PropTimeout = 300
+		}
+
+		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS, certInfo.PropTimeout)
 		if err != nil {
 			a.Logf("Renew "+fileName+"("+strings.Join(expiredCert.Domains, ",")+") failed", err)
 		} else {
