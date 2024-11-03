@@ -1190,7 +1190,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 		isRemove = true
 	}
 
-	headerRewriteDefination := rewrite.UserDefinedHeader{
+	headerRewriteDefinition := rewrite.UserDefinedHeader{
 		Key:       name,
 		Value:     value,
 		Direction: rewriteDirection,
