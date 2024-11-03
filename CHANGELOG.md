@@ -1,3 +1,19 @@
+# v3.1.2 03 Nov 2024
+
++ Added auto start port 80 listener on acme certificate generator
++ Added polling interval and propagation timeout option in ACME module [#300](https://github.com/tobychui/zoraxy/issues/300)
++ Added support for custom header variables [#318](https://github.com/tobychui/zoraxy/issues/318)
++ Added support for X-Remote-User 
++ Added port scanner [#342](https://github.com/tobychui/zoraxy/issues/342)
++ Optimized code base for stream proxy and config file storage [#320](https://github.com/tobychui/zoraxy/issues/320)
++ Removed sorting on cert list
++ Fixed request certificate button bug 
++ Fixed cert auto renew logic [#316](https://github.com/tobychui/zoraxy/issues/316)
++ Fixed unable to remove new stream proxy bug
++ Fixed many other minor bugs  [#328](https://github.com/tobychui/zoraxy/issues/328) [#297](https://github.com/tobychui/zoraxy/issues/297)
++ Added more code to SSO system (disabled in release)
+
+
 # v3.1.1. 09 Sep 2024
 
 + Updated country name in access list [#287](https://github.com/tobychui/zoraxy/issues/287)
