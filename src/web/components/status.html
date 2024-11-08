@@ -94,7 +94,7 @@
             <label>Force redirect HTTP request to HTTPS</label>
         </div>
     </div>
-    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+    <div class="ui basic segment advanceoptions">
         <div class="ui accordion advanceSettings">
             <div class="title">
               <i class="dropdown icon"></i>
@@ -579,7 +579,7 @@
     let timestamps = [];
 
     for(var i = 0; i < dataCount; i++){
-        timestamps.push(parseInt(Date.now() / 1000) + i);
+        timestamps.push(new Date(Date.now() + i * 1000).toLocaleString().replace(',', ''));
     }
 
     function fetchData() {
@@ -600,10 +600,8 @@
                     txValues.shift();
                 }
                 
-               
-                timestamps.push(parseInt(Date.now() / 1000));
+                timestamps.push(new Date(Date.now()).toLocaleString().replace(',', ''));
                 timestamps.shift();
-
                 updateChart();
             }
         })

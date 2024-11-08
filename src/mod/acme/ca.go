@@ -3,7 +3,7 @@ package acme
 /*
 	CA.go
 
-	This script load CA defination from embedded ca.json
+	This script load CA definition from embedded ca.json
 */
 import (
 	_ "embed"
@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// CA Defination, load from embeded json when startup
+// CA definition, load from embeded json when startup
 type CaDef struct {
 	Production map[string]string
 	Test       map[string]string

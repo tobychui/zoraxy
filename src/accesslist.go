@@ -230,7 +230,17 @@ func handleCountryBlacklistAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule.AddCountryCodeToBlackList(countryCode, comment)
+	//Check if the country code contains comma, if yes, split it
+	if strings.Contains(countryCode, ",") {
+		codes := strings.Split(countryCode, ",")
+		for _, code := range codes {
+			code = strings.TrimSpace(code)
+			rule.AddCountryCodeToBlackList(code, comment)
+		}
+	} else {
+		countryCode = strings.TrimSpace(countryCode)
+		rule.AddCountryCodeToBlackList(countryCode, comment)
+	}
 
 	utils.SendOK(w)
 }
@@ -254,7 +264,17 @@ func handleCountryBlacklistRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule.RemoveCountryCodeFromBlackList(countryCode)
+	//Check if the country code contains comma, if yes, split it
+	if strings.Contains(countryCode, ",") {
+		codes := strings.Split(countryCode, ",")
+		for _, code := range codes {
+			code = strings.TrimSpace(code)
+			rule.RemoveCountryCodeFromBlackList(code)
+		}
+	} else {
+		countryCode = strings.TrimSpace(countryCode)
+		rule.RemoveCountryCodeFromBlackList(countryCode)
+	}
 
 	utils.SendOK(w)
 }
@@ -397,7 +417,17 @@ func handleCountryWhitelistAdd(w http.ResponseWriter, r *http.Request) {
 	p := bluemonday.StrictPolicy()
 	comment = p.Sanitize(comment)
 
-	rule.AddCountryCodeToWhitelist(countryCode, comment)
+	//Check if the country code contains comma, if yes, split it
+	if strings.Contains(countryCode, ",") {
+		codes := strings.Split(countryCode, ",")
+		for _, code := range codes {
+			code = strings.TrimSpace(code)
+			rule.AddCountryCodeToWhitelist(code, comment)
+		}
+	} else {
+		countryCode = strings.TrimSpace(countryCode)
+		rule.AddCountryCodeToWhitelist(countryCode, comment)
+	}
 
 	utils.SendOK(w)
 }
@@ -420,7 +450,17 @@ func handleCountryWhitelistRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule.RemoveCountryCodeFromWhitelist(countryCode)
+	//Check if the country code contains comma, if yes, split it
+	if strings.Contains(countryCode, ",") {
+		codes := strings.Split(countryCode, ",")
+		for _, code := range codes {
+			code = strings.TrimSpace(code)
+			rule.RemoveCountryCodeFromWhitelist(code)
+		}
+	} else {
+		countryCode = strings.TrimSpace(countryCode)
+		rule.RemoveCountryCodeFromWhitelist(countryCode)
+	}
 
 	utils.SendOK(w)
 }

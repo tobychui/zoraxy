@@ -1173,7 +1173,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Create a Custom Header Defination type
+	//Create a Custom Header Definition type
 	var rewriteDirection rewrite.HeaderDirection
 	if direction == "toOrigin" {
 		rewriteDirection = rewrite.HeaderDirection_ZoraxyToUpstream
