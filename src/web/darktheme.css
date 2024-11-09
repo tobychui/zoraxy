@@ -100,7 +100,7 @@ body.darkTheme .ui.input input:active {
 
 body.darkTheme .ui.input input {
     background-color: var(--theme_bg_active) !important;
-    border: 1px solid transparent !important;
+    border: 1px solid var(--button_border_color) !important;
 }
 
 body.darkTheme .ui.input input:focus,
@@ -136,7 +136,19 @@ body.darkTheme .ui.toggle.checkbox input:checked ~ label::before{
     background-color: var(--theme_highlight) !important;
 }
 
+#sidemenuBtn{
+    border: 1px solid var(--button_border_color) !important;
+}
 
+.toolbar{
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+.toobar #mainmenu a.item:hover{
+    background-color: var(--theme_highlight) !important;
+}
 
 body.darkTheme .ui.segment:not(.basic) {
     background-color: var(--theme_bg) !important;
@@ -156,13 +168,16 @@ body.darkTheme .ui.radio.defaultsite.checkbox label small {
     color: var(--text_color_secondary) !important;
 }
 
-body.darkTheme .ui.form .field input,
+body.darkTheme .ui.form .field input{
+    color: var(--text_color) !important;
+    background-color: var(--theme_bg_active) !important;
+    border-color: var(--button_border_color) !important;
+}
+
 body.darkTheme .ui.form .field input::placeholder,
 body.darkTheme .ui.form .field input:focus,
 body.darkTheme .ui.form .field input:active {
-    color: var(--text_color) !important;
-    border-color: 1px solid transparent !important;
-    background-color: var(--theme_bg_active) !important;
+    border-color: var(--theme_highlight) !important;
 }
 
 body.darkTheme .ui.form .field input::placeholder {
@@ -176,6 +191,10 @@ body.darkTheme .ui.form .field .ui.checkbox input:checked ~ label {
 
 body.darkTheme .ui.basic.label {
     background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.form .grouped.fields label {
     color: var(--text_color) !important;
 }
 
@@ -277,15 +296,18 @@ body.darkTheme .ui.endpointAdvanceConfig.accordion .title {
     color: var(--text_color) !important;
 }
 
+body.darkTheme .RateLimit input {
+    border-color: var(--theme_highlight) !important;
+}
+
 /* 
     Virtual Directorie Table
-
 */
 
 body.darkTheme .ui.fluid.search.selection.dropdown {
     background-color: var(--theme_bg) !important;
     color: var(--text_color) !important;
-    border-color: transparent !important;
+    border-color: var(--divider_color) !important;
 }
 
 body.darkTheme .ui.fluid.search.selection.dropdown .menu {
@@ -328,3 +350,359 @@ body.darkTheme .ui.fluid.search.selection.dropdown .text {
 body.darkTheme .ui.fluid.search.selection.dropdown .dropdown.icon {
     color: var(--text_color) !important;
 }
+
+
+/*
+
+    New Proxy Rule
+
+*/
+
+body.darkTheme .ui.horizontal.divider.transition.visible {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #basicAuthCredPassword, body.darkTheme #basicAuthCredUsername {
+    color: var(--text_color) !important;
+    background-color: var(--theme_bg_active) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #rules .field label {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field small {
+    color: var(--text_color_secondary) !important;
+}
+
+/*
+
+    Stream Proxy 
+
+*/
+
+body.darkTheme #streamproxy {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable {
+    background-color: transparent !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable tbody tr td:not(:first-child) {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #proxyTable tbody td .statusText {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.basic.mini.circular.icon.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.basic.mini.circular.icon.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.circular.red.basic.mini.icon.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.circular.red.basic.mini.icon.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+/* 
+
+    Redirect 
+
+*/
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody tr td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.red.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+body.darkTheme #redirectset .ui.checkbox input:checked ~ label,
+body.darkTheme #redirectset .ui.checkbox input:checked ~ label small,
+body.darkTheme #redirectset .ui.checkbox input:checked ~ label a {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.message {
+    color: var(--text_color) !important;
+    background-color: var(--theme_bg_active) !important;
+    border: 1px solid var(--message_border_color) !important;
+}
+
+/* 
+    Access Rules 
+*/
+
+/* Access Rule Selector */
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/* Tab Menu in access control */
+
+body.darkTheme .ui.top.attached.tabular.menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.top.attached.tabular.menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.top.attached.tabular.menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.top.attached.tabular.menu .item.active {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+/* Tables in access control */
+
+body.darkTheme #access .ui.unstackable.basic.celled.table{
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody tr td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.red.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+/* Fixing the color of the sel;ector label in country selector */
+body.darkTheme .ui.search.multiple.selection.dropdown .ui.label {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+}
+
+/* Quick band IP table *(ipTable) */
+body.darkTheme #ipTable {
+    background-color: transparent !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #ipTable thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #ipTable tbody tr td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #ipTable tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #ipTable tbody td .ui.basic.red.tiny.icon.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #ipTable tbody td .ui.basic.red.tiny.icon.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+
+/*
+    TLS / SSL Certificates
+*/
+body.darkTheme .ui.selection.dropdown#defaultCA {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .default.text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
