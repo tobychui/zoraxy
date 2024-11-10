@@ -42,7 +42,7 @@ func HandleCreateProxySession(w http.ResponseWriter, r *http.Request) {
 
 	if !*allowSshLoopback {
 		//Not allow loopback connections
-		if strings.EqualFold(strings.TrimSpace(ipaddr), "localhost") || strings.TrimSpace(ipaddr) == "127.0.0.1" {
+		if sshprox.IsLoopbackIPOrDomain(ipaddr) {
 			//Request target is loopback
 			utils.SendErrorResponse(w, "loopback web ssh connection is not enabled on this host")
 			return
@@ -74,7 +74,7 @@ func HandleCreateProxySession(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
-//Check if the host support ssh, or if the target domain (and port, optional) support ssh
+// Check if the host support ssh, or if the target domain (and port, optional) support ssh
 func HandleWebSshSupportCheck(w http.ResponseWriter, r *http.Request) {
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
