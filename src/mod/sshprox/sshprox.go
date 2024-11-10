@@ -50,21 +50,6 @@ func NewSSHProxyManager() *Manager {
 	}
 }
 
-// Get the next free port in the list
-func (m *Manager) GetNextPort() int {
-	nextPort := m.StartingPort
-	occupiedPort := make(map[int]bool)
-	for _, instance := range m.Instances {
-		occupiedPort[instance.AssignedPort] = true
-	}
-	for {
-		if !occupiedPort[nextPort] {
-			return nextPort
-		}
-		nextPort++
-	}
-}
-
 func (m *Manager) HandleHttpByInstanceId(instanceId string, w http.ResponseWriter, r *http.Request) {
 	targetInstance, err := m.GetInstanceById(instanceId)
 	if err != nil {
@@ -168,6 +153,17 @@ func (i *Instance) CreateNewConnection(listenPort int, username string, remoteIp
 	if username != "" {
 		connAddr = username + "@" + remoteIpAddr
 	}
+
+	//Trim the space in the username and remote address
+	username = strings.TrimSpace(username)
+	remoteIpAddr = strings.TrimSpace(remoteIpAddr)
+
+	//Validate the username and remote address
+	err := ValidateUsernameAndRemoteAddr(username, remoteIpAddr)
+	if err != nil {
+		return err
+	}
+
 	configPath := filepath.Join(filepath.Dir(i.ExecPath), ".gotty")
 	title := username + "@" + remoteIpAddr
 	if remotePort != 22 {
