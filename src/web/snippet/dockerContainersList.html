@@ -2,7 +2,7 @@
 <html>
   <head>
     <!-- Notes: This should be open in its original path-->
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <link rel="stylesheet" href="../script/semantic/semantic.min.css" />
     <script src="../script/jquery-3.6.0.min.js"></script>
     <script src="../script/semantic/semantic.min.js"></script>
@@ -10,6 +10,19 @@
   <body>
     <br />
     <div class="ui container">
+      <div class="field">
+        <div class="ui checkbox">
+          <input type="checkbox" id="showUnexposed" class="hidden" />
+          <label for="showUnexposed"
+            >Show Containers with Unexposed Ports
+            <br />
+            <small
+              >Please make sure Zoraxy and the target container share a
+              network</small
+            >
+          </label>
+        </div>
+      </div>
       <div class="ui header">
         <div class="content">
           List of Docker Containers
@@ -33,56 +46,70 @@
     </div>
 
     <script>
-      const lines = {};
-      const linesAded = {};
+      let lines = {};
+      let linesAdded = {};
+
+      document
+        .getElementById("showUnexposed")
+        .addEventListener("change", () => {
+          console.log("showUnexposed", $("#showUnexposed").is(":checked"));
+          $("#containersList").html('<div class="ui loader active"></div>');
+
+          $("#containersAddedList").empty();
+          $("#containersAddedListHeader").attr("hidden", true);
+
+          lines = {};
+          linesAdded = {};
+
+          getDockerContainers();
+        });
 
       function getDockerContainers() {
         const hostRequest = $.get("/api/proxy/list?type=host");
         const dockerRequest = $.get("/api/docker/containers");
 
-        // Wait for both requests to complete
         Promise.all([hostRequest, dockerRequest])
           .then(([hostData, dockerData]) => {
-            if (
-              dockerData.error === undefined &&
-              hostData.error === undefined
-            ) {
+            if (!dockerData.error && !hostData.error) {
               const { containers, network } = dockerData;
-              const bridge = network.find(({ Name }) => Name === "bridge");
-              const {
-                IPAM: {
-                  Config: [{ Gateway: gateway }],
-                },
-              } = bridge;
-              const existedDomains = hostData.reduce((acc, { ActiveOrigins }) => {
-                return acc.concat(ActiveOrigins.map(({ OriginIpOrDomain }) => OriginIpOrDomain));
-              }, []);
+
+              const existingTargets = new Set(
+                hostData.flatMap(({ ActiveOrigins }) =>
+                  ActiveOrigins.map(({ OriginIpOrDomain }) => OriginIpOrDomain)
+                )
+              );
 
               for (const container of containers) {
-                const {
-                  Ports,
-                  Names: [name],
-                } = container;
+                const Ports = container.Ports;
+                const name = container.Names[0].replace(/^\//, "");
 
-                for (const portObject of Ports.filter(
-                  ({ IP: ip }) => ip === "::" || ip === '0.0.0.0'
-                )) {
-                  const { IP: ip, PublicPort: port } = portObject;
+                for (const portObject of Ports) {
+                  let port = portObject.PublicPort;
+                  if (!port) {
+                    if (!$("#showUnexposed").is(":checked")) {
+                      continue;
+                    }
+                    port = portObject.PrivatePort;
+                  }
                   const key = `${name}-${port}`;
 
+                  // if port is not exposed, use container's name and let docker handle the routing
+                  // BUT this will only work if the container is on the same network as Zoraxy
+                  const targetAddress = portObject.IP || name;
+
                   if (
-                    existedDomains.some((item) => item === `${gateway}:${port}`) &&
-                    !linesAded[key]
+                    existingTargets.has(`${targetAddress}:${port}`) &&
+                    !linesAdded[key]
                   ) {
-                    linesAded[key] = {
-                      name: name.replace(/^\//, ""),
-                      ip: gateway,
+                    linesAdded[key] = {
+                      name,
+                      ip: targetAddress,
                       port,
                     };
                   } else if (!lines[key]) {
                     lines[key] = {
-                      name: name.replace(/^\//, ""),
-                      ip: gateway,
+                      name,
+                      ip: targetAddress,
                       port,
                     };
                   }
@@ -92,29 +119,31 @@
               for (const [key, line] of Object.entries(lines)) {
                 $("#containersList").append(
                   `<div class="item">
-                    <div class="right floated content">
-                      <div class="ui button" onclick="addContainerItem('${key}');">Add</div>
-                    </div>
-                    <div class="content">
-                      <div class="header">${line.name}</div>
-                      <div class="description">
-                        ${line.ip}:${line.port}
-                      </div>
-                    </div>`
+                        <div class="right floated content">
+                          <div class="ui button" onclick="addContainerItem('${key}');">Add</div>
+                        </div>
+                        <div class="content">
+                          <div class="header">${line.name}</div>
+                          <div class="description">
+                            ${line.ip}:${line.port}
+                          </div>
+                        </div>`
                 );
               }
-              for (const [key, line] of Object.entries(linesAded)) {
+
+              for (const [key, line] of Object.entries(linesAdded)) {
                 $("#containersAddedList").append(
                   `<div class="item">
-                    <div class="content">
-                      <div class="header">${line.name}</div>
-                      <div class="description">
-                        ${line.ip}:${line.port}
-                      </div>
-                    </div>`
+                        <div class="content">
+                          <div class="header">${line.name}</div>
+                          <div class="description">
+                            ${line.ip}:${line.port}
+                          </div>
+                        </div>`
                 );
               }
-              Object.entries(linesAded).length &&
+
+              Object.entries(linesAdded).length &&
                 $("#containersAddedListHeader").removeAttr("hidden");
               $("#containersList .loader").removeClass("active");
             } else {
@@ -122,7 +151,11 @@
                 `Error loading data: ${dockerData.error || hostData.error}`,
                 false
               );
-              $("#containersList").html(`<div class="ui basic segment"><i class="ui red times icon"></i> ${dockerData.error || hostData.error}</div>`);
+              $("#containersList").html(
+                `<div class="ui basic segment"><i class="ui red times icon"></i> ${
+                  dockerData.error || hostData.error
+                }</div>`
+              );
             }
           })
           .catch((error) => {
