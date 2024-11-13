@@ -58,7 +58,7 @@ ENV WEBROOT="./www"
 ENV ZTAUTH=""
 ENV ZTPORT="9993"
 
-VOLUME [ "/opt/zoraxy/config/", "/var/lib/zerotier-one/" ]
+VOLUME [ "/opt/zoraxy/config/" ]
 
 ENTRYPOINT [ "/opt/zoraxy/entrypoint.sh" ]
 
