@@ -144,14 +144,16 @@ body.darkTheme .ui.toggle.checkbox input:checked ~ label::before{
     background-color: var(--theme_bg) !important;
     color: var(--text_color) !important;
     border: 1px solid var(--divider_color) !important;
-}
-
-.toobar #mainmenu a.item:hover{
-    background-color: var(--theme_highlight) !important;
-}
+}s
 
 body.darkTheme .ui.segment:not(.basic) {
     background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid transparent !important;
+}
+
+body.darkTheme .ui.segment{
+    background-color: transparent !important;
     color: var(--text_color) !important;
     border: 1px solid transparent !important;
 }
@@ -565,7 +567,7 @@ body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .dropdown.icon {
 /* Tab Menu in access control */
 
 body.darkTheme .ui.top.attached.tabular.menu {
-    background-color: var(--theme_bg) !important;
+    background-color: transparent !important;
     color: var(--text_color) !important;
 }
 
@@ -579,7 +581,7 @@ body.darkTheme .ui.top.attached.tabular.menu .item:hover {
 }
 
 body.darkTheme .ui.top.attached.tabular.menu .item.active {
-    background-color: var(--theme_bg) !important;
+    background-color: var(--theme_bg_primary) !important;
     color: var(--text_color) !important;
 }
 
@@ -706,3 +708,48 @@ body.darkTheme .ui.selection.dropdown#defaultCA .dropdown.icon {
     color: var(--text_color) !important;
 }
 
+/*
+
+ZeroTier
+
+*/
+
+body.darkTheme #gan .ui.list .item .icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #gan .ui.list .item .content .header {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #gan .ui.list .item .content .description {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme #gan .clickable.iprange.active {
+    background-color: var(--theme_highlight) !important;
+}
+
+body.darkTheme #gan thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+
+/* 
+
+    Uptime Monitor
+
+*/
+
+body.darkTheme #utm .standardContainer {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #utm .standardContainer .padding.statusDot {
+    background-color: var(--theme_bg) !important;
+    border: 0.2px solid var(--theme_bg_primary) !important;
+}

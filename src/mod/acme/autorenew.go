@@ -308,7 +308,6 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				}
 				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
-
 					DNSName, err := ExtractDomains(certBytes)
 					if err != nil {
 						//Maybe self signed. Ignore this
