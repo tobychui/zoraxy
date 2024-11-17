@@ -5,6 +5,57 @@
     This will override the default CSS (white theme) for semantic UI
 */
 
+/* Color Pallete */
+/* Theme Color Definition */
+body:not(.darkTheme){
+    --theme_bg: #f6f6f6;
+    --theme_bg_primary: #ffffff;
+    --theme_bg_secondary: #ffffff;
+    --theme_bg_active: #ececec;
+    --theme_highlight: #a9d1f3;
+    --theme_bg_inverted: #27292d;
+    --theme_advance: #f7f7f7;
+    --item_color: #5e5d5d;
+    --item_color_select: rgba(0,0,0,.87);
+    --text_color: #414141;
+    --input_color: white;
+    --divider_color: #cacaca;
+    --text_color_inverted: #fcfcfc;
+    --button_text_color: #878787;
+    --button_border_color: #dedede;
+
+    --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
+    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
+    --theme_green: linear-gradient(270deg, #27e7ff, #00ca52);
+    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
+}
+
+body.darkTheme{
+    --theme_bg: #000000;
+    --theme_bg_primary: #060912;
+    --theme_bg_secondary:#172a41;
+    --theme_highlight: #4380b0;
+    --theme_bg_active: #020101;
+    --theme_bg_inverted: #f8f8f9;
+    --theme_advance: #000000;
+    --item_color: #cacaca;
+    --text_color: #dee1e4;
+    --text_color_secondary: #b5c0c7;
+    --input_color: black;
+    --divider_color: #282828;
+    --item_color_select: rgba(255, 255, 255, 0.87);
+    --text_color_inverted: #414141;
+    --button_text_color: #e9e9e9;
+    --button_border_color: #646464;
+
+    --theme_background: linear-gradient(214deg, rgba(3,1,70,1) 17%, rgb(1, 55, 80) 78%);
+    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
+    --theme_green: linear-gradient(214deg, rgba(25,128,94,1) 17%, rgba(62,76,111,1) 78%);
+    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
+}
+
+/* General Rules Overwrite */
+
 body.darkTheme {
     background-color: var(--theme_bg);
     color: var(--text_color);
@@ -128,6 +179,20 @@ body.darkTheme .ui.toggle.checkbox input ~ label:focus {
     color: var(--text_color_secondary) !important;
 }
 
+body.darkTheme textarea {
+    background-color: var(--theme_bg_active) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme textarea::placeholder {
+    color: var(--text_color_secondary) !important;
+    opacity: 0.7;
+}
+
+body.darkTheme textarea:focus {
+    border-color: var(--theme_highlight) !important;
+}
 
 body.darkTheme .ui.toggle.checkbox input ~ label::before{
     background-color: var(--theme_bg_secondary) !important;
@@ -140,13 +205,73 @@ body.darkTheme .ui.toggle.checkbox input:checked ~ label::before{
     border: 1px solid var(--button_border_color) !important;
 }
 
+/* Generic dropdown overwrites */
+body.darkTheme .ui.selection.dropdown {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu .item:hover {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .default.text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/* Secondary menu override */
+body.darkTheme .ui.pointing.secondary.menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-bottom: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item:hover {
+    color: var(--item_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item.active {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-bottom: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item.narrowpadding {
+    border-top-left-radius: 0.4em;
+    border-top-right-radius: 0.4em;
+}
+
+/* Tool bar overvrite */
 .toolbar{
     background-color: var(--theme_bg) !important;
     color: var(--text_color) !important;
-    border: 1px solid var(--divider_color) !important;
-}s
+}
 
-body.darkTheme .ui.segment:not(.basic) {
+body.darkTheme .ui.segment:not(.basic):not(.tab) {
     background-color: var(--theme_bg) !important;
     color: var(--text_color) !important;
     border: 1px solid transparent !important;
@@ -198,6 +323,105 @@ body.darkTheme .ui.basic.label {
 
 body.darkTheme .ui.form .grouped.fields label {
     color: var(--text_color) !important;
+}
+
+/* Confirm Box */
+
+body.darkTheme .confirmBoxBody {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.red.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.green.button {
+    color: var(--button_green_color) !important;
+    border: 1px solid var(--button_green_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.green.button:hover {
+    background-color: #0a380a !important;
+    color: var(--button_green_hover_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .questionToConfirm {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #confirmBox .ui.top.attached.progress{
+    background-color: var(--theme_bg_secondary) !important;
+}
+
+body.darkTheme #confirmBox .ui.top.attached.progress .bar {
+    background-color: var(--theme_highlight) !important;
+}
+
+/* Tour Modal */
+
+body.darkTheme #tourModal {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #tourModal .tourStepTitle {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #tourModal .tourStepContent {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme #tourModal .ui.divider {
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #tourModal .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #tourModal .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #tourModal .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+body.darkTheme #tourModal .ui.circular.icon.button {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #tourModal .ui.circular.icon.button:hover {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
 }
 
 /*
@@ -751,5 +975,129 @@ body.darkTheme #utm .standardContainer {
 
 body.darkTheme #utm .standardContainer .padding.statusDot {
     background-color: var(--theme_bg) !important;
-    border: 0.2px solid var(--theme_bg_primary) !important;
+    border: 0.2px solid var(--text_color_inverted) !important;
+}
+
+body.darkTheme .ui.utmloading.segment {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.utmloading.segment .ui.inverted.dimmer {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.utmloading.segment .ui.inverted.dimmer .ui.text.loader {
+    color: var(--text_color) !important;
+}
+
+
+/*
+    Network Tool overlay
+*/
+
+body.darkTheme .ui.celled.unstackable.table:not(.basic) th{
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #networktool .ui.accordion .title {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #networktool .ui.accordion .title .dropdown.icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #networktool .ui.accordion .title .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu .item:hover {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.visible.dropdown > .text:not(.default) {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .default.text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/* 
+
+Tool overlay css override
+
+*/
+
+body.darkTheme .picker-wrap.popup .picker {
+    background: var(--theme_bg_primary) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .picker-wrap.popup .picker .picker-d-b {
+    background: var(--theme_bg) !important;
+}
+
+body.darkTheme .picker-wrap.popup .picker .picker-d-d.picker-d-td{
+    background: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .picker-p {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .picker-p .picker-b,
+body.darkTheme .picker-p .picker-n {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .picker-p .picker-m,
+body.darkTheme .picker-p .picker-y {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+/* Statistics */
+
+body.darkTheme .statistic .value.totalViewCount {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .statistic .label {
+    color: var(--text_color_secondary) !important;
 }

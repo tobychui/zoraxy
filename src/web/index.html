@@ -272,8 +272,17 @@
             function toggleTheme(){
                 if ($("body").hasClass("darkTheme")){
                     setDarkTheme(false);
+                    //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
+                    if ($(".sideWrapper").is(":visible")){
+                        $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(false);
+                    }
                 }else{
                     setDarkTheme(true);
+                    //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
+                    if ($(".sideWrapper").is(":visible")){
+                        $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(true);
+                    }
+                    
                 }
             }
 

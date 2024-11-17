@@ -14,69 +14,72 @@
             top: 0.4em;
             right: 1em;
         }
+
       </style>
   </head>
   <body>
-  <br>
-  <div class="ui container">
-    <div class="ui header">
-        <div class="content">
-            Access Rule Editor
-            <div class="sub header">Create, Edit or Remove Access Rules</div>
-        </div>
-    </div>
-    <div class="ui divider"></div>
-    <div class="ui top attached tabular menu">
-        <a class="active item" data-tab="new"><i class="ui green add icon"></i> New</a>
-        <a class="item" data-tab="edit"><i class="ui grey edit icon"></i> Edit</a>
-    </div>
-    <div class="ui bottom attached active tab segment" data-tab="new">
-        <p>Create a new Access Rule</p>
-        <form class="ui form" id="accessRuleForm">
-            <div class="field">
-                <label>Rule Name</label>
-                <input type="text" name="accessRuleName" placeholder="Rule Name" required>
-            </div>
-            <div class="field">
-                <label>Description</label>
-                <textarea name="description" placeholder="Description" required></textarea>
-            </div>
-            <button class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>
-        </form>
+    <link rel="stylesheet" href="../darktheme.css">
+    <script src="../script/darktheme.js"></script>
     <br>
-    </div>
-    <div class="ui bottom attached tab segment" data-tab="edit">
-        <p>Select an Access Rule to edit</p>
-        <button id="refreshAccessRuleListBtn" class="ui circular basic icon button" onclick="reloadAccessRuleList()"><i class="ui green refresh icon"></i></button>
-        <div class="ui selection fluid dropdown" id="accessRuleSelector">
-            <input type="hidden" name="targetAccessRule" value="default">
-            <i class="dropdown icon"></i>
-            <div class="default text"></div>
-            <div class="menu" id="accessRuleList">
-                <div class="item" data-value="default"><i class="ui yellow star icon"></i> Default</div>
+    <div class="ui container">
+        <div class="ui header">
+            <div class="content">
+                Access Rule Editor
+                <div class="sub header">Create, Edit or Remove Access Rules</div>
             </div>
+        </div>
+        <div class="ui divider"></div>
+        <div class="ui top attached tabular menu">
+            <a class="active item" data-tab="new"><i class="ui green add icon"></i> New</a>
+            <a class="item" data-tab="edit"><i class="ui grey edit icon"></i> Edit</a>
+        </div>
+        <div class="ui bottom attached active tab segment" data-tab="new">
+            <p>Create a new Access Rule</p>
+            <form class="ui form" id="accessRuleForm">
+                <div class="field">
+                    <label>Rule Name</label>
+                    <input type="text" name="accessRuleName" placeholder="Rule Name" required>
+                </div>
+                <div class="field">
+                    <label>Description</label>
+                    <textarea name="description" placeholder="Description" required></textarea>
+                </div>
+                <button class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>
+            </form>
+        <br>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="edit">
+            <p>Select an Access Rule to edit</p>
+            <button id="refreshAccessRuleListBtn" class="ui circular basic icon button" onclick="reloadAccessRuleList()"><i class="ui green refresh icon"></i></button>
+            <div class="ui selection fluid dropdown" id="accessRuleSelector">
+                <input type="hidden" name="targetAccessRule" value="default">
+                <i class="dropdown icon"></i>
+                <div class="default text"></div>
+                <div class="menu" id="accessRuleList">
+                    <div class="item" data-value="default"><i class="ui yellow star icon"></i> Default</div>
+                </div>
+            </div>
+            <br>
+            <form class="ui form" id="modifyRuleInfo">
+                <div class="disabled field">
+                    <label>Rule ID</label>
+                    <input type="text" name="accessRuleUUID">
+                </div>
+                <div class="field">
+                    <label>Rule Name</label>
+                    <input type="text" name="accessRuleName" placeholder="Rule Name" required>
+                </div>
+                <div class="field">
+                    <label>Description</label>
+                    <textarea name="description" placeholder="Description" required></textarea>
+                </div>
+                <button class="ui basic button" type="submit"><i class="ui green save icon"></i> Save Changes</button>
+                <button class="ui basic button" onclick="removeAccessRule(event);"><i class="ui red trash icon"></i> Remove Rule</button>
+            </form>
         </div>
         <br>
-        <form class="ui form" id="modifyRuleInfo">
-            <div class="disabled field">
-                <label>Rule ID</label>
-                <input type="text" name="accessRuleUUID">
-            </div>
-            <div class="field">
-                <label>Rule Name</label>
-                <input type="text" name="accessRuleName" placeholder="Rule Name" required>
-            </div>
-            <div class="field">
-                <label>Description</label>
-                <textarea name="description" placeholder="Description" required></textarea>
-            </div>
-            <button class="ui basic button" type="submit"><i class="ui green save icon"></i> Save Changes</button>
-            <button class="ui basic button" onclick="removeAccessRule(event);"><i class="ui red trash icon"></i> Remove Rule</button>
-        </form>
-    </div>
-    <br>
-    <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
-    <br><br><br>
+        <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
+        <br><br><br>
   </div>
 
   <script>

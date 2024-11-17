@@ -1,57 +1,8 @@
 /*
     index.html style overwrite
 */
-:root{
-  
-}
 
-/* Theme Color Definition */
-body:not(.darkTheme){
-    --theme_bg: #f6f6f6;
-    --theme_bg_primary: #ffffff;
-    --theme_bg_secondary: #ffffff;
-    --theme_bg_active: #ececec;
-    --theme_highlight: #a9d1f3;
-    --theme_bg_inverted: #27292d;
-    --theme_advance: #f7f7f7;
-    --item_color: #5e5d5d;
-    --item_color_select: rgba(0,0,0,.87);
-    --text_color: #414141;
-    --input_color: white;
-    --divider_color: #cacaca;
-    --text_color_inverted: #fcfcfc;
-    --button_text_color: #878787;
-    --button_border_color: #dedede;
-
-    --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
-    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
-    --theme_green: linear-gradient(270deg, #27e7ff, #00ca52);
-    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
-}
-
-body.darkTheme{
-    --theme_bg: #000000;
-    --theme_bg_primary: #141414;
-    --theme_bg_secondary:#230046;
-    --theme_highlight: #743788;
-    --theme_bg_active: #020101;
-    --theme_bg_inverted: #f8f8f9;
-    --theme_advance: #000000;
-    --item_color: #cacaca;
-    --text_color: #dee1e4;
-    --text_color_secondary: #b5c0c7;
-    --input_color: black;
-    --divider_color: #282828;
-    --item_color_select: rgba(255, 255, 255, 0.87);
-    --text_color_inverted: #414141;
-    --button_text_color: #e9e9e9;
-    --button_border_color: #646464;
-
-    --theme_background: linear-gradient(214deg, rgba(3,1,70,1) 17%, rgba(60,1,80,1) 78%);
-    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
-    --theme_green: linear-gradient(214deg, rgba(25,128,94,1) 17%, rgba(62,76,111,1) 78%);
-    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
-}
+/* Theme color palletes are defined in darktheme.css */
 
 /* Theme Toggle CSS */
 #themeColorButton{
