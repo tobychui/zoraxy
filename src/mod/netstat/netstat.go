@@ -169,9 +169,16 @@ func (n *NetStatBuffers) HandleGetBufferedNetworkInterfaceStats(w http.ResponseW
 }
 
 func (n *NetStatBuffers) Close() {
-	n.StopChan <- true
-	time.Sleep(300 * time.Millisecond)
-	n.EventTicker.Stop()
+	//Fixed issue #394 for stopping netstat listener on platforms not supported platforms
+	if n.StopChan != nil {
+		n.StopChan <- true
+		time.Sleep(300 * time.Millisecond)
+	}
+
+	if n.EventTicker != nil {
+		n.EventTicker.Stop()
+	}
+
 }
 
 func (n *NetStatBuffers) HandleGetNetworkInterfaceStats(w http.ResponseWriter, r *http.Request) {
@@ -270,11 +277,11 @@ func (n *NetStatBuffers) GetNetworkInterfaceStats() (int64, int64, error) {
 		allIfaceRxByteFiles, err := filepath.Glob("/sys/class/net/*/statistics/rx_bytes")
 		if err != nil {
 			//Permission denied
-			return 0, 0, errors.New("Access denied")
+			return 0, 0, errors.New("access denied")
 		}
 
 		if len(allIfaceRxByteFiles) == 0 {
-			return 0, 0, errors.New("No valid iface found")
+			return 0, 0, errors.New("no valid iface found")
 		}
 
 		rxSum := int64(0)
@@ -334,5 +341,5 @@ func (n *NetStatBuffers) GetNetworkInterfaceStats() (int64, int64, error) {
 		return 0, 0, nil //no ethernet adapters with en*/<Link#*>
 	}
 
-	return 0, 0, errors.New("Platform not supported")
+	return 0, 0, errors.New("platform not supported")
 }
