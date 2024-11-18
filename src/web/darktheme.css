@@ -31,7 +31,7 @@ body:not(.darkTheme){
 }
 
 body.darkTheme{
-    --theme_bg: #000000;
+    --theme_bg: #0a090e;
     --theme_bg_primary: #060912;
     --theme_bg_secondary:#172a41;
     --theme_highlight: #4380b0;
@@ -269,6 +269,17 @@ body.darkTheme .ui.pointing.secondary.menu .item.narrowpadding {
 .toolbar{
     background-color: var(--theme_bg) !important;
     color: var(--text_color) !important;
+}
+
+/* Checkbox check after color override */
+body.darkTheme .ui.checkbox input:checked ~ .box::after,
+body.darkTheme .ui.checkbox input:checked ~ label::after {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.toggle.checkbox input:focus:checked ~ .box,
+body.darkTheme .ui.toggle.checkbox input:focus:checked ~ label {
+    color: var(--text_color_secondary) !important;
 }
 
 body.darkTheme .ui.segment:not(.basic):not(.tab) {
@@ -1100,4 +1111,18 @@ body.darkTheme .statistic .value.totalViewCount {
 
 body.darkTheme .statistic .label {
     color: var(--text_color_secondary) !important;
+}
+
+/* Other Tables */
+
+body.darkTheme .ui.celled.compact.table {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.celled.compact.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
 }

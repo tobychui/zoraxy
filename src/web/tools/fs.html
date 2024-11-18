@@ -32,6 +32,8 @@
         </style>
     </head>
     <body class="whiteTheme">
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
         <div id="navibar" class="navibar">
             <!-- File Opr Group-->
             <button class="fileOprBtn" title="Open" onclick="openViaButton(event);"><img class="opricon" src="img/opr/open.svg"><p class="oprtxt" locale="fileopr/Open">Open</p></button>
@@ -60,7 +62,7 @@
                 <div id="pathDisplayField" class="ui breadcrumb addressText pathDisplay desktopOnly" >
                   
                 </div>
-                <button id="togglePropertiesViewBtn" style="margin-left: 0.4em;" class="ui icon tiny button videmode propbar" title="Show Properties" onclick="togglePropertiesView(this);"><i class="columns icon"></i></button>
+                <button id="togglePropertiesViewBtn" style="margin-left: 0.4em; " class="ui icon tiny button videmode propbar" title="Show Properties" onclick="togglePropertiesView(this);"><i class="columns icon"></i></button>
             </div>
             
             <div class="msgbox" style="z-index:999; display:none; padding-bottom: 1em;">
@@ -79,7 +81,7 @@
                 </div>
                 <br>
             </div>
-            <div id="propertiesView" class="small">
+            <div id="propertiesView" class="small" style="height: 100%;">
                 <h3 class="ui header" style="margin-top: 0.4em;">
                     <span class="filename" style="word-break: break-all;" locale="sidebar/default/nofileselected">No File Selected</span>
                     <div class="sub header vpath"  style="word-break: break-all;" locale="sidebar/default/instruction">Select a file to view file properties</div>
@@ -471,11 +473,12 @@
                                         </span>
                                     </div>`);
                                 }else{
+                                    let isDarkTheme = $("body").hasClass("darkTheme");
                                     let extension = "." + filename.split(".").pop();
                                     let fileIcon = getFileIcon(extension);
                                     $("#fileList").append(`<div class="fileObject item" draggable="true" filename="${filename}" filepath="${path + filename}" ondblclick="openthis(this,event);" type="file">
                                         <span style="display:inline-block !important;word-break: break-all; width:100%;" class="normal object">
-                                            <i class="${fileIcon} icon" style="margin-right:12px; color:grey;"></i>  <span class="filename">${filename} (${humanFileSize(filesize)})</span> 
+                                            <i class="${fileIcon} icon" style="margin-right:12px; color:${isDarkTheme?'white':'grey'} !important;"></i>  <span class="filename">${filename} (${humanFileSize(filesize)})</span> 
                                         </span>
                                     </div>`);
                                 }

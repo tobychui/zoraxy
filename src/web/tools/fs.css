@@ -1252,6 +1252,10 @@ code{
     color: var(--um_file_txt) !important;
 }
 
+.darkTheme .filename{
+    color:var(--text_color) !important;
+}
+
 
 /*
     Hot Search Related
