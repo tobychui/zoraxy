@@ -10,17 +10,27 @@
   <body>
     <br />
     <div class="ui container">
-      <div class="field">
-        <div class="ui checkbox">
-          <input type="checkbox" id="showUnexposed" class="hidden" />
-          <label for="showUnexposed"
-            >Show Containers with Unexposed Ports
-            <br />
-            <small
-              >Please make sure Zoraxy and the target container share a
-              network</small
-            >
-          </label>
+      <div class="ui form">
+        <div class="field">
+          <input
+            id="searchbar"
+            type="text"
+            placeholder="Search..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" id="showUnexposed" class="hidden" />
+            <label for="showUnexposed"
+              >Show Containers with unexposed ports
+              <br />
+              <small
+                >Please make sure Zoraxy and the target container share a
+                network</small
+              >
+            </label>
+          </div>
         </div>
       </div>
       <div class="ui header">
@@ -46,6 +56,9 @@
     </div>
 
     <script>
+      // TODO: refactor for better readability / consistent use of jQuery
+      // TODO: add persistence for showUnexposed checkbox
+
       let lines = {};
       let linesAdded = {};
 
@@ -63,6 +76,16 @@
 
           getDockerContainers();
         });
+
+      $("#searchbar").on("input", () => {
+        // TODO: this should probably be debounced to avoid unnecessary calls during typing
+        const search = $("#searchbar").val().toLowerCase();
+        console.log("search", search);
+        $("#containersList .item").each((index, item) => {
+          const content = $(item).text().toLowerCase();
+          $(item).toggle(content.includes(search));
+        });
+      });
 
       function getDockerContainers() {
         const hostRequest = $.get("/api/proxy/list?type=host");
