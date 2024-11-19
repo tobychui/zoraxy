@@ -367,12 +367,22 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 		ZerotierConnected bool
 	}
 
+	displayUUID := nodeUUID
+	displayAllowSSHLB := *allowSshLoopback
+	displayBootTime := bootTime
+
+	if !authAgent.CheckAuth(r) {
+		displayUUID = "Unauthorized"
+		displayAllowSSHLB = false
+		displayBootTime = 0
+	}
+
 	info := ZoraxyInfo{
 		Version:           SYSTEM_VERSION,
-		NodeUUID:          nodeUUID,
+		NodeUUID:          displayUUID,
 		Development:       DEVELOPMENT_BUILD,
-		BootTime:          bootTime,
-		EnableSshLoopback: *allowSshLoopback,
+		BootTime:          displayBootTime,
+		EnableSshLoopback: displayAllowSSHLB,
 		ZerotierConnected: ganManager.ControllerID != "",
 	}
 
