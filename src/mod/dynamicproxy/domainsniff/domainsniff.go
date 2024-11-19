@@ -9,6 +9,7 @@ package domainsniff
 
 */
 import (
+	"crypto/tls"
 	"net"
 	"time"
 )
@@ -23,6 +24,30 @@ func DomainReachableWithError(domain string) error {
 
 	conn.Close()
 	return nil
+}
+
+// Check if a domain have TLS but it is self-signed or expired
+func DomainIsSelfSigned(domain string) (bool, error) {
+	//Get the certificate
+	conn, err := net.Dial("tcp", domain)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Close()
+
+	//Connect with TLS using insecure skip verify
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+	tlsConn := tls.Client(conn, config)
+	err = tlsConn.Handshake()
+	if err != nil {
+		return false, err
+	}
+
+	//Check if the certificate is self-signed
+	cert := tlsConn.ConnectionState().PeerCertificates[0]
+	return cert.Issuer.CommonName == cert.Subject.CommonName, nil
 }
 
 // Check if domain reachable

@@ -41,6 +41,20 @@ func initACME() *acme.ACMEHandler {
 	return acme.NewACME("https://acme-v02.api.letsencrypt.org/directory", strconv.Itoa(port), sysdb, SystemWideLogger)
 }
 
+// Restart ACME handler and auto renewer
+func restartACMEHandler() {
+	SystemWideLogger.Println("Restarting ACME handler")
+	//Clos the current handler and auto renewer
+	acmeHandler.Close()
+	acmeAutoRenewer.Close()
+	acmeDeregisterSpecialRoutingRule()
+
+	//Reinit the handler with a new random port
+	acmeHandler = initACME()
+
+	acmeRegisterSpecialRoutingRule()
+}
+
 // create the special routing rule for ACME
 func acmeRegisterSpecialRoutingRule() {
 	SystemWideLogger.Println("Assigned temporary port:" + acmeHandler.Getport())
@@ -80,6 +94,12 @@ func acmeRegisterSpecialRoutingRule() {
 	if err != nil {
 		SystemWideLogger.PrintAndLog("ACME", "Unable register temp port for DNS resolver", err)
 	}
+}
+
+// remove the special routing rule for ACME
+func acmeDeregisterSpecialRoutingRule() {
+	SystemWideLogger.Println("Removing ACME routing rule")
+	dynamicProxyRouter.RemoveRoutingRule("acme-autorenew")
 }
 
 // This function check if the renew setup is satisfied. If not, toggle them automatically

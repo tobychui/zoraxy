@@ -85,7 +85,7 @@ func ReverseProxtInit() {
 
 	dprouter, err := dynamicproxy.NewDynamicProxy(dynamicproxy.RouterOption{
 		HostUUID:           nodeUUID,
-		HostVersion:        version,
+		HostVersion:        SYSTEM_VERSION,
 		Port:               inboundPort,
 		UseTls:             useTls,
 		ForceTLSLatest:     forceLatestTLSVersion,

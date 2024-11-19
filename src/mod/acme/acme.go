@@ -86,6 +86,13 @@ func (a *ACMEHandler) Logf(message string, err error) {
 	a.Logger.PrintAndLog("ACME", message, err)
 }
 
+// Close closes the ACMEHandler.
+// ACME Handler does not need to close anything
+// Function defined for future compatibility
+func (a *ACMEHandler) Close() error {
+	return nil
+}
+
 // ObtainCert obtains a certificate for the specified domains.
 func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int) (bool, error) {
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)

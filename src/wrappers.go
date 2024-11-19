@@ -368,9 +368,9 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	info := ZoraxyInfo{
-		Version:           version,
+		Version:           SYSTEM_VERSION,
 		NodeUUID:          nodeUUID,
-		Development:       development,
+		Development:       DEVELOPMENT_BUILD,
 		BootTime:          bootTime,
 		EnableSshLoopback: *allowSshLoopback,
 		ZerotierConnected: ganManager.ControllerID != "",

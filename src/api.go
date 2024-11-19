@@ -21,8 +21,7 @@ import (
 
 */
 
-var requireAuth = true
-
+/* Register all the APIs */
 func initAPIs(targetMux *http.ServeMux) {
 	authRouter := auth.NewManagedHTTPRouter(auth.RouterOption{
 		AuthAgent:   authAgent,
@@ -35,7 +34,7 @@ func initAPIs(targetMux *http.ServeMux) {
 
 	//Register the standard web services urls
 	fs := http.FileServer(http.FS(webres))
-	if development {
+	if DEVELOPMENT_BUILD {
 		fs = http.FileServer(http.Dir("web/"))
 	}
 	//Add a layer of middleware for advance control
@@ -215,7 +214,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	authRouter.HandleFunc("/api/acme/autoRenew/email", acmeAutoRenewer.HandleACMEEmail)
 	authRouter.HandleFunc("/api/acme/autoRenew/setDomains", acmeAutoRenewer.HandleSetAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/setEAB", acmeAutoRenewer.HanldeSetEAB)
-	authRouter.HandleFunc("/api/acme/autoRenew/setDNS", acmeAutoRenewer.HanldeSetDNS)
+	authRouter.HandleFunc("/api/acme/autoRenew/setDNS", acmeAutoRenewer.HandleSetDNS)
 	authRouter.HandleFunc("/api/acme/autoRenew/listDomains", acmeAutoRenewer.HandleLoadAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewPolicy", acmeAutoRenewer.HandleRenewPolicy)
 	authRouter.HandleFunc("/api/acme/autoRenew/renewNow", acmeAutoRenewer.HandleRenewNow)

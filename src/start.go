@@ -52,19 +52,19 @@ var (
 
 func startupSequence() {
 	//Start a system wide logger and log viewer
-	l, err := logger.NewLogger("zr", "./log")
+	l, err := logger.NewLogger(LOG_PREFIX, LOG_FOLDER)
 	if err == nil {
 		SystemWideLogger = l
 	} else {
 		panic(err)
 	}
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
-		RootFolder: "./log",
-		Extension:  ".log",
+		RootFolder: LOG_FOLDER,
+		Extension:  LOG_EXTENSION,
 	})
 
 	//Create database
-	db, err := database.NewDatabase("sys.db", false)
+	db, err := database.NewDatabase(DATABASE_PATH, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,21 +73,21 @@ func startupSequence() {
 	sysdb.NewTable("settings")
 
 	//Create tmp folder and conf folder
-	os.MkdirAll("./tmp", 0775)
-	os.MkdirAll("./conf/proxy/", 0775)
+	os.MkdirAll(TMP_FOLDER, 0775)
+	os.MkdirAll(CONF_HTTP_PROXY, 0775)
 
 	//Create an auth agent
 	sessionKey, err := auth.GetSessionKey(sysdb, SystemWideLogger)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authAgent = auth.NewAuthenticationAgent(name, []byte(sessionKey), sysdb, true, SystemWideLogger, func(w http.ResponseWriter, r *http.Request) {
+	authAgent = auth.NewAuthenticationAgent(SYSTEM_NAME, []byte(sessionKey), sysdb, true, SystemWideLogger, func(w http.ResponseWriter, r *http.Request) {
 		//Not logged in. Redirecting to login page
 		http.Redirect(w, r, ppf("/login.html"), http.StatusTemporaryRedirect)
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager("./conf/certs", development, SystemWideLogger)
+	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, DEVELOPMENT_BUILD, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +96,7 @@ func startupSequence() {
 	db.NewTable("redirect")
 	redirectAllowRegexp := false
 	db.Read("redirect", "regex", &redirectAllowRegexp)
-	redirectTable, err = redirection.NewRuleTable("./conf/redirect", redirectAllowRegexp, SystemWideLogger)
+	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -121,7 +121,7 @@ func startupSequence() {
 	accessController, err = access.NewAccessController(&access.Options{
 		Database:     sysdb,
 		GeoDB:        geodbStore,
-		ConfigFolder: "./conf/access",
+		ConfigFolder: CONF_ACCESS_RULE,
 	})
 	if err != nil {
 		panic(err)
@@ -154,7 +154,7 @@ func startupSequence() {
 	//Start the static web server
 	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
 		Sysdb:                  sysdb,
-		Port:                   "5487", //Default Port
+		Port:                   strconv.Itoa(WEBSERV_DEFAULT_PORT), //Default Port
 		WebRoot:                *staticWebServerRoot,
 		EnableDirectoryListing: true,
 		EnableWebDirManager:    *allowWebFileManager,
@@ -179,7 +179,7 @@ func startupSequence() {
 
 	pathRuleHandler = pathrule.NewPathRuleHandler(&pathrule.Options{
 		Enabled:      false,
-		ConfigFolder: "./conf/rules/pathrules",
+		ConfigFolder: CONF_PATH_RULE,
 	})
 
 	/*
@@ -197,7 +197,7 @@ func startupSequence() {
 
 		hostName := *mdnsName
 		if hostName == "" {
-			hostName = "zoraxy_" + nodeUUID
+			hostName = MDNS_HOSTNAME_PREFIX + nodeUUID
 		} else {
 			//Trim off the suffix
 			hostName = strings.TrimSuffix(hostName, ".local")
@@ -206,24 +206,24 @@ func startupSequence() {
 		mdnsScanner, err = mdns.NewMDNS(mdns.NetworkHost{
 			HostName:     hostName,
 			Port:         portInt,
-			Domain:       "zoraxy.aroz.org",
-			Model:        "Network Gateway",
+			Domain:       MDNS_IDENTIFY_DOMAIN,
+			Model:        MDNS_IDENTIFY_DEVICE_TYPE,
 			UUID:         nodeUUID,
-			Vendor:       "imuslab.com",
-			BuildVersion: version,
+			Vendor:       MDNS_IDENTIFY_VENDOR,
+			BuildVersion: SYSTEM_VERSION,
 		}, "")
 		if err != nil {
 			SystemWideLogger.Println("Unable to startup mDNS service. Disabling mDNS services")
 		} else {
 			//Start initial scanning
 			go func() {
-				hosts := mdnsScanner.Scan(30, "")
+				hosts := mdnsScanner.Scan(MDNS_SCAN_TIMEOUT, "")
 				previousmdnsScanResults = hosts
 				SystemWideLogger.Println("mDNS Startup scan completed")
 			}()
 
 			//Create a ticker to update mDNS results every 5 minutes
-			ticker := time.NewTicker(15 * time.Minute)
+			ticker := time.NewTicker(MDNS_SCAN_UPDATE_INTERVAL * time.Minute)
 			stopChan := make(chan bool)
 			go func() {
 				for {
@@ -231,7 +231,7 @@ func startupSequence() {
 					case <-stopChan:
 						ticker.Stop()
 					case <-ticker.C:
-						hosts := mdnsScanner.Scan(30, "")
+						hosts := mdnsScanner.Scan(MDNS_SCAN_TIMEOUT, "")
 						previousmdnsScanResults = hosts
 						SystemWideLogger.Println("mDNS scan result updated")
 					}
@@ -265,7 +265,7 @@ func startupSequence() {
 	//Create TCP Proxy Manager
 	streamProxyManager, err = streamproxy.NewStreamProxy(&streamproxy.Options{
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
-		ConfigStore:          "./conf/streamproxy",
+		ConfigStore:          CONF_STREAM_PROXY,
 		Logger:               SystemWideLogger,
 	})
 	if err != nil {
@@ -303,8 +303,8 @@ func startupSequence() {
 	sysdb.NewTable("acmepref")
 	acmeHandler = initACME()
 	acmeAutoRenewer, err = acme.NewAutoRenewer(
-		"./conf/acme_conf.json",
-		"./conf/certs/",
+		ACME_AUTORENEW_CONFIG_PATH,
+		CONF_CERT_STORE,
 		int64(*acmeAutoRenewInterval),
 		*acmeCertAutoRenewDays,
 		acmeHandler,
