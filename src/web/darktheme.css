@@ -1126,3 +1126,8 @@ body.darkTheme .ui.celled.compact.table thead th {
     color: var(--text_color) !important;
     border-color: var(--divider_color) !important;
 }
+
+body.darkTheme .ui.list .list > .item .header, .ui.list > .item .header,
+body.darkTheme .ui.list .list > .item .description, .ui.list > .item .description {
+    color: var(--text_color) !important;
+}
