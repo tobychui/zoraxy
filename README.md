@@ -33,6 +33,7 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
   - Basic single-admin management mode
   - External permission management system for easy system integration
   - SMTP config for password reset
+  - Dark Theme Mode
 
 ## Downloads
 
@@ -102,6 +103,8 @@ Usage of zoraxy:
         Enable auto config upgrade if breaking change is detected (default true)
   -docker
         Run Zoraxy in docker compatibility mode
+  -earlyrenew int
+        Number of days to early renew a soon expiring certificate (days) (default 30)
   -fastgeoip
         Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
   -mdns
@@ -119,7 +122,7 @@ Usage of zoraxy:
   -webfm
         Enable web file manager for static web server root folder (default true)
   -webroot string
-        Static web server root folder. Only allow change in start parameters (default "./www")
+        Static web server root folder. Only allow chnage in start paramters (default "./www")
   -ztauth string
         ZeroTier authtoken for the local node
   -ztport int
