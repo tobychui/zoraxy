@@ -3,6 +3,7 @@ package geodb
 import (
 	_ "embed"
 	"net/http"
+	"time"
 
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -15,17 +16,22 @@ var geoipv4 []byte //Geodb dataset for ipv4
 var geoipv6 []byte //Geodb dataset for ipv6
 
 type Store struct {
-	geodb       [][]string //Parsed geodb list
-	geodbIpv6   [][]string //Parsed geodb list for ipv6
-	geotrie     *trie
-	geotrieIpv6 *trie
-	sysdb       *database.Database
-	option      *StoreOptions
+	geodb                    [][]string //Parsed geodb list
+	geodbIpv6                [][]string //Parsed geodb list for ipv6
+	geotrie                  *trie
+	geotrieIpv6              *trie
+	sysdb                    *database.Database
+	slowLookupCacheIpv4      map[string]string //Cache for slow lookup
+	slowLookupCacheIpv6      map[string]string //Cache for slow lookup
+	cacheClearTicker         *time.Ticker      //Ticker for clearing cache
+	cacheClearTickerStopChan chan bool         //Stop channel for cache clear ticker
+	option                   *StoreOptions
 }
 
 type StoreOptions struct {
-	AllowSlowIpv4LookUp bool
-	AllowSloeIpv6Lookup bool
+	AllowSlowIpv4LookUp          bool
+	AllowSlowIpv6Lookup          bool
+	SlowLookupCacheClearInterval time.Duration //Clear slow lookup cache interval
 }
 
 type CountryInfo struct {
@@ -50,18 +56,44 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 	}
 
 	var ipv6Trie *trie
-	if !option.AllowSloeIpv6Lookup {
+	if !option.AllowSlowIpv6Lookup {
 		ipv6Trie = constrctTrieTree(parsedGeoDataIpv6)
 	}
 
-	return &Store{
-		geodb:       parsedGeoData,
-		geotrie:     ipv4Trie,
-		geodbIpv6:   parsedGeoDataIpv6,
-		geotrieIpv6: ipv6Trie,
-		sysdb:       sysdb,
-		option:      option,
-	}, nil
+	if option.SlowLookupCacheClearInterval == 0 {
+		option.SlowLookupCacheClearInterval = 15 * time.Minute
+	}
+
+	//Create a new store
+	thisGeoDBStore := &Store{
+		geodb:                    parsedGeoData,
+		geotrie:                  ipv4Trie,
+		geodbIpv6:                parsedGeoDataIpv6,
+		geotrieIpv6:              ipv6Trie,
+		sysdb:                    sysdb,
+		slowLookupCacheIpv4:      make(map[string]string),
+		slowLookupCacheIpv6:      make(map[string]string),
+		cacheClearTicker:         time.NewTicker(option.SlowLookupCacheClearInterval),
+		cacheClearTickerStopChan: make(chan bool),
+		option:                   option,
+	}
+
+	//Start cache clear ticker
+	if option.AllowSlowIpv4LookUp || option.AllowSlowIpv6Lookup {
+		go func(store *Store) {
+			for {
+				select {
+				case <-store.cacheClearTickerStopChan:
+					return
+				case <-thisGeoDBStore.cacheClearTicker.C:
+					thisGeoDBStore.slowLookupCacheIpv4 = make(map[string]string)
+					thisGeoDBStore.slowLookupCacheIpv6 = make(map[string]string)
+				}
+			}
+		}(thisGeoDBStore)
+	}
+
+	return thisGeoDBStore, nil
 }
 
 func (s *Store) ResolveCountryCodeFromIP(ipstring string) (*CountryInfo, error) {
@@ -73,8 +105,12 @@ func (s *Store) ResolveCountryCodeFromIP(ipstring string) (*CountryInfo, error) 
 
 }
 
+// Close the store
 func (s *Store) Close() {
-
+	if s.option.AllowSlowIpv4LookUp || s.option.AllowSlowIpv6Lookup {
+		//Stop cache clear ticker
+		s.cacheClearTickerStopChan <- true
+	}
 }
 
 func (s *Store) GetRequesterCountryISOCode(r *http.Request) string {

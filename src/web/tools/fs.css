@@ -6,7 +6,7 @@
 */
 
 /*
-    Color definations
+    Color definition
 */
 :root{
     --dark_theme_toggle: #333333;
@@ -1250,6 +1250,10 @@ code{
 
 .um.filename{
     color: var(--um_file_txt) !important;
+}
+
+.darkTheme .filename{
+    color:var(--text_color) !important;
 }
 
 

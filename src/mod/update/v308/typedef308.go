@@ -1,7 +1,7 @@
 package v308
 
 /*
-	v308 type definations
+	v308 type definition
 
 	This file wrap up the self-contained data structure
 	for v3.0.8 structure and allow automatic updates

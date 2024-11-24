@@ -1,0 +1,6 @@
+# robots.txt for Zoraxy project
+# In general, you should not expose the management interface to the internet.
+# In case you do, this file (hopefully) protects you from web crawlers.
+
+User-agent: *
+Disallow: /

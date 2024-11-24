@@ -109,6 +109,8 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	thisTransporter.(*http.Transport).MaxConnsPerHost = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).DisableCompression = true
 
+	//TODO: Add user adjustable timeout option here
+
 	if dpcOptions.IgnoreTLSVerification {
 		//Ignore TLS certificate validation error
 		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true

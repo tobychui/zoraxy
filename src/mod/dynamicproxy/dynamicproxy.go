@@ -291,7 +291,7 @@ func (router *Router) Restart() error {
 			return err
 		}
 
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(800 * time.Millisecond)
 		// Start the server
 		err = router.StartProxyService()
 		if err != nil {

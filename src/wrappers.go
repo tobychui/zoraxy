@@ -18,11 +18,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -31,39 +29,6 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 	"imuslab.com/zoraxy/mod/wakeonlan"
 )
-
-/*
-	Proxy Utils
-*/
-//Check if site support TLS
-func HandleCheckSiteSupportTLS(w http.ResponseWriter, r *http.Request) {
-	targetURL, err := utils.PostPara(r, "url")
-	if err != nil {
-		utils.SendErrorResponse(w, "invalid url given")
-		return
-	}
-
-	httpsUrl := fmt.Sprintf("https://%s", targetURL)
-	httpUrl := fmt.Sprintf("http://%s", targetURL)
-
-	client := http.Client{Timeout: 5 * time.Second}
-
-	resp, err := client.Head(httpsUrl)
-	if err == nil && resp.StatusCode == http.StatusOK {
-		js, _ := json.Marshal("https")
-		utils.SendJSONResponse(w, string(js))
-		return
-	}
-
-	resp, err = client.Head(httpUrl)
-	if err == nil && resp.StatusCode == http.StatusOK {
-		js, _ := json.Marshal("http")
-		utils.SendJSONResponse(w, string(js))
-		return
-	}
-
-	utils.SendErrorResponse(w, "invalid url given")
-}
 
 /*
 	Statistic Summary
@@ -367,12 +332,22 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 		ZerotierConnected bool
 	}
 
+	displayUUID := nodeUUID
+	displayAllowSSHLB := *allowSshLoopback
+	displayBootTime := bootTime
+
+	if !authAgent.CheckAuth(r) {
+		displayUUID = "Unauthorized"
+		displayAllowSSHLB = false
+		displayBootTime = 0
+	}
+
 	info := ZoraxyInfo{
-		Version:           version,
-		NodeUUID:          nodeUUID,
-		Development:       development,
-		BootTime:          bootTime,
-		EnableSshLoopback: *allowSshLoopback,
+		Version:           SYSTEM_VERSION,
+		NodeUUID:          displayUUID,
+		Development:       DEVELOPMENT_BUILD,
+		BootTime:          displayBootTime,
+		EnableSshLoopback: displayAllowSSHLB,
 		ZerotierConnected: ganManager.ControllerID != "",
 	}
 

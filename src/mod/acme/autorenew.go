@@ -308,7 +308,6 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 				}
 				if CertExpireSoon(certBytes, a.EarlyRenewDays) || CertIsExpired(certBytes) {
 					//This cert is expired
-
 					DNSName, err := ExtractDomains(certBytes)
 					if err != nil {
 						//Maybe self signed. Ignore this
@@ -355,6 +354,7 @@ func (a *AutoRenewer) CheckAndRenewCertificates() ([]string, error) {
 	return a.renewExpiredDomains(expiredCertList)
 }
 
+// Close the auto renewer
 func (a *AutoRenewer) Close() {
 	if a.TickerstopChan != nil {
 		a.TickerstopChan <- true
@@ -440,7 +440,7 @@ func (a *AutoRenewer) HanldeSetEAB(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handle update auto renew DNS configuration
-func (a *AutoRenewer) HanldeSetDNS(w http.ResponseWriter, r *http.Request) {
+func (a *AutoRenewer) HandleSetDNS(w http.ResponseWriter, r *http.Request) {
 	dnsProvider, err := utils.PostPara(r, "dnsProvider")
 	if err != nil {
 		utils.SendErrorResponse(w, "dnsProvider not set")

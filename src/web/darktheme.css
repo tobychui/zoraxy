@@ -1,0 +1,1133 @@
+/* 
+    Darktheme CSS
+
+    This file contains the CSS for the dark theme.
+    This will override the default CSS (white theme) for semantic UI
+*/
+
+/* Color Pallete */
+/* Theme Color Definition */
+body:not(.darkTheme){
+    --theme_bg: #f6f6f6;
+    --theme_bg_primary: #ffffff;
+    --theme_bg_secondary: #ffffff;
+    --theme_bg_active: #ececec;
+    --theme_highlight: #a9d1f3;
+    --theme_bg_inverted: #27292d;
+    --theme_advance: #f7f7f7;
+    --item_color: #5e5d5d;
+    --item_color_select: rgba(0,0,0,.87);
+    --text_color: #414141;
+    --input_color: white;
+    --divider_color: #cacaca;
+    --text_color_inverted: #fcfcfc;
+    --button_text_color: #878787;
+    --button_border_color: #dedede;
+
+    --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
+    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
+    --theme_green: linear-gradient(270deg, #27e7ff, #00ca52);
+    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
+}
+
+body.darkTheme{
+    --theme_bg: #0a090e;
+    --theme_bg_primary: #060912;
+    --theme_bg_secondary:#172a41;
+    --theme_highlight: #4380b0;
+    --theme_bg_active: #020101;
+    --theme_bg_inverted: #f8f8f9;
+    --theme_advance: #000000;
+    --item_color: #cacaca;
+    --text_color: #dee1e4;
+    --text_color_secondary: #b5c0c7;
+    --input_color: black;
+    --divider_color: #282828;
+    --item_color_select: rgba(255, 255, 255, 0.87);
+    --text_color_inverted: #414141;
+    --button_text_color: #e9e9e9;
+    --button_border_color: #646464;
+
+    --theme_background: linear-gradient(214deg, rgba(3,1,70,1) 17%, rgb(1, 55, 80) 78%);
+    --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
+    --theme_green: linear-gradient(214deg, rgba(25,128,94,1) 17%, rgba(62,76,111,1) 78%);
+    --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
+}
+
+/* General Rules Overwrite */
+
+body.darkTheme {
+    background-color: var(--theme_bg);
+    color: var(--text_color);
+}
+
+body.darkTheme h1,
+body.darkTheme h2,
+body.darkTheme h3,
+body.darkTheme h4,
+body.darkTheme h5,
+body.darkTheme h6,
+body.darkTheme a {
+    color: var(--text_color);
+}
+
+body.darkTheme .ui.header {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme p,
+body.darkTheme span{
+    color: var(--text_color_secondary);
+}
+
+body.darkTheme .ui.secondary.menu .dropdown.item:hover,
+body.darkTheme .ui.secondary.menu .link.item:hover,
+body.darkTheme .ui.secondary.menu a.item:hover {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.basic.white.icon.button {
+    background-color: transparent !important;
+    border: none !important;
+}
+
+body.darkTheme .ui.basic.white.icon.button:hover {
+    border: none !important;
+    opacity: 0.8;
+}
+
+body.darkTheme .ui.basic.white.icon.button:disabled {
+    border: none !important;
+    opacity: 0.5;
+}
+
+body.darkTheme .ui.basic.buttons .button i.icon {
+    color: #ffffff !important;
+}
+
+body.darkTheme .ui.basic.button:not(.red) {
+    color: #ffffff !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.basic.button:not(.red):hover {
+    border: 1px solid var(--button_border_color) !important;
+    background-color: var(--theme_bg) !important;
+    opacity: 0.8;
+}
+
+body.darkTheme .ui.basic.button.red:hover {
+    background-color: #380a0a !important;
+    opacity: 0.8;
+}
+
+body.darkTheme .ui.basic.button:disabled {
+    border: none !important;
+    background-color: transparent !important;
+    opacity: 0.5;
+}
+
+body.darkTheme .ui.basic.button:focus,
+body.darkTheme .ui.basic.buttons .button:focus {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+}
+
+
+body.darkTheme .ui.table thead th,
+body.darkTheme .ui.table tbody td,
+body.darkTheme .ui.table tfoot td {
+    color: #ffffff !important;
+}
+
+body.darkTheme .ui.input input,
+body.darkTheme .ui.input input::placeholder,
+body.darkTheme .ui.input input:focus,
+body.darkTheme .ui.input input:active {
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+}
+
+body.darkTheme .ui.input input {
+    background-color: var(--theme_bg_active) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.input input:focus,
+body.darkTheme .ui.input input:active {
+    border-color: var(--theme_highlight) !important;
+}
+
+body.darkTheme .ui.input input::placeholder {
+    opacity: 0.7;
+}
+
+body.darkTheme .ui.label,
+body.darkTheme .ui.label .detail,
+body.darkTheme .ui.label .icon {
+    color: #ffffff !important;
+}
+
+body.darkTheme .advanceoptions .title {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.toggle.checkbox input ~ .box,
+body.darkTheme .ui.toggle.checkbox input ~ label,
+body.darkTheme .ui.toggle.checkbox input ~ label:focus {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme textarea {
+    background-color: var(--theme_bg_active) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme textarea::placeholder {
+    color: var(--text_color_secondary) !important;
+    opacity: 0.7;
+}
+
+body.darkTheme textarea:focus {
+    border-color: var(--theme_highlight) !important;
+}
+
+body.darkTheme .ui.toggle.checkbox input ~ label::before{
+    background-color: var(--theme_bg_secondary) !important;
+}
+body.darkTheme .ui.toggle.checkbox input:checked ~ label::before{
+    background-color: var(--theme_highlight) !important;
+}
+
+#sidemenuBtn{
+    border: 1px solid var(--button_border_color) !important;
+}
+
+/* Generic dropdown overwrites */
+body.darkTheme .ui.selection.dropdown {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu .item:hover {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .default.text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/* Secondary menu override */
+body.darkTheme .ui.pointing.secondary.menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-bottom: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item:hover {
+    color: var(--item_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item.active {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-bottom: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.pointing.secondary.menu .item.narrowpadding {
+    border-top-left-radius: 0.4em;
+    border-top-right-radius: 0.4em;
+}
+
+/* Tool bar overvrite */
+.toolbar{
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+/* Checkbox check after color override */
+body.darkTheme .ui.checkbox input:checked ~ .box::after,
+body.darkTheme .ui.checkbox input:checked ~ label::after {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.toggle.checkbox input:focus:checked ~ .box,
+body.darkTheme .ui.toggle.checkbox input:focus:checked ~ label {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.segment:not(.basic):not(.tab) {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid transparent !important;
+}
+
+body.darkTheme .ui.segment{
+    background-color: transparent !important;
+    color: var(--text_color) !important;
+    border: 1px solid transparent !important;
+}
+
+body.darkTheme .sub.header {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.radio.defaultsite.checkbox label {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.radio.defaultsite.checkbox label small {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.form .field input{
+    color: var(--text_color) !important;
+    background-color: var(--theme_bg_active) !important;
+    border-color: var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.form .field input::placeholder,
+body.darkTheme .ui.form .field input:focus,
+body.darkTheme .ui.form .field input:active {
+    border-color: var(--theme_highlight) !important;
+}
+
+body.darkTheme .ui.form .field input::placeholder {
+    opacity: 0.7;
+}
+
+body.darkTheme .ui.form .field label,
+body.darkTheme .ui.form .field .ui.checkbox input:checked ~ label {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.basic.label {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.form .grouped.fields label {
+    color: var(--text_color) !important;
+}
+
+/* Confirm Box */
+
+body.darkTheme .confirmBoxBody {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.red.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.green.button {
+    color: var(--button_green_color) !important;
+    border: 1px solid var(--button_green_border_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .ui.green.button:hover {
+    background-color: #0a380a !important;
+    color: var(--button_green_hover_color) !important;
+}
+
+body.darkTheme .confirmBoxBody .questionToConfirm {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #confirmBox .ui.top.attached.progress{
+    background-color: var(--theme_bg_secondary) !important;
+}
+
+body.darkTheme #confirmBox .ui.top.attached.progress .bar {
+    background-color: var(--theme_highlight) !important;
+}
+
+/* Tour Modal */
+
+body.darkTheme #tourModal {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #tourModal .tourStepTitle {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #tourModal .tourStepContent {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme #tourModal .ui.divider {
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #tourModal .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #tourModal .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #tourModal .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+body.darkTheme #tourModal .ui.circular.icon.button {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #tourModal .ui.circular.icon.button:hover {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+/*
+    HTTP Proxy Table
+*/
+body.darkTheme .ui.table{
+    background-color: transparent !important;
+}
+body.darkTheme .ui.celled.sortable.unstackable.compact.table thead th,
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td,
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tfoot td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td a {
+    color: var(--link_color) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td a:hover {
+    color: var(--link_hover_color) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td small {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input ~ .box,
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input ~ label,
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input ~ label:focus {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input ~ label::before {
+    background-color: var(--theme_bg_secondary) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input:checked ~ label::before {
+    background-color: var(--theme_highlight) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.circular.mini.basic.icon.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.circular.mini.basic.icon.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.circular.mini.red.basic.icon.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.circular.mini.red.basic.icon.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+    
+}
+
+body.darkTheme .ui.basic.small.icon.circular.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.basic.small.icon.circular.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+    opacity: 0.8;
+}
+
+body.darkTheme .ui.checkbox input ~ .box,
+body.darkTheme .ui.checkbox input ~ label,
+body.darkTheme .ui.checkbox input ~ label:focus {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.basic.advance.segment {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.endpointAdvanceConfig.accordion .title {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .RateLimit input {
+    border-color: var(--theme_highlight) !important;
+}
+
+/* 
+    Virtual Directorie Table
+*/
+
+body.darkTheme .ui.fluid.search.selection.dropdown {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown .menu > .item {
+    border-top: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.selection.active.dropdown .menu {
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .search {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.fluid.search.selection.dropdown .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+
+/*
+
+    New Proxy Rule
+
+*/
+
+body.darkTheme .ui.horizontal.divider.transition.visible {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #basicAuthCredPassword, body.darkTheme #basicAuthCredUsername {
+    color: var(--text_color) !important;
+    background-color: var(--theme_bg_active) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #rules .field label {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field .ui.selection.dropdown .text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #rules .field small {
+    color: var(--text_color_secondary) !important;
+}
+
+/*
+
+    Stream Proxy 
+
+*/
+
+body.darkTheme #streamproxy {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable {
+    background-color: transparent !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable tbody tr td:not(:first-child) {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #proxyTable tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #proxyTable tbody td .statusText {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.basic.mini.circular.icon.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.basic.mini.circular.icon.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.circular.red.basic.mini.icon.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #proxyTable tbody td .ui.circular.red.basic.mini.icon.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+/* 
+
+    Redirect 
+
+*/
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody tr td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.red.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody td .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+body.darkTheme #redirectset .ui.checkbox input:checked ~ label,
+body.darkTheme #redirectset .ui.checkbox input:checked ~ label small,
+body.darkTheme #redirectset .ui.checkbox input:checked ~ label a {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.message {
+    color: var(--text_color) !important;
+    background-color: var(--theme_bg_active) !important;
+    border: 1px solid var(--message_border_color) !important;
+}
+
+/* 
+    Access Rules 
+*/
+
+/* Access Rule Selector */
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#accessRuleSelector .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/* Tab Menu in access control */
+
+body.darkTheme .ui.top.attached.tabular.menu {
+    background-color: transparent !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.top.attached.tabular.menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.top.attached.tabular.menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.top.attached.tabular.menu .item.active {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+/* Tables in access control */
+
+body.darkTheme #access .ui.unstackable.basic.celled.table{
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody tr td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.button {
+    color: var(--button_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.button:hover {
+    background-color: var(--button_hover_bg) !important;
+    color: var(--button_hover_color) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.red.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #access .ui.unstackable.basic.celled.table tbody td .ui.red.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+/* Fixing the color of the sel;ector label in country selector */
+body.darkTheme .ui.search.multiple.selection.dropdown .ui.label {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+}
+
+/* Quick band IP table *(ipTable) */
+body.darkTheme #ipTable {
+    background-color: transparent !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #ipTable thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #ipTable tbody tr td {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #ipTable tbody tr:hover {
+    background-color: var(--theme_bg_hover) !important;
+}
+
+body.darkTheme #ipTable tbody td .ui.basic.red.tiny.icon.button {
+    color: var(--button_red_color) !important;
+    border: 1px solid var(--button_red_border_color) !important;
+}
+
+body.darkTheme #ipTable tbody td .ui.basic.red.tiny.icon.button:hover {
+    background-color: #380a0a !important;
+    color: var(--button_red_hover_color) !important;
+}
+
+
+/*
+    TLS / SSL Certificates
+*/
+body.darkTheme .ui.selection.dropdown#defaultCA {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: transparent !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu .item:hover {
+    background-color: var(--theme_bg_hover) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .default.text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.dropdown#defaultCA .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/*
+
+ZeroTier
+
+*/
+
+body.darkTheme #gan .ui.list .item .icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #gan .ui.list .item .content .header {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #gan .ui.list .item .content .description {
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme #gan .clickable.iprange.active {
+    background-color: var(--theme_highlight) !important;
+}
+
+body.darkTheme #gan thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+
+/* 
+
+    Uptime Monitor
+
+*/
+
+body.darkTheme #utm .standardContainer {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme #utm .standardContainer .padding.statusDot {
+    background-color: var(--theme_bg) !important;
+    border: 0.2px solid var(--text_color_inverted) !important;
+}
+
+body.darkTheme .ui.utmloading.segment {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border: 1px solid var(--divider_color) !important;
+}
+
+body.darkTheme .ui.utmloading.segment .ui.inverted.dimmer {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.utmloading.segment .ui.inverted.dimmer .ui.text.loader {
+    color: var(--text_color) !important;
+}
+
+
+/*
+    Network Tool overlay
+*/
+
+body.darkTheme .ui.celled.unstackable.table:not(.basic) th{
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme #networktool .ui.accordion .title {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme #networktool .ui.accordion .title .dropdown.icon {
+    color: var(--icon_color) !important;
+}
+
+body.darkTheme #networktool .ui.accordion .title .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu .item {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu .item:hover {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .menu .item.active.selected {
+    background-color: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.visible.dropdown > .text:not(.default) {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .default.text {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.selection.fluid.dropdown#mdnsWoL .dropdown.icon {
+    color: var(--text_color) !important;
+}
+
+/* 
+
+Tool overlay css override
+
+*/
+
+body.darkTheme .picker-wrap.popup .picker {
+    background: var(--theme_bg_primary) !important;
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .picker-wrap.popup .picker .picker-d-b {
+    background: var(--theme_bg) !important;
+}
+
+body.darkTheme .picker-wrap.popup .picker .picker-d-d.picker-d-td{
+    background: var(--theme_highlight) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .picker-p {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .picker-p .picker-b,
+body.darkTheme .picker-p .picker-n {
+    background-color: var(--theme_bg_primary) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .picker-p .picker-m,
+body.darkTheme .picker-p .picker-y {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+/* Statistics */
+
+body.darkTheme .statistic .value.totalViewCount {
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .statistic .label {
+    color: var(--text_color_secondary) !important;
+}
+
+/* Other Tables */
+
+body.darkTheme .ui.celled.compact.table {
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.celled.compact.table thead th {
+    background-color: var(--theme_bg_secondary) !important;
+    color: var(--text_color) !important;
+    border-color: var(--divider_color) !important;
+}
+
+body.darkTheme .ui.list .list > .item .header, .ui.list > .item .header,
+body.darkTheme .ui.list .list > .item .description, .ui.list > .item .description {
+    color: var(--text_color) !important;
+}

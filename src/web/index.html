@@ -16,22 +16,24 @@
         <script src="script/chart.js"></script>
         <script src="script/utils.js"></script>
         <link rel="stylesheet" href="main.css">
+        <link rel="stylesheet" href="darktheme.css">
     </head>
     <body>
+        <script src="script/darktheme.js"></script>
         <div class="menubar">
             <div class="item">
                 <img class="logo" src="img/logo.svg">
             </div>
 
             <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
-                <button class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
+                <button id="sidemenuBtn" class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
             </div>
             <div class="ui right floated buttons" style="padding-top: 2px; padding-right: 0.4em;">
                 <button class="ui basic white icon button" onclick="logout();"><i class="sign-out icon"></i></button>
             </div>
-            <!-- <div class="ui right floated buttons" style="padding-top: 2px;">
+            <div class="ui right floated buttons" style="padding-top: 2px; margin-right: 0.4em;">
                 <button id="themeColorButton" class="ui icon button" onclick="toggleTheme();"><i class="sun icon"></i></button>
-            </div> -->
+            </div>
         </div>
         <div class="wrapper">
             <div class="toolbar">
@@ -269,11 +271,18 @@
 
             function toggleTheme(){
                 if ($("body").hasClass("darkTheme")){
-                    $("body").removeClass("darkTheme")
-                    $("#themeColorButton").html(`<i class="ui moon icon"></i>`);
+                    setDarkTheme(false);
+                    //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
+                    if ($(".sideWrapper").is(":visible")){
+                        $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(false);
+                    }
                 }else{
-                    $("body").addClass("darkTheme");
-                    $("#themeColorButton").html(`<i class="ui sun icon"></i>`);
+                    setDarkTheme(true);
+                    //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
+                    if ($(".sideWrapper").is(":visible")){
+                        $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(true);
+                    }
+                    
                 }
             }
 

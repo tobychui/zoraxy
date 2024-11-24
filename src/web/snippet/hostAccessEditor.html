@@ -41,9 +41,28 @@
                 min-height: 300px;
                 overflow-y: auto;
             }
+
+            body.darkTheme #accessRuleList{
+                border: 1px solid rgb(50, 50, 50) !important;
+
+            }
+
+            body.darkTheme .ui.segment.accessRule {
+                border: 1px solid var(--theme_bg_secondary) !important;
+            }
+
+            body.darkTheme .ui.segment.accessRule:hover {
+                background-color: var(--theme_bg_secondary) !important;
+            }
+
+            body.darkTheme .ui.segment.accessRule.active {
+                background-color: var(--theme_bg_secondary) !important;
+            }
         </style>
     </head>
     <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
             <div class="ui header">

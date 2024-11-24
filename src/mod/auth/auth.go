@@ -210,8 +210,8 @@ func (a *AuthAgent) Logout(w http.ResponseWriter, r *http.Request) error {
 	}
 	session.Values["authenticated"] = false
 	session.Values["username"] = nil
-	session.Save(r, w)
-	return nil
+	session.Options.MaxAge = -1
+	return session.Save(r, w)
 }
 
 // Get the current session username from request
@@ -339,6 +339,7 @@ func (a *AuthAgent) CheckAuth(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
+
 	// Check if user is authenticated
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		return false

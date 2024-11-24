@@ -841,6 +841,25 @@
     function initBannedCountryList(){
         $.get("/api/blacklist/list?type=country&id=" + currentEditingAccessRule, function(data) {
             let bannedListHtml = '';
+
+            //Check if the country code list contains all eu countries. If yes, replace it with "EU"
+            let allEu = true;
+            let euCountries = getEUCCs();
+            for (var i = 0; i < euCountries.length; i++){
+                if (!data.includes(euCountries[i])){
+                    allEu = false;
+                    break;
+                }
+            }
+
+            if (allEu){
+                //Remove EU countries from the list and replace it with EU
+                data = data.filter(function(value, index, arr){
+                    return !euCountries.includes(value);
+                });
+                data.push("eu");
+            }
+
             data.forEach((countryCode) => {
                 bannedListHtml += `
                 <tr>
@@ -919,18 +938,48 @@
     //Whitelist country table
     function initWhitelistCountryList(){
         $.get("/api/whitelist/list?type=country&id=" + currentEditingAccessRule, function(data) {
-            let bannedListHtml = '';
+            let whiteListHTML = '';
+            
+            //Check if the country code list contains all eu countries. If yes, replace it with "EU"
+            let allEu = true;
+            let euCountries = getEUCCs();
+            let countryCodesIndata = data.map(function(item){
+                //data[n].CC is the country code 
+                return item.CC;
+            });
+            for (var i = 0; i < euCountries.length; i++){
+                if (!countryCodesIndata.includes(euCountries[i])){
+                    allEu = false;
+                    break;
+                }
+            }
+
+            if (allEu){
+                //Remove EU countries from the list and replace it with EU
+                data = data.filter(function(value, index, arr){
+                    return !euCountries.includes(value.CC);
+                });
+                data.push({
+                    CC: "eu"
+                });
+            }
+            
             data.forEach((countryWhitelistEntry) => {
                 let countryCode = countryWhitelistEntry.CC;
-                bannedListHtml += `
+                whiteListHTML += `
                 <tr>
                     <td><i class="${countryCode} flag"></i> ${getCountryName(countryCode)} (${countryCode.toUpperCase()})</td>
                     <td><button class="ui red basic mini icon button" onclick="removeFromWhiteList('${countryCode}')"><i class="trash icon"></i></button></td>
                 </tr>
                 `;
             });
-            $('#whitelistCountryList').html(bannedListHtml);
-            filterCountries(data, "#countrySelectorWhitelist .menu .item");
+            $('#whitelistCountryList').html(whiteListHTML);
+
+            //Map the data.CC to the country code
+            let countryCodes = data.map(function(item){
+                return item.CC;
+            });
+            filterCountries(countryCodes, "#countrySelectorWhitelist .menu .item");
             if (data.length === 0) {
                 $('#whitelistCountryList').append(`
                     <tr>
@@ -1016,6 +1065,10 @@
         });
     }
 
+    function getEUCCs(){
+        return ["at","be","bg","cy","cz","de","dk","ee","es","fi","fr","gr","hr","hu","ie","it","lt","lu","lv","mt","nl","pl","pt","se","si","sk"];
+    }
+
     function addCountryToBlacklist() {
         var countryCode = $("#countrySelector").dropdown("get value").toLowerCase();
         let ccs = [countryCode];
@@ -1025,48 +1078,50 @@
             ccs = countryCode.split(",");
         }
 
-        let counter = 0;
-        for(var i = 0; i < ccs.length; i++){
-            let thisCountryCode = ccs[i];
-            $.cjax({
-                type: "POST",
-                url: "/api/blacklist/country/add",
-                method: "POST",
-                data: { cc: thisCountryCode, id: currentEditingAccessRule},
-                success: function(response) {
-                    if (response.error != undefined){
-                        msgbox(response.error, false);
-                    }
-                    
-                    if (counter == (ccs.length - 1)){
-                        //Last item
-                        setTimeout(function(){
-                            initBannedCountryList();
-                            if (ccs.length == 1){
-                                //Single country
-                                msgbox(`Added ${getCountryName(ccs[0])} to blacklist`);
-                            }else{
-                                msgbox(ccs.length + " countries added to blacklist");
-                            }
-                            
-                        }, (ccs.length==1)?0:100);
-                    }
-                    counter++;
-                },
-                error: function(xhr, status, error) {
-                // handle error response
-                }
+        //If the ccs includes "eu", remove the "eu" and add all eu country code to the list
+        if (ccs.includes("eu")){
+            ccs = ccs.concat(getEUCCs());
+            ccs = ccs.filter(function(item){
+                return item != "eu";
             });
         }
-        
-        
+
+        let counter = ccs.length;
+        $.cjax({
+            type: "POST",
+            url: "/api/blacklist/country/add",
+            method: "POST",
+            data: { cc: ccs.join(","), id: currentEditingAccessRule},
+            success: function(response) {
+                if (response.error != undefined){
+                    msgbox(response.error, false);
+                }
+                initBannedCountryList();
+                if (ccs.length == 1){
+                    //Single country
+                    msgbox(`Added ${getCountryName(ccs[0])} to blacklist`);
+                }else{
+                    msgbox(ccs.length + " countries added to blacklist");
+                }
+            },
+            error: function(xhr, status, error) {
+            // handle error response
+            }
+        });
         $('#countrySelector').dropdown('clear');
-        
     }
 
     function removeFromBannedList(countryCode){
-        countryCode = countryCode.toLowerCase();
         let countryName = getCountryName(countryCode);
+        if (countryCode == "eu"){
+            let euCountries = getEUCCs();
+            countryCode = euCountries.join(",");
+            countryName = "European Union";
+        }else{
+            countryCode = countryCode.toLowerCase();
+        }
+        
+        
         $.cjax({
             url: "/api/blacklist/country/remove",
             method: "POST",
@@ -1162,44 +1217,53 @@
             //Usually just a few countries a for loop will get the job done
             ccs = countryCode.split(",");
         }
-    
-        let counter = 0;
-        for(var i = 0; i < ccs.length; i++){
-            let thisCountryCode = ccs[i];
-            $.cjax({
-                type: "POST",
-                url: "/api/whitelist/country/add",
-                data: { cc: thisCountryCode , id: currentEditingAccessRule},
-                success: function(response) {
-                    if (response.error != undefined){
-                        msgbox(response.error, false);
-                    }
 
-                    if (counter == (ccs.length - 1)){
-                        setTimeout(function(){
-                            initWhitelistCountryList();
-                            if (ccs.length == 1){
-                                //Single country
-                                msgbox(`Added ${getCountryName(ccs[0])} to whitelist`);
-                            }else{
-                                msgbox(ccs.length + " countries added to whitelist");
-                            }
-                        }, (ccs.length==1)?0:100);
-                    }
-                    counter++;
-                },
-                error: function(xhr, status, error) {
-                    // handle error response
-                }
+        //If the ccs includes "eu", remove the "eu" and add all eu country code to the list
+        if (ccs.includes("eu")){
+            ccs = ccs.filter(function(item){
+                return item != "eu";
             });
+            ccs = ccs.concat(getEUCCs());
         }
+
+        let counter = ccs.length;
+        $.cjax({
+            type: "POST",
+            url: "/api/whitelist/country/add",
+            data: { cc: ccs.join(",") , id: currentEditingAccessRule},
+            success: function(response) {
+                if (response.error != undefined){
+                    msgbox(response.error, false);
+                }
+
+                initWhitelistCountryList();
+                if (ccs.length == 1){
+                    //Single country
+                    msgbox(`Added ${getCountryName(ccs[0])} to whitelist`);
+                }else{
+                    msgbox(ccs.length + " countries added to whitelist");
+                }
+            },
+            error: function(xhr, status, error) {
+                // handle error response
+            }
+        });
+        
 
         $('#countrySelectorWhitelist').dropdown('clear');
     }
 
-    function removeFromWhiteList(countryCode){
-        if (confirm("Confirm removing " + getCountryName(countryCode) + " from whitelist?")){
+    //Remove from whitelist, accepts a country code or "eu" for all EU countries
+    function removeFromWhiteList(countryCode, skipConfirm = true){
+        let countryName = getCountryName(countryCode);
+        if (countryCode == "eu"){
+            let euCountries = getEUCCs();
+            countryCode = euCountries.join(",");
+            countryName = "European Union";
+        }else{
             countryCode = countryCode.toLowerCase(); 
+        }
+        if (skipConfirm || confirm("Confirm removing " + getCountryName(countryCode) + " from whitelist?")){
             $.cjax({
                 url: "/api/whitelist/country/remove",
                 method: "POST",
@@ -1208,6 +1272,7 @@
                     if (response.error != undefined){
                         msgbox(response.error, false);
                     }
+                    msgbox(countryName + " removed from whitelist");
                     initWhitelistCountryList();
                 },
                 error: function(xhr, status, error) {
@@ -1276,19 +1341,27 @@
     /*
         Common Utilities
     */
-    function filterCountries(codesToShow, selector="#countrySelector .menu .item") {
+    function filterCountries(alreadySelectedCCs, selector="#countrySelector .menu .item") {
         // get all items in the dropdown
         const items = document.querySelectorAll(selector);
+        const euCountries = getEUCCs();
+        //Replce "eu" in alreadySelectedCCs with all EU countries
+        if (alreadySelectedCCs.includes("eu")){
+            alreadySelectedCCs = alreadySelectedCCs.filter(function(item){
+                return item != "eu";
+            });
+            alreadySelectedCCs = alreadySelectedCCs.concat(euCountries);
+        }
+        
         // loop through all items
         items.forEach(item => {
             // get the value of the item (i.e. the country code)
             const code = item.dataset.value;
-            // if the code is in the array of codes to show, show the item
-            if (codesToShow.includes(code)) {
+            if (alreadySelectedCCs.includes(code)) {
+                //This country code already selected. Hide it
                 item.style.display = 'none';
-            }
-            // otherwise, hide the item
-            else {
+            } else {
+                // otherwise, show the item
                 item.style.display = 'block';
             }
         });

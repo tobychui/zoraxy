@@ -44,6 +44,7 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 	store, err := geodb.NewGeoDb(nil, &geodb.StoreOptions{
 		false,
 		true,
+		0,
 	})
 	if err != nil {
 		t.Errorf("error creating store: %v", err)

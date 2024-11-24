@@ -27,7 +27,7 @@ func FSHandler(handler http.Handler) http.Handler {
 			Development Mode Override
 			=> Web root is located in /
 		*/
-		if development && strings.HasPrefix(r.URL.Path, "/web/") {
+		if DEVELOPMENT_BUILD && strings.HasPrefix(r.URL.Path, "/web/") {
 			u, _ := url.Parse(strings.TrimPrefix(r.URL.Path, "/web"))
 			r.URL = u
 		}
@@ -36,7 +36,7 @@ func FSHandler(handler http.Handler) http.Handler {
 			Production Mode Override
 			=> Web root is located in /web
 		*/
-		if !development && r.URL.Path == "/" {
+		if !DEVELOPMENT_BUILD && r.URL.Path == "/" {
 			//Redirect to web UI
 			http.Redirect(w, r, "/web/", http.StatusTemporaryRedirect)
 			return
@@ -93,7 +93,7 @@ func FSHandler(handler http.Handler) http.Handler {
 
 // Production path fix wrapper. Fix the path on production or development environment
 func ppf(relativeFilepath string) string {
-	if !development {
+	if !DEVELOPMENT_BUILD {
 		return strings.ReplaceAll(filepath.Join("/web/", relativeFilepath), "\\", "/")
 	}
 	return relativeFilepath
@@ -111,7 +111,7 @@ func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath s
 	if len(relativeFilepath) > 0 && relativeFilepath[len(relativeFilepath)-1:] == "/" {
 		relativeFilepath = relativeFilepath + "index.html"
 	}
-	if development {
+	if DEVELOPMENT_BUILD {
 		//Load from disk
 		targetFilePath := strings.ReplaceAll(filepath.Join("web/", relativeFilepath), "\\", "/")
 		content, err = os.ReadFile(targetFilePath)

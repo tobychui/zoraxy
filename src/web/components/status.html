@@ -73,28 +73,30 @@
     <p>Inbound Port (Reverse Proxy Listening Port)</p>
     <div class="ui action fluid notloopbackOnly input" tourstep="incomingPort">
         <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
-        <input type="text" id="incomingPort" placeholder="Incoming Port" value="80">
+        <input type="text" id="incomingPort" placeholder="Incoming Port" value="443">
         <button class="ui green notloopbackOnly button" style="background: linear-gradient(60deg, #27e7ff, #00ca52);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
     </div>
     <br>
     <div id="tls" class="ui toggle notloopbackOnly checkbox">
         <input type="checkbox">
-        <label>Use TLS to serve proxy request</label>
+        <label>Use TLS to serve proxy request<br>
+        <small>Also known as HTTPS mode</small></label>
     </div>
     <br>
-    <div id="listenP80" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;" >
+    <div id="listenP80" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;" >
         <input type="checkbox">
         <label>Enable HTTP server on port 80<br>
-        <small>(Only apply when TLS enabled and not using port 80)</small></label>
+        <small>Accept HTTP requests even if you are using HTTPS mode</small></label>
     </div>
     <br>
     <div tourstep="forceHttpsRedirect" style="display: inline-block;">
-        <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em; padding-left: 2em;">
+        <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;">
             <input type="checkbox">
-            <label>Force redirect HTTP request to HTTPS</label>
+            <label>Force redirect HTTP request to HTTPS<br>
+            <small>Redirect web traffic from port 80 to 443, require enabling HTTP server on port 80</small></label>
         </div>
     </div>
-    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+    <div class="ui basic segment advanceoptions">
         <div class="ui accordion advanceSettings">
             <div class="title">
               <i class="dropdown icon"></i>
@@ -359,10 +361,10 @@
                     return;
                 }
                 if (enabled){
-                    $("#redirect").show();
+                    //$("#redirect").show();
                     msgbox("Port 80 listener enabled");
                 }else{
-                    $("#redirect").hide();
+                    //$("#redirect").hide();
                     msgbox("Port 80 listener disabled");
                 }
             }
@@ -400,10 +402,10 @@
         $.get("/api/proxy/listenPort80", function(data){
             if (data){
                 $("#listenP80").checkbox("set checked");
-                $("#redirect").show();
+                //$("#redirect").show();
             }else{
                 $("#listenP80").checkbox("set unchecked");
-                $("#redirect").hide();
+                //$("#redirect").hide();
             }
 
             $("#listenP80").find("input").on("change", function(){
@@ -579,7 +581,7 @@
     let timestamps = [];
 
     for(var i = 0; i < dataCount; i++){
-        timestamps.push(parseInt(Date.now() / 1000) + i);
+        timestamps.push(new Date(Date.now() + i * 1000).toLocaleString().replace(',', ''));
     }
 
     function fetchData() {
@@ -600,10 +602,8 @@
                     txValues.shift();
                 }
                 
-               
-                timestamps.push(parseInt(Date.now() / 1000));
+                timestamps.push(new Date(Date.now()).toLocaleString().replace(',', ''));
                 timestamps.shift();
-
                 updateChart();
             }
         })

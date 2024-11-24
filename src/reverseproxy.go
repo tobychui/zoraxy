@@ -27,18 +27,18 @@ func ReverseProxtInit() {
 	/*
 		Load Reverse Proxy Global Settings
 	*/
-	inboundPort := 80
+	inboundPort := 443
 	if sysdb.KeyExists("settings", "inbound") {
 		sysdb.Read("settings", "inbound", &inboundPort)
 		SystemWideLogger.Println("Serving inbound port ", inboundPort)
 	} else {
-		SystemWideLogger.Println("Inbound port not set. Using default (80)")
+		SystemWideLogger.Println("Inbound port not set. Using default (443)")
 	}
 
-	useTls := false
+	useTls := true
 	sysdb.Read("settings", "usetls", &useTls)
 	if useTls {
-		SystemWideLogger.Println("TLS mode enabled. Serving proxxy request with TLS")
+		SystemWideLogger.Println("TLS mode enabled. Serving proxy request with TLS")
 	} else {
 		SystemWideLogger.Println("TLS mode disabled. Serving proxy request with plain http")
 	}
@@ -59,7 +59,7 @@ func ReverseProxtInit() {
 		SystemWideLogger.Println("Development mode disabled. Proxying with default Cache Control policy")
 	}
 
-	listenOnPort80 := false
+	listenOnPort80 := true
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if listenOnPort80 {
 		SystemWideLogger.Println("Port 80 listener enabled")
@@ -67,7 +67,7 @@ func ReverseProxtInit() {
 		SystemWideLogger.Println("Port 80 listener disabled")
 	}
 
-	forceHttpsRedirect := false
+	forceHttpsRedirect := true
 	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
 	if forceHttpsRedirect {
 		SystemWideLogger.Println("Force HTTPS mode enabled")
@@ -85,7 +85,7 @@ func ReverseProxtInit() {
 
 	dprouter, err := dynamicproxy.NewDynamicProxy(dynamicproxy.RouterOption{
 		HostUUID:           nodeUUID,
-		HostVersion:        version,
+		HostVersion:        SYSTEM_VERSION,
 		Port:               inboundPort,
 		UseTls:             useTls,
 		ForceTLSLatest:     forceLatestTLSVersion,
@@ -1085,6 +1085,7 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 	if dynamicProxyRouter.Running {
 		dynamicProxyRouter.StopProxyService()
 		dynamicProxyRouter.Option.Port = newIncomingPortInt
+		time.Sleep(1 * time.Second) //Fixed start fail issue
 		dynamicProxyRouter.StartProxyService()
 	} else {
 		//Only change setting but not starting the proxy service
@@ -1173,7 +1174,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Create a Custom Header Defination type
+	//Create a Custom Header Definition type
 	var rewriteDirection rewrite.HeaderDirection
 	if direction == "toOrigin" {
 		rewriteDirection = rewrite.HeaderDirection_ZoraxyToUpstream
