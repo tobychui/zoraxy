@@ -23,7 +23,6 @@ docker run -d \
   -p 443:443 \
   -p 8000:8000 \
   -v /path/to/zoraxy/config/:/opt/zoraxy/config/ \
-  -v /path/to/zerotier/config/:/var/lib/zerotier-one/ \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /etc/localtime:/etc/localtime \
   -e FASTGEOIP="true" \
@@ -45,7 +44,6 @@ services:
       - 8000:8000
     volumes:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
-      - /path/to/zerotier/config/:/var/lib/zerotier-one/
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime
     environment:
@@ -66,7 +64,6 @@ services:
 | Volume | Details |
 |:-|:-|
 | `/opt/zoraxy/config/` | Zoraxy configuration. |
-| `/var/lib/zerotier-one/` | ZeroTier configuration. Only required if you wish to use ZeroTier. |
 | `/var/run/docker.sock` | Docker socket. Used for additional functionality with Zoraxy. |
 | `/etc/localtime` | Localtime. Set to ensure the host and container are synchronized. |
 
