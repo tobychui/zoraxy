@@ -191,14 +191,19 @@
         var targetDomain = $("#virtualDirectoryDomain").val().trim();
         if (targetDomain != ""){
             $.cjax({
-                url: "/api/proxy/tlscheck",
+                url: "/api/proxy/tlscheck?selfsignchk=true",
                 data: {url: targetDomain},
                 success: function(data){
                     if (data.error != undefined){
 
-                    }else if (data == "https"){
+                    }else if (data.protocol == "https"){
                         $("#vdReqTls").parent().checkbox("set checked");
-                    }else if (data == "http"){
+                        if (data.selfsign){
+                            $("#vdSkipTLSValidation").parent().checkbox("set checked");
+                        }else{
+                            $("#vdSkipTLSValidation").parent().checkbox("set unchecked");
+                        }
+                    }else if (data.protocol == "http"){
                         $("#vdReqTls").parent().checkbox("set unchecked");
                     }
                 }

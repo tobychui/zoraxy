@@ -56,6 +56,12 @@ func (s *Store) slowSearchIpv4(ipAddr string) string {
 	if isReservedIP(ipAddr) {
 		return ""
 	}
+
+	//Check if already in cache
+	if cc, ok := s.slowLookupCacheIpv4[ipAddr]; ok {
+		return cc
+	}
+
 	for _, ipRange := range s.geodb {
 		startIp := ipRange[0]
 		endIp := ipRange[1]
@@ -63,6 +69,8 @@ func (s *Store) slowSearchIpv4(ipAddr string) string {
 
 		inRange, _ := isIPv4InRange(startIp, endIp, ipAddr)
 		if inRange {
+			//Add to cache
+			s.slowLookupCacheIpv4[ipAddr] = cc
 			return cc
 		}
 	}
@@ -73,6 +81,12 @@ func (s *Store) slowSearchIpv6(ipAddr string) string {
 	if isReservedIP(ipAddr) {
 		return ""
 	}
+
+	//Check if already in cache
+	if cc, ok := s.slowLookupCacheIpv6[ipAddr]; ok {
+		return cc
+	}
+
 	for _, ipRange := range s.geodbIpv6 {
 		startIp := ipRange[0]
 		endIp := ipRange[1]
@@ -80,6 +94,8 @@ func (s *Store) slowSearchIpv6(ipAddr string) string {
 
 		inRange, _ := isIPv6InRange(startIp, endIp, ipAddr)
 		if inRange {
+			//Add to cache
+			s.slowLookupCacheIpv6[ipAddr] = cc
 			return cc
 		}
 	}

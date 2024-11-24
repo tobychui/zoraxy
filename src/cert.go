@@ -177,7 +177,10 @@ func handleListDomains(w http.ResponseWriter, r *http.Request) {
 
 // Handle front-end toggling TLS mode
 func handleToggleTLSProxy(w http.ResponseWriter, r *http.Request) {
-	currentTlsSetting := false
+	currentTlsSetting := true //Default to true
+	if dynamicProxyRouter.Option != nil {
+		currentTlsSetting = dynamicProxyRouter.Option.UseTls
+	}
 	if sysdb.KeyExists("settings", "usetls") {
 		sysdb.Read("settings", "usetls", &currentTlsSetting)
 	}

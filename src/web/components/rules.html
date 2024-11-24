@@ -295,15 +295,25 @@
     //Automatic check if the site require TLS and check the checkbox if needed
     function autoCheckTls(targetDomain){
        $.cjax({
-            url: "/api/proxy/tlscheck",
+            url: "/api/proxy/tlscheck?selfsignchk=true",
             data: {url: targetDomain},
             success: function(data){
                 if (data.error != undefined){
                     msgbox(data.error, false);
-                }else if (data == "https"){
-                    $("#reqTls").parent().checkbox("set checked");
-                }else if (data == "http"){
-                    $("#reqTls").parent().checkbox("set unchecked");
+                }else{
+                    //Check if the site require TLS
+                    if (data.protocol == "https"){
+                        $("#reqTls").parent().checkbox("set checked");
+                    }else if (data.protocol == "http"){
+                        $("#reqTls").parent().checkbox("set unchecked");
+                    }
+                    //Check if the site is using self-signed cert
+                    if (data.selfsign){
+                        $("#skipTLSValidation").parent().checkbox("set checked");
+                    }else{
+                        $("#skipTLSValidation").parent().checkbox("set unchecked");
+                    }
+                    
                 }
             }
        })

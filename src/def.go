@@ -43,7 +43,7 @@ const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
 	SYSTEM_VERSION    = "3.1.4"
-	DEVELOPMENT_BUILD = true /* Development: Set to false to use embedded web fs */
+	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
 	DATABASE_PATH              = "sys.db"
@@ -55,6 +55,7 @@ const (
 	MDNS_IDENTIFY_VENDOR       = "imuslab.com"
 	MDNS_SCAN_TIMEOUT          = 30 /* Seconds */
 	MDNS_SCAN_UPDATE_INTERVAL  = 15 /* Minutes */
+	GEODB_CACHE_CLEAR_INTERVAL = 15 /* Minutes */
 	ACME_AUTORENEW_CONFIG_PATH = "./conf/acme_conf.json"
 	CSRF_COOKIENAME            = "zoraxy_csrf"
 	LOG_PREFIX                 = "zr"
@@ -71,27 +72,29 @@ const (
 )
 
 /* System Startup Flags */
-var webUIPort = flag.String("port", ":8000", "Management web interface listening port")
-var noauth = flag.Bool("noauth", false, "Disable authentication for management interface")
-var showver = flag.Bool("version", false, "Show version of this server")
-var allowSshLoopback = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
-var allowMdnsScanning = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
-var mdnsName = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
-var ztAuthToken = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
-var ztAPIPort = flag.Int("ztport", 9993, "ZeroTier controller API port")
-var runningInDocker = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
-var acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
-var acmeCertAutoRenewDays = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
-var enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
-var staticWebServerRoot = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
-var allowWebFileManager = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
-var enableAutoUpdate = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+var (
+	webUIPort                  = flag.String("port", ":8000", "Management web interface listening port")
+	noauth                     = flag.Bool("noauth", false, "Disable authentication for management interface")
+	showver                    = flag.Bool("version", false, "Show version of this server")
+	allowSshLoopback           = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
+	allowMdnsScanning          = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
+	mdnsName                   = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
+	ztAuthToken                = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
+	ztAPIPort                  = flag.Int("ztport", 9993, "ZeroTier controller API port")
+	runningInDocker            = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
+	acmeAutoRenewInterval      = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+	acmeCertAutoRenewDays      = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
+	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
+	staticWebServerRoot        = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
+	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
+	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+)
 
 /* Global Variables and Handlers */
 var (
-	nodeUUID    = "generic" //System uuid, in uuidv4 format, load from database on startup
+	nodeUUID    = "generic" //System uuid in uuidv4 format, load from database on startup
 	bootTime    = time.Now().Unix()
-	requireAuth = true /* Require authentication for webmin panel */
+	requireAuth = true //Require authentication for webmin panel, override from flag
 
 	/*
 		Binary Embedding File System
@@ -131,5 +134,5 @@ var (
 	AnalyticLoader    *analytic.DataLoader  //Data loader for Zoraxy Analytic
 	DockerUXOptimizer *dockerux.UXOptimizer //Docker user experience optimizer, community contribution only
 	SystemWideLogger  *logger.Logger        //Logger for Zoraxy
-	LogViewer         *logviewer.Viewer
+	LogViewer         *logviewer.Viewer     //Log viewer HTTP handlers
 )

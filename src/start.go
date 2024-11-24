@@ -103,8 +103,9 @@ func startupSequence() {
 
 	//Create a geodb store
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
-		AllowSlowIpv4LookUp: !*enableHighSpeedGeoIPLookup,
-		AllowSloeIpv6Lookup: !*enableHighSpeedGeoIPLookup,
+		AllowSlowIpv4LookUp:          !*enableHighSpeedGeoIPLookup,
+		AllowSlowIpv6Lookup:          !*enableHighSpeedGeoIPLookup,
+		SlowLookupCacheClearInterval: GEODB_CACHE_CLEAR_INTERVAL * time.Minute,
 	})
 	if err != nil {
 		panic(err)
