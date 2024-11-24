@@ -46,6 +46,7 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+
 /* SIGTERM handler, do shutdown sequences before closing */
 func SetupCloseHandler() {
 	c := make(chan os.Signal, 2)
