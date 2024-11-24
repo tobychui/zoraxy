@@ -1,3 +1,20 @@
+# v3.1.4 24 Nov 2024
+
++ **Added Dark Theme Mode** [#390](https://github.com/tobychui/zoraxy/issues/390) [#82](https://github.com/tobychui/zoraxy/issues/82)
++ Added an auto sniffer for self-signed certificates
++ Added robots.txt to the project
++ Introduced an EU wrapper in the front-end for automatic registration of 26 countries [#378](https://github.com/tobychui/zoraxy/issues/378)
++ Moved all hard-coded values to a dedicated def.go file
++ Fixed a panic issue occurring on unsupported platform exits
++ Integrated fixes for SSH proxy and Docker snippet updates [#330](https://github.com/tobychui/zoraxy/issues/330) [#348](https://github.com/tobychui/zoraxy/issues/348)
++ **Changed the default listening port to 443 and enable TLS by default**
++ Optimized GeoIP database slow-search mode CPU usage
+
+
+# v3.1.3 12 Nov 2024
+
++ Fixed a critical security bug [CVE-2024-52010](https://github.com/advisories/GHSA-7hpf-g48v-hw3j)
+
 # v3.1.2 03 Nov 2024
 
 + Added auto start port 80 listener on acme certificate generator
