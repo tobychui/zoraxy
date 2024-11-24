@@ -8,21 +8,29 @@
     <script src="../script/semantic/semantic.min.js"></script>
   </head>
   <body>
-    <link rel="stylesheet" href="../darktheme.css">
-    <script src="../script/darktheme.js"></script>
     <br />
     <div class="ui container">
-      <div class="field">
-        <div class="ui checkbox">
-          <input type="checkbox" id="showUnexposed" class="hidden" />
-          <label for="showUnexposed"
-            >Show Containers with Unexposed Ports
-            <br />
-            <small
-              >Please make sure Zoraxy and the target container share a
-              network</small
-            >
-          </label>
+      <div class="ui form">
+        <div class="field">
+          <input
+            id="searchbar"
+            type="text"
+            placeholder="Search..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" id="showUnexposed" class="hidden" />
+            <label for="showUnexposed"
+              >Show Containers with unexposed ports
+              <br />
+              <small
+                >Please make sure Zoraxy and the target container share a
+                network</small
+              >
+            </label>
+          </div>
         </div>
       </div>
       <div class="ui header">
@@ -48,131 +56,185 @@
     </div>
 
     <script>
-      let lines = {};
-      let linesAdded = {};
+      // debounce function to prevent excessive calls to a function
+      function debounce(func, delay) {
+        let timeout;
+        return (...args) => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func(...args), delay);
+        };
+      }
 
-      document
-        .getElementById("showUnexposed")
-        .addEventListener("change", () => {
-          console.log("showUnexposed", $("#showUnexposed").is(":checked"));
-          $("#containersList").html('<div class="ui loader active"></div>');
+      // wait until DOM is fully loaded before executing script
+      $(document).ready(() => {
+        const $containersList = $("#containersList");
+        const $containersAddedList = $("#containersAddedList");
+        const $containersAddedListHeader = $("#containersAddedListHeader");
+        const $searchbar = $("#searchbar");
+        const $showUnexposed = $("#showUnexposed");
 
-          $("#containersAddedList").empty();
-          $("#containersAddedListHeader").attr("hidden", true);
+        let lines = {};
+        let linesAdded = {};
+
+        // load showUnexposed checkbox state from local storage
+        function loadShowUnexposedState() {
+          const storedState = localStorage.getItem("showUnexposed");
+          if (storedState !== null) {
+            $showUnexposed.prop("checked", storedState === "true");
+          }
+        }
+
+        // save showUnexposed checkbox state to local storage
+        function saveShowUnexposedState() {
+          localStorage.setItem("showUnexposed", $showUnexposed.prop("checked"));
+        }
+
+        // fetch docker containers
+        function getDockerContainers() {
+          $containersList.html('<div class="ui loader active"></div>');
+          $containersAddedList.empty();
+          $containersAddedListHeader.attr("hidden", true);
 
           lines = {};
           linesAdded = {};
 
+          const hostRequest = $.get("/api/proxy/list?type=host");
+          const dockerRequest = $.get("/api/docker/containers");
+
+          Promise.all([hostRequest, dockerRequest])
+            .then(([hostData, dockerData]) => {
+              if (!hostData.error && !dockerData.error) {
+                processDockerData(hostData, dockerData);
+              } else {
+                showError(hostData.error || dockerData.error);
+              }
+            })
+            .catch((error) => {
+              console.error(error);
+              parent.msgbox("Error loading data: " + error.message, false);
+            });
+        }
+
+        // process docker data and update ui
+        function processDockerData(hostData, dockerData) {
+          const { containers } = dockerData;
+          const existingTargets = new Set(
+            hostData.flatMap(({ ActiveOrigins }) =>
+              ActiveOrigins.map(({ OriginIpOrDomain }) => OriginIpOrDomain)
+            )
+          );
+
+          containers.forEach((container) => {
+            const name = container.Names[0].replace(/^\//, "");
+            container.Ports.forEach((portObject) => {
+              let port = portObject.PublicPort || portObject.PrivatePort;
+              if (!portObject.PublicPort && !$showUnexposed.is(":checked"))
+                return;
+
+              // if port is not exposed, use container's name and let docker handle the routing
+              // BUT this will only work if the container is on the same network as Zoraxy
+              const targetAddress = portObject.IP || name;
+              const key = `${name}-${port}`;
+
+              if (
+                existingTargets.has(`${targetAddress}:${port}`) &&
+                !linesAdded[key]
+              ) {
+                linesAdded[key] = { name, ip: targetAddress, port };
+              } else if (!lines[key]) {
+                lines[key] = { name, ip: targetAddress, port };
+              }
+            });
+          });
+
+          // update ui
+          updateContainersList();
+          updateAddedContainersList();
+        }
+
+        // update containers list
+        function updateContainersList() {
+          $containersList.empty();
+          Object.entries(lines).forEach(([key, line]) => {
+            $containersList.append(`
+              <div class="item">
+                <div class="right floated content">
+                  <div class="ui button add-button" data-key="${key}">Add</div>
+                </div>
+                <div class="content">
+                  <div class="header">${line.name}</div>
+                  <div class="description">${line.ip}:${line.port}</div>
+                </div>
+              </div>
+            `);
+          });
+          $containersList.find(".loader").removeClass("active");
+        }
+
+        // update the added containers list
+        function updateAddedContainersList() {
+          Object.entries(linesAdded).forEach(([key, line]) => {
+            $containersAddedList.append(`
+              <div class="item">
+                <div class="content">
+                  <div class="header">${line.name}</div>
+                  <div class="description">${line.ip}:${line.port}</div>
+                </div>
+              </div>
+            `);
+          });
+          if (Object.keys(linesAdded).length) {
+            $containersAddedListHeader.removeAttr("hidden");
+          }
+        }
+
+        // show error message
+        function showError(error) {
+          $containersList.html(
+            `<div class="ui basic segment"><i class="ui red times icon"></i> ${error}</div>`
+          );
+          parent.msgbox(`Error loading data: ${error}`, false);
+        }
+
+        //
+        // event listeners
+        //
+
+        $showUnexposed.on("change", () => {
+          saveShowUnexposedState(); // save the new state to local storage
           getDockerContainers();
         });
 
-      function getDockerContainers() {
-        const hostRequest = $.get("/api/proxy/list?type=host");
-        const dockerRequest = $.get("/api/docker/containers");
+        $searchbar.on(
+          "input",
+          debounce(() => {
+            // debounce searchbar input with 300ms delay, then filter list
+            // this prevents excessive calls to the filter function
+            const search = $searchbar.val().toLowerCase();
+            $("#containersList .item").each((index, item) => {
+              const content = $(item).text().toLowerCase();
+              $(item).toggle(content.includes(search));
+            });
+          }, 300)
+        );
 
-        Promise.all([hostRequest, dockerRequest])
-          .then(([hostData, dockerData]) => {
-            if (!dockerData.error && !hostData.error) {
-              const { containers, network } = dockerData;
+        $containersList.on("click", ".add-button", (event) => {
+          const key = $(event.currentTarget).data("key");
+          if (lines[key]) {
+            parent.addContainerItem(lines[key]);
+          }
+        });
 
-              const existingTargets = new Set(
-                hostData.flatMap(({ ActiveOrigins }) =>
-                  ActiveOrigins.map(({ OriginIpOrDomain }) => OriginIpOrDomain)
-                )
-              );
+        //
+        // initial calls
+        //
 
-              for (const container of containers) {
-                const Ports = container.Ports;
-                const name = container.Names[0].replace(/^\//, "");
+        // load state of showUnexposed checkbox
+        loadShowUnexposedState();
 
-                for (const portObject of Ports) {
-                  let port = portObject.PublicPort;
-                  if (!port) {
-                    if (!$("#showUnexposed").is(":checked")) {
-                      continue;
-                    }
-                    port = portObject.PrivatePort;
-                  }
-                  const key = `${name}-${port}`;
-
-                  // if port is not exposed, use container's name and let docker handle the routing
-                  // BUT this will only work if the container is on the same network as Zoraxy
-                  const targetAddress = portObject.IP || name;
-
-                  if (
-                    existingTargets.has(`${targetAddress}:${port}`) &&
-                    !linesAdded[key]
-                  ) {
-                    linesAdded[key] = {
-                      name,
-                      ip: targetAddress,
-                      port,
-                    };
-                  } else if (!lines[key]) {
-                    lines[key] = {
-                      name,
-                      ip: targetAddress,
-                      port,
-                    };
-                  }
-                }
-              }
-
-              for (const [key, line] of Object.entries(lines)) {
-                $("#containersList").append(
-                  `<div class="item">
-                        <div class="right floated content">
-                          <div class="ui button" onclick="addContainerItem('${key}');">Add</div>
-                        </div>
-                        <div class="content">
-                          <div class="header">${line.name}</div>
-                          <div class="description">
-                            ${line.ip}:${line.port}
-                          </div>
-                        </div>`
-                );
-              }
-
-              for (const [key, line] of Object.entries(linesAdded)) {
-                $("#containersAddedList").append(
-                  `<div class="item">
-                        <div class="content">
-                          <div class="header">${line.name}</div>
-                          <div class="description">
-                            ${line.ip}:${line.port}
-                          </div>
-                        </div>`
-                );
-              }
-
-              Object.entries(linesAdded).length &&
-                $("#containersAddedListHeader").removeAttr("hidden");
-              $("#containersList .loader").removeClass("active");
-            } else {
-              parent.msgbox(
-                `Error loading data: ${dockerData.error || hostData.error}`,
-                false
-              );
-              $("#containersList").html(
-                `<div class="ui basic segment"><i class="ui red times icon"></i> ${
-                  dockerData.error || hostData.error
-                }</div>`
-              );
-            }
-          })
-          .catch((error) => {
-            console.log(error.responseText);
-            parent.msgbox("Error loading data: " + error.message, false);
-          });
-      }
-
-      getDockerContainers();
-
-      function addContainerItem(item) {
-        if (lines[item]) {
-          parent.addContainerItem(lines[item]);
-        }
-      }
+        // initial load of docker containers
+        getDockerContainers();
+      });
     </script>
   </body>
 </html>
