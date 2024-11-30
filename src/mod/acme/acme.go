@@ -116,6 +116,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	config := lego.NewConfig(&adminUser)
 
 	// skip TLS verify if need
+	// Ref: https://github.com/go-acme/lego/blob/6af2c756ac73a9cb401621afca722d0f4112b1b8/lego/client_config.go#L74
 	if skipTLS {
 		a.Logf("Ignoring TLS/SSL Verification Error for ACME Server", nil)
 		config.HTTPClient.Transport = &http.Transport{
@@ -151,6 +152,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			config.CADirURL = caLinkOverwrite
 			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
 		} else {
+			// (caName == "" || caUrl == "") will use default acme
 			config.CADirURL = a.DefaultAcmeServer
 			a.Logf("Using Default ACME "+a.DefaultAcmeServer+" for CA Directory URL", nil)
 		}
@@ -168,11 +170,11 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	if useDNS {
 		if !a.Database.TableExists("acme") {
 			a.Database.NewTable("acme")
-			return false, errors.New("DNS Provider and DNS Credential configuration required for ACME Provider (Error -1)")
+			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -1)")
 		}
 
 		if !a.Database.KeyExists("acme", certificateName+"_dns_provider") || !a.Database.KeyExists("acme", certificateName+"_dns_credentials") {
-			return false, errors.New("DNS Provider and DNS Credential configuration required for ACME Provider (Error -2)")
+			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -2)")
 		}
 
 		var dnsCredentials string
@@ -218,9 +220,19 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// New users will need to register
+	/*
+		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if err != nil {
+			log.Println(err)
+			return false, err
+		}
+	*/
 	var reg *registration.Resource
+	// New users will need to register
 	if client.GetExternalAccountRequired() {
 		a.Logf("External Account Required for this ACME Provider", nil)
+		// IF KID and HmacEncoded is overidden
+
 		if !a.Database.TableExists("acme") {
 			a.Database.NewTable("acme")
 			return false, errors.New("kid and HmacEncoded configuration required for ACME Provider (Error -1)")
@@ -256,6 +268,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			a.Logf("Register with external account binder failed", err)
 			return false, err
 		}
+		//return false, errors.New("External Account Required for this ACME Provider.")
 	} else {
 		reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 		if err != nil {
@@ -296,7 +309,6 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		SkipTLS:     skipTLS,
 		UseDNS:      useDNS,
 		PropTimeout: propagationTimeout,
-		DNSServers:  dnsServers,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -478,6 +490,12 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
+	//Clean spaces in front or behind each domain
+	cleanedDomains := []string{}
+	for _, domain := range domains {
+		cleanedDomains = append(cleanedDomains, strings.TrimSpace(domain))
+	}
+
 	// Extract DNS servers from the request
 	var dnsServers []string
 	dnsServersPara, err := utils.PostPara(r, "dnsServers")
@@ -486,12 +504,6 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		for i := range dnsServers {
 			dnsServers[i] = strings.TrimSpace(dnsServers[i])
 		}
-	}
-
-	//Clean spaces in front or behind each domain
-	cleanedDomains := []string{}
-	for _, domain := range domains {
-		cleanedDomains = append(cleanedDomains, strings.TrimSpace(domain))
 	}
 
 	// Convert DNS servers slice to a single string

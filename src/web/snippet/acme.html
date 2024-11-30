@@ -25,6 +25,8 @@
       </style>
   </head>
   <body>
+    <link rel="stylesheet" href="../darktheme.css">
+    <script src="../script/darktheme.js"></script>
   <br>
   <div class="ui container">
     <div class="ui header">
@@ -50,7 +52,7 @@
       </div>
       <small>If you don't want to share your private email address, you can also fill in an email address that point to a mailbox not exists on your domain.</small>
     </div>
-    <div class="ui basic segment" style="background-color: #f7f7f7; border-radius: 1em;">
+    <div class="ui basic segment advanceoptions">
       <div class="ui accordion advanceSettings">
           <div class="title">
             <i class="dropdown icon"></i>
@@ -135,13 +137,6 @@
           <!-- Auto populate moved to acmedns module and initDNSProviderList() -->
         </div>
       </div>
-      <div class="ui form">
-        <div class="field">
-          <label>Domain Name Server (optional)</label>
-          <input id="dnsInput" type="text" placeholder="ns.example.com" onkeyup="handlePostInputAutomation();">
-          <small>If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com)
-          </small>
-        </div>
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <div class="ui divider"></div>
@@ -165,6 +160,11 @@
           These credentials will be stored as plaintext in the database and in environment variables!
         </div>
       -->
+    </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <label>Domain Name Server (optional)</label>
+      <input id="dnsInput" type="text" placeholder="ns.example.com">
+      <small>If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com)</small>
     </div>
     <div class="field" id="caInput" style="display:none;">
       <label>ACME Server URL</label>
@@ -444,11 +444,15 @@
         let optionalFieldsHTML = "";
         for (const [key, datatype] of Object.entries(data)) {
           if (datatype == "int"){
-            $("#dnsProviderAPIFields").append(`<div class="ui fluid labeled dnsConfigField input" key="${key}" style="margin-top: 0.2em;">
+            let defaultValue = 10;
+            if (key == "HTTPTimeout"){
+              defaultValue = 300;
+            }
+            $("#dnsProviderAPIFields").append(`<div class="ui fluid labeled dnsConfigField input typeint" key="${key}" style="margin-top: 0.2em;">
               <div class="ui basic blue label" style="font-weight: 300;">
                 ${key}
               </div>
-              <input type="number" value="300">
+              <input type="number" value="${defaultValue}">
             </div>`);
           }else if (datatype == "bool"){
              booleanFieldsHTML += (`<div class="ui checkbox dnsConfigField" key="${key}" style="margin-top: 1em !important; padding-left: 0.4em;">
@@ -607,8 +611,12 @@
           //Boolean option
           let checked = $(this).find("input")[0].checked;
           dnsCredentials[thisKey] = checked;
+        }else if ($(this).hasClass("typeint")){
+          //Int options
+          let value = $(this).find("input").val();
+          dnsCredentials[thisKey] = parseInt(value);
         }else{
-          //String or int options
+          //String options
           let value = $(this).find("input").val().trim();
           dnsCredentials[thisKey] = value;
         }
@@ -732,7 +740,7 @@
 
       var dns = $("#useDnsChallenge")[0].checked;
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
-      var dnsServers = $("#dnsInput").val(); // New line: Read DNS servers from input field
+      var dnsServers = $("#dnsInput").val(); // Erfassen der DNS-Server
 
       $.ajax({
         url: "/api/acme/obtainCert",
@@ -745,7 +753,7 @@
           caURL: caURL,
           skipTLS: skipTLSValue,
           dns: dns,
-          dnsServers: dnsServers // New line: Include DNS servers in the request
+          dnsServers: dnsServers // DNS-Server in die Anfrage einfügen
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
