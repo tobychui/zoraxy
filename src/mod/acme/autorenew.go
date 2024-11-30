@@ -390,8 +390,8 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 		}
 
 		// Extract DNS servers from the certificate info if available
-		var dnsServers []string
-		if certInfo.DNSServers != nil {
+		var dnsServers string
+		if certInfo.DNSServers != "" {
 			dnsServers = certInfo.DNSServers
 		}
 
