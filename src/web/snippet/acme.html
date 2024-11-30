@@ -759,12 +759,16 @@
           $("#obtainButton").removeClass("loading").removeClass("disabled");
           if (response.error) {
             console.log("Error:", response.error);
+            // Show error message
             parent.msgbox(response.error, false, 12000);
             if (callback != undefined){callback(false);}
           } else {
             console.log("Certificate renewed successfully");
+            // Show success message
             parent.msgbox("Certificate renewed successfully");
+            // Renew the parent certificate list
             parent.initManagedDomainCertificateList();
+
             if (callback != undefined){callback(true);}
           }
         },
