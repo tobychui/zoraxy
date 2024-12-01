@@ -393,8 +393,8 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 
 		// Extract DNS servers from the certificate info if available
 		var dnsServers string
-		if certInfo.DNSServers != "" {
-			dnsServers = certInfo.DNSServers
+		if len(certInfo.DNSServers) > 0 {
+			dnsServers = strings.Join(certInfo.DNSServers, ",")
 		}
 
 		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS, certInfo.PropTimeout, dnsServers)

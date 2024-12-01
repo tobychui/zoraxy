@@ -30,13 +30,20 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+var defaultNameservers = []string{
+	"8.8.8.8:53", // Google DNS
+	"8.8.4.4:53", // Google DNS
+	"1.1.1.1:53", // Cloudflare DNS
+	"1.0.0.1:53", // Cloudflare DNS
+}
+
 type CertificateInfoJSON struct {
-	AcmeName    string `json:"acme_name"`  //ACME provider name
-	AcmeUrl     string `json:"acme_url"`   //Custom ACME URL (if any)
-	SkipTLS     bool   `json:"skip_tls"`   //Skip TLS verification of upstream
-	UseDNS      bool   `json:"dns"`        //Use DNS challenge
-	PropTimeout int    `json:"prop_time"`  //Propagation timeout
-	DNSServers  string `json:"dnsServers"` // DNS servers
+	AcmeName    string   `json:"acme_name"`  //ACME provider name
+	AcmeUrl     string   `json:"acme_url"`   //Custom ACME URL (if any)
+	SkipTLS     bool     `json:"skip_tls"`   //Skip TLS verification of upstream
+	UseDNS      bool     `json:"dns"`        //Use DNS challenge
+	PropTimeout int      `json:"prop_time"`  //Propagation timeout
+	DNSServers  []string `json:"dnsServers"` // DNS servers
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -166,15 +173,25 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 
+	// Load certificate info from JSON file
+	certInfo, err := LoadCertInfoJSON(fmt.Sprintf("./conf/certs/%s.json", certificateName))
+	if err == nil {
+		useDNS = certInfo.UseDNS
+		if dnsServers == "" && len(certInfo.DNSServers) > 0 {
+			dnsServers = strings.Join(certInfo.DNSServers, ",")
+		}
+		propagationTimeout = certInfo.PropTimeout
+	}
+
 	// setup how to receive challenge
 	if useDNS {
 		if !a.Database.TableExists("acme") {
 			a.Database.NewTable("acme")
-			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -1)")
+			return false, errors.New("DNS Provider and DNS Credential configuration required for ACME Provider (Error -1)")
 		}
 
 		if !a.Database.KeyExists("acme", certificateName+"_dns_provider") || !a.Database.KeyExists("acme", certificateName+"_dns_credentials") {
-			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -2)")
+			return false, errors.New("DNS Provider and DNS Credential configuration required for ACME Provider (Error -2)")
 		}
 
 		var dnsCredentials string
@@ -205,7 +222,8 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			a.Logf("Using DNS servers: "+strings.Join(dnsServersList, ", "), nil)
 			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(dnsServersList))
 		} else {
-			err = client.Challenge.SetDNS01Provider(provider)
+			// Use default DNS-01 nameservers if dnsServers is empty
+			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(defaultNameservers))
 		}
 		if err != nil {
 			a.Logf("Failed to resolve DNS01 Provider", err)
@@ -303,12 +321,13 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// Save certificate's ACME info for renew usage
-	certInfo := &CertificateInfoJSON{
+	certInfo = &CertificateInfoJSON{
 		AcmeName:    caName,
 		AcmeUrl:     caUrl,
 		SkipTLS:     skipTLS,
 		UseDNS:      useDNS,
 		PropTimeout: propagationTimeout,
+		DNSServers:  strings.Split(dnsServers, ","),
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
