@@ -3,6 +3,7 @@ package geodb
 import (
 	_ "embed"
 	"net/http"
+	"sync"
 	"time"
 
 	"imuslab.com/zoraxy/mod/database"
@@ -21,10 +22,10 @@ type Store struct {
 	geotrie                  *trie
 	geotrieIpv6              *trie
 	sysdb                    *database.Database
-	slowLookupCacheIpv4      map[string]string //Cache for slow lookup
-	slowLookupCacheIpv6      map[string]string //Cache for slow lookup
-	cacheClearTicker         *time.Ticker      //Ticker for clearing cache
-	cacheClearTickerStopChan chan bool         //Stop channel for cache clear ticker
+	slowLookupCacheIpv4      sync.Map     //Cache for slow lookup, ip -> cc
+	slowLookupCacheIpv6      sync.Map     //Cache for slow lookup ipv6, ip -> cc
+	cacheClearTicker         *time.Ticker //Ticker for clearing cache
+	cacheClearTickerStopChan chan bool    //Stop channel for cache clear ticker
 	option                   *StoreOptions
 }
 
@@ -61,7 +62,7 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 	}
 
 	if option.SlowLookupCacheClearInterval == 0 {
-		option.SlowLookupCacheClearInterval = 15 * time.Minute
+		option.SlowLookupCacheClearInterval = 30 * time.Minute
 	}
 
 	//Create a new store
@@ -71,8 +72,8 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 		geodbIpv6:                parsedGeoDataIpv6,
 		geotrieIpv6:              ipv6Trie,
 		sysdb:                    sysdb,
-		slowLookupCacheIpv4:      make(map[string]string),
-		slowLookupCacheIpv6:      make(map[string]string),
+		slowLookupCacheIpv4:      sync.Map{},
+		slowLookupCacheIpv6:      sync.Map{},
 		cacheClearTicker:         time.NewTicker(option.SlowLookupCacheClearInterval),
 		cacheClearTickerStopChan: make(chan bool),
 		option:                   option,
@@ -86,8 +87,8 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 				case <-store.cacheClearTickerStopChan:
 					return
 				case <-thisGeoDBStore.cacheClearTicker.C:
-					thisGeoDBStore.slowLookupCacheIpv4 = make(map[string]string)
-					thisGeoDBStore.slowLookupCacheIpv6 = make(map[string]string)
+					thisGeoDBStore.slowLookupCacheIpv4 = sync.Map{}
+					thisGeoDBStore.slowLookupCacheIpv6 = sync.Map{}
 				}
 			}
 		}(thisGeoDBStore)

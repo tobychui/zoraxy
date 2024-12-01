@@ -58,7 +58,8 @@ func (s *Store) slowSearchIpv4(ipAddr string) string {
 	}
 
 	//Check if already in cache
-	if cc, ok := s.slowLookupCacheIpv4[ipAddr]; ok {
+	cc := s.GetSlowSearchCachedIpv4(ipAddr)
+	if cc != "" {
 		return cc
 	}
 
@@ -70,7 +71,7 @@ func (s *Store) slowSearchIpv4(ipAddr string) string {
 		inRange, _ := isIPv4InRange(startIp, endIp, ipAddr)
 		if inRange {
 			//Add to cache
-			s.slowLookupCacheIpv4[ipAddr] = cc
+			s.slowLookupCacheIpv4.Store(ipAddr, cc)
 			return cc
 		}
 	}
@@ -83,7 +84,8 @@ func (s *Store) slowSearchIpv6(ipAddr string) string {
 	}
 
 	//Check if already in cache
-	if cc, ok := s.slowLookupCacheIpv6[ipAddr]; ok {
+	cc := s.GetSlowSearchCachedIpv6(ipAddr)
+	if cc != "" {
 		return cc
 	}
 
@@ -95,9 +97,27 @@ func (s *Store) slowSearchIpv6(ipAddr string) string {
 		inRange, _ := isIPv6InRange(startIp, endIp, ipAddr)
 		if inRange {
 			//Add to cache
-			s.slowLookupCacheIpv6[ipAddr] = cc
+			s.slowLookupCacheIpv6.Store(ipAddr, cc)
 			return cc
 		}
+	}
+	return ""
+}
+
+// GetSlowSearchCachedIpv4 return the country code for the given ipv4 address, return empty string if not found
+func (s *Store) GetSlowSearchCachedIpv4(ipAddr string) string {
+	cc, ok := s.slowLookupCacheIpv4.Load(ipAddr)
+	if ok {
+		return cc.(string)
+	}
+	return ""
+}
+
+// GetSlowSearchCachedIpv6 return the country code for the given ipv6 address, return empty string if not found
+func (s *Store) GetSlowSearchCachedIpv6(ipAddr string) string {
+	cc, ok := s.slowLookupCacheIpv6.Load(ipAddr)
+	if ok {
+		return cc.(string)
 	}
 	return ""
 }

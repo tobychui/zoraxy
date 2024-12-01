@@ -42,7 +42,7 @@ func TestTrieConstruct(t *testing.T) {
 func TestResolveCountryCodeFromIP(t *testing.T) {
 	// Create a new store
 	store, err := geodb.NewGeoDb(nil, &geodb.StoreOptions{
-		false,
+		true,
 		true,
 		0,
 	})
@@ -84,4 +84,24 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 	if info.CountryIsoCode != expected {
 		t.Errorf("expected country code %s, but got %s for IP %s", expected, info.CountryIsoCode, ip)
 	}
+
+	// Test for issue #401
+	// Create 100 concurrent goroutines to resolve country code for random IP addresses in the test cases above
+	for i := 0; i < 100; i++ {
+		go func() {
+			for _, testcase := range knownIpCountryMap {
+				ip := testcase[0]
+				expected := testcase[1]
+				info, err := store.ResolveCountryCodeFromIP(ip)
+				if err != nil {
+					t.Errorf("error resolving country code for IP %s: %v", ip, err)
+					return
+				}
+				if info.CountryIsoCode != expected {
+					t.Errorf("expected country code %s, but got %s for IP %s", expected, info.CountryIsoCode, ip)
+				}
+			}
+		}()
+	}
+
 }
