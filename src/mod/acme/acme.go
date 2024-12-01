@@ -177,10 +177,16 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	certInfo, err := LoadCertInfoJSON(fmt.Sprintf("./conf/certs/%s.json", certificateName))
 	if err == nil {
 		useDNS = certInfo.UseDNS
-		if dnsServers == "" && len(certInfo.DNSServers) > 0 {
+		if dnsServers == "" && certInfo.DNSServers != nil && len(certInfo.DNSServers) > 0 {
 			dnsServers = strings.Join(certInfo.DNSServers, ",")
 		}
 		propagationTimeout = certInfo.PropTimeout
+	}
+
+	// Clean DNS servers
+	dnsNameservers := strings.Split(dnsServers, ",")
+	for i := range dnsNameservers {
+		dnsNameservers[i] = strings.TrimSpace(dnsNameservers[i])
 	}
 
 	// setup how to receive challenge
@@ -214,13 +220,9 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			return false, err
 		}
 
-		if dnsServers != "" {
-			dnsServersList := strings.Split(dnsServers, ",")
-			for i := range dnsServersList {
-				dnsServersList[i] = strings.TrimSpace(dnsServersList[i])
-			}
-			a.Logf("Using DNS servers: "+strings.Join(dnsServersList, ", "), nil)
-			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(dnsServersList))
+		if len(dnsNameservers) > 0 && dnsNameservers[0] != "" {
+			a.Logf("Using DNS servers: "+strings.Join(dnsNameservers, ", "), nil)
+			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(dnsNameservers))
 		} else {
 			// Use default DNS-01 nameservers if dnsServers is empty
 			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(defaultNameservers))
@@ -327,7 +329,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		SkipTLS:     skipTLS,
 		UseDNS:      useDNS,
 		PropTimeout: propagationTimeout,
-		DNSServers:  strings.Split(dnsServers, ","),
+		DNSServers:  dnsNameservers,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -569,6 +571,11 @@ func LoadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
 	certInfo := &CertificateInfoJSON{}
 	if err = json.Unmarshal(certInfoBytes, certInfo); err != nil {
 		return nil, err
+	}
+
+	// Clean DNS servers
+	for i := range certInfo.DNSServers {
+		certInfo.DNSServers[i] = strings.TrimSpace(certInfo.DNSServers[i])
 	}
 
 	return certInfo, nil
