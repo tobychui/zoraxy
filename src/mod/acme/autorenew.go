@@ -385,9 +385,9 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 			}
 		}
 
-		// For upgrading config from older version of Zoraxy which don't have timeout
+		//For upgrading config from older version of Zoraxy which don't have timeout
 		if certInfo.PropTimeout == 0 {
-			// Set default timeout
+			//Set default timeout
 			certInfo.PropTimeout = 300
 		}
 
