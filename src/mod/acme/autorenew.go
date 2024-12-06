@@ -26,6 +26,7 @@ type AutoRenewConfig struct {
 	Email        string   //Email for acme
 	RenewAll     bool     //Renew all or selective renew with the slice below
 	FilesToRenew []string //If RenewAll is false, renew these certificate files
+	DNSServers   string   // DNS servers
 }
 
 type AutoRenewer struct {
@@ -390,7 +391,13 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 			certInfo.PropTimeout = 300
 		}
 
-		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS, certInfo.PropTimeout)
+		// Extract DNS servers from the certificate info if available
+		var dnsServers string
+		if len(certInfo.DNSServers) > 0 {
+			dnsServers = strings.Join(certInfo.DNSServers, ",")
+		}
+
+		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS, certInfo.PropTimeout, dnsServers)
 		if err != nil {
 			a.Logf("Renew "+fileName+"("+strings.Join(expiredCert.Domains, ",")+") failed", err)
 		} else {
@@ -459,12 +466,18 @@ func (a *AutoRenewer) HandleSetDNS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dnsServers, err := utils.PostPara(r, "dnsServers")
+	if err != nil {
+		dnsServers = ""
+	}
+
 	if !a.AcmeHandler.Database.TableExists("acme") {
 		a.AcmeHandler.Database.NewTable("acme")
 	}
 
 	a.AcmeHandler.Database.Write("acme", filename+"_dns_provider", dnsProvider)
 	a.AcmeHandler.Database.Write("acme", filename+"_dns_credentials", dnsCredentials)
+	a.AcmeHandler.Database.Write("acme", filename+"_dns_servers", dnsServers)
 
 	utils.SendOK(w)
 

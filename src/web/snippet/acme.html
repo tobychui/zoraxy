@@ -161,6 +161,11 @@
         </div>
       -->
     </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <label>Domain Name Server (optional)</label>
+      <input id="dnsInput" type="text" placeholder="ns.example.com">
+      <small>If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com)</small>
+    </div>
     <div class="field" id="caInput" style="display:none;">
       <label>ACME Server URL</label>
       <input id="caURL" type="text" placeholder="https://example.com/acme/dictionary">
@@ -725,8 +730,7 @@
         if (callback != undefined){callback(false);}
         return;
       }
-    
-      
+
       var ca = $("#ca").dropdown("get value");
       var caURL = "";
       if (ca == "Custom ACME Server") {
@@ -734,9 +738,9 @@
         caURL = $("#caURL").val();
       }
 
-      
       var dns = $("#useDnsChallenge")[0].checked;
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
+      var dnsServers = $("#dnsInput").val(); // Erfassen der DNS-Server
 
       $.ajax({
         url: "/api/acme/obtainCert",
@@ -749,6 +753,7 @@
           caURL: caURL,
           skipTLS: skipTLSValue,
           dns: dns,
+          dnsServers: dnsServers // DNS-Server in die Anfrage einfügen
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
@@ -761,7 +766,6 @@
             console.log("Certificate renewed successfully");
             // Show success message
             parent.msgbox("Certificate renewed successfully");
-            
             // Renew the parent certificate list
             parent.initManagedDomainCertificateList();
 

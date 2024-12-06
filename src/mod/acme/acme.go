@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v4/challenge/dns01"
 	"github.com/go-acme/lego/v4/challenge/http01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
@@ -29,12 +30,20 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+var defaultNameservers = []string{
+	"8.8.8.8:53", // Google DNS
+	"8.8.4.4:53", // Google DNS
+	"1.1.1.1:53", // Cloudflare DNS
+	"1.0.0.1:53", // Cloudflare DNS
+}
+
 type CertificateInfoJSON struct {
-	AcmeName    string `json:"acme_name"` //ACME provider name
-	AcmeUrl     string `json:"acme_url"`  //Custom ACME URL (if any)
-	SkipTLS     bool   `json:"skip_tls"`  //Skip TLS verification of upstream
-	UseDNS      bool   `json:"dns"`       //Use DNS challenge
-	PropTimeout int    `json:"prop_time"` //Propagation timeout
+	AcmeName    string   `json:"acme_name"`  //ACME provider name
+	AcmeUrl     string   `json:"acme_url"`   //Custom ACME URL (if any)
+	SkipTLS     bool     `json:"skip_tls"`   //Skip TLS verification of upstream
+	UseDNS      bool     `json:"dns"`        //Use DNS challenge
+	PropTimeout int      `json:"prop_time"`  //Propagation timeout
+	DNSServers  []string `json:"dnsServers"` // DNS servers
 }
 
 // ACMEUser represents a user in the ACME system.
@@ -94,7 +103,7 @@ func (a *ACMEHandler) Close() error {
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string) (bool, error) {
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
 
 	// generate private key
@@ -164,15 +173,31 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 
+	// Load certificate info from JSON file
+	certInfo, err := LoadCertInfoJSON(fmt.Sprintf("./conf/certs/%s.json", certificateName))
+	if err == nil {
+		useDNS = certInfo.UseDNS
+		if dnsServers == "" && certInfo.DNSServers != nil && len(certInfo.DNSServers) > 0 {
+			dnsServers = strings.Join(certInfo.DNSServers, ",")
+		}
+		propagationTimeout = certInfo.PropTimeout
+	}
+
+	// Clean DNS servers
+	dnsNameservers := strings.Split(dnsServers, ",")
+	for i := range dnsNameservers {
+		dnsNameservers[i] = strings.TrimSpace(dnsNameservers[i])
+	}
+
 	// setup how to receive challenge
 	if useDNS {
 		if !a.Database.TableExists("acme") {
 			a.Database.NewTable("acme")
-			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -1)")
+			return false, errors.New("DNS Provider and DNS Credential configuration required for ACME Provider (Error -1)")
 		}
 
 		if !a.Database.KeyExists("acme", certificateName+"_dns_provider") || !a.Database.KeyExists("acme", certificateName+"_dns_credentials") {
-			return false, errors.New("DNS Provider and DNS Credenital configuration required for ACME Provider (Error -2)")
+			return false, errors.New("DNS Provider and DNS Credential configuration required for ACME Provider (Error -2)")
 		}
 
 		var dnsCredentials string
@@ -195,7 +220,13 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			return false, err
 		}
 
-		err = client.Challenge.SetDNS01Provider(provider)
+		if len(dnsNameservers) > 0 && dnsNameservers[0] != "" {
+			a.Logf("Using DNS servers: "+strings.Join(dnsNameservers, ", "), nil)
+			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(dnsNameservers))
+		} else {
+			// Use default DNS-01 nameservers if dnsServers is empty
+			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(defaultNameservers))
+		}
 		if err != nil {
 			a.Logf("Failed to resolve DNS01 Provider", err)
 			return false, err
@@ -292,12 +323,13 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// Save certificate's ACME info for renew usage
-	certInfo := &CertificateInfoJSON{
+	certInfo = &CertificateInfoJSON{
 		AcmeName:    caName,
 		AcmeUrl:     caUrl,
 		SkipTLS:     skipTLS,
 		UseDNS:      useDNS,
 		PropTimeout: propagationTimeout,
+		DNSServers:  dnsNameservers,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -484,7 +516,21 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	for _, domain := range domains {
 		cleanedDomains = append(cleanedDomains, strings.TrimSpace(domain))
 	}
-	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout)
+
+	// Extract DNS servers from the request
+	var dnsServers []string
+	dnsServersPara, err := utils.PostPara(r, "dnsServers")
+	if err == nil && dnsServersPara != "" {
+		dnsServers = strings.Split(dnsServersPara, ",")
+		for i := range dnsServers {
+			dnsServers[i] = strings.TrimSpace(dnsServers[i])
+		}
+	}
+
+	// Convert DNS servers slice to a single string
+	dnsServersString := strings.Join(dnsServers, ",")
+
+	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
@@ -525,6 +571,11 @@ func LoadCertInfoJSON(filename string) (*CertificateInfoJSON, error) {
 	certInfo := &CertificateInfoJSON{}
 	if err = json.Unmarshal(certInfoBytes, certInfo); err != nil {
 		return nil, err
+	}
+
+	// Clean DNS servers
+	for i := range certInfo.DNSServers {
+		certInfo.DNSServers[i] = strings.TrimSpace(certInfo.DNSServers[i])
 	}
 
 	return certInfo, nil
