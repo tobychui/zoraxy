@@ -364,7 +364,7 @@
                             method: "POST",
                             data: {
                                 "domain": editingEndpoint.ep,
-                                "maxage": 31536000
+                                "maxage": HSTSEnabled?31536000:0,
                             },
                             success: function(data){
                                 if (data.error != undefined){

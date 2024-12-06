@@ -1427,7 +1427,11 @@ func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 
 		if newMaxAge == 0 || newMaxAge >= 31536000 {
 			targetProxyEndpoint.HSTSMaxAge = int64(newMaxAge)
-			SaveReverseProxyConfig(targetProxyEndpoint)
+			err = SaveReverseProxyConfig(targetProxyEndpoint)
+			if err != nil {
+				utils.SendErrorResponse(w, "save HSTS state failed: "+err.Error())
+				return
+			}
 			targetProxyEndpoint.UpdateToRuntime()
 		} else {
 			utils.SendErrorResponse(w, "invalid max age given")
