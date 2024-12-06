@@ -13,6 +13,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
@@ -64,7 +65,14 @@ func startupSequence() {
 	})
 
 	//Create database
-	db, err := database.NewDatabase(DATABASE_PATH, false)
+	backendType := database.GetRecommendedBackendType()
+	if *databaseBackend == "leveldb" {
+		backendType = dbinc.BackendLevelDB
+	} else if *databaseBackend == "boltdb" {
+		backendType = dbinc.BackendBoltDB
+	}
+	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)
+	db, err := database.NewDatabase(DATABASE_PATH, backendType)
 	if err != nil {
 		log.Fatal(err)
 	}

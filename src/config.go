@@ -167,7 +167,6 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 	if includeSysDBRaw == "true" {
 		//Include the system database in backup snapshot
 		//Temporary set it to read only
-		sysdb.ReadOnly = true
 		includeSysDB = true
 	}
 
@@ -241,8 +240,6 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//Restore sysdb state
-		sysdb.ReadOnly = false
 	}
 
 	if err != nil {
