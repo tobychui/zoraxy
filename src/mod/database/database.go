@@ -28,14 +28,16 @@ func NewDatabase(dbfile string, backendType dbinc.BackendType) (*Database, error
 	return newDatabase(dbfile, backendType)
 }
 
+// Get the recommended backend type for the current system
 func GetRecommendedBackendType() dbinc.BackendType {
 	//Check if the system is running on RISCV hardware
 	if runtime.GOARCH == "riscv64" {
 		//RISCV hardware, currently only support FS emulated database
 		return dbinc.BackendFSOnly
 	} else if runtime.GOOS == "windows" || (runtime.GOOS == "linux" && runtime.GOARCH == "amd64") {
-		//Powerful hardware, use LevelDB
-		return dbinc.BackendLevelDB
+		//Powerful hardware
+		return dbinc.BackendBoltDB
+		//return dbinc.BackendLevelDB
 	}
 
 	//Default to BoltDB, the safest option

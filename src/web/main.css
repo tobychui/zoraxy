@@ -65,6 +65,8 @@ body{
     height: calc(100% - 51px);
     overflow-y: auto;
     width: 240px;
+    position: sticky;
+    top: 4em;
 }
 
 .contentWindow{

@@ -60,19 +60,31 @@ func SetupCloseHandler() {
 func ShutdownSeq() {
 	SystemWideLogger.Println("Shutting down " + SYSTEM_NAME)
 	SystemWideLogger.Println("Closing Netstats Listener")
-	netstatBuffers.Close()
+	if netstatBuffers != nil {
+		netstatBuffers.Close()
+	}
+
 	SystemWideLogger.Println("Closing Statistic Collector")
-	statisticCollector.Close()
+	if statisticCollector != nil {
+		statisticCollector.Close()
+	}
+
 	if mdnsTickerStop != nil {
 		SystemWideLogger.Println("Stopping mDNS Discoverer (might take a few minutes)")
 		// Stop the mdns service
 		mdnsTickerStop <- true
 	}
-	mdnsScanner.Close()
+	if mdnsScanner != nil {
+		mdnsScanner.Close()
+	}
 	SystemWideLogger.Println("Shutting down load balancer")
-	loadBalancer.Close()
+	if loadBalancer != nil {
+		loadBalancer.Close()
+	}
 	SystemWideLogger.Println("Closing Certificates Auto Renewer")
-	acmeAutoRenewer.Close()
+	if acmeAutoRenewer != nil {
+		acmeAutoRenewer.Close()
+	}
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
 	os.RemoveAll("./tmp")
