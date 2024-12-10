@@ -67,16 +67,18 @@
               <button id="renewNowBtn" onclick="renewNow();" class="ui basic right floated button" style="margin-top: -2em;"><i class="yellow refresh icon"></i> Renew Now</button>
               <div class="ui horizontal divider"> OR </div>
               <p>Select the certificates to automatic renew in the list below</p>
-              <table id="domainCertFileTable" class="ui very compact unstackable basic disabled table">
-                <thead>
-                  <tr>
-                    <th>Domain Name</th>
-                    <th>Match Rule</th>
-                    <th>Auto-Renew</th>
-                  </tr>
-                </thead>
-                <tbody id="domainTableBody"></tbody>
-              </table>
+              <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+                <table id="domainCertFileTable" class="ui very compact unstackable basic disabled table">
+                  <thead>
+                    <tr>
+                      <th>Domain Name</th>
+                      <th>Match Rule</th>
+                      <th>Auto-Renew</th>
+                    </tr>
+                  </thead>
+                  <tbody id="domainTableBody"></tbody>
+                </table>
+              </div>
               <small><i class="ui red info circle icon"></i> Domain in red are expired</small><br>
               <div class="ui yellow message">
                 Certificate Renew only works on the certification authority (CA) supported by Zoraxy. Check Zoraxy wiki for more information on supported list of CAs.
