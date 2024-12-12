@@ -1,3 +1,10 @@
+<style>
+    #redirect.disabled{
+        opacity: 0.7;
+        pointer-events: none;
+        user-select: none;
+    }
+</style>
 <div class="ui stackable grid">
     <div class="ten wide column serverstatusWrapper">
         <div id="serverstatus" class="ui statustab inverted segment">
@@ -362,9 +369,11 @@
                 }
                 if (enabled){
                     //$("#redirect").show();
+                    $("#redirect").removeClass("disabled");
                     msgbox("Port 80 listener enabled");
                 }else{
                     //$("#redirect").hide();
+                    $("#redirect").addClass("disabled");
                     msgbox("Port 80 listener disabled");
                 }
             }
@@ -402,9 +411,11 @@
         $.get("/api/proxy/listenPort80", function(data){
             if (data){
                 $("#listenP80").checkbox("set checked");
+                $("#redirect").removeClass("disabled");
                 //$("#redirect").show();
             }else{
                 $("#listenP80").checkbox("set unchecked");
+                $("#redirect").addClass("disabled");
                 //$("#redirect").hide();
             }
 

@@ -125,10 +125,10 @@
                         </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
-                            ${subd.RequireBasicAuth?`<i class="ui green check icon"></i> Basic Auth`:``}
-                            ${subd.RequireBasicAuth && subd.RequireRateLimit?"<br>":""}
-                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
-                            ${!subd.RequireBasicAuth && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui green check icon"></i> Basic Auth`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x1 && subd.RequireRateLimit?"<br>":""}
+                            ${subd.AuthenticationProvider.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
+                            ${!subd.AuthenticationProvider.AuthMethod == 0x1 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
                         </td>
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
@@ -269,7 +269,7 @@
                 </button>`);
 
             }else if (datatype == "advanced"){
-                let requireBasicAuth = payload.RequireBasicAuth;
+                let requireBasicAuth = payload.AuthenticationProvider.AuthMethod == 0x1;
                 let basicAuthCheckstate = "";
                 if (requireBasicAuth){
                     basicAuthCheckstate = "checked";

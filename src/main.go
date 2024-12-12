@@ -57,47 +57,6 @@ func SetupCloseHandler() {
 	}()
 }
 
-func ShutdownSeq() {
-	SystemWideLogger.Println("Shutting down " + SYSTEM_NAME)
-	SystemWideLogger.Println("Closing Netstats Listener")
-	if netstatBuffers != nil {
-		netstatBuffers.Close()
-	}
-
-	SystemWideLogger.Println("Closing Statistic Collector")
-	if statisticCollector != nil {
-		statisticCollector.Close()
-	}
-
-	if mdnsTickerStop != nil {
-		SystemWideLogger.Println("Stopping mDNS Discoverer (might take a few minutes)")
-		// Stop the mdns service
-		mdnsTickerStop <- true
-	}
-	if mdnsScanner != nil {
-		mdnsScanner.Close()
-	}
-	SystemWideLogger.Println("Shutting down load balancer")
-	if loadBalancer != nil {
-		loadBalancer.Close()
-	}
-	SystemWideLogger.Println("Closing Certificates Auto Renewer")
-	if acmeAutoRenewer != nil {
-		acmeAutoRenewer.Close()
-	}
-	//Remove the tmp folder
-	SystemWideLogger.Println("Cleaning up tmp files")
-	os.RemoveAll("./tmp")
-
-	//Close database
-	SystemWideLogger.Println("Stopping system database")
-	sysdb.Close()
-
-	//Close logger
-	SystemWideLogger.Println("Closing system wide logger")
-	SystemWideLogger.Close()
-}
-
 func main() {
 	//Parse startup flags
 	flag.Parse()
@@ -141,7 +100,7 @@ func main() {
 		csrf.SameSite(csrf.SameSiteLaxMode),
 	)
 
-	//Startup all modules
+	//Startup all modules, see start.go
 	startupSequence()
 
 	//Initiate management interface APIs

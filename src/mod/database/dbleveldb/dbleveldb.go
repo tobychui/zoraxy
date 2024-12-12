@@ -41,8 +41,8 @@ func NewDB(path string) (*DB, error) {
 		batch: leveldb.Batch{},
 	}
 
-	//Create a ticker to flush data into disk every 5 seconds
-	writeFlushTicker := time.NewTicker(5 * time.Second)
+	//Create a ticker to flush data into disk every 1 seconds
+	writeFlushTicker := time.NewTicker(1 * time.Second)
 	writeFlushStop := make(chan bool)
 	go func() {
 		for {

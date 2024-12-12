@@ -84,16 +84,18 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//SSO Interception Mode
-		if sep.UseSSOIntercept {
-			allowPass := h.Parent.Option.SSOHandler.ServeForwardAuth(w, r)
-			if !allowPass {
-				h.Parent.Option.Logger.LogHTTPRequest(r, "sso-x", 307)
-				return
+		/*
+			if sep.AuthenticationProvider.SSOInterceptMode {
+				allowPass := h.Parent.Option.SSOHandler.ServeForwardAuth(w, r)
+				if !allowPass {
+					h.Parent.Option.Logger.LogHTTPRequest(r, "sso-x", 307)
+					return
+				}
 			}
-		}
+		*/
 
 		//Validate basic auth
-		if sep.RequireBasicAuth {
+		if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
 			err := h.handleBasicAuthRouting(w, r, sep)
 			if err != nil {
 				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
@@ -108,7 +110,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			//Virtual directory routing rule found. Route via vdir mode
 			h.vdirRequest(w, r, targetProxyEndpoint)
 			return
-		} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyType_Root {
+		} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyTypeRoot {
 			potentialProxtEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
 			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
@@ -180,7 +182,7 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 			//Virtual directory routing rule found. Route via vdir mode
 			h.vdirRequest(w, r, targetProxyEndpoint)
 			return
-		} else if !strings.HasSuffix(proxyingPath, "/") && proot.ProxyType != ProxyType_Root {
+		} else if !strings.HasSuffix(proxyingPath, "/") && proot.ProxyType != ProxyTypeRoot {
 			potentialProxtEndpoint := proot.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
 			if potentialProxtEndpoint != nil && !targetProxyEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
