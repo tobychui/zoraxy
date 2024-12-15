@@ -98,8 +98,8 @@ func ReverseProxtInit() {
 		StatisticCollector: statisticCollector,
 		WebDirectory:       *staticWebServerRoot,
 		AccessController:   accessController,
+		AutheliaRouter:     autheliaRouter,
 		LoadBalancer:       loadBalancer,
-		SSOHandler:         ssoHandler,
 		Logger:             SystemWideLogger,
 	})
 	if err != nil {
@@ -471,13 +471,17 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassGlobalTLS := (bpgtls == "true")
 
-	// Basic Auth
-	rba, _ := utils.PostPara(r, "bauth")
-	if rba == "" {
-		rba = "false"
+	// Auth Provider
+	authProviderTypeStr, _ := utils.PostPara(r, "authprovider")
+	if authProviderTypeStr == "" {
+		authProviderTypeStr = "0"
 	}
 
-	requireBasicAuth := (rba == "true")
+	authProviderType, err := strconv.Atoi(authProviderTypeStr)
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid auth provider type")
+		return
+	}
 
 	// Rate Limiting?
 	rl, _ := utils.PostPara(r, "rate")
@@ -519,8 +523,12 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 		}
 	}
-	if requireBasicAuth {
+	if authProviderType == 1 {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
+	} else if authProviderType == 2 {
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodAuthelia
+	} else if authProviderType == 3 {
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
 	} else {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}

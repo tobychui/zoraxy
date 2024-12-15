@@ -83,24 +83,11 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		//SSO Interception Mode
-		/*
-			if sep.AuthenticationProvider.SSOInterceptMode {
-				allowPass := h.Parent.Option.SSOHandler.ServeForwardAuth(w, r)
-				if !allowPass {
-					h.Parent.Option.Logger.LogHTTPRequest(r, "sso-x", 307)
-					return
-				}
-			}
-		*/
-
 		//Validate basic auth
-		if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
-			err := h.handleBasicAuthRouting(w, r, sep)
-			if err != nil {
-				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
-				return
-			}
+		respWritten := handleAuthProviderRouting(sep, w, r, h)
+		if respWritten {
+			//Request handled by subroute
+			return
 		}
 
 		//Check if any virtual directory rules matches

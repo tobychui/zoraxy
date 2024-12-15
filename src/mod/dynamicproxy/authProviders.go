@@ -9,12 +9,47 @@ import (
 )
 
 /*
-	BasicAuth.go
+	authProviders.go
 
-	This file handles the basic auth on proxy endpoints
-	if RequireBasicAuth is set to true
+	This script handle authentication providers
 */
 
+/*
+Central Authentication Provider Router
+
+This function will route the request to the correct authentication provider
+if the return value is true, do not continue to the next handler
+
+handleAuthProviderRouting takes in 4 parameters:
+- sep: the ProxyEndpoint object
+- w: the http.ResponseWriter object
+- r: the http.Request object
+- h: the ProxyHandler object
+
+and return a boolean indicate if the request is written to http.ResponseWriter
+- true: the request is handled, do not write to http.ResponseWriter
+- false: the request is not handled (usually means auth ok), continue to the next handler
+*/
+func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *http.Request, h *ProxyHandler) bool {
+	if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
+		err := h.handleBasicAuthRouting(w, r, sep)
+		if err != nil {
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
+			return true
+		}
+	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodAuthelia {
+		err := h.handleAutheliaAuth(w, r)
+		if err != nil {
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
+			return true
+		}
+	}
+
+	//No authentication provider, do not need to handle
+	return false
+}
+
+/* Basic Auth */
 func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
 	err := handleBasicAuth(w, r, pe)
 	if err != nil {
@@ -63,4 +98,11 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 	}
 
 	return nil
+}
+
+/* Authelia */
+
+// Handle authelia auth routing
+func (h *ProxyHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Request) error {
+	return h.Parent.Option.AutheliaRouter.HandleAutheliaAuth(w, r)
 }

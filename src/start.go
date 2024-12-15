@@ -12,6 +12,7 @@ import (
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/auth/sso/authelia"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
@@ -136,21 +137,13 @@ func startupSequence() {
 		panic(err)
 	}
 
-	/*
-		//Create an SSO handler
-		ssoHandler, err = sso.NewSSOHandler(&sso.SSOConfig{
-			SystemUUID:       nodeUUID,
-			PortalServerPort: 5488,
-			AuthURL:          "http://auth.localhost",
-			Database:         sysdb,
-			Logger:           SystemWideLogger,
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		//Restore the SSO handler to previous state before shutdown
-		ssoHandler.RestorePreviousRunningState()
-	*/
+	//Create authentication providers
+	autheliaRouter = authelia.NewAutheliaRouter(&authelia.AutheliaRouterOptions{
+		UseHTTPS:    false, // Automatic populate in router initiation
+		AutheliaURL: "",    // Automatic populate in router initiation
+		Logger:      SystemWideLogger,
+		Database:    sysdb,
+	})
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{

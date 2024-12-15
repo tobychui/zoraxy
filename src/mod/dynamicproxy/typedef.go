@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"imuslab.com/zoraxy/mod/access"
-	"imuslab.com/zoraxy/mod/auth/sso"
+	"imuslab.com/zoraxy/mod/auth/sso/authelia"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -33,14 +33,17 @@ type ProxyHandler struct {
 
 /* Router Object Options */
 type RouterOption struct {
-	HostUUID           string                    //The UUID of Zoraxy, use for heading mod
-	HostVersion        string                    //The version of Zoraxy, use for heading mod
-	Port               int                       //Incoming port
-	UseTls             bool                      //Use TLS to serve incoming requsts
-	ForceTLSLatest     bool                      //Force TLS1.2 or above
-	NoCache            bool                      //Force set Cache-Control: no-store
-	ListenOnPort80     bool                      //Enable port 80 http listener
-	ForceHttpsRedirect bool                      //Force redirection of http to https endpoint
+	/* Basic Settings */
+	HostUUID           string //The UUID of Zoraxy, use for heading mod
+	HostVersion        string //The version of Zoraxy, use for heading mod
+	Port               int    //Incoming port
+	UseTls             bool   //Use TLS to serve incoming requsts
+	ForceTLSLatest     bool   //Force TLS1.2 or above
+	NoCache            bool   //Force set Cache-Control: no-store
+	ListenOnPort80     bool   //Enable port 80 http listener
+	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
+
+	/* Routing Service Managers */
 	TlsManager         *tlscert.Manager          //TLS manager for serving SAN certificates
 	RedirectRuleTable  *redirection.RuleTable    //Redirection rules handler and table
 	GeodbStore         *geodb.Store              //GeoIP resolver
@@ -48,8 +51,12 @@ type RouterOption struct {
 	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
 	WebDirectory       string                    //The static web server directory containing the templates folder
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
-	SSOHandler         *sso.SSOHandler           //SSO handler for handling SSO requests, interception mode only
-	Logger             *logger.Logger            //Logger for reverse proxy requets
+
+	/* Authentication Providers */
+	AutheliaRouter *authelia.AutheliaRouter //Authelia router for Authelia authentication
+
+	/* Utilities */
+	Logger *logger.Logger //Logger for reverse proxy requets
 }
 
 /* Router Object */
@@ -129,9 +136,15 @@ const (
 )
 
 type AuthenticationProvider struct {
-	AuthMethod              AuthMethod                //The authentication method to use
+	AuthMethod AuthMethod //The authentication method to use
+	/* Basic Auth Settings */
 	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+	BasicAuthGroupIDs       []string                  //Group IDs that are allowed to access this endpoint
+
+	/* Authelia Settings */
+	AutheliaURL string //URL of the Authelia server, leave empty to use global settings e.g. authelia.example.com
+	UseHTTPS    bool   //Whether to use HTTPS for the Authelia server
 }
 
 // A proxy endpoint record, a general interface for handling inbound routing

@@ -1,50 +1,99 @@
 package authelia
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/utils"
 )
 
-type Options struct {
-	AutheliaURL string //URL of the Authelia server, e.g. authelia.example.com
-	UseHTTPS    bool   //Whether to use HTTPS for the Authelia server
-	Logger      logger.Logger
+type AutheliaRouterOptions struct {
+	UseHTTPS    bool   //If the Authelia server is using HTTPS
+	AutheliaURL string //The URL of the Authelia server
+	Logger      *logger.Logger
+	Database    *database.Database
 }
 
-type AutheliaHandler struct {
-	options *Options
+type AutheliaRouter struct {
+	options *AutheliaRouterOptions
 }
 
-func NewAutheliaAuthenticator(options *Options) *AutheliaHandler {
-	return &AutheliaHandler{
+// NewAutheliaRouter creates a new AutheliaRouter object
+func NewAutheliaRouter(options *AutheliaRouterOptions) *AutheliaRouter {
+	options.Database.NewTable("authelia")
+
+	//Read settings from database, if exists
+	options.Database.Read("authelia", "autheliaURL", &options.AutheliaURL)
+	options.Database.Read("authelia", "useHTTPS", &options.UseHTTPS)
+
+	return &AutheliaRouter{
 		options: options,
 	}
 }
 
-// HandleAutheliaAuthRouting is the handler for Authelia authentication, if the error is not nil, the request will be forwarded to the endpoint
-// Do not continue processing or write to the response writer if the error is not nil
-func (h *AutheliaHandler) HandleAutheliaAuthRouting(w http.ResponseWriter, r *http.Request, pe *dynamicproxy.ProxyEndpoint) error {
-	err := h.handleAutheliaAuth(w, r)
-	if err != nil {
-		return nil
+// HandleSetAutheliaURLAndHTTPS is the internal handler for setting the Authelia URL and HTTPS
+func (ar *AutheliaRouter) HandleSetAutheliaURLAndHTTPS(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		//Return the current settings
+		js, _ := json.Marshal(map[string]interface{}{
+			"useHTTPS":    ar.options.UseHTTPS,
+			"autheliaURL": ar.options.AutheliaURL,
+		})
+
+		utils.SendJSONResponse(w, string(js))
+		return
+	} else if r.Method == http.MethodPost {
+		//Update the settings
+		autheliaURL, err := utils.PostPara(r, "autheliaURL")
+		if err != nil {
+			utils.SendErrorResponse(w, "autheliaURL not found")
+			return
+		}
+
+		useHTTPS, err := utils.PostBool(r, "useHTTPS")
+		if err != nil {
+			useHTTPS = false
+		}
+
+		//Write changes to runtime
+		ar.options.AutheliaURL = autheliaURL
+		ar.options.UseHTTPS = useHTTPS
+
+		//Write changes to database
+		ar.options.Database.Write("authelia", "autheliaURL", autheliaURL)
+		ar.options.Database.Write("authelia", "useHTTPS", useHTTPS)
+
+		utils.SendOK(w)
+	} else {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
-	return err
+
 }
 
-func (h *AutheliaHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Request) error {
+// handleAutheliaAuth is the internal handler for Authelia authentication
+// Set useHTTPS to true if your authelia server is using HTTPS
+// Set autheliaURL to the URL of the Authelia server, e.g. authelia.example.com
+func (ar *AutheliaRouter) HandleAutheliaAuth(w http.ResponseWriter, r *http.Request) error {
 	client := &http.Client{}
 
+	if ar.options.AutheliaURL == "" {
+		ar.options.Logger.PrintAndLog("Authelia", "Authelia URL not set", nil)
+		w.WriteHeader(500)
+		w.Write([]byte("500 - Internal Server Error"))
+		return errors.New("authelia URL not set")
+	}
 	protocol := "http"
-	if h.options.UseHTTPS {
+	if ar.options.UseHTTPS {
 		protocol = "https"
 	}
 
-	autheliaBaseURL := protocol + "://" + h.options.AutheliaURL
+	autheliaBaseURL := protocol + "://" + ar.options.AutheliaURL
 	//Remove tailing slash if any
 	if autheliaBaseURL[len(autheliaBaseURL)-1] == '/' {
 		autheliaBaseURL = autheliaBaseURL[:len(autheliaBaseURL)-1]
@@ -53,7 +102,7 @@ func (h *AutheliaHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Requ
 	//Make a request to Authelia to verify the request
 	req, err := http.NewRequest("POST", autheliaBaseURL+"/api/verify", nil)
 	if err != nil {
-		h.options.Logger.PrintAndLog("Authelia", "Unable to create request", err)
+		ar.options.Logger.PrintAndLog("Authelia", "Unable to create request", err)
 		w.WriteHeader(401)
 		return errors.New("unauthorized")
 	}
@@ -72,7 +121,7 @@ func (h *AutheliaHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Requ
 	// Making the verification request
 	resp, err := client.Do(req)
 	if err != nil {
-		h.options.Logger.PrintAndLog("Authelia", "Unable to verify", err)
+		ar.options.Logger.PrintAndLog("Authelia", "Unable to verify", err)
 		w.WriteHeader(401)
 		return errors.New("unauthorized")
 	}
