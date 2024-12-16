@@ -30,7 +30,7 @@ src/certs/*
 src/rules/*
 src/README.md
 docker/ContainerTester.sh
-docker/ImagePublisher.sh
+docker/docker-compose.yaml
 src/mod/acme/test/stackoverflow.pem
 /tools/dns_challenge_update/code-gen/acmedns
 /tools/dns_challenge_update/code-gen/lego
