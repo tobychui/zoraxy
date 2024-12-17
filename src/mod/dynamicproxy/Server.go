@@ -217,5 +217,27 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		} else {
 			w.Write(template)
 		}
+	case DefaultSite_NoResponse:
+		//No response. Just close the connection
+		h.Parent.logRequest(r, false, 444, "root-noresponse", domainOnly)
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
+			return
+		}
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		conn.Close()
+	case DefaultSite_TeaPot:
+		//I'm a teapot
+		h.Parent.logRequest(r, false, 418, "root-teapot", domainOnly)
+		http.Error(w, "I'm a teapot", http.StatusTeapot)
+	default:
+		//Unknown routing option. Send empty response
+		h.Parent.logRequest(r, false, 544, "root-unknown", domainOnly)
+		http.Error(w, "544 - No Route Defined", 544)
 	}
 }

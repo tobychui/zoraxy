@@ -201,6 +201,9 @@ const (
 	DefaultSite_ReverseProxy            = 1
 	DefaultSite_Redirect                = 2
 	DefaultSite_NotFoundPage            = 3
+	DefaultSite_NoResponse              = 4
+
+	DefaultSite_TeaPot = 418 //I'm a teapot
 )
 
 /*

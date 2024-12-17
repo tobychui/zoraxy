@@ -37,6 +37,14 @@
                         </label>
                     </div>
                 </div>
+                <div class="field">
+                    <div class="ui radio defaultsite checkbox">
+                        <input type="radio" name="defaultsiteOption" value="closeresp">
+                        <label>Close Connection<br>
+                            <small>Close the connection without any response</small>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -105,6 +113,8 @@
             currentDefaultSiteOption = 2;
         }else if (selectedDefaultSite == "notfound"){
             currentDefaultSiteOption = 3;
+        }else if (selectedDefaultSite == "closeresp"){
+            currentDefaultSiteOption = 4;
         }else{
             //Unknown option
             return;
@@ -137,6 +147,8 @@
                     $("#redirectDomain").val(data.DefaultSiteValue);
                 }else if (proxyType == 3){
                     $radios.filter('[value=notfound]').prop('checked', true);
+                }else if (proxyType == 4){
+                    $radios.filter('[value=closeresp]').prop('checked', true);
                 }
                 updateAvaibleDefaultSiteOptions();
                 
