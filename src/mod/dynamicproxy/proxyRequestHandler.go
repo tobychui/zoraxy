@@ -35,6 +35,7 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 // Get the proxy endpoint from hostname, which might includes checking of wildcard certificates
 func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
 	var targetSubdomainEndpoint *ProxyEndpoint = nil
+	hostname = strings.ToLower(hostname)
 	ep, ok := router.ProxyEndpoints.Load(hostname)
 	if ok {
 		//Exact hit

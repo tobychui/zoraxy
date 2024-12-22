@@ -264,5 +264,6 @@ func (ep *ProxyEndpoint) Remove() error {
 // use prepare -> remove -> add if you change anything in the endpoint
 // that effects the proxy routing src / dest
 func (ep *ProxyEndpoint) UpdateToRuntime() {
-	ep.parent.ProxyEndpoints.Store(ep.RootOrMatchingDomain, ep)
+	lookupHostname := strings.ToLower(ep.RootOrMatchingDomain)
+	ep.parent.ProxyEndpoints.Store(lookupHostname, ep)
 }

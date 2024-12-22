@@ -142,7 +142,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 /*
 handleRootRouting
 
-This function handle root routing situations where there are no subdomain
+This function handle root routing (aka default sites) situations where there are no subdomain
 , vdir or special routing rule matches the requested URI.
 
 Once entered this routing segment, the root routing options will take over
@@ -222,12 +222,10 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		h.Parent.logRequest(r, false, 444, "root-noresponse", domainOnly)
 		hijacker, ok := w.(http.Hijacker)
 		if !ok {
-			http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
 			return
 		}
 		conn, _, err := hijacker.Hijack()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		conn.Close()

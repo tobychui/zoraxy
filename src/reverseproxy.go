@@ -923,6 +923,7 @@ func ReverseProxyListDetail(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "epname not defined")
 			return
 		}
+		epname = strings.ToLower(strings.TrimSpace(epname))
 		endpointRaw, ok := dynamicProxyRouter.ProxyEndpoints.Load(epname)
 		if !ok {
 			utils.SendErrorResponse(w, "proxy rule not found")
