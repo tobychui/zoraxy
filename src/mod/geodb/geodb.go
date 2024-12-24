@@ -3,11 +3,14 @@ package geodb
 import (
 	_ "embed"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/utils"
 )
 
 //go:embed geoipv4.csv
@@ -32,6 +35,7 @@ type Store struct {
 type StoreOptions struct {
 	AllowSlowIpv4LookUp          bool
 	AllowSlowIpv6Lookup          bool
+	Logger                       *logger.Logger
 	SlowLookupCacheClearInterval time.Duration //Clear slow lookup cache interval
 }
 
@@ -41,6 +45,23 @@ type CountryInfo struct {
 }
 
 func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
+	//Check if external geoDB data is available
+	if utils.FileExists("./conf/geodb/geoipv4.csv") {
+		externalV4Db, err := os.ReadFile("./conf/geodb/geoipv4.csv")
+		if err == nil {
+			option.Logger.PrintAndLog("GeoDB", "External GeoDB data found, using external IPv4 GeoIP data", nil)
+			geoipv4 = externalV4Db
+		}
+	}
+
+	if utils.FileExists("./conf/geodb/geoipv6.csv") {
+		externalV6Db, err := os.ReadFile("./conf/geodb/geoipv6.csv")
+		if err == nil {
+			option.Logger.PrintAndLog("GeoDB", "External GeoDB data found, using external IPv6 GeoIP data", nil)
+			geoipv6 = externalV6Db
+		}
+	}
+
 	parsedGeoData, err := parseCSV(geoipv4)
 	if err != nil {
 		return nil, err

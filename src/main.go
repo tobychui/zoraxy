@@ -42,6 +42,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
+	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/update"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -60,11 +61,18 @@ func SetupCloseHandler() {
 func main() {
 	//Parse startup flags
 	flag.Parse()
+
+	/* Maintaince Function Modes */
 	if *showver {
 		fmt.Println(SYSTEM_NAME + " - Version " + SYSTEM_VERSION)
 		os.Exit(0)
 	}
+	if *geoDbUpdate {
+		geodb.DownloadGeoDBUpdate("./conf/geodb")
+		os.Exit(0)
+	}
 
+	/* Main Zoraxy Routines */
 	if !utils.ValidateListeningAddress(*webUIPort) {
 		fmt.Println("Malformed -port (listening address) paramter. Do you mean -port=:" + *webUIPort + "?")
 		os.Exit(0)

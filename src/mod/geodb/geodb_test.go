@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/info/logger"
 )
 
 /*
@@ -44,6 +45,7 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 	store, err := geodb.NewGeoDb(nil, &geodb.StoreOptions{
 		true,
 		true,
+		&logger.Logger{},
 		0,
 	})
 	if err != nil {

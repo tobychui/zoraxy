@@ -43,7 +43,7 @@ const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
 	SYSTEM_VERSION    = "3.1.5"
-	DEVELOPMENT_BUILD = true /* Development: Set to false to use embedded web fs */
+	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
 	DATABASE_PATH              = "sys.db"
@@ -89,6 +89,9 @@ var (
 	staticWebServerRoot        = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+
+	/* Maintaince Function Flags */
+	geoDbUpdate = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
 )
 
 /* Global Variables and Handlers */
