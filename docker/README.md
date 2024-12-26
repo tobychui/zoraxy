@@ -73,6 +73,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 |:-|:-|:-|
 | `AUTORENEW` | `86400` (Integer) | ACME auto TLS/SSL certificate renew check interval. |
 | `CFGUPGRADE` | `true` (Boolean) | Enable auto config upgrade if breaking change is detected. |
+| `DB` | `auto` (String) | Database backend to use (leveldb, boltdb, auto) Note that fsdb will be used on unsupported platforms like RISCV (default "auto"). |
 | `DOCKER` | `true` (Boolean) | Run Zoraxy in docker compatibility mode. |
 | `EARLYRENEW` | `30` (Integer) | Number of days to early renew a soon expiring certificate. |
 | `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices). |
@@ -81,6 +82,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |
 | `PORT` | `8000` (Integer) | Management web interface listening port |
 | `SSHLB` | `false` (Boolean) | Allow loopback web ssh connection (DANGER). |
+| `UPDATE_GEOIP` | `false` (Boolean) | Download the latest GeoIP data and exit. |
 | `VERSION` | `false` (Boolean) | Show version of this server. |
 | `WEBFM` | `true` (Boolean) | Enable web file manager for static web server root folder. |
 | `WEBROOT` | `./www` (String) | Static web server root folder. Only allow change in start parameters. |
