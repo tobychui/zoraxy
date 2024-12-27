@@ -9,7 +9,7 @@
 
 If you are attempting to access your service from outside your network, make sure to forward ports 80 and 443 to the Zoraxy host to allow web traffic. If you know how to do this, great! If not, find the manufacturer of your router and search on how to do that. There are too many to be listed here. Read more about it from [whatismyip](https://www.whatismyip.com/port-forwarding/).
 
-In the examples below, make sure to update `/path/to/zoraxy/config/` with your actual path. If a path is not provided, a Docker volume will be created at the location but it is recommended to store the data at a defined host location.
+In the examples below, make sure to update `/path/to/zoraxy/config/`. If a path is not provided, a Docker volume will be created at the location but it is recommended to store the data at a defined host location or a named Docker volume.
 
 Once setup, access the webui at `http://<host-ip>:8000` to configure Zoraxy. Change the port in the URL if you changed the management port.
 
@@ -26,7 +26,6 @@ docker run -d \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /etc/localtime:/etc/localtime \
   -e FASTGEOIP="true" \
-  -e ZEROTIER="true" \
   zoraxydocker/zoraxy:latest
 ```
 
@@ -48,7 +47,6 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       FASTGEOIP: "true"
-      ZEROTIER: "true"
 ```
 
 ### Ports
@@ -75,6 +73,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 |:-|:-|:-|
 | `AUTORENEW` | `86400` (Integer) | ACME auto TLS/SSL certificate renew check interval. |
 | `CFGUPGRADE` | `true` (Boolean) | Enable auto config upgrade if breaking change is detected. |
+| `DB` | `auto` (String) | Database backend to use (leveldb, boltdb, auto) Note that fsdb will be used on unsupported platforms like RISCV (default "auto"). |
 | `DOCKER` | `true` (Boolean) | Run Zoraxy in docker compatibility mode. |
 | `EARLYRENEW` | `30` (Integer) | Number of days to early renew a soon expiring certificate. |
 | `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices). |
@@ -83,6 +82,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |
 | `PORT` | `8000` (Integer) | Management web interface listening port |
 | `SSHLB` | `false` (Boolean) | Allow loopback web ssh connection (DANGER). |
+| `UPDATE_GEOIP` | `false` (Boolean) | Download the latest GeoIP data and exit. |
 | `VERSION` | `false` (Boolean) | Show version of this server. |
 | `WEBFM` | `true` (Boolean) | Enable web file manager for static web server root folder. |
 | `WEBROOT` | `./www` (String) | Static web server root folder. Only allow change in start parameters. |
@@ -92,4 +92,13 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 
 > [!IMPORTANT]
 > Contrary to the Zoraxy README, Docker usage of the port flag should NOT include the colon. Ex: `-e PORT="8000"` for Docker run and `PORT: "8000"` for Docker compose.
+
+### Building
+
+To build the Docker image:
+  - Check out the repository/branch.
+  - Copy the Zoraxy `src/` directory into the `docker/` (here) directory.
+  - Run the build command with `docker build -t zoraxy_build .`
+  - You can now use the image `zoraxy_build`
+    - If you wish to change the image name, then modify`zoraxy_build` in the previous step and then build again.
 

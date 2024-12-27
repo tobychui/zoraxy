@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
 update-ca-certificates
-echo "CA certificates updated"
+echo "CA certificates updated."
+
+zoraxy -update_geoip=true
+echo "Updated GeoIP data."
 
 if [ "$ZEROTIER" = "true" ]; then
   if [ ! -d "/opt/zoraxy/config/zerotier/" ]; then
@@ -9,13 +12,14 @@ if [ "$ZEROTIER" = "true" ]; then
   fi
   ln -s /opt/zoraxy/config/zerotier/ /var/lib/zerotier-one
   zerotier-one -d
-  echo "ZeroTier daemon started"
+  echo "ZeroTier daemon started."
 fi
 
 echo "Starting Zoraxy..."
 exec zoraxy \
   -autorenew="$AUTORENEW" \
   -cfgupgrade="$CFGUPGRADE" \
+  -db="$DB" \
   -docker="$DOCKER" \
   -earlyrenew="$EARLYRENEW" \
   -fastgeoip="$FASTGEOIP" \
@@ -24,6 +28,7 @@ exec zoraxy \
   -noauth="$NOAUTH" \
   -port=:"$PORT" \
   -sshlb="$SSHLB" \
+  -update_geoip="$UPDATE_GEOIP" \
   -version="$VERSION" \
   -webfm="$WEBFM" \
   -webroot="$WEBROOT" \
