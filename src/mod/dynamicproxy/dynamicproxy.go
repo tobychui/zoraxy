@@ -144,7 +144,7 @@ func (router *Router) StartProxyService() error {
 						}
 
 						//Validate basic auth
-						if sep.RequireBasicAuth {
+						if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
 							err := handleBasicAuth(w, r, sep)
 							if err != nil {
 								return
@@ -161,8 +161,8 @@ func (router *Router) StartProxyService() error {
 							ProxyDomain:         selectedUpstream.OriginIpOrDomain,
 							OriginalHost:        originalHostHeader,
 							UseTLS:              selectedUpstream.RequireTLS,
-							HostHeaderOverwrite: sep.RequestHostOverwrite,
-							NoRemoveHopByHop:    sep.DisableHopByHopHeaderRemoval,
+							HostHeaderOverwrite: sep.HeaderRewriteRules.RequestHostOverwrite,
+							NoRemoveHopByHop:    sep.HeaderRewriteRules.DisableHopByHopHeaderRemoval,
 							PathPrefix:          "",
 							Version:             sep.parent.Option.HostVersion,
 						})

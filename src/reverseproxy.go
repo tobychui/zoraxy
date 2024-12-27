@@ -98,8 +98,8 @@ func ReverseProxtInit() {
 		StatisticCollector: statisticCollector,
 		WebDirectory:       *staticWebServerRoot,
 		AccessController:   accessController,
+		AutheliaRouter:     autheliaRouter,
 		LoadBalancer:       loadBalancer,
-		SSOHandler:         ssoHandler,
 		Logger:             SystemWideLogger,
 	})
 	if err != nil {
@@ -309,10 +309,25 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		//Generate a default authenticaion provider
+		authMethod := dynamicproxy.AuthMethodNone
+		if requireBasicAuth {
+			authMethod = dynamicproxy.AuthMethodBasic
+		}
+		thisAuthenticationProvider := dynamicproxy.AuthenticationProvider{
+			AuthMethod:              authMethod,
+			BasicAuthCredentials:    basicAuthCredentials,
+			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
+		}
+
+		thisCustomHeaderRules := dynamicproxy.HeaderRewriteRules{
+			UserDefinedHeaders: []*rewrite.UserDefinedHeader{},
+		}
+
 		//Generate a proxy endpoint object
 		thisProxyEndpoint := dynamicproxy.ProxyEndpoint{
 			//I/O
-			ProxyType:            dynamicproxy.ProxyType_Host,
+			ProxyType:            dynamicproxy.ProxyTypeHost,
 			RootOrMatchingDomain: rootOrMatchingDomain,
 			MatchingDomainAlias:  aliasHostnames,
 			ActiveOrigins: []*loadbalance.Upstream{
@@ -333,13 +348,16 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Custom headers
-			UserDefinedHeaders: []*rewrite.UserDefinedHeader{},
+
 			//Auth
-			RequireBasicAuth:        requireBasicAuth,
-			BasicAuthCredentials:    basicAuthCredentials,
-			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
-			DefaultSiteOption:       0,
-			DefaultSiteValue:        "",
+			AuthenticationProvider: &thisAuthenticationProvider,
+
+			//Header Rewrite
+			HeaderRewriteRules: &thisCustomHeaderRules,
+
+			//Default Site
+			DefaultSiteOption: 0,
+			DefaultSiteValue:  "",
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
@@ -379,7 +397,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 		//Write the root options to file
 		rootRoutingEndpoint := dynamicproxy.ProxyEndpoint{
-			ProxyType:            dynamicproxy.ProxyType_Root,
+			ProxyType:            dynamicproxy.ProxyTypeRoot,
 			RootOrMatchingDomain: "/",
 			ActiveOrigins: []*loadbalance.Upstream{
 				{
@@ -453,13 +471,17 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassGlobalTLS := (bpgtls == "true")
 
-	// Basic Auth
-	rba, _ := utils.PostPara(r, "bauth")
-	if rba == "" {
-		rba = "false"
+	// Auth Provider
+	authProviderTypeStr, _ := utils.PostPara(r, "authprovider")
+	if authProviderTypeStr == "" {
+		authProviderTypeStr = "0"
 	}
 
-	requireBasicAuth := (rba == "true")
+	authProviderType, err := strconv.Atoi(authProviderTypeStr)
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid auth provider type")
+		return
+	}
 
 	// Rate Limiting?
 	rl, _ := utils.PostPara(r, "rate")
@@ -494,7 +516,23 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
-	newProxyEndpoint.RequireBasicAuth = requireBasicAuth
+	if newProxyEndpoint.AuthenticationProvider == nil {
+		newProxyEndpoint.AuthenticationProvider = &dynamicproxy.AuthenticationProvider{
+			AuthMethod:              dynamicproxy.AuthMethodNone,
+			BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
+			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
+		}
+	}
+	if authProviderType == 1 {
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
+	} else if authProviderType == 2 {
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodAuthelia
+	} else if authProviderType == 3 {
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
+	} else {
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
+	}
+
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
@@ -624,7 +662,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 		}
 
 		usernames := []string{}
-		for _, cred := range targetProxy.BasicAuthCredentials {
+		for _, cred := range targetProxy.AuthenticationProvider.BasicAuthCredentials {
 			usernames = append(usernames, cred.Username)
 		}
 
@@ -668,7 +706,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 			if credential.Password == "" {
 				//Check if exists in the old credential files
 				keepUnchange := false
-				for _, oldCredEntry := range targetProxy.BasicAuthCredentials {
+				for _, oldCredEntry := range targetProxy.AuthenticationProvider.BasicAuthCredentials {
 					if oldCredEntry.Username == credential.Username {
 						//Exists! Reuse the old hash
 						mergedCredentials = append(mergedCredentials, &dynamicproxy.BasicAuthCredentials{
@@ -693,7 +731,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		targetProxy.BasicAuthCredentials = mergedCredentials
+		targetProxy.AuthenticationProvider.BasicAuthCredentials = mergedCredentials
 
 		//Save it to file
 		SaveReverseProxyConfig(targetProxy)
@@ -727,7 +765,7 @@ func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//List all the exception paths for this proxy
-	results := targetProxy.BasicAuthExceptionRules
+	results := targetProxy.AuthenticationProvider.BasicAuthExceptionRules
 	if results == nil {
 		//It is a config from a really old version of zoraxy. Overwrite it with empty array
 		results = []*dynamicproxy.BasicAuthExceptionRule{}
@@ -764,7 +802,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 
 	//Add a new exception rule if it is not already exists
 	alreadyExists := false
-	for _, thisExceptionRule := range targetProxy.BasicAuthExceptionRules {
+	for _, thisExceptionRule := range targetProxy.AuthenticationProvider.BasicAuthExceptionRules {
 		if thisExceptionRule.PathPrefix == matchingPrefix {
 			alreadyExists = true
 			break
@@ -774,7 +812,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "This matching path already exists")
 		return
 	}
-	targetProxy.BasicAuthExceptionRules = append(targetProxy.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
+	targetProxy.AuthenticationProvider.BasicAuthExceptionRules = append(targetProxy.AuthenticationProvider.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
 		PathPrefix: strings.TrimSpace(matchingPrefix),
 	})
 
@@ -808,7 +846,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 	newExceptionRuleList := []*dynamicproxy.BasicAuthExceptionRule{}
 	matchingExists := false
-	for _, thisExceptionalRule := range targetProxy.BasicAuthExceptionRules {
+	for _, thisExceptionalRule := range targetProxy.AuthenticationProvider.BasicAuthExceptionRules {
 		if thisExceptionalRule.PathPrefix != matchingPrefix {
 			newExceptionRuleList = append(newExceptionRuleList, thisExceptionalRule)
 		} else {
@@ -821,7 +859,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	targetProxy.BasicAuthExceptionRules = newExceptionRuleList
+	targetProxy.AuthenticationProvider.BasicAuthExceptionRules = newExceptionRuleList
 
 	// Save configs to runtime and file
 	targetProxy.UpdateToRuntime()
@@ -885,6 +923,7 @@ func ReverseProxyListDetail(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "epname not defined")
 			return
 		}
+		epname = strings.ToLower(strings.TrimSpace(epname))
 		endpointRaw, ok := dynamicProxyRouter.ProxyEndpoints.Load(epname)
 		if !ok {
 			utils.SendErrorResponse(w, "proxy rule not found")
@@ -914,13 +953,13 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 			thisEndpoint := dynamicproxy.CopyEndpoint(value.(*dynamicproxy.ProxyEndpoint))
 			//Clear the auth passwords before showing to front-end
 			cleanedCredentials := []*dynamicproxy.BasicAuthCredentials{}
-			for _, user := range thisEndpoint.BasicAuthCredentials {
+			for _, user := range thisEndpoint.AuthenticationProvider.BasicAuthCredentials {
 				cleanedCredentials = append(cleanedCredentials, &dynamicproxy.BasicAuthCredentials{
 					Username:     user.Username,
 					PasswordHash: "",
 				})
 			}
-			thisEndpoint.BasicAuthCredentials = cleanedCredentials
+			thisEndpoint.AuthenticationProvider.BasicAuthCredentials = cleanedCredentials
 			results = append(results, thisEndpoint)
 			return true
 		})
@@ -1127,7 +1166,7 @@ func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//List all custom headers
-	customHeaderList := targetProxyEndpoint.UserDefinedHeaders
+	customHeaderList := targetProxyEndpoint.HeaderRewriteRules.UserDefinedHeaders
 	if customHeaderList == nil {
 		customHeaderList = []*rewrite.UserDefinedHeader{}
 	}
@@ -1269,7 +1308,7 @@ func HandleHostOverwrite(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		//Get the current host header
-		js, _ := json.Marshal(targetProxyEndpoint.RequestHostOverwrite)
+		js, _ := json.Marshal(targetProxyEndpoint.HeaderRewriteRules.RequestHostOverwrite)
 		utils.SendJSONResponse(w, string(js))
 	} else if r.Method == http.MethodPost {
 		//Set the new host header
@@ -1278,7 +1317,7 @@ func HandleHostOverwrite(w http.ResponseWriter, r *http.Request) {
 		//As this will require change in the proxy instance we are running
 		//we need to clone and respawn this proxy endpoint
 		newProxyEndpoint := targetProxyEndpoint.Clone()
-		newProxyEndpoint.RequestHostOverwrite = newHostname
+		newProxyEndpoint.HeaderRewriteRules.RequestHostOverwrite = newHostname
 		//Save proxy endpoint
 		err = SaveReverseProxyConfig(newProxyEndpoint)
 		if err != nil {
@@ -1341,7 +1380,7 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		//Get the current hop by hop header state
-		js, _ := json.Marshal(!targetProxyEndpoint.DisableHopByHopHeaderRemoval)
+		js, _ := json.Marshal(!targetProxyEndpoint.HeaderRewriteRules.DisableHopByHopHeaderRemoval)
 		utils.SendJSONResponse(w, string(js))
 	} else if r.Method == http.MethodPost {
 		//Set the hop by hop header state
@@ -1351,7 +1390,7 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 		//we need to clone and respawn this proxy endpoint
 		newProxyEndpoint := targetProxyEndpoint.Clone()
 		//Storage file use false as default, so disable removal = not enable remover
-		newProxyEndpoint.DisableHopByHopHeaderRemoval = !enableHopByHopRemover
+		newProxyEndpoint.HeaderRewriteRules.DisableHopByHopHeaderRemoval = !enableHopByHopRemover
 
 		//Save proxy endpoint
 		err = SaveReverseProxyConfig(newProxyEndpoint)
@@ -1414,7 +1453,7 @@ func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		//Return current HSTS enable state
-		hstsAge := targetProxyEndpoint.HSTSMaxAge
+		hstsAge := targetProxyEndpoint.HeaderRewriteRules.HSTSMaxAge
 		js, _ := json.Marshal(hstsAge)
 		utils.SendJSONResponse(w, string(js))
 		return
@@ -1426,8 +1465,12 @@ func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if newMaxAge == 0 || newMaxAge >= 31536000 {
-			targetProxyEndpoint.HSTSMaxAge = int64(newMaxAge)
-			SaveReverseProxyConfig(targetProxyEndpoint)
+			targetProxyEndpoint.HeaderRewriteRules.HSTSMaxAge = int64(newMaxAge)
+			err = SaveReverseProxyConfig(targetProxyEndpoint)
+			if err != nil {
+				utils.SendErrorResponse(w, "save HSTS state failed: "+err.Error())
+				return
+			}
 			targetProxyEndpoint.UpdateToRuntime()
 		} else {
 			utils.SendErrorResponse(w, "invalid max age given")
@@ -1464,11 +1507,11 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 		}
 
 		currentPolicy := permissionpolicy.GetDefaultPermissionPolicy()
-		if targetProxyEndpoint.PermissionPolicy != nil {
-			currentPolicy = targetProxyEndpoint.PermissionPolicy
+		if targetProxyEndpoint.HeaderRewriteRules.PermissionPolicy != nil {
+			currentPolicy = targetProxyEndpoint.HeaderRewriteRules.PermissionPolicy
 		}
 		result := CurrentPolicyState{
-			PPEnabled:     targetProxyEndpoint.EnablePermissionPolicyHeader,
+			PPEnabled:     targetProxyEndpoint.HeaderRewriteRules.EnablePermissionPolicyHeader,
 			CurrentPolicy: currentPolicy,
 		}
 
@@ -1483,7 +1526,7 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		targetProxyEndpoint.EnablePermissionPolicyHeader = enableState
+		targetProxyEndpoint.HeaderRewriteRules.EnablePermissionPolicyHeader = enableState
 		SaveReverseProxyConfig(targetProxyEndpoint)
 		targetProxyEndpoint.UpdateToRuntime()
 		utils.SendOK(w)
@@ -1505,7 +1548,7 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//Save it to file
-		targetProxyEndpoint.PermissionPolicy = newPermissionPolicy
+		targetProxyEndpoint.HeaderRewriteRules.PermissionPolicy = newPermissionPolicy
 		SaveReverseProxyConfig(targetProxyEndpoint)
 		targetProxyEndpoint.UpdateToRuntime()
 		utils.SendOK(w)

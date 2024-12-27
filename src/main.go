@@ -42,10 +42,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
+	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/update"
 	"imuslab.com/zoraxy/mod/utils"
 )
-
 
 /* SIGTERM handler, do shutdown sequences before closing */
 func SetupCloseHandler() {
@@ -58,43 +58,21 @@ func SetupCloseHandler() {
 	}()
 }
 
-func ShutdownSeq() {
-	SystemWideLogger.Println("Shutting down " + SYSTEM_NAME)
-	SystemWideLogger.Println("Closing Netstats Listener")
-	netstatBuffers.Close()
-	SystemWideLogger.Println("Closing Statistic Collector")
-	statisticCollector.Close()
-	if mdnsTickerStop != nil {
-		SystemWideLogger.Println("Stopping mDNS Discoverer (might take a few minutes)")
-		// Stop the mdns service
-		mdnsTickerStop <- true
-	}
-	mdnsScanner.Close()
-	SystemWideLogger.Println("Shutting down load balancer")
-	loadBalancer.Close()
-	SystemWideLogger.Println("Closing Certificates Auto Renewer")
-	acmeAutoRenewer.Close()
-	//Remove the tmp folder
-	SystemWideLogger.Println("Cleaning up tmp files")
-	os.RemoveAll("./tmp")
-
-	//Close database
-	SystemWideLogger.Println("Stopping system database")
-	sysdb.Close()
-
-	//Close logger
-	SystemWideLogger.Println("Closing system wide logger")
-	SystemWideLogger.Close()
-}
-
 func main() {
 	//Parse startup flags
 	flag.Parse()
+
+	/* Maintaince Function Modes */
 	if *showver {
 		fmt.Println(SYSTEM_NAME + " - Version " + SYSTEM_VERSION)
 		os.Exit(0)
 	}
+	if *geoDbUpdate {
+		geodb.DownloadGeoDBUpdate("./conf/geodb")
+		os.Exit(0)
+	}
 
+	/* Main Zoraxy Routines */
 	if !utils.ValidateListeningAddress(*webUIPort) {
 		fmt.Println("Malformed -port (listening address) paramter. Do you mean -port=:" + *webUIPort + "?")
 		os.Exit(0)
@@ -130,7 +108,7 @@ func main() {
 		csrf.SameSite(csrf.SameSiteLaxMode),
 	)
 
-	//Startup all modules
+	//Startup all modules, see start.go
 	startupSequence()
 
 	//Initiate management interface APIs

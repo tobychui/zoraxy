@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"imuslab.com/zoraxy/mod/access"
-	"imuslab.com/zoraxy/mod/auth/sso"
+	"imuslab.com/zoraxy/mod/auth/sso/authelia"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -19,10 +19,12 @@ import (
 	"imuslab.com/zoraxy/mod/tlscert"
 )
 
+type ProxyType int
+
 const (
-	ProxyType_Root = 0
-	ProxyType_Host = 1
-	ProxyType_Vdir = 2
+	ProxyTypeRoot ProxyType = iota //Root Proxy, everything not matching will be routed here
+	ProxyTypeHost                  //Host Proxy, match by host (domain) name
+	ProxyTypeVdir                  //Virtual Directory Proxy, match by path prefix
 )
 
 type ProxyHandler struct {
@@ -31,14 +33,17 @@ type ProxyHandler struct {
 
 /* Router Object Options */
 type RouterOption struct {
-	HostUUID           string                    //The UUID of Zoraxy, use for heading mod
-	HostVersion        string                    //The version of Zoraxy, use for heading mod
-	Port               int                       //Incoming port
-	UseTls             bool                      //Use TLS to serve incoming requsts
-	ForceTLSLatest     bool                      //Force TLS1.2 or above
-	NoCache            bool                      //Force set Cache-Control: no-store
-	ListenOnPort80     bool                      //Enable port 80 http listener
-	ForceHttpsRedirect bool                      //Force redirection of http to https endpoint
+	/* Basic Settings */
+	HostUUID           string //The UUID of Zoraxy, use for heading mod
+	HostVersion        string //The version of Zoraxy, use for heading mod
+	Port               int    //Incoming port
+	UseTls             bool   //Use TLS to serve incoming requsts
+	ForceTLSLatest     bool   //Force TLS1.2 or above
+	NoCache            bool   //Force set Cache-Control: no-store
+	ListenOnPort80     bool   //Enable port 80 http listener
+	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
+
+	/* Routing Service Managers */
 	TlsManager         *tlscert.Manager          //TLS manager for serving SAN certificates
 	RedirectRuleTable  *redirection.RuleTable    //Redirection rules handler and table
 	GeodbStore         *geodb.Store              //GeoIP resolver
@@ -46,21 +51,25 @@ type RouterOption struct {
 	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
 	WebDirectory       string                    //The static web server directory containing the templates folder
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
-	SSOHandler         *sso.SSOHandler           //SSO handler for handling SSO requests, interception mode only
-	Logger             *logger.Logger            //Logger for reverse proxy requets
+
+	/* Authentication Providers */
+	AutheliaRouter *authelia.AutheliaRouter //Authelia router for Authelia authentication
+
+	/* Utilities */
+	Logger *logger.Logger //Logger for reverse proxy requets
 }
 
 /* Router Object */
 type Router struct {
 	Option         *RouterOption
-	ProxyEndpoints *sync.Map
-	Running        bool
-	Root           *ProxyEndpoint
-	mux            http.Handler
-	server         *http.Server
-	tlsListener    net.Listener
+	ProxyEndpoints *sync.Map                 //Map of ProxyEndpoint objects, each ProxyEndpoint object is a routing rule that handle incoming requests
+	Running        bool                      //If the router is running
+	Root           *ProxyEndpoint            //Root proxy endpoint, default site
+	mux            http.Handler              //HTTP handler
+	server         *http.Server              //HTTP server
+	tlsListener    net.Listener              //TLS listener, handle SNI routing
 	loadBalancer   *loadbalance.RouteManager //Load balancer routing manager
-	routingRules   []*RoutingRule
+	routingRules   []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
 
 	tlsRedirectStop  chan bool              //Stop channel for tls redirection server
 	rateLimterStop   chan bool              //Stop channel for rate limiter
@@ -99,9 +108,48 @@ type VirtualDirectoryEndpoint struct {
 	parent              *ProxyEndpoint       `json:"-"`
 }
 
+// Rules and settings for header rewriting
+type HeaderRewriteRules struct {
+	UserDefinedHeaders           []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
+	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
+	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
+	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
+	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
+	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
+
+}
+
+/*
+
+	Authentication Provider
+
+	TODO: Move these into a dedicated module
+*/
+
+type AuthMethod int
+
+const (
+	AuthMethodNone     AuthMethod = iota //No authentication required
+	AuthMethodBasic                      //Basic Auth
+	AuthMethodAuthelia                   //Authelia
+	AuthMethodOauth2                     //Oauth2
+)
+
+type AuthenticationProvider struct {
+	AuthMethod AuthMethod //The authentication method to use
+	/* Basic Auth Settings */
+	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
+	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
+	BasicAuthGroupIDs       []string                  //Group IDs that are allowed to access this endpoint
+
+	/* Authelia Settings */
+	AutheliaURL string //URL of the Authelia server, leave empty to use global settings e.g. authelia.example.com
+	UseHTTPS    bool   //Whether to use HTTPS for the Authelia server
+}
+
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
-	ProxyType            int                     //The type of this proxy, see const def
+	ProxyType            ProxyType               //The type of this proxy, see const def
 	RootOrMatchingDomain string                  //Matching domain for host, also act as key
 	MatchingDomainAlias  []string                //A list of domains that alias to this rule
 	ActiveOrigins        []*loadbalance.Upstream //Activated Upstream or origin servers IP or domain to proxy to
@@ -117,22 +165,17 @@ type ProxyEndpoint struct {
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
 	//Custom Headers
-	UserDefinedHeaders           []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
-	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
-	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
-	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
-	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
-	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
+	HeaderRewriteRules *HeaderRewriteRules
 
 	//Authentication
-	RequireBasicAuth        bool                      //Set to true to request basic auth before proxy
-	BasicAuthCredentials    []*BasicAuthCredentials   //Basic auth credentials
-	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
-	UseSSOIntercept         bool                      //Allow SSO to intercept this endpoint and provide authentication via Oauth2 credentials
+	AuthenticationProvider *AuthenticationProvider
 
 	// Rate Limiting
 	RequireRateLimit bool
 	RateLimit        int64 // Rate limit in requests per second
+
+	//Uptime Monitor
+	DisableUptimeMonitor bool //Disable uptime monitor for this endpoint
 
 	//Access Control
 	AccessFilterUUID string //Access filter ID
@@ -158,6 +201,9 @@ const (
 	DefaultSite_ReverseProxy            = 1
 	DefaultSite_Redirect                = 2
 	DefaultSite_NotFoundPage            = 3
+	DefaultSite_NoResponse              = 4
+
+	DefaultSite_TeaPot = 418 //I'm a teapot
 )
 
 /*

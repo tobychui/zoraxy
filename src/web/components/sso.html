@@ -1,381 +1,79 @@
 <div class="standardContainer">
     <div class="ui basic segment">
-        <div class="ui message">
-            <div class="header">
-                Work in Progress
-            </div>
-            <p>The SSO feature is currently under development.</p>
-        </div>
+        <h2>SSO</h2>
+        <p>Single Sign-On (SSO) and authentication providers settings </p>
     </div>
-</div>
-<!-- 
-<div class="standardContainer">
-    <div class="ui basic segment">
-        <h2>Zoraxy SSO / Oauth</h2>
-        <p>A centralized authentication system for all your subdomains</p>
-        <div class="ui divider"></div>
-        <div class="ui basic segment enabled ssoRunningState">
-            <h4 class="ui header" id="ssoRunningState">
-                <i class="circle check icon"></i>
-                <div class="content">
-                    <span class="webserv_status">Running</span>
-                    <div class="sub header">Listen port :<span class="oauthserv_port">8081</span></div>
-                </div>
-            </h4>
-        </div>
-        <div class="ui form">
-            <h3 class="ui dividing header">Oauth2 Server Settings</h3>
-            <div class="field">
-                <div class="ui toggle checkbox">
-                    <input type="checkbox" name="enableOauth2">
-                    <label>Enable Oauth2 Server<br>
-                    <small>Oauth2 server for handling external authentication requests</small></label>
-                </div>
-            </div>
-            <div class="field">
-                <label>Oauth2 Server Port</label>
-                <div class="ui action input">
-                    <input type="number" name="oauth2Port" placeholder="Port" value="5488">
-                    <button id="saveOauthServerPortBtn" class="ui basic green button"><i class="ui green circle check icon"></i> Update</button>         
-                </div>
-                <small>Listening port of the Zoraxy internal Oauth2 Server.You can create a subdomain proxy rule to <code>127.0.0.1:<span class="ssoPort">5488</span></code></small>
-            </div>
-            <div class="field">
-                <label>Auth URL</label>
-                <div class="ui action input">
-                    <input type="text" name="authURL" placeholder="https://auth.yourdomain.com">
-                    <button id="saveAuthURLBtn" class="ui basic blue button"><i class="ui blue save icon"></i> Save</button>
-                </div>
-                <small>The exposed authentication URL of the Oauth2 server, usually <code>https://auth.example.com</code> or <code>https://sso.yourdomain.com</code>. <b>Remember to include the http:// or https:// in your URL.</b></small>
-            </div>
-        </div>
-        <br>
-        <div class="ui form">
-            <h3 class="ui dividing header">Zoraxy SSO Settings</h3>
-            <div class="field">
-                <label>Default Redirection URL </label>   
-                <div class="ui fluid input">
-                    <input type="text" name="defaultSiteURL" placeholder="https://yourdomain.com">
-                </div>
-                <small>The default URL to redirect to after login if redirection target is not set</small>
-            </div>
 
-            <button class="ui basic button"> <i class="ui green check icon"></i> Apply Changes </button>
-        </div>
-        <div class="ui basic message">
+    <div class="ui basic segment">
+        <div class="ui yellow message">
             <div class="header">
-                <i class="ui yellow exclamation triangle icon"></i> Important Notes about Zoraxy SSO
+                Experimental Feature
             </div>
-            <p>Zoraxy SSO, if enabled in HTTP Proxy rule, will automatically intercept the proxy request and provide an SSO interface on upstreams that do not support OAuth natively.
-                It is basically like basic auth with a login page. <b> The same user credential can be used in OAuth sign-in and Zoraxy SSO sign-in.</b>
-            </p>
-        </div>
-        <div class="ui divider"></div>
-        <div>
-            <h3 class="ui header">
-                <i class="ui blue user circle icon"></i>
-                <div class="content">
-                    Registered Users
-                  <div class="sub header">A list of users that are registered with the SSO server</div>
-                </div>
-            </h3>
-            <table class="ui celled table">
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Registered On</th>
-                        <th>Reset Password</th>
-                        <th>Remove</th>
-                    </tr>
-                </thead>
-                <tbody id="registeredSsoUsers">
-                    <tr>
-                        <td>admin</td>
-                        <td>2020-01-01</td>
-                        <td><button class="ui blue basic small icon button"><i class="ui blue key icon"></i></button></td>
-                        <td><button class="ui red basic small icon button"><i class="ui red trash icon"></i></button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button onclick="handleUserListRefresh();" class="ui basic right floated button"><i class="ui green refresh icon"></i> Refresh</button>
-            <button onclick="openRegisteredUserManager();" class="ui basic button"><i class="ui blue users icon"></i> Manage Registered Users</button>
-        </div>
-        <div class="ui divider"></div>
-        <div>
-            <h3 class="ui header">
-                <i class="ui green th icon"></i>
-                <div class="content">
-                    Registered Apps
-                  <div class="sub header">A list of apps that are registered with the SSO server</div>
-                </div>
-            </h3>
-            <table class="ui celled table">
-                <thead>
-                    <tr>
-                        <th>App Name</th>
-                        <th>Domain</th>
-                        <th>App ID</th>
-                        <th>Registered On</th>
-                        <th>Remove</th>
-                    </tr>
-                </thead>
-                <tbody id="registeredSsoApps">
-                    <tr>
-                        <td>My App</td>
-                        <td><a href="//example.com" target="_blank">example.com</a></td>
-                        <td>123456</td>
-                        <td>2020-01-01</td>
-                        <td><button class="ui red basic small icon button"><i class="ui red trash icon"></i></button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button onclick="handleRegisterAppListRefresh();" class="ui basic right floated button"><i class="ui green refresh icon"></i> Refresh</button>
-            <button onclick="openRegisterAppManagementSnippet();" class="ui basic button"><i style="font-size: 1em; margin-top: -0.2em;" class="ui green th large icon"></i> Manage Registered App</button>
-            <p></p>
+            <p>Please note that this feature is still in development and may not work as expected.</p>
         </div>
     </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h3>Authelia</h3>
+        <p>Configuration settings for Authelia authentication provider.</p>
+
+        <form class="ui form">
+            <div class="field">
+                <label for="autheliaServerUrl">Authelia Server URL</label>
+                <input type="text" id="autheliaServerUrl" name="autheliaServerUrl" placeholder="Enter Authelia Server URL">
+                <small>Example: auth.example.com</small>
+            </div>
+            <div class="field">
+                <div class="ui checkbox">
+                    <input type="checkbox" id="useHttps" name="useHttps">
+                    <label for="useHttps">Use HTTPS</label>
+                    <small>Check this if your authelia server uses HTTPS</small>
+                </div>
+            </div>
+            <button class="ui basic button" onclick="event.preventDefault(); updateAutheliaSettings();"><i class="green check icon"></i> Apply Change</button>
+        </form>
+    </div>
+    <div class="ui divider"></div>
 </div>
 
 <script>
-    $("input[name=oauth2Port]").on("change", function() {
-        $(".ssoPort").text($(this).val());
-    });
-
-    function updateSSOStatus(){
-        $.get("/api/sso/status", function(data){
-            if(data.error != undefined){
-                //Show error message
-                $(".ssoRunningState").removeClass("enabled").addClass("disabled");
-                $("#ssoRunningState .webserv_status").html('Error: '+data.error);
-            }else{
-                if (data.Enabled){
-                    $(".ssoRunningState").addClass("enabled");
-                    $("#ssoRunningState .webserv_status").html('Running');
-                    $(".ssoRunningState i").attr("class", "circle check icon");
-                    $("input[name=enableOauth2]").parent().checkbox("set checked");
-                }else{
-                    $(".ssoRunningState").removeClass("enabled");
-                    $("#ssoRunningState .webserv_status").html('Stopped');
-                    $(".ssoRunningState i").attr("class", "circle times icon");
-                    $("input[name=enableOauth2]").parent().checkbox("set unchecked");
-                }
-                $("input[name=oauth2Port]").val(data.ListeningPort);
-                $(".oauthserv_port").text(data.ListeningPort);
-                $("input[name=authURL]").val(data.AuthURL);
+    $(document).ready(function() {
+        $.cjax({
+            url: '/api/sso/Authelia',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                $('#autheliaServerUrl').val(data.autheliaURL);
+                $('#useHttps').prop('checked', data.useHTTPS);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching SSO settings:', textStatus, errorThrown);
             }
         });
-    }
+    });
 
+    function updateAutheliaSettings(){
+        var autheliaServerUrl = $('#autheliaServerUrl').val();
+        var useHttps = $('#useHttps').prop('checked');
 
-    function initSSOStatus(){
-        $.get("/api/sso/status", function(data){
-            //Update the SSO status from the server
-            updateSSOStatus();
-
-            //Bind events to the enable checkbox
-            $("input[name=enableOauth2]").off("change").on("change", function(){
-                var checked = $(this).prop("checked");
-                $.cjax({
-                    url: "/api/sso/enable",
-                    method: "POST",
-                    data: {
-                        enable: checked
-                    },
-                    success: function(data){
-                        if(data.error != undefined){
-                            msgbox("Failed to toggle SSO: " + data.error, false);
-                            //Unbind the event to prevent infinite loop
-                            $("input[name=enableOauth2]").off("change");
-                        }else{
-                            initSSOStatus();
-                        }
-                    }
-                });
-            });
-        });
-    }
-    initSSOStatus();
-
-    /* Save the Oauth server port */
-    function saveOauthServerPort(){
-        var port = $("input[name=oauth2Port]").val();
-        //Check if the port is valid
-        if (port < 1 || port > 65535){
-                msgbox("Invalid port number", false);
-                return;
-        }
-        //Use cjax to send the port to the server with csrf token
         $.cjax({
-            url: "/api/sso/setPort",
-            method: "POST",
+            url: '/api/sso/Authelia',
+            method: 'POST',
             data: {
-                port: port
+                autheliaURL: autheliaServerUrl,
+                useHTTPS: useHttps
             },
             success: function(data) {
                 if (data.error != undefined) {
-                    msgbox("Failed to update Oauth server port: " + data.error, false);
-                } else {
-                    msgbox("Oauth server port updated", true);
-                    
+                    $.msgbox(data.error, false);
+                    return;
                 }
-                updateSSOStatus();
-            }
-        });
-    }
-    //Bind the save button to the saveOauthServerPort function
-    $("#saveOauthServerPortBtn").on("click", function() {
-        saveOauthServerPort();
-    });
-    $("input[name=oauth2Port]").on("keypress", function(e) {
-        if (e.which == 13) {
-            saveOauthServerPort();
-        }
-    });
-
-    /* Save the Oauth server URL (aka AuthURL) */
-    function saveAuthURL(){
-        var url = $("input[name=authURL]").val();
-        //Make sure the url contains http:// or https://
-        if (!url.startsWith("http://") && !url.startsWith("https://")){
-            msgbox("Invalid URL. Make sure to include http:// or https://", false);
-            $("input[name=authURL]").parent().parent().addClass("error");
-            return;
-        }else{
-            $("input[name=authURL]").parent().parent().removeClass("error");
-        }
-        //Use cjax to send the port to the server with csrf token
-        $.cjax({
-            url: "/api/sso/setAuthURL",
-            method: "POST",
-            data: {
-                "auth_url": url
+                msgbox('Authelia settings updated', true);
+                console.log('Authelia settings updated:', data);
             },
-            success: function(data) {
-                if (data.error != undefined) {
-                    msgbox("Failed to update Oauth server port: " + data.error, false);
-                } else {
-                    msgbox("Oauth server port updated", true);
-                    
-                }
-                updateSSOStatus();
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Authelia settings:', textStatus, errorThrown);
             }
         });
-    }
-
-    //Bind the save button to the saveAuthURL function
-    $("#saveAuthURLBtn").on("click", function() {
-        saveAuthURL();
-    });
-    $("input[name=authURL]").on("keypress", function(e) {
-        if (e.which == 13) {
-            saveAuthURL();
-        }
-    });
-    
-    /* Registered Apps Event Handlers */
-    
-    //Function to initialize the registered app table
-    function initRegisteredAppTable(){
-        $.get("/api/sso/app/list", function(data){
-            if(data.error != undefined){
-                msgbox("Failed to get registered apps: " + data.error, false);
-            }else{
-                var tbody = $("#registeredSsoApps");
-                tbody.empty();
-                for(var i = 0; i < data.length; i++){
-                    var app = data[i];
-                    var tr = $("<tr>");
-                    tr.append($("<td>").text(app.AppName));
-                    tr.append($("<td>").html('<a href="//'+app.Domain+'" target="_blank">'+app.Domain+'</a>'));
-                    tr.append($("<td>").text(app.AppID));
-                    tr.append($("<td>").text(app.RegisteredOn));
-                    var removeBtn = $("<button>").addClass("ui red basic small icon button").html('<i class="ui red trash icon"></i>');
-                    removeBtn.on("click", function(){
-                        removeApp(app.AppID);
-                    });
-                    tr.append($("<td>").append(removeBtn));
-                    tbody.append(tr);
-                }
-
-                if (data.length == 0){
-                    tbody.append($("<tr>").append($("<td>").attr("colspan", 4).html(`<i class="ui green circle check icon"></i> No registered users`)));
-                }
-            }
-        });
-    }
-    initRegisteredAppTable();
-
-    //Also bind the refresh button to the initRegisteredAppTable function
-    function handleRegisterAppListRefresh(){
-        initRegisteredAppTable();
-    }
-
-    function openRegisterAppManagementSnippet(){
-        //Open the register app management snippet
-        showSideWrapper("snippet/sso_app.html");
-    }
-
-
-    //Bind the remove button to the removeApp function
-    function removeApp(appID){
-        $.cjax({
-            url: "/api/sso/removeApp",
-            method: "POST",
-            data: {
-                appID: appID
-            },
-            success: function(data){
-                if(data.error != undefined){
-                    msgbox("Failed to remove app: " + data.error, false);
-                }else{
-                    msgbox("App removed", true);
-                    updateSSOStatus();
-                }
-            }
-        });
-    }
-
-    /* Registered Users Event Handlers */
-    function initUserList(){
-        $.get("/api/sso/user/list", function(data){
-            if(data.error != undefined){
-                msgbox("Failed to get registered users: " + data.error, false);
-            }else{
-                var tbody = $("#registeredSsoUsers");
-                tbody.empty();
-                for(var i = 0; i < data.length; i++){
-                    var user = data[i];
-                    var tr = $("<tr>");
-                    tr.append($("<td>").text(user.Username));
-                    tr.append($("<td>").text(user.RegisteredOn));
-                    var resetBtn = $("<button>").addClass("ui blue basic small icon button").html('<i class="ui blue key icon"></i>');
-                    resetBtn.on("click", function(){
-                        resetPassword(user.Username);
-                    });
-                    tr.append($("<td>").append(resetBtn));
-                    var removeBtn = $("<button>").addClass("ui red basic small icon button").html('<i class="ui red trash icon"></i>');
-                    removeBtn.on("click", function(){
-                        removeUser(user.Username);
-                    });
-                    tr.append($("<td>").append(removeBtn));
-                    tbody.append(tr);
-                }
-
-                if (data.length == 0){
-                    tbody.append($("<tr>").append($("<td>").attr("colspan", 4).html(`<i class="ui green circle check icon"></i> No registered users`)));
-                }
-            }
-        });
-    }
-
-    //Bind the refresh button to the initUserList function
-    function handleUserListRefresh(){
-        initUserList();
-    }
-
-    function openRegisteredUserManager(){
-        //Open the registered user management snippet
-        showSideWrapper("snippet/sso_user.html");
     }
 </script>
--->

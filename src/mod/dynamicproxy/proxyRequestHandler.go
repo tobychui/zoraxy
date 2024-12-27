@@ -35,6 +35,7 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 // Get the proxy endpoint from hostname, which might includes checking of wildcard certificates
 func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
 	var targetSubdomainEndpoint *ProxyEndpoint = nil
+	hostname = strings.ToLower(hostname)
 	ep, ok := router.ProxyEndpoints.Load(hostname)
 	if ok {
 		//Exact hit
@@ -143,9 +144,11 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		}
 		h.Parent.logRequest(r, true, 101, "host-websocket", selectedUpstream.OriginIpOrDomain)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-			SkipTLSValidation: selectedUpstream.SkipCertValidations,
-			SkipOriginCheck:   selectedUpstream.SkipWebSocketOriginCheck,
-			Logger:            h.Parent.Option.Logger,
+			SkipTLSValidation:  selectedUpstream.SkipCertValidations,
+			SkipOriginCheck:    selectedUpstream.SkipWebSocketOriginCheck,
+			CopyAllHeaders:     true,
+			UserDefinedHeaders: target.HeaderRewriteRules.UserDefinedHeaders,
+			Logger:             h.Parent.Option.Logger,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return
@@ -160,15 +163,15 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	//Populate the user-defined headers with the values from the request
-	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.UserDefinedHeaders)
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.HeaderRewriteRules.UserDefinedHeaders)
 
 	//Build downstream and upstream header rules
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
 		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
-		HSTSMaxAge:                   target.HSTSMaxAge,
+		HSTSMaxAge:                   target.HeaderRewriteRules.HSTSMaxAge,
 		HSTSIncludeSubdomains:        target.ContainsWildcardName(true),
-		EnablePermissionPolicyHeader: target.EnablePermissionPolicyHeader,
-		PermissionPolicy:             target.PermissionPolicy,
+		EnablePermissionPolicyHeader: target.HeaderRewriteRules.EnablePermissionPolicyHeader,
+		PermissionPolicy:             target.HeaderRewriteRules.PermissionPolicy,
 	})
 
 	//Handle the request reverse proxy
@@ -180,8 +183,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		PathPrefix:          "",
 		UpstreamHeaders:     upstreamHeaders,
 		DownstreamHeaders:   downstreamHeaders,
-		HostHeaderOverwrite: target.RequestHostOverwrite,
-		NoRemoveHopByHop:    target.DisableHopByHopHeaderRemoval,
+		HostHeaderOverwrite: target.HeaderRewriteRules.RequestHostOverwrite,
+		NoRemoveHopByHop:    target.HeaderRewriteRules.DisableHopByHopHeaderRemoval,
 		Version:             target.parent.Option.HostVersion,
 	})
 
@@ -221,9 +224,11 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		}
 		h.Parent.logRequest(r, true, 101, "vdir-websocket", target.Domain)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-			SkipTLSValidation: target.SkipCertValidations,
-			SkipOriginCheck:   true, //You should not use websocket via virtual directory. But keep this to true for compatibility
-			Logger:            h.Parent.Option.Logger,
+			SkipTLSValidation:  target.SkipCertValidations,
+			SkipOriginCheck:    true, //You should not use websocket via virtual directory. But keep this to true for compatibility
+			CopyAllHeaders:     true,
+			UserDefinedHeaders: target.parent.HeaderRewriteRules.UserDefinedHeaders,
+			Logger:             h.Parent.Option.Logger,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return
@@ -238,15 +243,15 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	//Populate the user-defined headers with the values from the request
-	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.parent.UserDefinedHeaders)
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.parent.HeaderRewriteRules.UserDefinedHeaders)
 
 	//Build downstream and upstream header rules, use the parent (subdomain) endpoint's headers
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
 		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
-		HSTSMaxAge:                   target.parent.HSTSMaxAge,
+		HSTSMaxAge:                   target.parent.HeaderRewriteRules.HSTSMaxAge,
 		HSTSIncludeSubdomains:        target.parent.ContainsWildcardName(true),
-		EnablePermissionPolicyHeader: target.parent.EnablePermissionPolicyHeader,
-		PermissionPolicy:             target.parent.PermissionPolicy,
+		EnablePermissionPolicyHeader: target.parent.HeaderRewriteRules.EnablePermissionPolicyHeader,
+		PermissionPolicy:             target.parent.HeaderRewriteRules.PermissionPolicy,
 	})
 
 	//Handle the virtual directory reverse proxy request
@@ -257,7 +262,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		PathPrefix:          target.MatchingPath,
 		UpstreamHeaders:     upstreamHeaders,
 		DownstreamHeaders:   downstreamHeaders,
-		HostHeaderOverwrite: target.parent.RequestHostOverwrite,
+		HostHeaderOverwrite: target.parent.HeaderRewriteRules.RequestHostOverwrite,
 		Version:             target.parent.parent.Option.HostVersion,
 	})
 

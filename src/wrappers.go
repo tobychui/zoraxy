@@ -90,7 +90,7 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 
 	UptimeTargets := []*uptime.Target{}
 	for hostid, target := range hosts {
-		if target.Disabled {
+		if target.Disabled || target.DisableUptimeMonitor {
 			//Skip those proxy rules that is disabled
 			continue
 		}

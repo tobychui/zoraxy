@@ -28,9 +28,11 @@ require (
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.114 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/tidwall/btree v0.0.0-20191029221954-400434d76274 // indirect
 	github.com/tidwall/buntdb v1.1.2 // indirect
 	github.com/tidwall/gjson v1.12.1 // indirect

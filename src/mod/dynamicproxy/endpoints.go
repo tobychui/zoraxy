@@ -27,7 +27,7 @@ import (
 
 // Check if a user define header exists in this endpoint, ignore case
 func (ep *ProxyEndpoint) UserDefinedHeaderExists(key string) bool {
-	for _, header := range ep.UserDefinedHeaders {
+	for _, header := range ep.HeaderRewriteRules.UserDefinedHeaders {
 		if strings.EqualFold(header.Key, key) {
 			return true
 		}
@@ -38,13 +38,13 @@ func (ep *ProxyEndpoint) UserDefinedHeaderExists(key string) bool {
 // Remvoe a user defined header from the list
 func (ep *ProxyEndpoint) RemoveUserDefinedHeader(key string) error {
 	newHeaderList := []*rewrite.UserDefinedHeader{}
-	for _, header := range ep.UserDefinedHeaders {
+	for _, header := range ep.HeaderRewriteRules.UserDefinedHeaders {
 		if !strings.EqualFold(header.Key, key) {
 			newHeaderList = append(newHeaderList, header)
 		}
 	}
 
-	ep.UserDefinedHeaders = newHeaderList
+	ep.HeaderRewriteRules.UserDefinedHeaders = newHeaderList
 
 	return nil
 }
@@ -56,7 +56,7 @@ func (ep *ProxyEndpoint) AddUserDefinedHeader(newHeaderRule *rewrite.UserDefined
 	}
 
 	newHeaderRule.Key = cases.Title(language.Und, cases.NoLower).String(newHeaderRule.Key)
-	ep.UserDefinedHeaders = append(ep.UserDefinedHeaders, newHeaderRule)
+	ep.HeaderRewriteRules.UserDefinedHeaders = append(ep.HeaderRewriteRules.UserDefinedHeaders, newHeaderRule)
 	return nil
 }
 
@@ -123,9 +123,9 @@ func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint)
 		return nil, err
 	}
 
-	if ep.ProxyType == ProxyType_Root {
+	if ep.ProxyType == ProxyTypeRoot {
 		parentRouter.Root = readyRoutingRule
-	} else if ep.ProxyType == ProxyType_Host {
+	} else if ep.ProxyType == ProxyTypeHost {
 		ep.Remove()
 		parentRouter.AddProxyRouteToRuntime(readyRoutingRule)
 	} else {
@@ -264,5 +264,6 @@ func (ep *ProxyEndpoint) Remove() error {
 // use prepare -> remove -> add if you change anything in the endpoint
 // that effects the proxy routing src / dest
 func (ep *ProxyEndpoint) UpdateToRuntime() {
-	ep.parent.ProxyEndpoints.Store(ep.RootOrMatchingDomain, ep)
+	lookupHostname := strings.ToLower(ep.RootOrMatchingDomain)
+	ep.parent.ProxyEndpoints.Store(lookupHostname, ep)
 }

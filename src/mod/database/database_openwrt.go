@@ -10,10 +10,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
+
+	"imuslab.com/zoraxy/mod/database/dbinc"
 )
 
-func newDatabase(dbfile string, readOnlyMode bool) (*Database, error) {
+/*
+	OpenWRT or RISCV backend
+
+	For OpenWRT or RISCV platform, we will use the filesystem as the database backend
+	as boltdb or leveldb is not supported on these platforms, including boltDB and LevelDB
+	in conditional compilation will create a build error on these platforms
+*/
+
+func newDatabase(dbfile string, backendType dbinc.BackendType) (*Database, error) {
 	dbRootPath := filepath.ToSlash(filepath.Clean(dbfile))
 	dbRootPath = "fsdb/" + dbRootPath
 	err := os.MkdirAll(dbRootPath, 0755)
@@ -21,24 +30,11 @@ func newDatabase(dbfile string, readOnlyMode bool) (*Database, error) {
 		return nil, err
 	}
 
-	tableMap := sync.Map{}
-	//build the table list from file system
-	files, err := filepath.Glob(filepath.Join(dbRootPath, "/*"))
-	if err != nil {
-		return nil, err
-	}
-
-	for _, file := range files {
-		if isDirectory(file) {
-			tableMap.Store(filepath.Base(file), "")
-		}
-	}
-
 	log.Println("Filesystem Emulated Key-value Database Service Started: " + dbRootPath)
 	return &Database{
-		Db:       dbRootPath,
-		Tables:   tableMap,
-		ReadOnly: readOnlyMode,
+		Db:          dbRootPath,
+		BackendType: dbinc.BackendFSOnly,
+		Backend:     nil,
 	}, nil
 }
 
@@ -61,9 +57,7 @@ func (d *Database) dump(filename string) ([]string, error) {
 }
 
 func (d *Database) newTable(tableName string) error {
-	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
-	}
+
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	if !fileExists(tablePath) {
 		return os.MkdirAll(tablePath, 0755)
@@ -85,9 +79,7 @@ func (d *Database) tableExists(tableName string) bool {
 }
 
 func (d *Database) dropTable(tableName string) error {
-	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
-	}
+
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	if d.tableExists(tableName) {
 		return os.RemoveAll(tablePath)
@@ -98,9 +90,7 @@ func (d *Database) dropTable(tableName string) error {
 }
 
 func (d *Database) write(tableName string, key string, value interface{}) error {
-	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
-	}
+
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	js, err := json.Marshal(value)
 	if err != nil {
@@ -138,9 +128,7 @@ func (d *Database) keyExists(tableName string, key string) bool {
 }
 
 func (d *Database) delete(tableName string, key string) error {
-	if d.ReadOnly {
-		return errors.New("Operation rejected in ReadOnly mode")
-	}
+
 	if !d.keyExists(tableName, key) {
 		return errors.New("key not exists")
 	}

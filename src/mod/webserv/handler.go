@@ -83,7 +83,11 @@ func (ws *WebServer) SetEnableDirectoryListing(w http.ResponseWriter, r *http.Re
 		utils.SendErrorResponse(w, "invalid setting given")
 		return
 	}
-
+	err = ws.option.Sysdb.Write("webserv", "dirlist", enableList)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save setting")
+		return
+	}
 	ws.option.EnableDirectoryListing = enableList
 	utils.SendOK(w)
 }

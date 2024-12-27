@@ -59,7 +59,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		thisConfigEndpoint.RootOrMatchingDomain = "/"
 	}
 
-	if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyType_Root {
+	if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyTypeRoot {
 		//This is a root config file
 		rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
 		if err != nil {
@@ -68,7 +68,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 
 		dynamicProxyRouter.SetProxyRouteAsRoot(rootProxyEndpoint)
 
-	} else if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyType_Host {
+	} else if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyTypeHost {
 		//This is a host config file
 		readyProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
 		if err != nil {
@@ -97,7 +97,7 @@ func filterProxyConfigFilename(filename string) string {
 func SaveReverseProxyConfig(endpoint *dynamicproxy.ProxyEndpoint) error {
 	//Get filename for saving
 	filename := filepath.Join("./conf/proxy/", endpoint.RootOrMatchingDomain+".config")
-	if endpoint.ProxyType == dynamicproxy.ProxyType_Root {
+	if endpoint.ProxyType == dynamicproxy.ProxyTypeRoot {
 		filename = "./conf/proxy/root.config"
 	}
 
@@ -129,9 +129,15 @@ func RemoveReverseProxyConfig(endpoint string) error {
 // Get the default root config that point to the internal static web server
 // this will be used if root config is not found (new deployment / missing root.config file)
 func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
+	//Default Authentication Provider
+	defaultAuth := &dynamicproxy.AuthenticationProvider{
+		AuthMethod:              dynamicproxy.AuthMethodNone,
+		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
+		BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
+	}
 	//Default settings
 	rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&dynamicproxy.ProxyEndpoint{
-		ProxyType:            dynamicproxy.ProxyType_Root,
+		ProxyType:            dynamicproxy.ProxyTypeRoot,
 		RootOrMatchingDomain: "/",
 		ActiveOrigins: []*loadbalance.Upstream{
 			{
@@ -141,14 +147,12 @@ func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
 				Weight:              0,
 			},
 		},
-		InactiveOrigins:         []*loadbalance.Upstream{},
-		BypassGlobalTLS:         false,
-		VirtualDirectories:      []*dynamicproxy.VirtualDirectoryEndpoint{},
-		RequireBasicAuth:        false,
-		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
-		BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
-		DefaultSiteOption:       dynamicproxy.DefaultSite_InternalStaticWebServer,
-		DefaultSiteValue:        "",
+		InactiveOrigins:        []*loadbalance.Upstream{},
+		BypassGlobalTLS:        false,
+		VirtualDirectories:     []*dynamicproxy.VirtualDirectoryEndpoint{},
+		AuthenticationProvider: defaultAuth,
+		DefaultSiteOption:      dynamicproxy.DefaultSite_InternalStaticWebServer,
+		DefaultSiteValue:       "",
 	})
 	if err != nil {
 		return nil, err
@@ -167,7 +171,6 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 	if includeSysDBRaw == "true" {
 		//Include the system database in backup snapshot
 		//Temporary set it to read only
-		sysdb.ReadOnly = true
 		includeSysDB = true
 	}
 
@@ -241,8 +244,6 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//Restore sysdb state
-		sysdb.ReadOnly = false
 	}
 
 	if err != nil {

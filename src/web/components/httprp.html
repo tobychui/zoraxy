@@ -125,10 +125,12 @@
                         </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
-                            ${subd.RequireBasicAuth?`<i class="ui green check icon"></i> Basic Auth`:``}
-                            ${subd.RequireBasicAuth && subd.RequireRateLimit?"<br>":""}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> Oauth2`:``}
+                            ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
                             ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
-                            ${!subd.RequireBasicAuth && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
                         </td>
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
@@ -194,6 +196,11 @@
                     }
 
                     let rule = accessRuleMap[thisAccessRuleID];
+                    if (rule == undefined){
+                        //Missing config or config too old
+                        $(this).html(`<i class="ui red exclamation triangle icon"></i> <b style="color: #db2828;">Access Rule Error</b>`);
+                        return;
+                    }
                     let icon = `<i class="ui grey filter icon"></i>`;
                     if (rule.ID == "default"){
                         icon = `<i class="ui yellow star icon"></i>`;
@@ -269,12 +276,8 @@
                 </button>`);
 
             }else if (datatype == "advanced"){
-                let requireBasicAuth = payload.RequireBasicAuth;
-                let basicAuthCheckstate = "";
-                if (requireBasicAuth){
-                    basicAuthCheckstate = "checked";
-                }
-
+                let authProvider = payload.AuthenticationProvider.AuthMethod;
+                
                 let skipWebSocketOriginCheck = payload.SkipWebSocketOriginCheck;
                 let wsCheckstate = "";
                 if (skipWebSocketOriginCheck){
@@ -296,13 +299,29 @@
                     rateLimitDisableState = "disabled";
                 }
 
-                column.empty().append(`<div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="RequireBasicAuth" ${basicAuthCheckstate}>
-                        <label>Require Basic Auth</label>
+                column.empty().append(`
+                    <div class="grouped fields authProviderPicker">
+                        <label><b>Authentication Provider</b></label>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" value="0" name="authProviderType" ${authProvider==0x0?"checked":""}>
+                                <label>None (Anyone can access)</label>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" value="1" name="authProviderType" ${authProvider==0x1?"checked":""}>
+                                <label>Basic Auth</label>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" value="2" name="authProviderType" ${authProvider==0x2?"checked":""}>
+                                <label>Authelia</label>
+                            </div>
+                        </div>
                     </div>
-                    <br>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
-                    <br>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
 
                     <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
@@ -328,6 +347,7 @@
                     <div>
                 `);
 
+                $('.authProviderPicker .ui.checkbox').checkbox();
             } else if (datatype == "ratelimit"){
                
                 column.empty().append(`
@@ -421,7 +441,7 @@
         
         var epttype = "host";
         let useStickySession =  $(row).find(".UseStickySession")[0].checked;
-        let requireBasicAuth = $(row).find(".RequireBasicAuth")[0].checked;
+        let authProviderType = $(row).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
@@ -434,7 +454,7 @@
                 "rootname": uuid,
                 "ss":useStickySession,
                 "bpgtls": bypassGlobalTLS,
-                "bauth" :requireBasicAuth,
+                "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "ratenum" :rateLimit,
             },

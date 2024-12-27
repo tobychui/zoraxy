@@ -3,10 +3,14 @@ package geodb
 import (
 	_ "embed"
 	"net/http"
+	"os"
+	"sync"
 	"time"
 
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/utils"
 )
 
 //go:embed geoipv4.csv
@@ -21,16 +25,17 @@ type Store struct {
 	geotrie                  *trie
 	geotrieIpv6              *trie
 	sysdb                    *database.Database
-	slowLookupCacheIpv4      map[string]string //Cache for slow lookup
-	slowLookupCacheIpv6      map[string]string //Cache for slow lookup
-	cacheClearTicker         *time.Ticker      //Ticker for clearing cache
-	cacheClearTickerStopChan chan bool         //Stop channel for cache clear ticker
+	slowLookupCacheIpv4      sync.Map     //Cache for slow lookup, ip -> cc
+	slowLookupCacheIpv6      sync.Map     //Cache for slow lookup ipv6, ip -> cc
+	cacheClearTicker         *time.Ticker //Ticker for clearing cache
+	cacheClearTickerStopChan chan bool    //Stop channel for cache clear ticker
 	option                   *StoreOptions
 }
 
 type StoreOptions struct {
 	AllowSlowIpv4LookUp          bool
 	AllowSlowIpv6Lookup          bool
+	Logger                       *logger.Logger
 	SlowLookupCacheClearInterval time.Duration //Clear slow lookup cache interval
 }
 
@@ -40,6 +45,23 @@ type CountryInfo struct {
 }
 
 func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
+	//Check if external geoDB data is available
+	if utils.FileExists("./conf/geodb/geoipv4.csv") {
+		externalV4Db, err := os.ReadFile("./conf/geodb/geoipv4.csv")
+		if err == nil {
+			option.Logger.PrintAndLog("GeoDB", "External GeoDB data found, using external IPv4 GeoIP data", nil)
+			geoipv4 = externalV4Db
+		}
+	}
+
+	if utils.FileExists("./conf/geodb/geoipv6.csv") {
+		externalV6Db, err := os.ReadFile("./conf/geodb/geoipv6.csv")
+		if err == nil {
+			option.Logger.PrintAndLog("GeoDB", "External GeoDB data found, using external IPv6 GeoIP data", nil)
+			geoipv6 = externalV6Db
+		}
+	}
+
 	parsedGeoData, err := parseCSV(geoipv4)
 	if err != nil {
 		return nil, err
@@ -61,7 +83,7 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 	}
 
 	if option.SlowLookupCacheClearInterval == 0 {
-		option.SlowLookupCacheClearInterval = 15 * time.Minute
+		option.SlowLookupCacheClearInterval = 30 * time.Minute
 	}
 
 	//Create a new store
@@ -71,8 +93,8 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 		geodbIpv6:                parsedGeoDataIpv6,
 		geotrieIpv6:              ipv6Trie,
 		sysdb:                    sysdb,
-		slowLookupCacheIpv4:      make(map[string]string),
-		slowLookupCacheIpv6:      make(map[string]string),
+		slowLookupCacheIpv4:      sync.Map{},
+		slowLookupCacheIpv6:      sync.Map{},
 		cacheClearTicker:         time.NewTicker(option.SlowLookupCacheClearInterval),
 		cacheClearTickerStopChan: make(chan bool),
 		option:                   option,
@@ -86,8 +108,8 @@ func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
 				case <-store.cacheClearTickerStopChan:
 					return
 				case <-thisGeoDBStore.cacheClearTicker.C:
-					thisGeoDBStore.slowLookupCacheIpv4 = make(map[string]string)
-					thisGeoDBStore.slowLookupCacheIpv6 = make(map[string]string)
+					thisGeoDBStore.slowLookupCacheIpv4 = sync.Map{}
+					thisGeoDBStore.slowLookupCacheIpv6 = sync.Map{}
 				}
 			}
 		}(thisGeoDBStore)
