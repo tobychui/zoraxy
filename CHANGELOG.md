@@ -1,3 +1,16 @@
+# v3.1.5 28 Dec 2024
+
++ Fixed hostname case sensitive bug [#435](https://github.com/tobychui/zoraxy/issues/435)
++ Fixed ACME table too wide css bug [#422](https://github.com/tobychui/zoraxy/issues/422)
++ Fixed HSTS toggle button bug [#415](https://github.com/tobychui/zoraxy/issues/415)
++ Fixed slow GeoIP resolve mode concurrent r/w bug [#401](https://github.com/tobychui/zoraxy/issues/401)
++ Added close connection as default site option [#430](https://github.com/tobychui/zoraxy/issues/430)
++ Added experimental authelia support [#384](https://github.com/tobychui/zoraxy/issues/384)
++ Added custom header support to websocket [#426](https://github.com/tobychui/zoraxy/issues/426)
++ Added levelDB as database implementation (not currently used)
++ Added external GeoIP db loading support
++ Restructured a lot of modules
+
 # v3.1.4 24 Nov 2024
 
 + **Added Dark Theme Mode** [#390](https://github.com/tobychui/zoraxy/issues/390) [#82](https://github.com/tobychui/zoraxy/issues/82)
