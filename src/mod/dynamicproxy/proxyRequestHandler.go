@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -143,10 +144,11 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
 		}
 		h.Parent.logRequest(r, true, 101, "host-websocket", selectedUpstream.OriginIpOrDomain)
+
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  selectedUpstream.SkipCertValidations,
 			SkipOriginCheck:    selectedUpstream.SkipWebSocketOriginCheck,
-			CopyAllHeaders:     true,
+			CopyAllHeaders:     domainsniff.RequireWebsocketHeaderCopy(r),
 			UserDefinedHeaders: target.HeaderRewriteRules.UserDefinedHeaders,
 			Logger:             h.Parent.Option.Logger,
 		})
@@ -163,7 +165,10 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	//Populate the user-defined headers with the values from the request
-	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.HeaderRewriteRules.UserDefinedHeaders)
+	rewrittenUserDefinedHeaders := []*rewrite.UserDefinedHeader{}
+	if target.HeaderRewriteRules != nil {
+		rewrittenUserDefinedHeaders = rewrite.PopulateRequestHeaderVariables(r, target.HeaderRewriteRules.UserDefinedHeaders)
+	}
 
 	//Build downstream and upstream header rules
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
@@ -225,8 +230,8 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		h.Parent.logRequest(r, true, 101, "vdir-websocket", target.Domain)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  target.SkipCertValidations,
-			SkipOriginCheck:    true, //You should not use websocket via virtual directory. But keep this to true for compatibility
-			CopyAllHeaders:     true,
+			SkipOriginCheck:    true,                                      //You should not use websocket via virtual directory. But keep this to true for compatibility
+			CopyAllHeaders:     domainsniff.RequireWebsocketHeaderCopy(r), //Left this as default to prevent nginx user setting / as vdir
 			UserDefinedHeaders: target.parent.HeaderRewriteRules.UserDefinedHeaders,
 			Logger:             h.Parent.Option.Logger,
 		})
@@ -243,7 +248,10 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	//Populate the user-defined headers with the values from the request
-	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, target.parent.HeaderRewriteRules.UserDefinedHeaders)
+	rewrittenUserDefinedHeaders := []*rewrite.UserDefinedHeader{}
+	if target.parent.HeaderRewriteRules != nil {
+		rewrittenUserDefinedHeaders = rewrite.PopulateRequestHeaderVariables(r, target.parent.HeaderRewriteRules.UserDefinedHeaders)
+	}
 
 	//Build downstream and upstream header rules, use the parent (subdomain) endpoint's headers
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{

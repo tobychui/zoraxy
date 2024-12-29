@@ -100,6 +100,23 @@ func DomainUsesTLS(targetURL string) bool {
 }
 
 /*
+	WebSocket Header Sniff
+*/
+
+// Check if the requst is a special case where
+// user defined header shall not be passed over
+
+func RequireWebsocketHeaderCopy(r *http.Request) bool {
+	//Return false for proxmox
+	if IsProxmox(r) {
+		return false
+	}
+
+	//Add more edge cases here
+	return true
+}
+
+/*
 	Request Handlers
 */
 //Check if site support TLS
