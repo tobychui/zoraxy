@@ -320,10 +320,6 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 		}
 
-		thisCustomHeaderRules := dynamicproxy.HeaderRewriteRules{
-			UserDefinedHeaders: []*rewrite.UserDefinedHeader{},
-		}
-
 		//Generate a proxy endpoint object
 		thisProxyEndpoint := dynamicproxy.ProxyEndpoint{
 			//I/O
@@ -353,7 +349,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			AuthenticationProvider: &thisAuthenticationProvider,
 
 			//Header Rewrite
-			HeaderRewriteRules: &thisCustomHeaderRules,
+			HeaderRewriteRules: dynamicproxy.GetDefaultHeaderRewriteRules(),
 
 			//Default Site
 			DefaultSiteOption: 0,

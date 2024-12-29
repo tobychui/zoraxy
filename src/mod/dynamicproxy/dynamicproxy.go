@@ -157,12 +157,18 @@ func (router *Router) StartProxyService() error {
 							router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
 							router.logRequest(r, false, 404, "vdir-http", r.Host)
 						}
+
+						endpointProxyRewriteRules := GetDefaultHeaderRewriteRules()
+						if sep.HeaderRewriteRules != nil {
+							endpointProxyRewriteRules = sep.HeaderRewriteRules
+						}
+
 						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 							ProxyDomain:         selectedUpstream.OriginIpOrDomain,
 							OriginalHost:        originalHostHeader,
 							UseTLS:              selectedUpstream.RequireTLS,
-							HostHeaderOverwrite: sep.HeaderRewriteRules.RequestHostOverwrite,
-							NoRemoveHopByHop:    sep.HeaderRewriteRules.DisableHopByHopHeaderRemoval,
+							HostHeaderOverwrite: endpointProxyRewriteRules.RequestHostOverwrite,
+							NoRemoveHopByHop:    endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
 							PathPrefix:          "",
 							Version:             sep.parent.Option.HostVersion,
 						})

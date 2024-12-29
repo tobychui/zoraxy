@@ -145,6 +145,10 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		}
 		h.Parent.logRequest(r, true, 101, "host-websocket", selectedUpstream.OriginIpOrDomain)
 
+		if target.HeaderRewriteRules == nil {
+			target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
+		}
+
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  selectedUpstream.SkipCertValidations,
 			SkipOriginCheck:    selectedUpstream.SkipWebSocketOriginCheck,
@@ -165,18 +169,19 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	//Populate the user-defined headers with the values from the request
-	rewrittenUserDefinedHeaders := []*rewrite.UserDefinedHeader{}
+	headerRewriteOptions := GetDefaultHeaderRewriteRules()
 	if target.HeaderRewriteRules != nil {
-		rewrittenUserDefinedHeaders = rewrite.PopulateRequestHeaderVariables(r, target.HeaderRewriteRules.UserDefinedHeaders)
+		headerRewriteOptions = target.HeaderRewriteRules
 	}
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, headerRewriteOptions.UserDefinedHeaders)
 
 	//Build downstream and upstream header rules
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
 		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
-		HSTSMaxAge:                   target.HeaderRewriteRules.HSTSMaxAge,
+		HSTSMaxAge:                   headerRewriteOptions.HSTSMaxAge,
 		HSTSIncludeSubdomains:        target.ContainsWildcardName(true),
-		EnablePermissionPolicyHeader: target.HeaderRewriteRules.EnablePermissionPolicyHeader,
-		PermissionPolicy:             target.HeaderRewriteRules.PermissionPolicy,
+		EnablePermissionPolicyHeader: headerRewriteOptions.EnablePermissionPolicyHeader,
+		PermissionPolicy:             headerRewriteOptions.PermissionPolicy,
 	})
 
 	//Handle the request reverse proxy
@@ -188,8 +193,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		PathPrefix:          "",
 		UpstreamHeaders:     upstreamHeaders,
 		DownstreamHeaders:   downstreamHeaders,
-		HostHeaderOverwrite: target.HeaderRewriteRules.RequestHostOverwrite,
-		NoRemoveHopByHop:    target.HeaderRewriteRules.DisableHopByHopHeaderRemoval,
+		HostHeaderOverwrite: headerRewriteOptions.RequestHostOverwrite,
+		NoRemoveHopByHop:    headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		Version:             target.parent.Option.HostVersion,
 	})
 
@@ -248,18 +253,20 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	//Populate the user-defined headers with the values from the request
-	rewrittenUserDefinedHeaders := []*rewrite.UserDefinedHeader{}
+	headerRewriteOptions := GetDefaultHeaderRewriteRules()
 	if target.parent.HeaderRewriteRules != nil {
-		rewrittenUserDefinedHeaders = rewrite.PopulateRequestHeaderVariables(r, target.parent.HeaderRewriteRules.UserDefinedHeaders)
+		headerRewriteOptions = target.parent.HeaderRewriteRules
 	}
+
+	rewrittenUserDefinedHeaders := rewrite.PopulateRequestHeaderVariables(r, headerRewriteOptions.UserDefinedHeaders)
 
 	//Build downstream and upstream header rules, use the parent (subdomain) endpoint's headers
 	upstreamHeaders, downstreamHeaders := rewrite.SplitUpDownStreamHeaders(&rewrite.HeaderRewriteOptions{
 		UserDefinedHeaders:           rewrittenUserDefinedHeaders,
-		HSTSMaxAge:                   target.parent.HeaderRewriteRules.HSTSMaxAge,
+		HSTSMaxAge:                   headerRewriteOptions.HSTSMaxAge,
 		HSTSIncludeSubdomains:        target.parent.ContainsWildcardName(true),
-		EnablePermissionPolicyHeader: target.parent.HeaderRewriteRules.EnablePermissionPolicyHeader,
-		PermissionPolicy:             target.parent.HeaderRewriteRules.PermissionPolicy,
+		EnablePermissionPolicyHeader: headerRewriteOptions.EnablePermissionPolicyHeader,
+		PermissionPolicy:             headerRewriteOptions.PermissionPolicy,
 	})
 
 	//Handle the virtual directory reverse proxy request
@@ -270,7 +277,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		PathPrefix:          target.MatchingPath,
 		UpstreamHeaders:     upstreamHeaders,
 		DownstreamHeaders:   downstreamHeaders,
-		HostHeaderOverwrite: target.parent.HeaderRewriteRules.RequestHostOverwrite,
+		HostHeaderOverwrite: headerRewriteOptions.RequestHostOverwrite,
 		Version:             target.parent.parent.Option.HostVersion,
 	})
 

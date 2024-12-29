@@ -48,7 +48,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 	}
 
 	//Parse it into dynamic proxy endpoint
-	thisConfigEndpoint := dynamicproxy.ProxyEndpoint{}
+	thisConfigEndpoint := dynamicproxy.GetDefaultProxyEndpoint()
 	err = json.Unmarshal(endpointConfig, &thisConfigEndpoint)
 	if err != nil {
 		return err
@@ -129,31 +129,23 @@ func RemoveReverseProxyConfig(endpoint string) error {
 // Get the default root config that point to the internal static web server
 // this will be used if root config is not found (new deployment / missing root.config file)
 func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
-	//Default Authentication Provider
-	defaultAuth := &dynamicproxy.AuthenticationProvider{
-		AuthMethod:              dynamicproxy.AuthMethodNone,
-		BasicAuthCredentials:    []*dynamicproxy.BasicAuthCredentials{},
-		BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
-	}
-	//Default settings
-	rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&dynamicproxy.ProxyEndpoint{
-		ProxyType:            dynamicproxy.ProxyTypeRoot,
-		RootOrMatchingDomain: "/",
-		ActiveOrigins: []*loadbalance.Upstream{
-			{
-				OriginIpOrDomain:    "127.0.0.1:" + staticWebServer.GetListeningPort(),
-				RequireTLS:          false,
-				SkipCertValidations: false,
-				Weight:              0,
-			},
+	//Get the default proxy endpoint
+	rootProxyEndpointConfig := dynamicproxy.GetDefaultProxyEndpoint()
+	rootProxyEndpointConfig.ProxyType = dynamicproxy.ProxyTypeRoot
+	rootProxyEndpointConfig.RootOrMatchingDomain = "/"
+	rootProxyEndpointConfig.ActiveOrigins = []*loadbalance.Upstream{
+		{
+			OriginIpOrDomain:    "127.0.0.1:" + staticWebServer.GetListeningPort(),
+			RequireTLS:          false,
+			SkipCertValidations: false,
+			Weight:              0,
 		},
-		InactiveOrigins:        []*loadbalance.Upstream{},
-		BypassGlobalTLS:        false,
-		VirtualDirectories:     []*dynamicproxy.VirtualDirectoryEndpoint{},
-		AuthenticationProvider: defaultAuth,
-		DefaultSiteOption:      dynamicproxy.DefaultSite_InternalStaticWebServer,
-		DefaultSiteValue:       "",
-	})
+	}
+	rootProxyEndpointConfig.DefaultSiteOption = dynamicproxy.DefaultSite_InternalStaticWebServer
+	rootProxyEndpointConfig.DefaultSiteValue = ""
+
+	//Default settings
+	rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&rootProxyEndpointConfig)
 	if err != nil {
 		return nil, err
 	}
