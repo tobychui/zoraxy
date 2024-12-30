@@ -467,6 +467,12 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassGlobalTLS := (bpgtls == "true")
 
+	//Disable uptime monitor
+	disbleUtm, err := utils.PostBool(r, "dutm")
+	if err != nil {
+		disbleUtm = false
+	}
+
 	// Auth Provider
 	authProviderTypeStr, _ := utils.PostPara(r, "authprovider")
 	if authProviderTypeStr == "" {
@@ -532,6 +538,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
+	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 
 	//Prepare to replace the current routing rule
 	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
@@ -1552,4 +1559,40 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+}
+
+func HandleWsHeaderBehavior(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		js, _ := json.Marshal(targetProxyEndpoint.EnableWebsocketCustomHeaders)
+		utils.SendJSONResponse(w, string(js))
+	} else if r.Method == http.MethodPost {
+		enableWsHeader, err := utils.PostBool(r, "enable")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid enable state given")
+			return
+		}
+
+		targetProxyEndpoint.EnableWebsocketCustomHeaders = enableWsHeader
+		SaveReverseProxyConfig(targetProxyEndpoint)
+		targetProxyEndpoint.UpdateToRuntime()
+		utils.SendOK(w)
+
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
 }

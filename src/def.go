@@ -42,7 +42,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.1.5"
+	SYSTEM_VERSION    = "3.1.6"
 	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */

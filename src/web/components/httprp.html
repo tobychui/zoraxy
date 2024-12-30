@@ -258,6 +258,13 @@
                 if (payload.UseStickySession){
                     useStickySessionChecked = "checked";
                 }
+
+                let enableUptimeMonitor = "";
+                //Note the config file store the uptime monitor as disable, so we need to reverse the logic
+                if (!payload.DisableUptimeMonitor){
+                    enableUptimeMonitor = "checked";
+                }
+
                 input = `<button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 1em;" onclick="editUpstreams('${uuid}');"><i class="grey server icon"></i> Edit Upstreams</button>
                 <div class="ui divider"></div>
                 <div class="ui checkbox" style="margin-top: 0.4em;">
@@ -265,7 +272,11 @@
                     <label>Use Sticky Session<br>
                         <small>Enable stick session on load balancing</small></label>
                 </div>
-
+                <div class="ui checkbox" style="margin-top: 0.4em;">
+                    <input type="checkbox" class="EnableUptimeMonitor" ${enableUptimeMonitor}>
+                    <label>Monitor Uptime<br>
+                        <small>Enable active uptime monitor</small></label>
+                </div>
                 `;
                 column.append(input);
                 $(column).find(".upstreamList").addClass("editing");
@@ -441,6 +452,7 @@
         
         var epttype = "host";
         let useStickySession =  $(row).find(".UseStickySession")[0].checked;
+        let DisableUptimeMonitor = !$(row).find(".EnableUptimeMonitor")[0].checked;
         let authProviderType = $(row).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(row).find(".RateLimit").val();
@@ -453,6 +465,7 @@
                 "type": epttype,
                 "rootname": uuid,
                 "ss":useStickySession,
+                "dutm": DisableUptimeMonitor,
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
