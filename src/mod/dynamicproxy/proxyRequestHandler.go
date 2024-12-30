@@ -152,7 +152,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  selectedUpstream.SkipCertValidations,
 			SkipOriginCheck:    selectedUpstream.SkipWebSocketOriginCheck,
-			CopyAllHeaders:     domainsniff.RequireWebsocketHeaderCopy(r),
+			CopyAllHeaders:     target.EnableWebsocketCustomHeaders,
 			UserDefinedHeaders: target.HeaderRewriteRules.UserDefinedHeaders,
 			Logger:             h.Parent.Option.Logger,
 		})
@@ -232,11 +232,16 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		if target.RequireTLS {
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
 		}
+
+		if target.parent.HeaderRewriteRules != nil {
+			target.parent.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
+		}
+
 		h.Parent.logRequest(r, true, 101, "vdir-websocket", target.Domain)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  target.SkipCertValidations,
-			SkipOriginCheck:    true,                                      //You should not use websocket via virtual directory. But keep this to true for compatibility
-			CopyAllHeaders:     domainsniff.RequireWebsocketHeaderCopy(r), //Left this as default to prevent nginx user setting / as vdir
+			SkipOriginCheck:    target.parent.EnableWebsocketCustomHeaders, //You should not use websocket via virtual directory. But keep this to true for compatibility
+			CopyAllHeaders:     domainsniff.RequireWebsocketHeaderCopy(r),  //Left this as default to prevent nginx user setting / as vdir
 			UserDefinedHeaders: target.parent.HeaderRewriteRules.UserDefinedHeaders,
 			Logger:             h.Parent.Option.Logger,
 		})
