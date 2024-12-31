@@ -16,6 +16,15 @@ import (
 func GetRequesterIP(r *http.Request) string {
 	ip := r.Header.Get("X-Real-Ip")
 	if ip == "" {
+		CF_Connecting_IP := r.Header.Get("CF-Connecting-IP")
+		Fastly_Client_IP := r.Header.Get("Fastly-Client-IP")
+		if CF_Connecting_IP != "" {
+			//Use CF Connecting IP
+			return CF_Connecting_IP
+		} else if Fastly_Client_IP != "" {
+			//Use Fastly Client IP
+			return Fastly_Client_IP
+		}
 		ip = r.Header.Get("X-Forwarded-For")
 	}
 	if ip == "" {
