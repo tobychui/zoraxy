@@ -117,6 +117,16 @@
                                     <label>Remove Hop-by-hop Header<br>
                                     <small>This should be ON by default</small></label>
                                 </div>
+
+                                <div class="ui divider"></div>
+                                <h4> WebSocket Custom Headers</h4>
+                                <p>Copy custom headers from HTTP requests to WebSocket connections.
+                                    Might be required by some projects like MeshCentral.</p>
+                                <div class="ui toggle checkbox">
+                                    <input type="checkbox" id="copyCustomHeadersWS" name="">
+                                    <label>Enable WebSocket Custom Header<br>
+                                    <small>This should be OFF by default</small></label>
+                                </div>
                                 <div class="ui yellow message">
                                     <p><i class="exclamation triangle icon"></i>Settings in this section are for advanced users. Invalid settings might cause werid, unexpected behavior.</p>
                                 </div>
@@ -597,6 +607,7 @@
                 })
             }
 
+            /* Manual Hostname overwrite */
             function initManualHostOverwriteValue(){
                 $.get("/api/proxy/header/handleHostOverwrite?domain=" + editingEndpoint.ep, function(data){
                     if (data.error != undefined){
@@ -643,6 +654,42 @@
                 })
             }
             initHopByHopRemoverState();
+
+            /* WebSocket Custom Headers */
+            function initWebSocketCustomHeaderState(){
+                $.get("/api/proxy/header/handleWsHeaderBehavior?domain=" + editingEndpoint.ep, function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error);
+                    }else{
+                        if (data == true){
+                            $("#copyCustomHeadersWS").parent().checkbox("set checked");
+                        }else{
+                            $("#copyCustomHeadersWS").parent().checkbox("set unchecked");
+                        }
+                        
+                        //Bind event to the checkbox
+                        $("#copyCustomHeadersWS").on("change", function(evt){
+                            let isChecked = $(this)[0].checked;
+                            $.cjax({
+                                url: "/api/proxy/header/handleWsHeaderBehavior",
+                                method: "POST",
+                                data: {
+                                    "domain": editingEndpoint.ep,
+                                    "enable": isChecked,
+                                },
+                                success: function(data){
+                                    if (data.error != undefined){
+                                        parent.msgbox(data.error, false);
+                                    }else{
+                                        parent.msgbox("WebSocket Custom Header rule updated");
+                                    }
+                                }
+                            })
+                        })
+                    }
+                })
+            }
+            initWebSocketCustomHeaderState();
         </script>
     </body>
 </html>

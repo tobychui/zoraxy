@@ -42,11 +42,10 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.1.5"
+	SYSTEM_VERSION    = "3.1.6"
 	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
-	DATABASE_PATH              = "sys.db"
 	TMP_FOLDER                 = "./tmp"
 	WEBSERV_DEFAULT_PORT       = 5487
 	MDNS_HOSTNAME_PREFIX       = "zoraxy_" /* Follow by node UUID */
@@ -59,7 +58,6 @@ const (
 	ACME_AUTORENEW_CONFIG_PATH = "./conf/acme_conf.json"
 	CSRF_COOKIENAME            = "zoraxy_csrf"
 	LOG_PREFIX                 = "zr"
-	LOG_FOLDER                 = "./log"
 	LOG_EXTENSION              = ".log"
 
 	/* Configuration Folder Storage Path Constants */
@@ -86,9 +84,15 @@ var (
 	acmeAutoRenewInterval      = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 	acmeCertAutoRenewDays      = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
 	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
-	staticWebServerRoot        = flag.String("webroot", "./www", "Static web server root folder. Only allow chnage in start paramters")
 	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+
+	/* Path Configuration Flags */
+	//path_database  = flag.String("dbpath", "./sys.db", "Database path")
+	//path_conf      = flag.String("conf", "./conf", "Configuration folder path")
+	path_uuid      = flag.String("uuid", "./sys.uuid", "sys.uuid file path")
+	path_logFile   = flag.String("log", "./log", "Log folder path")
+	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
 
 	/* Maintaince Function Flags */
 	geoDbUpdate = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")

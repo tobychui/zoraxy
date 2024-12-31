@@ -1,5 +1,12 @@
 package dynamicproxy
 
+/*
+	typdef.go
+
+	This script handle the type definition for dynamic proxy and endpoints
+
+	If you are looking for the default object initailization, please refer to default.go
+*/
 import (
 	_ "embed"
 	"net"
@@ -165,7 +172,8 @@ type ProxyEndpoint struct {
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
 	//Custom Headers
-	HeaderRewriteRules *HeaderRewriteRules
+	HeaderRewriteRules           *HeaderRewriteRules
+	EnableWebsocketCustomHeaders bool //Enable custom headers for websocket connections as well (default only http reqiests)
 
 	//Authentication
 	AuthenticationProvider *AuthenticationProvider

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Echo Test</title>
+</head>
+<body>
+    <h1>WebSocket Echo Test</h1>
+    <p>1. Go run main.go</p>
+    <p>2. Create a Zoraxy proxy rule (and add to hosts file) from ws.localhost (port 80) to 127.0.0.1:8888</p>
+    <p>3. Click the Connect button below to test if headers are correctly sent over</p>
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+    <input type="text" id="messageInput" placeholder="Enter message">
+    <button id="sendBtn" disabled>Send</button>
+    <div id="output"></div>
+
+    <script>
+        let socket;
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const messageInput = document.getElementById('messageInput');
+        const output = document.getElementById('output');
+
+        connectBtn.addEventListener('click', () => {
+            output.innerHTML = '';
+            //socket = new WebSocket('ws://localhost:8888/echo');
+            socket = new WebSocket('ws://ws.localhost/echo');
+
+            socket.onopen = () => {
+                output.innerHTML += '<p>Connected to WebSocket server</p>';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendBtn.disabled = false;
+            };
+
+            socket.onmessage = (event) => {
+                output.innerHTML += `<p>Received: ${event.data}</p>`;
+            };
+
+            socket.onclose = () => {
+                output.innerHTML += '<p>Disconnected from WebSocket server</p>';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                sendBtn.disabled = true;
+            };
+
+            socket.onerror = (error) => {
+                output.innerHTML += `<p>Error: ${error.message}</p>`;
+            };
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            socket.close();
+        });
+
+        sendBtn.addEventListener('click', () => {
+            const message = messageInput.value;
+            socket.send(message);
+            output.innerHTML += `<p>Sent: ${message}</p>`;
+            messageInput.value = '';
+        });
+    </script>
+</body>
+</html>

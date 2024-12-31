@@ -222,10 +222,12 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		h.Parent.logRequest(r, false, 444, "root-noresponse", domainOnly)
 		hijacker, ok := w.(http.Hijacker)
 		if !ok {
+			w.Header().Set("Connection", "close")
 			return
 		}
 		conn, _, err := hijacker.Hijack()
 		if err != nil {
+			w.Header().Set("Connection", "close")
 			return
 		}
 		conn.Close()
