@@ -54,14 +54,14 @@ var (
 
 func startupSequence() {
 	//Start a system wide logger and log viewer
-	l, err := logger.NewLogger(LOG_PREFIX, LOG_FOLDER)
+	l, err := logger.NewLogger(LOG_PREFIX, *path_logFile)
 	if err == nil {
 		SystemWideLogger = l
 	} else {
 		panic(err)
 	}
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
-		RootFolder: LOG_FOLDER,
+		RootFolder: *path_logFile,
 		Extension:  LOG_EXTENSION,
 	})
 
@@ -73,7 +73,7 @@ func startupSequence() {
 		backendType = dbinc.BackendBoltDB
 	}
 	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)
-	db, err := database.NewDatabase(DATABASE_PATH, backendType)
+	db, err := database.NewDatabase("./sys.db", backendType)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func startupSequence() {
 	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
 		Sysdb:                  sysdb,
 		Port:                   strconv.Itoa(WEBSERV_DEFAULT_PORT), //Default Port
-		WebRoot:                *staticWebServerRoot,
+		WebRoot:                *path_webserver,
 		EnableDirectoryListing: true,
 		EnableWebDirManager:    *allowWebFileManager,
 		Logger:                 SystemWideLogger,

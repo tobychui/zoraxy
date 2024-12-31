@@ -96,7 +96,7 @@ func ReverseProxtInit() {
 		RedirectRuleTable:  redirectTable,
 		GeodbStore:         geodbStore,
 		StatisticCollector: statisticCollector,
-		WebDirectory:       *staticWebServerRoot,
+		WebDirectory:       *path_webserver,
 		AccessController:   accessController,
 		AutheliaRouter:     autheliaRouter,
 		LoadBalancer:       loadBalancer,

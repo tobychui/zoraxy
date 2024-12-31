@@ -167,7 +167,11 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Specify the folder path to be zipped
-	folderPath := "./conf/"
+	if !utils.FileExists("./conf") {
+		SystemWideLogger.PrintAndLog("Backup", "Configuration folder not found", nil)
+		return
+	}
+	folderPath := "./conf"
 
 	// Set the Content-Type header to indicate it's a zip file
 	w.Header().Set("Content-Type", "application/zip")
@@ -222,7 +226,7 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Open the file on disk
-		file, err := os.Open("sys.db")
+		file, err := os.Open("./sys.db")
 		if err != nil {
 			SystemWideLogger.PrintAndLog("Backup", "Unable to open sysdb", err)
 			return
@@ -271,6 +275,8 @@ func ImportConfigFromZip(w http.ResponseWriter, r *http.Request) {
 	targetDir := "./conf"
 	if utils.FileExists(targetDir) {
 		//Backup the old config to old
+		//backupPath := filepath.Dir(*path_conf) + filepath.Base(*path_conf) + ".old_" + strconv.Itoa(int(time.Now().Unix()))
+		//os.Rename(*path_conf, backupPath)
 		os.Rename("./conf", "./conf.old_"+strconv.Itoa(int(time.Now().Unix())))
 	}
 

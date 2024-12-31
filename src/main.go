@@ -86,7 +86,7 @@ func main() {
 	SetupCloseHandler()
 
 	//Read or create the system uuid
-	uuidRecord := "./sys.uuid"
+	uuidRecord := *path_uuid
 	if !utils.FileExists(uuidRecord) {
 		newSystemUUID := uuid.New().String()
 		os.WriteFile(uuidRecord, []byte(newSystemUUID), 0775)
