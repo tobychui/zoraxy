@@ -209,6 +209,10 @@ body.darkTheme .ui.toggle.checkbox input:checked ~ label::before{
     background-color: var(--buttom_toggle_active) !important;
 }
 
+body.darkTheme .ui.checkbox:not(.toggle) input[type="checkbox"]{
+    opacity: 100% !important;
+}
+
 #sidemenuBtn{
     border: 1px solid var(--button_border_color) !important;
 }

@@ -1174,7 +1174,7 @@
     }
 
     function removeIpBlacklist(ipaddr){
-        if (confirm("Confirm remove blacklist for " + ipaddr + " ?")){
+        //if (confirm("Confirm remove blacklist for " + ipaddr + " ?")){
             $.cjax({
                 url: "/api/blacklist/ip/remove",
                 type: "POST",
@@ -1191,7 +1191,7 @@
                 }
                 
             });
-        }
+        //}
     }
 
     /* 
@@ -1318,7 +1318,7 @@
     }
 
     function removeIpWhitelist(ipaddr){
-        if (confirm("Confirm remove whitelist for " + ipaddr + " ?")){
+        //if (confirm("Confirm remove whitelist for " + ipaddr + " ?")){
             $.cjax({
                 url: "/api/whitelist/ip/remove",
                 type: "POST",
@@ -1335,7 +1335,7 @@
                 }
                 
             });
-        }
+        //}
     }
 
     /*
