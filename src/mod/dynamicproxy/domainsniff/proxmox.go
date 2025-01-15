@@ -17,5 +17,6 @@ func IsProxmox(r *http.Request) bool {
 			return true
 		}
 	}
+
 	return false
 }
