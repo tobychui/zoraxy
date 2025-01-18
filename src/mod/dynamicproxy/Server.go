@@ -209,25 +209,18 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, redirectTarget, http.StatusTemporaryRedirect)
 	case DefaultSite_NotFoundPage:
 		//Serve the not found page, use template if exists
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusNotFound)
-		template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/notfound.html"))
-		if err != nil {
-			w.Write(page_hosterror)
-		} else {
-			w.Write(template)
-		}
+		h.serve404PageWithTemplate(w, r)
 	case DefaultSite_NoResponse:
 		//No response. Just close the connection
 		h.Parent.logRequest(r, false, 444, "root-no_resp", domainOnly)
 		hijacker, ok := w.(http.Hijacker)
 		if !ok {
-			w.Header().Set("Connection", "close")
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		conn, _, err := hijacker.Hijack()
 		if err != nil {
-			w.Header().Set("Connection", "close")
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		conn.Close()
@@ -239,5 +232,17 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		//Unknown routing option. Send empty response
 		h.Parent.logRequest(r, false, 544, "root-unknown", domainOnly)
 		http.Error(w, "544 - No Route Defined", 544)
+	}
+}
+
+// Serve 404 page with template if exists
+func (h *ProxyHandler) serve404PageWithTemplate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusNotFound)
+	template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/notfound.html"))
+	if err != nil {
+		w.Write(page_hosterror)
+	} else {
+		w.Write(template)
 	}
 }
