@@ -219,7 +219,7 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		}
 	case DefaultSite_NoResponse:
 		//No response. Just close the connection
-		h.Parent.logRequest(r, false, 444, "root-noresponse", domainOnly)
+		h.Parent.logRequest(r, false, 444, "root-no_resp", domainOnly)
 		hijacker, ok := w.(http.Hijacker)
 		if !ok {
 			w.Header().Set("Connection", "close")
