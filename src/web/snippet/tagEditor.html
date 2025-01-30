@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
+    </head>
+    <body>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Edit Tags
+                    <div class="sub header" id="epname"></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <p>Enter tags for this proxy host. Use commas to separate multiple tags.</p>
+            <div class="ui form">
+                <div class="field">
+                    <label>Tags</label>
+                    <input type="text" id="tagsInput" placeholder="e.g. mediaserver, management">
+                </div>
+                <button class="ui basic button" onclick="saveTags();"><i class="ui green save icon"></i> Save</button>
+                <button class="ui basic button" style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
+            </div>
+        </div>
+        <script>
+            let editingEndpoint = {};
+            if (window.location.hash.length > 1){
+                let payloadHash = window.location.hash.substr(1);
+                try{
+                    payloadHash = JSON.parse(decodeURIComponent(payloadHash));
+                    $("#epname").text(payloadHash.ep);
+                    editingEndpoint = payloadHash;
+                    loadTags();
+                }catch(ex){
+                    console.log("Unable to load endpoint data from hash")
+                }
+            }
+
+            function loadTags(){
+                $.get("/api/proxy/detail", { type: "host", epname: editingEndpoint.ep }, function(data){
+                    if (data.error == undefined){
+                        $("#tagsInput").val(data.Tags.join(", "));
+                    } else {
+                        alert(data.error);
+                    }
+                });
+            }
+
+            function saveTags(){
+                let tags = $("#tagsInput").val().trim().split(",").map(tag => tag.trim());
+                console.log(tags);
+                $.cjax({
+                    url: "/api/proxy/edit",
+                    method: "POST",
+                    data: {
+                        type: "host",
+                        rootname: editingEndpoint.ep,
+                        tags: tags.join(",")
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false);
+                        } else {
+                            parent.msgbox("Tags updated");
+                            parent.hideSideWrapper();
+                        }
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -417,6 +417,7 @@
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
                     <button class="ui basic compact tiny ${enableQuickRequestButton?"":"disabled"} button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="requestCertificateForExistingHost('${uuid}', '${certificateDomains}', this);"><i class="green lock icon"></i> Get Certificate</button>
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editTags('${uuid}');"><i class="ui tag icon"></i> Tags</button>
                 `);
 
                 $(".hostAccessRuleSelector").dropdown();
@@ -612,5 +613,13 @@
     //Bind on tab switch events
     tabSwitchEventBind["httprp"] = function(){
         listProxyEndpoints();
+    }
+
+    function editTags(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
     }
 </script>
