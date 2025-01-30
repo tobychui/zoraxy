@@ -138,7 +138,9 @@
                             </div>
                         </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
-                        <td data-label="tags">${subd.Tags.join(", ")}</td> <!-- Display tags -->
+                        <td data-label="tags">
+                            ${subd.Tags.map(tag => `<span class="ui tiny label tag-select">${tag}</span>`).join("")}
+                        </td>
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
@@ -170,10 +172,11 @@
         data.forEach(subd => {
             subd.Tags.forEach(tag => tags.add(tag));
         });
+        tags = Array.from(tags).sort((a, b) => a.localeCompare(b));
         let dropdownMenu = $("#tagFilterDropdown .menu");
-        dropdownMenu.html('<div class="item" data-value="">All</div>');
+        dropdownMenu.html('<div class="item tag-select" data-value="">All</div>');
         tags.forEach(tag => {
-            dropdownMenu.append(`<div class="item" data-value="${tag}">${tag}</div>`);
+            dropdownMenu.append(`<div class="item tag-select" data-value="${tag}">${tag}</div>`);
         });
         $('#tagFilterDropdown').dropdown();
     }
@@ -669,5 +672,12 @@
     // Initialize the proxy list on page load
     $(document).ready(function() {
         listProxyEndpoints();
+
+        // Event listener for clicking on tags
+        $(document).on('click', '.tag-select', function() {
+            let tag = $(this).text().trim();
+            $('#tagFilterDropdown').dropdown('set selected', tag);
+            filterProxyList();
+        });
     });
 </script>

@@ -287,10 +287,13 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tagsStr, _ := utils.PostPara(r, "tags")
-	tags := strings.Split(tagsStr, ",")
-	for i := range tags {
-		tags[i] = strings.TrimSpace(tags[i])
+	tagStr, _ := utils.PostPara(r, "tags")
+	tags := []string{}
+	if tagStr != "" {
+		tags = strings.Split(tagStr, ",")
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
 	}
 
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
@@ -523,10 +526,13 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tagsStr, _ := utils.PostPara(r, "tags")
-	tags := strings.Split(tagsStr, ",")
-	for i := range tags {
-		tags[i] = strings.TrimSpace(tags[i])
+	tagStr, _ := utils.PostPara(r, "tags")
+	tags := []string{}
+	if tagStr != "" {
+		tags = strings.Split(tagStr, ",")
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
 	}
 
 	//Generate a new proxyEndpoint from the new config
