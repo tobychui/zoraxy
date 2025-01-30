@@ -194,6 +194,7 @@ type ProxyEndpoint struct {
 
 	//Internal Logic Elements
 	parent *Router `json:"-"`
+	Tags   []string // Tags for the proxy endpoint
 }
 
 /*

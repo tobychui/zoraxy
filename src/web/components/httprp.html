@@ -19,6 +19,7 @@
                     <th>Host</th>
                     <th>Destination</th>
                     <th>Virtual Directory</th>
+                    <th>Tags</th> <!-- New column for tags -->
                     <th style="max-width: 300px;">Advanced Settings</th>
                     <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
@@ -124,6 +125,7 @@
                             </div>
                         </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
+                        <td data-label="tags">${subd.Tags.join(", ")}</td> <!-- Display tags -->
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
@@ -457,6 +459,7 @@
         let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
+        let tags = $("#proxyTags").val().trim();
 
         $.cjax({
             url: "/api/proxy/edit",
@@ -470,6 +473,7 @@
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "ratenum" :rateLimit,
+                "tags": tags,
             },
             success: function(data){
                 if (data.error !== undefined){

@@ -287,6 +287,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	tagsStr, _ := utils.PostPara(r, "tags")
+	tags := strings.Split(tagsStr, ",")
+	for i := range tags {
+		tags[i] = strings.TrimSpace(tags[i])
+	}
+
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	if eptype == "host" {
 		rootOrMatchingDomain, err := utils.PostPara(r, "rootname")
@@ -357,6 +363,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
+
+			Tags: tags,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -515,6 +523,12 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagsStr, _ := utils.PostPara(r, "tags")
+	tags := strings.Split(tagsStr, ",")
+	for i := range tags {
+		tags[i] = strings.TrimSpace(tags[i])
+	}
+
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
@@ -539,6 +553,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
 	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
