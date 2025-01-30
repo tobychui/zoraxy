@@ -12,6 +12,19 @@
             min-width: 200px;
         }
     </style>
+    <div class="ui action input" style="margin-bottom: 1em;">
+        <input type="text" id="searchInput" placeholder="Search...">
+        <button class="ui button" onclick="filterProxyList()">Search</button>
+    </div>
+    <div class="ui selection dropdown" id="tagFilterDropdown" style="margin-bottom: 1em;">
+        <input type="hidden" name="tag">
+        <i class="dropdown icon"></i>
+        <div class="default text">Filter by Tag</div>
+        <div class="menu">
+            <div class="item" data-value="">All</div>
+            <!-- Add more tag options dynamically -->
+        </div>
+    </div>
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui celled sortable unstackable compact table">
             <thead>
@@ -144,9 +157,39 @@
                         </td>
                     </tr>`);
                 });
+                populateTagFilterDropdown(data);
             }
 
             resolveAccessRuleNameOnHostRPlist();
+        });
+    }
+
+    // Function to populate the tag filter dropdown
+    function populateTagFilterDropdown(data) {
+        let tags = new Set();
+        data.forEach(subd => {
+            subd.Tags.forEach(tag => tags.add(tag));
+        });
+        let dropdownMenu = $("#tagFilterDropdown .menu");
+        dropdownMenu.html('<div class="item" data-value="">All</div>');
+        tags.forEach(tag => {
+            dropdownMenu.append(`<div class="item" data-value="${tag}">${tag}</div>`);
+        });
+        $('#tagFilterDropdown').dropdown();
+    }
+
+    // Function to filter the proxy list
+    function filterProxyList() {
+        let searchInput = $("#searchInput").val().toLowerCase();
+        let selectedTag = $("#tagFilterDropdown").dropdown('get value');
+        $("#httpProxyList tr").each(function() {
+            let host = $(this).find("td[data-label='']").text().toLowerCase();
+            let tags = $(this).find("td[data-label='tags']").text().toLowerCase();
+            if ((host.includes(searchInput) || searchInput === "") && (tags.includes(selectedTag) || selectedTag === "")) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
         });
     }
 
@@ -622,4 +665,9 @@
         }));
         showSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
     }
+
+    // Initialize the proxy list on page load
+    $(document).ready(function() {
+        listProxyEndpoints();
+    });
 </script>
