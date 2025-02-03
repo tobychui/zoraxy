@@ -28,8 +28,8 @@ func ReverseProxtInit() {
 	/*
 		Load Reverse Proxy Global Settings
 	*/
-	inboundPort := 443
-	autoStartReverseProxy := true
+	inboundPort := *defaultInboundPort
+	autoStartReverseProxy := *defaultEnableInboundTraffic
 	if sysdb.KeyExists("settings", "inbound") {
 		//Read settings from database
 		sysdb.Read("settings", "inbound", &inboundPort)
@@ -42,8 +42,8 @@ func ReverseProxtInit() {
 	} else {
 		//Default port
 		if netutils.CheckIfPortOccupied(inboundPort) {
-			inboundPort = 8743
-			SystemWideLogger.Println("Port 443 is occupied. Switching to backup port 8743 instead")
+			autoStartReverseProxy = false
+			SystemWideLogger.Println("Port 443 is occupied. Change the listening port in the webmin panel and press \"Start Service\" to start reverse proxy service")
 		}
 		SystemWideLogger.Println("Inbound port not set. Using default (443)")
 	}

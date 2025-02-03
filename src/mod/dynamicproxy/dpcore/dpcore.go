@@ -2,6 +2,7 @@ package dpcore
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http2"
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 )
@@ -84,6 +86,7 @@ type requestCanceler interface {
 type DpcoreOptions struct {
 	IgnoreTLSVerification bool          //Disable all TLS verification when request pass through this proxy router
 	FlushInterval         time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
+	UseH2CRoundTripper    bool          //Use H2C RoundTripper for HTTP/2.0 connection
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -100,8 +103,17 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 
 	}
 
-	//Hack the default transporter to handle more connections
 	thisTransporter := http.DefaultTransport
+	if dpcOptions.UseH2CRoundTripper {
+		thisTransporter = &http2.Transport{
+			DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+				return net.Dial(network, addr)
+			},
+			AllowHTTP: true,
+		}
+	}
+
+	//Hack the default transporter to handle more connections
 	optimalConcurrentConnection := 32
 	thisTransporter.(*http.Transport).MaxIdleConns = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).MaxIdleConnsPerHost = optimalConcurrentConnection

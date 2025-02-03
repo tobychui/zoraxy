@@ -87,6 +87,10 @@ var (
 	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
+	/* Default Configuration Flags */
+	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
+	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
+
 	/* Path Configuration Flags */
 	//path_database  = flag.String("dbpath", "./sys.db", "Database path")
 	//path_conf      = flag.String("conf", "./conf", "Configuration folder path")
