@@ -354,7 +354,7 @@ func (router *Router) LoadProxy(matchingDomain string) (*ProxyEndpoint, error) {
 			return true
 		}
 
-		if key == matchingDomain {
+		if key == strings.ToLower(matchingDomain) {
 			targetProxyEndpoint = v
 		}
 		return true

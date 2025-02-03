@@ -267,7 +267,8 @@ func (ep *ProxyEndpoint) Clone() *ProxyEndpoint {
 
 // Remove this proxy endpoint from running proxy endpoint list
 func (ep *ProxyEndpoint) Remove() error {
-	ep.parent.ProxyEndpoints.Delete(ep.RootOrMatchingDomain)
+	lookupHostname := strings.ToLower(ep.RootOrMatchingDomain)
+	ep.parent.ProxyEndpoints.Delete(lookupHostname)
 	return nil
 }
 
