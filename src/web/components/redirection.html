@@ -13,7 +13,7 @@
                   <th>Destination URL</th>
                   <th class="no-sort">Copy Pathname</th>
                   <th class="no-sort">Status Code</th>
-                  <th class="no-sort">Remove</th>
+                  <th class="no-sort">Actions</th>
               </tr>
           </thead>
           <tbody id="redirectionRuleList">
@@ -163,13 +163,21 @@
         $("#redirectionRuleList").html("");
         $.get("/api/redirect/list", function(data){
             data.forEach(function(entry){
-                $("#redirectionRuleList").append(`<tr>
-                    <td><a href="${entry.RedirectURL}" target="_blank">${entry.RedirectURL}</a></td>
-                    <td>${entry.TargetURL}</td>
-                    <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
-                    <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
-                    <td><button onclick="deleteRule(this);" rurl="${encodeURIComponent(JSON.stringify(entry.RedirectURL))}" title="Delete redirection rule" class="ui mini red icon basic button"><i class="trash icon"></i></button></td>
-                </tr>`);
+              let encodedEntry = encodeURIComponent(JSON.stringify(entry));
+              let hrefURL = entry.RedirectURL;
+              if (!hrefURL.startsWith("http")){
+                hrefURL = "https://" + hrefURL;
+              }
+              $("#redirectionRuleList").append(`<tr>
+                  <td><a href="${hrefURL}" target="_blank">${entry.RedirectURL}</a></td>
+                  <td>${entry.TargetURL}</td>
+                  <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
+                  <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
+                  <td>
+                    <button onclick="editRule(this);" payload="${encodedEntry}" title="Edit redirection rule" class="ui mini blue icon basic button redirectEditBtn"><i class="edit icon"></i></button>
+                    <button onclick="deleteRule(this);" rurl="${encodeURIComponent(JSON.stringify(entry.RedirectURL))}" title="Delete redirection rule" class="ui mini red icon basic button"><i class="trash icon"></i></button>
+                  </td>
+              </tr>`);
             });
             
             if (data.length == 0){
@@ -179,6 +187,68 @@
         });
     }
     initRedirectionRuleList();
+
+    function editRule(obj){
+      $(".redirectEditBtn").addClass("disabled");
+      let payload = JSON.parse(decodeURIComponent($(obj).attr("payload")));
+      let row = $(obj).closest("tr");
+      let redirectUrl = payload.RedirectURL;
+      let destUrl = payload.TargetURL;
+      let forwardChildpath = payload.ForwardChildpath;
+      let statusCode = payload.StatusCode;
+
+      row.html(`
+        <td>
+          <div class="ui small input">
+            <input type="text" value="${redirectUrl}" id="editRedirectUrl">
+          </div>
+        </td>
+        <td>
+          <div class="ui small input">
+            <input type="text" value="${destUrl}" id="editDestUrl">
+          </div>
+        </td>
+        <td><div class="ui toggle checkbox"><input type="checkbox" ${forwardChildpath ? "checked" : ""} id="editForwardChildpath"><label></label></div></td>
+        <td>
+          <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="307" ${statusCode == 307 ? "checked" : ""}><label>Temporary Redirect (307)</label></div><br>
+          <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="301" ${statusCode == 301 ? "checked" : ""}><label>Moved Permanently (301)</label></div>
+        </td>
+        <td>
+          <button onclick="saveEditRule(this);" payload="${encodeURIComponent(JSON.stringify(payload))}" class="ui mini green icon basic button"><i class="save icon"></i></button>
+          <button onclick="initRedirectionRuleList();" class="ui mini icon basic button"><i class="cancel icon"></i></button>
+        </td>
+      `);
+
+      $(".checkbox").checkbox();
+    }
+
+    function saveEditRule(obj){
+      let payload = JSON.parse(decodeURIComponent($(obj).attr("payload")));
+      let redirectUrl = $("#editRedirectUrl").val();
+      let destUrl = $("#editDestUrl").val();
+      let forwardChildpath = $("#editForwardChildpath").is(":checked");
+      let statusCode = parseInt($("input[name='editStatusCode']:checked").val());
+
+      $.cjax({
+        url: "/api/redirect/edit", 
+        method: "POST",
+        data: {
+            originalRedirectUrl: payload.RedirectURL,
+            newRedirectUrl: redirectUrl,
+            destUrl: destUrl,
+            forwardChildpath: forwardChildpath,
+            redirectType: statusCode,
+        },
+        success: function(data){
+            if (data.error != undefined){
+              msgbox(data.error, false);
+            }else{
+              msgbox("Redirection rule updated", true);
+              initRedirectionRuleList();
+            }
+        }
+      });
+    }
 
     function initRegexpSupportToggle(){
       $.get("/api/redirect/regex", function(data){

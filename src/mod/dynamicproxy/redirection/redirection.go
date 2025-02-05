@@ -2,7 +2,6 @@ package redirection
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -111,6 +110,42 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 	return nil
 }
 
+// Edit an existing redirection rule, the oldRedirectURL is used to find the rule to be edited
+func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int) error {
+	newRule := &RedirectRules{
+		RedirectURL:      newRedirectURL,
+		TargetURL:        destURL,
+		ForwardChildpath: forwardPathname,
+		StatusCode:       statusCode,
+	}
+
+	//Remove the old rule
+	t.DeleteRedirectRule(oldRedirectURL)
+
+	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
+	filename := utils.ReplaceSpecialCharacters(newRedirectURL) + ".json"
+	filepath := path.Join(t.configPath, filename)
+
+	// Create a new file for writing the JSON data
+	file, err := os.Create(filepath)
+	if err != nil {
+		t.log("Error creating file "+filepath, err)
+		return err
+	}
+	defer file.Close()
+
+	err = json.NewEncoder(file).Encode(newRule)
+	if err != nil {
+		t.log("Error encoding JSON to file "+filepath, err)
+		return err
+	}
+
+	// Update the runtime map
+	t.rules.Store(newRedirectURL, newRule)
+
+	return nil
+}
+
 func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
 	filename := utils.ReplaceSpecialCharacters(redirectURL) + ".json"
@@ -118,7 +153,6 @@ func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 	// Create the full file path by joining the t.configPath with the filename
 	filepath := path.Join(t.configPath, filename)
 
-	fmt.Println(redirectURL, filename, filepath)
 	// Check if the file exists
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		return nil // File doesn't exist, nothing to delete

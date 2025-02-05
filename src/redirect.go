@@ -78,6 +78,49 @@ func handleDeleteRedirectionRule(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
+func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
+	originalRedirectUrl, err := utils.PostPara(r, "originalRedirectUrl")
+	if err != nil {
+		utils.SendErrorResponse(w, "original redirect url cannot be empty")
+		return
+	}
+
+	newRedirectUrl, err := utils.PostPara(r, "newRedirectUrl")
+	if err != nil {
+		utils.SendErrorResponse(w, "redirect url cannot be empty")
+		return
+	}
+	destUrl, err := utils.PostPara(r, "destUrl")
+	if err != nil {
+		utils.SendErrorResponse(w, "destination url cannot be empty")
+	}
+
+	forwardChildpath, err := utils.PostPara(r, "forwardChildpath")
+	if err != nil {
+		//Assume true
+		forwardChildpath = "true"
+	}
+
+	redirectTypeString, err := utils.PostPara(r, "redirectType")
+	if err != nil {
+		redirectTypeString = "307"
+	}
+
+	redirectionStatusCode, err := strconv.Atoi(redirectTypeString)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid status code number")
+		return
+	}
+
+	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
 // Toggle redirection regex support. Note that this cost another O(n) time complexity to each page load
 func handleToggleRedirectRegexpSupport(w http.ResponseWriter, r *http.Request) {
 	enabled, err := utils.PostPara(r, "enable")

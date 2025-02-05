@@ -88,6 +88,7 @@ func RegisterRedirectionAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/redirect/list", handleListRedirectionRules)
 	authRouter.HandleFunc("/api/redirect/add", handleAddRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
+	authRouter.HandleFunc("/api/redirect/edit", handleEditRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
 }
 
