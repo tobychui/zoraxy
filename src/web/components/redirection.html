@@ -174,8 +174,8 @@
                   <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                   <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
                   <td>
-                    <button onclick="editRule(this);" payload="${encodedEntry}" title="Edit redirection rule" class="ui mini blue icon basic button redirectEditBtn"><i class="edit icon"></i></button>
-                    <button onclick="deleteRule(this);" rurl="${encodeURIComponent(JSON.stringify(entry.RedirectURL))}" title="Delete redirection rule" class="ui mini red icon basic button"><i class="trash icon"></i></button>
+                    <button onclick="editRule(this);" payload="${encodedEntry}" title="Edit redirection rule" class="ui mini circular icon basic button redirectEditBtn"><i class="edit icon"></i></button>
+                    <button onclick="deleteRule(this);" rurl="${encodeURIComponent(JSON.stringify(entry.RedirectURL))}" title="Delete redirection rule" class="ui mini red circular icon basic button"><i class="trash icon"></i></button>
                   </td>
               </tr>`);
             });
@@ -214,8 +214,8 @@
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="301" ${statusCode == 301 ? "checked" : ""}><label>Moved Permanently (301)</label></div>
         </td>
         <td>
-          <button onclick="saveEditRule(this);" payload="${encodeURIComponent(JSON.stringify(payload))}" class="ui mini green icon basic button"><i class="save icon"></i></button>
-          <button onclick="initRedirectionRuleList();" class="ui mini icon basic button"><i class="cancel icon"></i></button>
+          <button onclick="saveEditRule(this);" payload="${encodeURIComponent(JSON.stringify(payload))}" class="ui small circular green icon basic button"><i class="save icon"></i></button>
+          <button onclick="initRedirectionRuleList();" class="ui small circular icon basic button"><i class="cancel icon"></i></button>
         </td>
       `);
 
