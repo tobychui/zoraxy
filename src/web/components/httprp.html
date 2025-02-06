@@ -12,6 +12,19 @@
             min-width: 200px;
         }
     </style>
+    <div class="ui action input" style="margin-bottom: 1em;">
+        <input type="text" id="searchInput" placeholder="Search...">
+        <button class="ui button" onclick="filterProxyList()">Search</button>
+    </div>
+    <div class="ui selection dropdown" id="tagFilterDropdown" style="margin-bottom: 1em;">
+        <input type="hidden" name="tag">
+        <i class="dropdown icon"></i>
+        <div class="default text">Filter by Tag</div>
+        <div class="menu">
+            <div class="item" data-value="">All</div>
+            <!-- Add more tag options dynamically -->
+        </div>
+    </div>
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui celled sortable unstackable compact table">
             <thead>
@@ -19,6 +32,7 @@
                     <th>Host</th>
                     <th>Destination</th>
                     <th>Virtual Directory</th>
+                    <th>Tags</th> <!-- New column for tags -->
                     <th style="max-width: 300px;">Advanced Settings</th>
                     <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
@@ -124,6 +138,9 @@
                             </div>
                         </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
+                        <td data-label="tags">
+                            ${subd.Tags.map(tag => `<span class="ui tiny label tag-select">${tag}</span>`).join("")}
+                        </td>
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
@@ -142,9 +159,40 @@
                         </td>
                     </tr>`);
                 });
+                populateTagFilterDropdown(data);
             }
 
             resolveAccessRuleNameOnHostRPlist();
+        });
+    }
+
+    // Function to populate the tag filter dropdown
+    function populateTagFilterDropdown(data) {
+        let tags = new Set();
+        data.forEach(subd => {
+            subd.Tags.forEach(tag => tags.add(tag));
+        });
+        tags = Array.from(tags).sort((a, b) => a.localeCompare(b));
+        let dropdownMenu = $("#tagFilterDropdown .menu");
+        dropdownMenu.html('<div class="item tag-select" data-value="">All</div>');
+        tags.forEach(tag => {
+            dropdownMenu.append(`<div class="item tag-select" data-value="${tag}">${tag}</div>`);
+        });
+        $('#tagFilterDropdown').dropdown();
+    }
+
+    // Function to filter the proxy list
+    function filterProxyList() {
+        let searchInput = $("#searchInput").val().toLowerCase();
+        let selectedTag = $("#tagFilterDropdown").dropdown('get value');
+        $("#httpProxyList tr").each(function() {
+            let host = $(this).find("td[data-label='']").text().toLowerCase();
+            let tags = $(this).find("td[data-label='tags']").text().toLowerCase();
+            if ((host.includes(searchInput) || searchInput === "") && (tags.includes(selectedTag) || selectedTag === "")) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
         });
     }
 
@@ -415,6 +463,7 @@
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
                     <button class="ui basic compact tiny ${enableQuickRequestButton?"":"disabled"} button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="requestCertificateForExistingHost('${uuid}', '${certificateDomains}', this);"><i class="green lock icon"></i> Get Certificate</button>
+                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editTags('${uuid}');"><i class="ui tag icon"></i> Tags</button>
                 `);
 
                 $(".hostAccessRuleSelector").dropdown();
@@ -457,6 +506,7 @@
         let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
+        let tags = $("#proxyTags").val().trim();
 
         $.cjax({
             url: "/api/proxy/edit",
@@ -470,6 +520,7 @@
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "ratenum" :rateLimit,
+                "tags": tags,
             },
             success: function(data){
                 if (data.error !== undefined){
@@ -609,4 +660,24 @@
     tabSwitchEventBind["httprp"] = function(){
         listProxyEndpoints();
     }
+
+    function editTags(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    // Initialize the proxy list on page load
+    $(document).ready(function() {
+        listProxyEndpoints();
+
+        // Event listener for clicking on tags
+        $(document).on('click', '.tag-select', function() {
+            let tag = $(this).text().trim();
+            $('#tagFilterDropdown').dropdown('set selected', tag);
+            filterProxyList();
+        });
+    });
 </script>
