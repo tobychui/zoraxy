@@ -121,6 +121,9 @@ body.darkTheme .ui.basic.button:not(.red) {
 body.darkTheme .ui.basic.button:not(.red):hover {
     border: 1px solid var(--button_border_color) !important;
     background-color: var(--theme_bg) !important;
+}
+
+body.darkTheme .ui.basic.button:not(.red):not(.dropdown):hover {
     opacity: 0.8;
 }
 
@@ -549,6 +552,18 @@ body.darkTheme .RateLimit input {
     border-color: var(--theme_highlight) !important;
 }
 
+body.darkTheme .menu.transition{
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.dropdown .menu{
+    background: var(--theme_bg_primary) !important;
+}
+
+body.darkTheme .ui.dropdown .menu .item{
+    color: var(--text_color) !important;
+}
 /* 
     Virtual Directorie Table
 */

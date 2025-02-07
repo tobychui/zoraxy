@@ -9,6 +9,9 @@
         <script src="../script/utils.js"></script>
     </head>
     <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
+        <br>
         <div class="ui container">
             <div class="ui header">
                 <div class="content">
@@ -67,7 +70,9 @@
                             parent.msgbox(data.error, false);
                         } else {
                             parent.msgbox("Tags updated");
-                            parent.hideSideWrapper();
+                            //Update the preview on parent page
+                            parent.renderTagsPreview(editingEndpoint.ep, tags);
+                            //parent.hideSideWrapper();
                         }
                     }
                 });
