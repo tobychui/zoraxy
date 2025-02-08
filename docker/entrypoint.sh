@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+trap cleanup TERM INT
+
+cleanup() {
+  echo "Shutting down..."
+  kill -TERM "$(pidof zoraxy)" &> /dev/null && echo "Zoraxy stopped."
+  kill -TERM "$(pidof zerotier-one)" &> /dev/null && echo "ZeroTier-One stopped."
+  exit 0
+}
+
 update-ca-certificates
 echo "CA certificates updated."
 
@@ -11,12 +20,13 @@ if [ "$ZEROTIER" = "true" ]; then
     mkdir -p /opt/zoraxy/config/zerotier/
   fi
   ln -s /opt/zoraxy/config/zerotier/ /var/lib/zerotier-one
-  zerotier-one -d
+  zerotier-one -d &
+  zerotierpid=$!
   echo "ZeroTier daemon started."
 fi
 
 echo "Starting Zoraxy..."
-exec zoraxy \
+zoraxy \
   -autorenew="$AUTORENEW" \
   -cfgupgrade="$CFGUPGRADE" \
   -db="$DB" \
@@ -33,5 +43,10 @@ exec zoraxy \
   -webfm="$WEBFM" \
   -webroot="$WEBROOT" \
   -ztauth="$ZTAUTH" \
-  -ztport="$ZTPORT"
+  -ztport="$ZTPORT" \
+  &
+
+zoraxypid=$!
+wait $zoraxypid
+wait $zerotierpid
 
