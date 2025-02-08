@@ -313,6 +313,14 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			tags[i] = strings.TrimSpace(tags[i])
 		}
 	}
+	// Remove empty tags
+	filteredTags := []string{}
+	for _, tag := range tags {
+		if tag != "" {
+			filteredTags = append(filteredTags, tag)
+		}
+	}
+	tags = filteredTags
 
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	if eptype == "host" {
