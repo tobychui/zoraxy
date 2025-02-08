@@ -11,7 +11,47 @@
         .subdEntry td:not(.ignoremw){
             min-width: 200px;
         }
+
+        .httpProxyListTools{
+            width: 100%;
+        }
+
+        .tag-select{
+            cursor: pointer;
+        }
+
+        .tag-select:hover{
+            text-decoration: underline;
+            opacity: 0.8;
+        }
     </style>
+    <div class="httpProxyListTools" style="margin-bottom: 1em;">
+        <div id="tagFilterDropdown" class="ui floating basic dropdown labeled icon button" style="min-width: 150px;">
+            <i class="filter icon"></i>
+            <span class="text">Filter by tags</span>
+            <div class="menu">
+              <div class="ui icon search input">
+                <i class="search icon"></i>
+                <input type="text" placeholder="Search tags...">
+              </div>
+              <div class="divider"></div>
+                <div class="scrolling menu tagList">
+                    <!--
+                    Example: 
+                    <div class="item">
+                        <div class="ui red empty circular label"></div>
+                        Important
+                    </div>
+                    -->
+                    <!-- Add more tag options dynamically -->
+                </div>
+            </div>
+        </div>
+        <div class="ui small input" style="width: 300px; height: 38px;">
+            <input type="text" id="searchInput" placeholder="Quick Search" onkeydown="handleSearchInput(event);" onchange="handleSearchInput(event);" onblur="handleSearchInput(event);">
+        </div>
+    </div>
+    
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui celled sortable unstackable compact table">
             <thead>
@@ -19,6 +59,7 @@
                     <th>Host</th>
                     <th>Destination</th>
                     <th>Virtual Directory</th>
+                    <th>Tags</th>
                     <th style="max-width: 300px;">Advanced Settings</th>
                     <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
@@ -124,6 +165,11 @@
                             </div>
                         </td>
                         <td data-label="" editable="true" datatype="vdir">${vdList}</td>
+                        <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags">
+                            <div class="tags-list">
+                            ${subd.Tags.length >0 ? subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join(""):"<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>"}
+                            </div>
+                        </td>
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
@@ -142,6 +188,7 @@
                         </td>
                     </tr>`);
                 });
+                populateTagFilterDropdown(data);
             }
 
             resolveAccessRuleNameOnHostRPlist();
@@ -285,7 +332,11 @@
                 column.append(`<button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="quickEditVdir('${uuid}');">
                     <i class="ui yellow folder icon"></i> Edit Virtual Directories
                 </button>`);
-
+            }else if (datatype == "tags"){
+                column.append(`
+                    <div class="ui divider"></div>
+                    <button class="ui basic compact fluid tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editTags('${uuid}');"><i class="ui purple tag icon"></i> Edit tags</button>
+                `);
             }else if (datatype == "advanced"){
                 let authProvider = payload.AuthenticationProvider.AuthMethod;
                 
@@ -457,7 +508,12 @@
         let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(row).find(".RateLimit").val();
         let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
-
+        let tags = getTagsArrayFromEndpoint(uuid);
+        if (tags.length > 0){
+            tags = tags.join(",");
+        }else{
+            tags = "";
+        }
         $.cjax({
             url: "/api/proxy/edit",
             method: "POST",
@@ -470,6 +526,7 @@
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "ratenum" :rateLimit,
+                "tags": tags,
             },
             success: function(data){
                 if (data.error !== undefined){
@@ -609,4 +666,110 @@
     tabSwitchEventBind["httprp"] = function(){
         listProxyEndpoints();
     }
+
+    /* Tags & Search */
+    function handleSearchInput(event){
+        if (event.key == "Escape"){
+            $("#searchInput").val("");
+        }
+        filterProxyList();
+    }
+
+     // Function to filter the proxy list
+     function filterProxyList() {
+        let searchInput = $("#searchInput").val().toLowerCase();
+        let selectedTag = $("#tagFilterDropdown").dropdown('get value');
+        $("#httpProxyList tr").each(function() {
+            let host = $(this).find("td[data-label='']").text().toLowerCase();
+            let tagElements = $(this).find("td[data-label='tags']");
+            let tags = tagElements.attr("payload");
+            tags = JSON.parse(decodeURIComponent(tags));
+            if ((host.includes(searchInput) || searchInput === "") && (tags.includes(selectedTag) || selectedTag === "")) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+
+    // Function to generate a color based on a tag name
+    function getTagColorByName(tagName) {
+        function hashCode(str) {
+            return str.split('').reduce((prevHash, currVal) =>
+                ((prevHash << 5) - prevHash) + currVal.charCodeAt(0), 0);
+        }
+        let hash = hashCode(tagName);
+        let color = '#' + ((hash >> 24) & 0xFF).toString(16).padStart(2, '0') +
+                            ((hash >> 16) & 0xFF).toString(16).padStart(2, '0') +
+                            ((hash >> 8) & 0xFF).toString(16).padStart(2, '0');
+        return color;
+    }
+
+    function getTagTextColor(tagName){
+        let color = getTagColorByName(tagName);
+        let r = parseInt(color.substr(1, 2), 16);
+        let g = parseInt(color.substr(3, 2), 16);
+        let b = parseInt(color.substr(5, 2), 16);
+        let brightness = Math.round(((r * 299) + (g * 587) + (b * 114)) / 1000);
+        return brightness > 125 ? "#000000" : "#ffffff";
+    }
+    
+     // Populate the tag filter dropdown
+     function populateTagFilterDropdown(data) {
+        let tags = new Set();
+        data.forEach(subd => {
+            subd.Tags.forEach(tag => tags.add(tag));
+        });
+        tags = Array.from(tags).sort((a, b) => a.localeCompare(b));
+        let dropdownMenu = $("#tagFilterDropdown .tagList");
+        dropdownMenu.html(`<div class="item tag-select" data-value="">
+            <div class="ui grey empty circular label"></div>
+            Show all
+        </div>`);
+        tags.forEach(tag => {
+            let thisTagColor = getTagColorByName(tag);
+            dropdownMenu.append(`<div class="item tag-select" data-value="${tag}">
+                <div class="ui empty circular label" style="background-color: ${thisTagColor}; border-color: ${thisTagColor};" ></div>
+                ${tag}
+            </div>`);
+        });
+    }
+
+    // Edit tags for a specific endpoint
+    function editTags(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    // Render the tags preview from tag editing snippet
+    function renderTagsPreview(endpoint, tags){
+        let targetProxyRuleEle = $(".subdEntry[eptuuid='" + endpoint + "'] td[data-label='tags']");
+        //Update the tag DOM
+        let newTagDOM = tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join("");
+        $(targetProxyRuleEle).find(".tags-list").html(newTagDOM);
+
+        //Update the tag payload
+        $(targetProxyRuleEle).attr("payload", encodeURIComponent(JSON.stringify(tags)));
+    }
+
+    function getTagsArrayFromEndpoint(endpoint){
+        let targetProxyRuleEle = $(".subdEntry[eptuuid='" + endpoint + "'] td[data-label='tags']");
+        let tags = $(targetProxyRuleEle).attr("payload");
+        return JSON.parse(decodeURIComponent(tags));
+    }
+
+    // Initialize the proxy list on page load
+    $(document).ready(function() {
+        listProxyEndpoints();
+
+        // Event listener for clicking on tags
+        $(document).on('click', '.tag-select', function() {
+            let tag = $(this).text().trim();
+            $('#tagFilterDropdown').dropdown('set selected', tag);
+            filterProxyList();
+        });
+    });
 </script>

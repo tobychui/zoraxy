@@ -63,6 +63,11 @@
                                         <label>Sticky Session<br><small>Enable stick session on upstream load balancing</small></label>
                                     </div>
                                 </div>
+                                <div class="field">
+                                    <label>Tags</label>
+                                    <input type="text" id="proxyTags" placeholder="e.g. mediaserver, management">
+                                    <small>Comma-separated list of tags for this proxy host.</small>
+                                </div>
                                 <div class="ui horizontal divider">
                                     <i class="ui green lock icon"></i>
                                     Security
@@ -198,6 +203,7 @@
         let skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
         let accessRuleToUse = $("#newProxyRuleAccessFilter").val();
         let useStickySessionLB = $("#useStickySessionLB")[0].checked; 
+        let tags = $("#proxyTags").val().trim();
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -231,6 +237,7 @@
                 cred: JSON.stringify(credentials),
                 access: accessRuleToUse,
                 stickysess: useStickySessionLB,
+                tags: tags,
             },
             success: function(data){
                 if (data.error != undefined){
@@ -239,6 +246,7 @@
                     //Clear old data
                     $("#rootname").val("");
                     $("#proxyDomain").val("");
+                    $("#proxyTags").val("");
                     credentials = [];
                     updateTable();
                     reloadUptimeList();

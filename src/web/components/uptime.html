@@ -108,6 +108,36 @@
         }
     }
 
+    function showStatusDotInfo(targetDot){
+        $(".statusbar .selectedDotInfo").hide();
+        let payload = $(targetDot).attr("payload");
+        let statusData = JSON.parse(decodeURIComponent(payload)); 
+        let statusDotInfoEle = $(targetDot).parent().parent().find(".selectedDotInfo");
+        let statusInfoEle = $(statusDotInfoEle).find(".status_dot_status_info");
+        //Fill in the data to the info box
+        $(statusDotInfoEle).find(".status_dot_timestamp").text(format_time(statusData.Timestamp));
+        $(statusDotInfoEle).find(".status_dot_latency").text(statusData.Latency + "ms");
+        $(statusDotInfoEle).find(".status_dot_status_code").text(statusData.StatusCode);
+        
+
+        //Set the class of the info box if status code is 5xx
+        $(statusDotInfoEle).removeClass("yellow");
+        $(statusDotInfoEle).removeClass("red");
+        $(statusDotInfoEle).removeClass("green");
+        if (statusData.StatusCode >= 500 && statusData.StatusCode < 600){
+            $(statusDotInfoEle).addClass("yellow");
+            $(statusInfoEle).text(httpErrorStatusCodeToText(statusData.StatusCode));
+        }else if (statusData.StatusCode == 0 && !statusData.Online){
+            $(statusDotInfoEle).addClass("red");
+            $(statusInfoEle).text("Upstream is offline");
+        }else{
+            $(statusDotInfoEle).addClass("green");
+            $(statusInfoEle).text("Upstream Online");
+        }
+
+        $(statusDotInfoEle).show();
+    }
+
 
     function renderUptimeData(key, value){
         if (value.length == 0){
@@ -132,6 +162,7 @@
             let thisStatus = value[i];
             let dotType = "";
             let statusCode = thisStatus.StatusCode;
+            let statusDotPayload = encodeURIComponent(JSON.stringify(thisStatus));
 
             if (!thisStatus.Online && statusCode == 0){
                 dotType = "offline";
@@ -159,7 +190,7 @@
             }
         
             let datetime = format_time(thisStatus.Timestamp);
-            statusDotList += `<div title="${datetime}" class="${dotType} statusDot"></div>`
+            statusDotList += `<div title="${datetime}" class="${dotType} statusDot" payload="${statusDotPayload}" onclick="showStatusDotInfo(this);"></div>`
         }
 
         ontimeRate = ontimeRate / value.length * 100;
@@ -207,7 +238,7 @@
                 
                 onlineStatusCss = `color: #f38020;`;
                 reminderEle = `<small style="${onlineStatusCss}">Target online but not accessible</small>`;
-            
+                
             }else{
                 currentOnlineStatus = `<i class="circle icon"></i> Offline`;
                 onlineStatusCss = `color: #df484a;`;
@@ -233,8 +264,71 @@
                 ${statusDotList}
             </div>
             ${reminderEle}
+            <div class="ui basic segment selectedDotInfo" style="display:none; border: 0.4em;">
+                <div class="ui list">
+                    <div class="item"><b>Timestamp</b>: <span class="status_dot_timestamp"></span></div>
+                    <div class="item"><b>Latency</b>: <span class="status_dot_latency"></span></div>
+                    <div class="item"><b>Status Code</b>: <span class="status_dot_status_code"></span></div>
+                    <div class="item"><b>Status Info</b>: <span class="status_dot_status_info"></span></div>
+                </div>
+                <button onclick="$(this).parent().hide();" style="position: absolute; right: 0.4em; top: 0.6em;" class="ui basic tiny circular icon button"><i class="ui times icon"></i></button>
+            </div>
             <div class="ui divider"></div>
         </div>`);
     }
     
+    function httpErrorStatusCodeToText(statusCode){
+        switch(statusCode){
+            case 400:
+            return "Bad Request";
+            case 401:
+            return "Unauthorized";
+            case 403:
+            return "Forbidden";
+            case 404:
+            return "Not Found";
+            case 405:
+            return "Method Not Allowed";
+            case 500:
+            return "Internal Server Error";
+            case 501:
+            return "Not Implemented";
+            case 502:
+            return "Bad Gateway";
+            case 503:
+            return "Service Unavailable";
+            case 504:
+            return "Gateway Timeout";
+            case 505:
+            return "HTTP Version Not Supported";
+            case 506:
+            return "Variant Also Negotiates";
+            case 507:
+            return "Insufficient Storage";
+            case 508:
+            return "Loop Detected";
+            case 510:
+            return "Not Extended";
+            case 511:
+            return "Network Authentication Required";
+            case 520:
+            return "Web Server Returned an Unknown Error (Cloudflare)";
+            case 521:
+            return "Web Server is Down (Cloudflare)";
+            case 522:
+            return "Connection Timed Out (Cloudflare)";
+            case 523:
+            return "Origin is Unreachable (Cloudflare)";
+            case 524:
+            return "A Timeout Occurred (Cloudflare)";
+            case 525:
+            return "SSL Handshake Failed (Cloudflare)";
+            case 526:
+            return "Invalid SSL Certificate (Cloudflare)";
+            case 527:
+            return "Railgun Error (Cloudflare)";
+            default:
+            return "Unknown Error";
+        }
+    }
 </script>

@@ -23,6 +23,10 @@ body:not(.darkTheme){
     --text_color_inverted: #fcfcfc;
     --button_text_color: #878787;
     --button_border_color: #dedede;
+    --buttom_toggle_active: #01dc64;
+    --buttom_toggle_disabled: #f2f2f2;
+    --table_bg_default: transparent;
+    --status_dot_bg: #e8e8e8;
 
     --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
     --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
@@ -31,10 +35,10 @@ body:not(.darkTheme){
 }
 
 body.darkTheme{
-    --theme_bg: #0a090e;
-    --theme_bg_primary: #060912;
-    --theme_bg_secondary:#172a41;
-    --theme_highlight: #4380b0;
+    --theme_bg: #1e1e1e;
+    --theme_bg_primary: #151517;
+    --theme_bg_secondary:#1b3572;
+    --theme_highlight: #6a7792;
     --theme_bg_active: #020101;
     --theme_bg_inverted: #f8f8f9;
     --theme_advance: #000000;
@@ -47,8 +51,12 @@ body.darkTheme{
     --text_color_inverted: #414141;
     --button_text_color: #e9e9e9;
     --button_border_color: #646464;
+    --buttom_toggle_active: #01dc64;
+    --buttom_toggle_disabled: #2b2b2b;
+    --table_bg_default: #121214;
+    --status_dot_bg: #232323;
 
-    --theme_background: linear-gradient(214deg, rgba(3,1,70,1) 17%, rgb(1, 55, 80) 78%);
+    --theme_background: linear-gradient(23deg, rgba(2,74,106,1) 17%, rgba(46,12,136,1) 86%);
     --theme_background_inverted: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
     --theme_green: linear-gradient(214deg, rgba(25,128,94,1) 17%, rgba(62,76,111,1) 78%);
     --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
@@ -113,6 +121,9 @@ body.darkTheme .ui.basic.button:not(.red) {
 body.darkTheme .ui.basic.button:not(.red):hover {
     border: 1px solid var(--button_border_color) !important;
     background-color: var(--theme_bg) !important;
+}
+
+body.darkTheme .ui.basic.button:not(.red):not(.dropdown):hover {
     opacity: 0.8;
 }
 
@@ -195,10 +206,14 @@ body.darkTheme textarea:focus {
 }
 
 body.darkTheme .ui.toggle.checkbox input ~ label::before{
-    background-color: var(--theme_bg_secondary) !important;
+    background-color: var(--buttom_toggle_disabled) !important;
 }
 body.darkTheme .ui.toggle.checkbox input:checked ~ label::before{
-    background-color: var(--theme_highlight) !important;
+    background-color: var(--buttom_toggle_active) !important;
+}
+
+body.darkTheme .ui.checkbox:not(.toggle) input[type="checkbox"]{
+    opacity: 100% !important;
 }
 
 #sidemenuBtn{
@@ -444,7 +459,7 @@ body.darkTheme .ui.table{
 body.darkTheme .ui.celled.sortable.unstackable.compact.table thead th,
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td,
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tfoot td {
-    background-color: var(--theme_bg) !important;
+    background-color: var(--table_bg_default) !important;
     color: var(--text_color) !important;
     border-color: var(--divider_color) !important;
 }
@@ -476,11 +491,11 @@ body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle
 }
 
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input ~ label::before {
-    background-color: var(--theme_bg_secondary) !important;
+    background-color: var(--buttom_toggle_disabled) !important;
 }
 
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.toggle.checkbox input:checked ~ label::before {
-    background-color: var(--theme_highlight) !important;
+    background-color: var(--buttom_toggle_active) !important;
 }
 
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td .ui.circular.mini.basic.icon.button {
@@ -537,6 +552,18 @@ body.darkTheme .RateLimit input {
     border-color: var(--theme_highlight) !important;
 }
 
+body.darkTheme .menu.transition{
+    background-color: var(--theme_bg) !important;
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.dropdown .menu{
+    background: var(--theme_bg_primary) !important;
+}
+
+body.darkTheme .ui.dropdown .menu .item{
+    color: var(--text_color) !important;
+}
 /* 
     Virtual Directorie Table
 */
@@ -714,7 +741,7 @@ body.darkTheme #redirectset .ui.sortable.unstackable.celled.table thead th {
 }
 
 body.darkTheme #redirectset .ui.sortable.unstackable.celled.table tbody tr td {
-    background-color: var(--theme_bg) !important;
+    background-color: var(--table_bg_default) !important;
     color: var(--text_color) !important;
     border-color: var(--divider_color) !important;
 }
@@ -833,7 +860,7 @@ body.darkTheme #access .ui.unstackable.basic.celled.table thead th {
 }
 
 body.darkTheme #access .ui.unstackable.basic.celled.table tbody tr td {
-    background-color: var(--theme_bg) !important;
+    background-color: var(--table_bg_default) !important;
     color: var(--text_color) !important;
     border-color: var(--divider_color) !important;
 }
@@ -985,8 +1012,8 @@ body.darkTheme #utm .standardContainer {
 }
 
 body.darkTheme #utm .standardContainer .padding.statusDot {
-    background-color: var(--theme_bg) !important;
-    border: 0.2px solid var(--text_color_inverted) !important;
+    background-color: var(--status_dot_bg) !important;
+    
 }
 
 body.darkTheme .ui.utmloading.segment {
@@ -1116,7 +1143,7 @@ body.darkTheme .statistic .label {
 /* Other Tables */
 
 body.darkTheme .ui.celled.compact.table {
-    background-color: var(--theme_bg) !important;
+    background-color: var(--table_bg_default) !important;
     color: var(--text_color) !important;
     border-color: var(--divider_color) !important;
 }

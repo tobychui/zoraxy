@@ -40,3 +40,8 @@ src/www/html/index.html
 src/sys.uuid
 src/zoraxy
 src/log/
+
+
+# dev-tags
+/Dockerfile
+/Entrypoint.sh

@@ -42,7 +42,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.1.6"
+	SYSTEM_VERSION    = "3.1.7"
 	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
@@ -86,6 +86,10 @@ var (
 	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+
+	/* Default Configuration Flags */
+	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
+	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
 
 	/* Path Configuration Flags */
 	//path_database  = flag.String("dbpath", "./sys.db", "Database path")

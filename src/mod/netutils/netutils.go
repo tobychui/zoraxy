@@ -157,3 +157,13 @@ func resolveIpFromDomain(targetIpOrDomain string) string {
 
 	return targetIpAddrString
 }
+
+// Check if the given port is already used by another process
+func CheckIfPortOccupied(portNumber int) bool {
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(portNumber))
+	if err != nil {
+		return true
+	}
+	listener.Close()
+	return false
+}

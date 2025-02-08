@@ -14,6 +14,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -27,11 +28,23 @@ func ReverseProxtInit() {
 	/*
 		Load Reverse Proxy Global Settings
 	*/
-	inboundPort := 443
+	inboundPort := *defaultInboundPort
+	autoStartReverseProxy := *defaultEnableInboundTraffic
 	if sysdb.KeyExists("settings", "inbound") {
+		//Read settings from database
 		sysdb.Read("settings", "inbound", &inboundPort)
-		SystemWideLogger.Println("Serving inbound port ", inboundPort)
+		if netutils.CheckIfPortOccupied(inboundPort) {
+			autoStartReverseProxy = false
+			SystemWideLogger.Println("Inbound port ", inboundPort, " is occupied. Change the listening port in the webmin panel and press \"Start Service\" to start reverse proxy service")
+		} else {
+			SystemWideLogger.Println("Serving inbound port ", inboundPort)
+		}
 	} else {
+		//Default port
+		if netutils.CheckIfPortOccupied(inboundPort) {
+			autoStartReverseProxy = false
+			SystemWideLogger.Println("Port 443 is occupied. Change the listening port in the webmin panel and press \"Start Service\" to start reverse proxy service")
+		}
 		SystemWideLogger.Println("Inbound port not set. Using default (443)")
 	}
 
@@ -60,6 +73,9 @@ func ReverseProxtInit() {
 	}
 
 	listenOnPort80 := true
+	if netutils.CheckIfPortOccupied(80) {
+		listenOnPort80 = false
+	}
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if listenOnPort80 {
 		SystemWideLogger.Println("Port 80 listener enabled")
@@ -136,9 +152,11 @@ func ReverseProxtInit() {
 	//Start Service
 	//Not sure why but delay must be added if you have another
 	//reverse proxy server in front of this service
-	time.Sleep(300 * time.Millisecond)
-	dynamicProxyRouter.StartProxyService()
-	SystemWideLogger.Println("Dynamic Reverse Proxy service started")
+	if autoStartReverseProxy {
+		time.Sleep(300 * time.Millisecond)
+		dynamicProxyRouter.StartProxyService()
+		SystemWideLogger.Println("Dynamic Reverse Proxy service started")
+	}
 
 	//Add all proxy services to uptime monitor
 	//Create a uptime monitor service
@@ -287,6 +305,23 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	tagStr, _ := utils.PostPara(r, "tags")
+	tags := []string{}
+	if tagStr != "" {
+		tags = strings.Split(tagStr, ",")
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
+	}
+	// Remove empty tags
+	filteredTags := []string{}
+	for _, tag := range tags {
+		if tag != "" {
+			filteredTags = append(filteredTags, tag)
+		}
+	}
+	tags = filteredTags
+
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	if eptype == "host" {
 		rootOrMatchingDomain, err := utils.PostPara(r, "rootname")
@@ -357,6 +392,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
+
+			Tags: tags,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -515,6 +552,15 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagStr, _ := utils.PostPara(r, "tags")
+	tags := []string{}
+	if tagStr != "" {
+		tags = strings.Split(tagStr, ",")
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
+	}
+
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
@@ -539,6 +585,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
 	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)

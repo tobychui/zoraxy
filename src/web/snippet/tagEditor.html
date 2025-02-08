@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
+        <style>
+            .ui.circular.label.tag-color{
+                min-width: 5px !important;
+                min-height: 5px !important;
+                margin-right: .4em;
+                margin-bottom: -0.2em;
+            }
+        </style>
+    </head>
+    <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Edit Tags
+                    <div class="sub header" id="epname"></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <p>Tags currently applied to this host name / proxy rule</p>
+            <div style="max-height: 300px; overflow-y: scroll;">
+                <table class="ui compact basic unstackable celled table">
+                    <thead>
+                        <tr>
+                            <th>Tag Name</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tagsTableBody">
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="ui divider"></div>
+            <h4>Add New Tags</h4>
+            <p>Create new tag or add this proxy rule to an existing tag</p>
+            <div class="ui form">
+                <div class="field">
+                    <label>New Tags</label>
+                    <input type="text" id="tagsInput" placeholder="e.g. mediaserver, management">
+                </div>
+                <button class="ui basic button" onclick="addSelectedTags();"><i class="ui blue plus icon"></i> Add tag</button>
+                <div class="ui horizontal divider">
+                Or
+                </div>
+                <div class="field">
+                    <label>Join Existing Tag Groups</label>
+                    <div class="ui fluid multiple search selection dropdown" id="existingTagsDropdown">
+                        <input type="hidden" id="existingTagsInput">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select Tags</div>
+                        <div class="menu" id="existingTagsMenu">
+                            <!-- Options will be dynamically added here -->
+                        </div>
+                    </div>
+                    <small id="notagwarning" style="display:none;"><i class="ui green circle check icon"></i> All tags has already been included in this host</small>
+                </div>
+                <button class="ui basic button" onclick="joinSelectedTagGroups();"><i class="ui blue plus icon"></i> Join tag group(s)</button>
+            </div>
+            <div class="ui divider"></div>
+            <!-- <button class="ui basic button" onclick="saveTags();"><i class="ui green save icon"></i> Save Changes</button> -->
+            <button class="ui basic button" style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
+        </div>
+        <script>
+            let editingEndpoint = {};
+            if (window.location.hash.length > 1){
+                let payloadHash = window.location.hash.substr(1);
+                try{
+                    payloadHash = JSON.parse(decodeURIComponent(payloadHash));
+                    $("#epname").text(payloadHash.ep);
+                    editingEndpoint = payloadHash;
+                    loadTags();
+                }catch(ex){
+                    console.log("Unable to load endpoint data from hash")
+                }
+            }
+
+            function loadTags(){
+                $.get("/api/proxy/detail", { type: "host", epname: editingEndpoint.ep }, function(data){
+                    if (data.error == undefined){
+                        //Render the tags to the table
+                        $("#tagsTableBody").empty();
+                        data.Tags.forEach(tag => {
+                            addTagRow(tag);
+                        });
+
+                        if (data.Tags.length == 0){
+                            appendNoTagNotice();
+                        }
+                    } else {
+                        parent.msgbox(data.error, false);
+                    }
+
+                    //Populate the dropdown with all tags created in the system
+                    populateTagsDropdown();
+                });
+            }
+
+            //Append or remove a notice to the table when no tags are applied
+            function appendNoTagNotice(){
+                $("#tagsTableBody").append(`<tr class="notagNotice" style="opacity: 0.5; pointer-events: none; user-select: none;"><td colspan="2"><i class="ui green circle check icon"></i> No tags applied to this host</td></tr>`);
+            }
+
+            function removeNoTagNotice(){
+                $("#tagsTableBody .notagNotice").remove();
+            }
+
+            //Load all tags created in this system
+            function loadAllCreatedTags(callback){
+                $.get("/api/proxy/list?type=host", function(data){
+                    if (data.error !== undefined){
+                        //No existsing rule created yet. Fresh install?
+                        callback([]);
+                        return;
+                    }
+                    let tags = {};
+                    data.forEach(host => {
+                        host.Tags.forEach(tag => {
+                            tags[tag] = true;
+                        });
+                    });
+
+                    let uniqueTags = Object.keys(tags);
+                    callback(uniqueTags);
+                });
+            }
+
+            //Populate the dropdown with all tags created in the system
+            function populateTagsDropdown(){
+                loadAllCreatedTags(function(tags) {
+                    let existingTags = new Set();
+                    $('#tagsTableBody tr').each(function() {
+                        existingTags.add($(this).attr('value'));
+                    });
+                    tags = tags.filter(tag => !existingTags.has(tag));
+                    $('#existingTagsMenu').empty();
+                    tags.forEach(tag => {
+                        $('#existingTagsMenu').append(`<div class="item" data-value="${tag}">${tag}</div>`);
+                    });
+                    $('#existingTagsDropdown').dropdown();
+
+                    if (tags.length == 0){
+                        $('#notagwarning').show();
+                    }else{
+                        $('#notagwarning').hide();
+                    }
+                });
+            }
+            
+            function tagAlreadyExistsInTable(tag) {
+                return $(`#tagsTableBody .tagEntry[value="${tag}"]`).length > 0;
+            }
+
+            function addSelectedTags() {
+                let tags = $('#tagsInput').val().split(',').map(tag => tag.trim());
+                tags.forEach(tag => {
+                    if (tag && !tagAlreadyExistsInTable(tag)) {
+                        addTagRow(tag);
+                    }
+                });
+                console.log(tags);
+                populateTagsDropdown();
+                $('#tagsInput').val('');
+                saveTags();
+            }
+
+            function joinSelectedTagGroups() {
+                if ($('#existingTagsInput').val() == ""){
+                    parent.msgbox("Please select at least one tag group to join", false);
+                    return;
+                }
+                let selectedTags = $('#existingTagsInput').val().split(',');
+                selectedTags.forEach(tag => {
+                    if (tag && !tagAlreadyExistsInTable(tag)) {
+                        addTagRow(tag);
+                    }
+                });
+                populateTagsDropdown();
+                $('#existingTagsDropdown').dropdown('clear');
+                saveTags();
+            }
+            
+
+             // Function to generate a color based on a tag name
+            function getTagColorByName(tagName) {
+                function hashCode(str) {
+                    return str.split('').reduce((prevHash, currVal) =>
+                        ((prevHash << 5) - prevHash) + currVal.charCodeAt(0), 0);
+                }
+                let hash = hashCode(tagName);
+                let color = '#' + ((hash >> 24) & 0xFF).toString(16).padStart(2, '0') +
+                                    ((hash >> 16) & 0xFF).toString(16).padStart(2, '0') +
+                                    ((hash >> 8) & 0xFF).toString(16).padStart(2, '0');
+                return color;
+            }
+
+            //Add a tag row to the table
+            function addTagRow(tag) {
+                const row = `<tr class="tagEntry" value="${tag}">
+                    <td><div class="ui circular label tag-color" style="background-color: ${getTagColorByName(tag)};"></div> ${tag}</td>    
+                    <td>
+                        <button title="Delete Tag" class="ui circular mini red basic icon button" onclick="removeTag('${tag}')">
+                            <i class="trash icon"></i>
+                        </button>
+                    </td>
+                </tr>`;
+                $("#tagsTableBody").append(row);
+                removeNoTagNotice();
+            }
+
+            function removeTag(tag) {
+                $(`#tagsTableBody .tagEntry[value="${tag}"]`).remove();
+                populateTagsDropdown();
+                saveTags();
+
+                if ($('#tagsTableBody tr').length == 0){
+                    appendNoTagNotice();
+                }
+            }
+
+            function saveTags(){
+                let tags = [];
+                $('#tagsTableBody tr').each(function() {
+                    tags.push($(this).attr('value'));
+                });
+                console.log(tags);
+                $.cjax({
+                    url: "/api/proxy/edit",
+                    method: "POST",
+                    data: {
+                        type: "host",
+                        rootname: editingEndpoint.ep,
+                        tags: tags.join(",")
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false);
+                        } else {
+                            parent.msgbox("Tags updated");
+                            //Update the preview on parent page
+                            parent.renderTagsPreview(editingEndpoint.ep, tags);
+                            //parent.hideSideWrapper();
+                        }
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -54,6 +54,11 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		return err
 	}
 
+	//Make sure the tags are not nil
+	if thisConfigEndpoint.Tags == nil {
+		thisConfigEndpoint.Tags = []string{}
+	}
+
 	//Matching domain not set. Assume root
 	if thisConfigEndpoint.RootOrMatchingDomain == "" {
 		thisConfigEndpoint.RootOrMatchingDomain = "/"
@@ -175,8 +180,8 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 
 	// Set the Content-Type header to indicate it's a zip file
 	w.Header().Set("Content-Type", "application/zip")
-	// Set the Content-Disposition header to specify the file name
-	w.Header().Set("Content-Disposition", "attachment; filename=\"config.zip\"")
+	// Set the Content-Disposition header to specify the file name, add timestamp to the filename
+	w.Header().Set("Content-Disposition", "attachment; filename=\"zoraxy-config-"+time.Now().Format("2006-01-02-15-04-05")+".zip\"")
 
 	// Create a zip writer
 	zipWriter := zip.NewWriter(w)
