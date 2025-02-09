@@ -1,3 +1,23 @@
+# v3.1.7 08 Feb 2025
+
++ Merged and added new tagging system for HTTP Proxy rules [by @adoolaard](https://github.com/adoolaard)
++ Added inline editing for redirection rules [#510](https://github.com/tobychui/zoraxy/issues/510)
++ Added uptime monitor status dot detail info (now clickable) [#467](https://github.com/tobychui/zoraxy/issues/467)
++ Added close connection support to port 80 listener [#405](https://github.com/tobychui/zoraxy/issues/450)
++ Optimized port collision check on startup
++ Optimized dark theme color scheme (Free consultation by 3S Design studio)
++ Fixed capital letter rule unable to delete bug [#507](https://github.com/tobychui/zoraxy/issues/507)
++ Fixed docker statistic not save bug [by @PassiveLemon](https://github.com/PassiveLemon) [#505](https://github.com/tobychui/zoraxy/issues/505)
+
+
+# v3.1.6 31 Dec 2024
+
+
++ Exposed log file, sys.uuid and static web server path to start flag (customizable conf and sys.db path is still wip)
++ Optimized connection close implementation
++ Added toggle for uptime monitor
++ Added optional copy HTTP custom headers to websocket connection [#444](https://github.com/tobychui/zoraxy/issues/444)
+
 # v3.1.5 28 Dec 2024
 
 + Fixed hostname case sensitive bug [#435](https://github.com/tobychui/zoraxy/issues/435)
