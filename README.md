@@ -101,12 +101,20 @@ Usage of zoraxy:
         ACME auto TLS/SSL certificate renew check interval (seconds) (default 86400)
   -cfgupgrade
         Enable auto config upgrade if breaking change is detected (default true)
+  -db string
+        Database backend to use (leveldb, boltdb, auto) Note that fsdb will be used on unsupported platforms like RISCV (default "auto")
+  -default_inbound_enabled
+        If web server is enabled by default (default true)
+  -default_inbound_port int
+        Default web server listening port (default 443)
   -docker
         Run Zoraxy in docker compatibility mode
   -earlyrenew int
         Number of days to early renew a soon expiring certificate (days) (default 30)
   -fastgeoip
         Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
+  -log string
+        Log folder path (default "./log")
   -mdns
         Enable mDNS scanner and transponder (default true)
   -mdnsname string
@@ -117,12 +125,16 @@ Usage of zoraxy:
         Management web interface listening port (default ":8000")
   -sshlb
         Allow loopback web ssh connection (DANGER)
+  -update_geoip
+        Download the latest GeoIP data and exit
+  -uuid string
+        sys.uuid file path (default "./sys.uuid")
   -version
         Show version of this server
   -webfm
         Enable web file manager for static web server root folder (default true)
   -webroot string
-        Static web server root folder. Only allow chnage in start paramters (default "./www")
+        Static web server root folder. Only allow change in start paramters (default "./www")
   -ztauth string
         ZeroTier authtoken for the local node
   -ztport int
