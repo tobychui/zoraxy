@@ -2,7 +2,6 @@ package dpcore
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -12,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/http2"
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
+	"imuslab.com/zoraxy/mod/dynamicproxy/modh2c"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 )
 
@@ -104,14 +103,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	}
 
 	thisTransporter := http.DefaultTransport
-	if dpcOptions.UseH2CRoundTripper {
-		thisTransporter = &http2.Transport{
-			DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-				return net.Dial(network, addr)
-			},
-			AllowHTTP: true,
-		}
-	}
 
 	//Hack the default transporter to handle more connections
 	optimalConcurrentConnection := 32
@@ -121,11 +112,15 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	thisTransporter.(*http.Transport).MaxConnsPerHost = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).DisableCompression = true
 
-	//TODO: Add user adjustable timeout option here
-
 	if dpcOptions.IgnoreTLSVerification {
 		//Ignore TLS certificate validation error
 		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+	}
+
+	//TODO: Add user adjustable timeout option here
+	if dpcOptions.UseH2CRoundTripper {
+		//Use H2C RoundTripper for HTTP/2.0 connection
+		thisTransporter = modh2c.NewH2CRoundTripper()
 	}
 
 	return &ReverseProxy{
