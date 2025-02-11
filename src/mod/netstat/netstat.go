@@ -4,14 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/v4/net"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -202,144 +197,21 @@ func (n *NetStatBuffers) HandleGetNetworkInterfaceStats(w http.ResponseWriter, r
 
 // Get network interface stats, return accumulated rx bits, tx bits and error if any
 func (n *NetStatBuffers) GetNetworkInterfaceStats() (int64, int64, error) {
-	if runtime.GOOS == "windows" {
-		//Windows wmic sometime freeze and not respond.
-		//The safer way is to make a bypass mechanism
-		//when timeout with channel
-
-		type wmicResult struct {
-			RX  int64
-			TX  int64
-			Err error
-		}
-
-		callbackChan := make(chan wmicResult)
-		cmd := exec.Command("wmic", "path", "Win32_PerfRawData_Tcpip_NetworkInterface", "Get", "BytesReceivedPersec,BytesSentPersec,BytesTotalPersec")
-		//Execute the cmd in goroutine
-		go func() {
-			out, err := cmd.Output()
-			if err != nil {
-				callbackChan <- wmicResult{0, 0, err}
-				return
-			}
-
-			//Filter out the first line
-			lines := strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n")
-			if len(lines) >= 2 && len(lines[1]) >= 0 {
-				dataLine := lines[1]
-				for strings.Contains(dataLine, "  ") {
-					dataLine = strings.ReplaceAll(dataLine, "  ", " ")
-				}
-				dataLine = strings.TrimSpace(dataLine)
-				info := strings.Split(dataLine, " ")
-				if len(info) != 3 {
-					callbackChan <- wmicResult{0, 0, errors.New("invalid wmic results length")}
-				}
-				rxString := info[0]
-				txString := info[1]
-
-				rx := int64(0)
-				tx := int64(0)
-				if s, err := strconv.ParseInt(rxString, 10, 64); err == nil {
-					rx = s
-				}
-
-				if s, err := strconv.ParseInt(txString, 10, 64); err == nil {
-					tx = s
-				}
-
-				time.Sleep(100 * time.Millisecond)
-				callbackChan <- wmicResult{rx * 4, tx * 4, nil}
-			} else {
-				//Invalid data
-				callbackChan <- wmicResult{0, 0, errors.New("invalid wmic results")}
-			}
-
-		}()
-
-		go func() {
-			//Spawn a timer to terminate the cmd process if timeout
-			time.Sleep(3 * time.Second)
-			if cmd != nil && cmd.Process != nil {
-				cmd.Process.Kill()
-				callbackChan <- wmicResult{0, 0, errors.New("wmic execution timeout")}
-			}
-		}()
-
-		result := wmicResult{}
-		result = <-callbackChan
-		cmd = nil
-		if result.Err != nil {
-			n.logger.PrintAndLog("netstat", "Unable to extract NIC info from wmic", result.Err)
-		}
-		return result.RX, result.TX, result.Err
-	} else if runtime.GOOS == "linux" {
-		allIfaceRxByteFiles, err := filepath.Glob("/sys/class/net/*/statistics/rx_bytes")
-		if err != nil {
-			//Permission denied
-			return 0, 0, errors.New("access denied")
-		}
-
-		if len(allIfaceRxByteFiles) == 0 {
-			return 0, 0, errors.New("no valid iface found")
-		}
-
-		rxSum := int64(0)
-		txSum := int64(0)
-		for _, rxByteFile := range allIfaceRxByteFiles {
-			rxBytes, err := os.ReadFile(rxByteFile)
-			if err == nil {
-				rxBytesInt, err := strconv.Atoi(strings.TrimSpace(string(rxBytes)))
-				if err == nil {
-					rxSum += int64(rxBytesInt)
-				}
-			}
-
-			//Usually the tx_bytes file is nearby it. Read it as well
-			txByteFile := filepath.Join(filepath.Dir(rxByteFile), "tx_bytes")
-			txBytes, err := os.ReadFile(txByteFile)
-			if err == nil {
-				txBytesInt, err := strconv.Atoi(strings.TrimSpace(string(txBytes)))
-				if err == nil {
-					txSum += int64(txBytesInt)
-				}
-			}
-
-		}
-
-		//Return value as bits
-		return rxSum * 8, txSum * 8, nil
-
-	} else if runtime.GOOS == "darwin" {
-		cmd := exec.Command("netstat", "-ib") //get data from netstat -ib
-		out, err := cmd.Output()
-		if err != nil {
-			return 0, 0, err
-		}
-
-		outStrs := string(out)                                                          //byte array to multi-line string
-		for _, outStr := range strings.Split(strings.TrimSuffix(outStrs, "\n"), "\n") { //foreach multi-line string
-			if strings.HasPrefix(outStr, "en") { //search for ethernet interface
-				if strings.Contains(outStr, "<Link#") { //search for the link with <Link#?>
-					outStrSplit := strings.Fields(outStr) //split by white-space
-
-					rxSum, errRX := strconv.Atoi(outStrSplit[6]) //received bytes sum
-					if errRX != nil {
-						return 0, 0, errRX
-					}
-
-					txSum, errTX := strconv.Atoi(outStrSplit[9]) //transmitted bytes sum
-					if errTX != nil {
-						return 0, 0, errTX
-					}
-
-					return int64(rxSum) * 8, int64(txSum) * 8, nil
-				}
-			}
-		}
-
-		return 0, 0, nil //no ethernet adapters with en*/<Link#*>
+	// Get aggregated network I/O stats for all interfaces
+	counters, err := net.IOCounters(false)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(counters) == 0 {
+		return 0, 0, errors.New("no network interfaces found")
 	}
 
-	return 0, 0, errors.New("platform not supported")
+	var totalRx, totalTx uint64
+	for _, counter := range counters {
+		totalRx += counter.BytesRecv
+		totalTx += counter.BytesSent
+	}
+
+	// Convert bytes to bits
+	return int64(totalRx * 8), int64(totalTx * 8), nil
 }
