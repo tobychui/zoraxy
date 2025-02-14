@@ -67,5 +67,6 @@ func (m *RouteManager) FilterOfflineOrigins(origins []*Upstream) []*Upstream {
 			onlineOrigins = append(onlineOrigins, origin)
 		}
 	}
+
 	return onlineOrigins
 }

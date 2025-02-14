@@ -109,6 +109,11 @@ func GetUpstreamsAsString(upstreams []*Upstream) string {
 	return strings.Join(targets, ", ")
 }
 
+// Reset the current session store and clear all previous sessions
+func (m *RouteManager) ResetSessions() {
+	m.SessionStore = sessions.NewCookieStore([]byte(m.Options.SystemUUID))
+}
+
 func (m *RouteManager) Close() {
 	//Close the session store
 	m.SessionStore.MaxAge(0)

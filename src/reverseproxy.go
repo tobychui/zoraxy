@@ -595,6 +595,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	targetProxyEntry.Remove()
+	loadBalancer.ResetSessions()
 	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
 
 	//Save it to file
