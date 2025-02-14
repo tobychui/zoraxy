@@ -1,7 +1,9 @@
 package dynamicproxy
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -198,14 +200,21 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		Version:             target.parent.Option.HostVersion,
 	})
 
+	//validate the error
 	var dnsError *net.DNSError
 	if err != nil {
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
 			h.Parent.logRequest(r, false, 404, "host-http", r.URL.Hostname())
+		} else if errors.Is(err, context.Canceled) {
+			//Request canceled by client, usually due to manual refresh before page load
+			http.Error(w, "Request canceled", http.StatusRequestTimeout)
+			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", r.URL.Hostname())
 		} else {
+			//Notify the load balancer that the host is unreachable
+			fmt.Println(err.Error())
+			h.Parent.loadBalancer.NotifyHostUnreachableWithTimeout(selectedUpstream.OriginIpOrDomain, PassiveLoadBalanceNotifyTimeout)
 			http.ServeFile(w, r, "./web/rperror.html")
-			//TODO: Take this upstream offline automatically
 			h.Parent.logRequest(r, false, 521, "host-http", r.URL.Hostname())
 		}
 	}

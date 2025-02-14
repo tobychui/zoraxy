@@ -19,12 +19,20 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 	if len(origins) == 0 {
 		return nil, errors.New("no upstream is defined for this host")
 	}
-	var targetOrigin = origins[0]
+
+	//Pick the origin
 	if useStickySession {
 		//Use stick session, check which origins this request previously used
 		targetOriginId, err := m.getSessionHandler(r, origins)
-		if err != nil {
-			//No valid session found. Assign a new upstream
+		if err != nil || !m.IsTargetOnline(origins[targetOriginId].OriginIpOrDomain) {
+			// No valid session found or origin is offline
+			// Filter the offline origins
+			origins = m.FilterOfflineOrigins(origins)
+			if len(origins) == 0 {
+				return nil, errors.New("no online upstream is available for origin: " + r.Host)
+			}
+
+			//Get a random origin
 			targetOrigin, index, err := getRandomUpstreamByWeight(origins)
 			if err != nil {
 				m.println("Unable to get random upstream", err)
@@ -35,21 +43,32 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 			return targetOrigin, nil
 		}
 
-		//Valid session found. Resume the previous session
+		//Valid session found and origin is online
 		return origins[targetOriginId], nil
-	} else {
-		//Do not use stick session. Get a random one
-		var err error
-		targetOrigin, _, err = getRandomUpstreamByWeight(origins)
-		if err != nil {
-			m.println("Failed to get next origin", err)
-			targetOrigin = origins[0]
-		}
+	}
+	//No sticky session, get a random origin
 
+	//Filter the offline origins
+	origins = m.FilterOfflineOrigins(origins)
+	if len(origins) == 0 {
+		return nil, errors.New("no online upstream is available for origin: " + r.Host)
+	}
+
+	//Get a random origin
+	targetOrigin, _, err := getRandomUpstreamByWeight(origins)
+	if err != nil {
+		m.println("Failed to get next origin", err)
+		targetOrigin = origins[0]
 	}
 
 	//fmt.Println("DEBUG: Picking origin " + targetOrigin.OriginIpOrDomain)
 	return targetOrigin, nil
+}
+
+// GetUsableUpstreamCounts return the number of usable upstreams
+func (m *RouteManager) GetUsableUpstreamCounts(origins []*Upstream) int {
+	origins = m.FilterOfflineOrigins(origins)
+	return len(origins)
 }
 
 /* Features related to session access */

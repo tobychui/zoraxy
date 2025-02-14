@@ -28,6 +28,7 @@ import (
 
 type ProxyType int
 
+const PassiveLoadBalanceNotifyTimeout = 60 //Time to assume a passive load balance is unreachable, in seconds
 const (
 	ProxyTypeRoot ProxyType = iota //Root Proxy, everything not matching will be routed here
 	ProxyTypeHost                  //Host Proxy, match by host (domain) name
@@ -193,7 +194,7 @@ type ProxyEndpoint struct {
 	DefaultSiteValue  string //Fallback routing target, optional
 
 	//Internal Logic Elements
-	parent *Router `json:"-"`
+	parent *Router  `json:"-"`
 	Tags   []string // Tags for the proxy endpoint
 }
 

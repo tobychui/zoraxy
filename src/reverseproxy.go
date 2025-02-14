@@ -163,10 +163,11 @@ func ReverseProxtInit() {
 	go func() {
 		//This must be done in go routine to prevent blocking on system startup
 		uptimeMonitor, _ = uptime.NewUptimeMonitor(&uptime.Config{
-			Targets:         GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter),
-			Interval:        300,              //5 minutes
-			MaxRecordsStore: 288,              //1 day
-			Logger:          SystemWideLogger, //Logger
+			Targets:           GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter),
+			Interval:          300,                                //5 minutes
+			MaxRecordsStore:   288,                                //1 day
+			OnlineStateNotify: loadBalancer.NotifyHostOnlineState, //Notify the load balancer for online state
+			Logger:            SystemWideLogger,                   //Logger
 		})
 
 		SystemWideLogger.Println("Uptime Monitor background service started")

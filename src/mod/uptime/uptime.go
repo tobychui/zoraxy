@@ -14,56 +14,6 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
-const (
-	logModuleName = "uptime-monitor"
-)
-
-type Record struct {
-	Timestamp  int64
-	ID         string
-	Name       string
-	URL        string
-	Protocol   string
-	Online     bool
-	StatusCode int
-	Latency    int64
-}
-
-type ProxyType string
-
-const (
-	ProxyType_Host ProxyType = "Origin Server"
-	ProxyType_Vdir ProxyType = "Virtual Directory"
-)
-
-type Target struct {
-	ID        string
-	Name      string
-	URL       string
-	Protocol  string
-	ProxyType ProxyType
-}
-
-type Config struct {
-	Targets         []*Target
-	Interval        int
-	MaxRecordsStore int
-	Logger          *logger.Logger
-}
-
-type Monitor struct {
-	Config          *Config
-	OnlineStatusLog map[string][]*Record
-}
-
-// Default configs
-var exampleTarget = Target{
-	ID:       "example",
-	Name:     "Example",
-	URL:      "example.com",
-	Protocol: "https",
-}
-
 // Create a new uptime monitor
 func NewUptimeMonitor(config *Config) (*Monitor, error) {
 	//Create new monitor object
@@ -75,6 +25,11 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 	if config.Logger == nil {
 		//Use default fmt to log if logger is not provided
 		config.Logger, _ = logger.NewFmtLogger()
+	}
+
+	if config.OnlineStateNotify == nil {
+		//Use default notify function if not provided
+		config.OnlineStateNotify = defaultNotify
 	}
 
 	//Start the endpoint listener
@@ -218,6 +173,7 @@ func (m *Monitor) getWebsiteStatusWithLatency(url string) (bool, int64, int) {
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
 		m.Config.Logger.PrintAndLog(logModuleName, "Ping upstream timeout. Assume offline", err)
+		m.Config.OnlineStateNotify(url, false)
 		return false, 0, 0
 	} else {
 		diff := end - start
@@ -231,7 +187,7 @@ func (m *Monitor) getWebsiteStatusWithLatency(url string) (bool, int64, int) {
 		} else {
 			succ = false
 		}
-
+		m.Config.OnlineStateNotify(url, true)
 		return succ, diff, statusCode
 	}
 
