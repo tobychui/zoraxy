@@ -212,6 +212,10 @@ func (n *NetStatBuffers) GetNetworkInterfaceStats() (int64, int64, error) {
 		totalTx += counter.BytesSent
 	}
 
-	// Convert bytes to bits
+	// Convert bytes to bits with overflow check
+	const maxInt64 = int64(^uint64(0) >> 1)
+	if totalRx*8 > uint64(maxInt64) || totalTx*8 > uint64(maxInt64) {
+		return 0, 0, errors.New("overflow detected when converting uint64 to int64")
+	}
 	return int64(totalRx * 8), int64(totalTx * 8), nil
 }
