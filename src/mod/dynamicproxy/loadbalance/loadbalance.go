@@ -3,6 +3,7 @@ package loadbalance
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
@@ -25,11 +26,12 @@ type Options struct {
 }
 
 type RouteManager struct {
-	SessionStore           *sessions.CookieStore
-	LoadBalanceMap         sync.Map  //Sync map to store the last load balance state of a given node
-	OnlineStatusMap        sync.Map  //Sync map to store the online status of a given ip address or domain name
-	onlineStatusTickerStop chan bool //Stopping channel for the online status pinger
-	Options                Options   //Options for the load balancer
+	SessionStore *sessions.CookieStore
+	OnlineStatus sync.Map //Store the online status notify by uptime monitor
+	Options      Options  //Options for the load balancer
+
+	cacheTicker     *time.Ticker //Ticker for cache cleanup
+	cacheTickerStop chan bool    //Stop the cache cleanup
 }
 
 /* Upstream or Origin Server */
@@ -41,8 +43,12 @@ type Upstream struct {
 	SkipWebSocketOriginCheck bool   //Skip origin check on websocket upgrade connections
 
 	//Load balancing configs
-	Weight  int //Random weight for round robin, 0 for fallback only
-	MaxConn int //TODO: Maxmium connection to this server, 0 for unlimited
+	Weight int //Random weight for round robin, 0 for fallback only
+
+	//HTTP Transport Config
+	MaxConn     int   //Maxmium concurrent requests to this upstream dpcore instance
+	RespTimeout int64 //Response header timeout in milliseconds
+	IdleTimeout int64 //Idle connection timeout in milliseconds
 
 	//currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
 	proxy *dpcore.ReverseProxy
@@ -55,14 +61,31 @@ func NewLoadBalancer(options *Options) *RouteManager {
 		options.SystemUUID = uuid.New().String()
 	}
 
+	//Create a ticker for cache cleanup every 12 hours
+	cacheTicker := time.NewTicker(12 * time.Hour)
+	cacheTickerStop := make(chan bool)
+	go func() {
+		options.Logger.PrintAndLog("LoadBalancer", "Upstream state cache ticker started", nil)
+		for {
+			select {
+			case <-cacheTickerStop:
+				return
+			case <-cacheTicker.C:
+				//Clean up the cache
+				options.Logger.PrintAndLog("LoadBalancer", "Cleaning up upstream state cache", nil)
+			}
+		}
+	}()
+
 	//Generate a session store for stickySession
 	store := sessions.NewCookieStore([]byte(options.SystemUUID))
 	return &RouteManager{
-		SessionStore:           store,
-		LoadBalanceMap:         sync.Map{},
-		OnlineStatusMap:        sync.Map{},
-		onlineStatusTickerStop: nil,
-		Options:                *options,
+		SessionStore: store,
+		OnlineStatus: sync.Map{},
+		Options:      *options,
+
+		cacheTicker:     cacheTicker,
+		cacheTickerStop: cacheTickerStop,
 	}
 }
 
@@ -90,11 +113,20 @@ func GetUpstreamsAsString(upstreams []*Upstream) string {
 	return strings.Join(targets, ", ")
 }
 
-func (m *RouteManager) Close() {
-	if m.onlineStatusTickerStop != nil {
-		m.onlineStatusTickerStop <- true
-	}
+// Reset the current session store and clear all previous sessions
+func (m *RouteManager) ResetSessions() {
+	m.SessionStore = sessions.NewCookieStore([]byte(m.Options.SystemUUID))
+}
 
+func (m *RouteManager) Close() {
+	//Close the session store
+	m.SessionStore.MaxAge(0)
+
+	//Stop the cache cleanup
+	if m.cacheTicker != nil {
+		m.cacheTicker.Stop()
+	}
+	close(m.cacheTickerStop)
 }
 
 // Log Println, replace all log.Println or fmt.Println with this

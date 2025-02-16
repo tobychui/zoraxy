@@ -39,8 +39,11 @@ func (u *Upstream) StartProxy() error {
 	}
 
 	proxy := dpcore.NewDynamicProxyCore(path, "", &dpcore.DpcoreOptions{
-		IgnoreTLSVerification: u.SkipCertValidations,
-		FlushInterval:         100 * time.Millisecond,
+		IgnoreTLSVerification:   u.SkipCertValidations,
+		FlushInterval:           100 * time.Millisecond,
+		ResponseHeaderTimeout:   u.RespTimeout,
+		IdleConnectionTimeout:   u.IdleTimeout,
+		MaxConcurrentConnection: u.MaxConn,
 	})
 
 	u.proxy = proxy

@@ -79,6 +79,25 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "upstream origin not set")
 		return
 	}
+
+	//Response timeout in seconds, set to 0 for default
+	respTimeout, err := utils.PostInt(r, "respt")
+	if err != nil {
+		respTimeout = 0
+	}
+
+	//Idle timeout in seconds, set to 0 for default
+	idleTimeout, err := utils.PostInt(r, "idlet")
+	if err != nil {
+		idleTimeout = 0
+	}
+
+	//Max concurrent connection to dpcore instance, set to 0 for default
+	maxConn, err := utils.PostInt(r, "maxconn")
+	if err != nil {
+		maxConn = 0
+	}
+
 	requireTLS, _ := utils.PostBool(r, "tls")
 	skipTlsValidation, _ := utils.PostBool(r, "tlsval")
 	bpwsorg, _ := utils.PostBool(r, "bpwsorg")
@@ -91,7 +110,9 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 		SkipCertValidations:      skipTlsValidation,
 		SkipWebSocketOriginCheck: bpwsorg,
 		Weight:                   1,
-		MaxConn:                  0,
+		MaxConn:                  maxConn,
+		RespTimeout:              int64(respTimeout),
+		IdleTimeout:              int64(idleTimeout),
 	}
 
 	//Add the new upstream to endpoint

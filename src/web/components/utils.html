@@ -259,6 +259,8 @@
 
     /*
         SMTP Settings
+
+        TODO: Remove SMTP support in future versions
     */
     
     //Bind events to the form
@@ -273,11 +275,13 @@
             adminAddr: $('input[name=recvAddr]').val()
         };
 
+        /*
         var inputValid = validateSMTPInputs();
         if (!inputValid){
             msgbox("SMTP input not valid", false, 5000);
             return;
         }
+        */
 
         $.cjax({
             type: "POST",
