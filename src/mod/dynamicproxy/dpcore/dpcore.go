@@ -83,9 +83,12 @@ type requestCanceler interface {
 }
 
 type DpcoreOptions struct {
-	IgnoreTLSVerification bool          //Disable all TLS verification when request pass through this proxy router
-	FlushInterval         time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
-	UseH2CRoundTripper    bool          //Use H2C RoundTripper for HTTP/2.0 connection
+	IgnoreTLSVerification   bool          //Disable all TLS verification when request pass through this proxy router
+	FlushInterval           time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
+	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
+	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
+	IdleConnectionTimeout   int64         //Idle connection timeout, set to 0 for default
+	UseH2CRoundTripper      bool          //Use H2C RoundTripper for HTTP/2.0 connection
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -106,18 +109,30 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 
 	//Hack the default transporter to handle more connections
 	optimalConcurrentConnection := 32
+	if dpcOptions.MaxConcurrentConnection > 0 {
+		optimalConcurrentConnection = dpcOptions.MaxConcurrentConnection
+	}
+	thisTransporter.(*http.Transport).IdleConnTimeout = 30 * time.Second
 	thisTransporter.(*http.Transport).MaxIdleConns = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).MaxIdleConnsPerHost = optimalConcurrentConnection
-	thisTransporter.(*http.Transport).IdleConnTimeout = 30 * time.Second
 	thisTransporter.(*http.Transport).MaxConnsPerHost = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).DisableCompression = true
+
+	if dpcOptions.ResponseHeaderTimeout > 0 {
+		//Set response header timeout
+		thisTransporter.(*http.Transport).ResponseHeaderTimeout = time.Duration(dpcOptions.ResponseHeaderTimeout) * time.Millisecond
+	}
+
+	if dpcOptions.IdleConnectionTimeout > 0 {
+		//Set idle connection timeout
+		thisTransporter.(*http.Transport).IdleConnTimeout = time.Duration(dpcOptions.IdleConnectionTimeout) * time.Millisecond
+	}
 
 	if dpcOptions.IgnoreTLSVerification {
 		//Ignore TLS certificate validation error
 		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 	}
 
-	//TODO: Add user adjustable timeout option here
 	if dpcOptions.UseH2CRoundTripper {
 		//Use H2C RoundTripper for HTTP/2.0 connection
 		thisTransporter = modh2c.NewH2CRoundTripper()

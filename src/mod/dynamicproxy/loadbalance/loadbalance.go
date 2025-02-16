@@ -43,8 +43,12 @@ type Upstream struct {
 	SkipWebSocketOriginCheck bool   //Skip origin check on websocket upgrade connections
 
 	//Load balancing configs
-	Weight  int //Random weight for round robin, 0 for fallback only
-	MaxConn int //TODO: Maxmium connection to this server, 0 for unlimited
+	Weight int //Random weight for round robin, 0 for fallback only
+
+	//HTTP Transport Config
+	MaxConn     int   //Maxmium concurrent requests to this upstream dpcore instance
+	RespTimeout int64 //Response header timeout in milliseconds
+	IdleTimeout int64 //Idle connection timeout in milliseconds
 
 	//currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
 	proxy *dpcore.ReverseProxy

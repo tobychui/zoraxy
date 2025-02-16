@@ -57,6 +57,17 @@
                     margin-bottom: 0.4em;
                 }
             }
+
+            .advanceUpstreamOptions{
+                padding: 0.6em;
+                background-color: var(--theme_advance); 
+                width: 100%;
+                border-radius: 0.4em;
+            }
+
+            .advanceUpstreamOptions.ui.accordion .content{
+                padding: 1em !important;
+            }
         </style>
     </head>
     <body>
@@ -121,6 +132,38 @@
                     <label>Skip WebSocket Origin Check<br>
                     <small>Check this to allow cross-origin websocket requests</small></label>
                 </div>
+                <div class="ui advanceUpstreamOptions accordion" style="margin-top:0.6em;">
+                    <div class="title">
+                        <i class="dropdown icon"></i>
+                        Advanced Options
+                    </div>
+                    <div class="content">
+                        <p>Max Concurrent Connections</p>
+                        <div class="ui mini fluid input" style="margin-top: -0.6em;">
+                            <input type="number" min="0" id="maxConn" value="0">
+                        </div>
+                        <small>Set to 0 for default value (32 connections)</small>
+                        <br><br>
+                        <p>Response Timeout</p>
+                        <div class="ui mini right labeled fluid input" style="margin-top: -0.6em;">
+                            <input type="number" min="0" id="respTimeout" value="0">
+                            <div class="ui basic label">
+                                Seconds
+                            </div>
+                        </div>
+                        <small>Maximum waiting time for server header response, set to 0 for default</small>
+                        <br><br>
+                        <p>Idle Timeout</p>
+                        <div class="ui mini right labeled fluid input" style="margin-top: -0.6em;">
+                            <input type="number" min="0" id="idleTimeout" value="0">
+                            <div class="ui basic label">
+                                Seconds
+                            </div>
+                        </div>
+                        <small>Maximum allowed keep-alive time forcefully closes the connection, set to 0 for default</small>
+                    </div>
+                </div>
+                
                 <br><br>
                 <button class="ui basic button" onclick="addNewUpstream();"><i class="ui green circle add icon"></i> Create</button>
             </div>
@@ -171,6 +214,8 @@
                             data.InactiveOrigins.forEach(upstream => {
                                 renderUpstreamEntryToTable(upstream, false);
                             });
+
+                            $(".advanceUpstreamOptions.accordion").accordion();
 
                             let totalUpstreams = data.ActiveOrigins.length + data.InactiveOrigins.length;
                             if (totalUpstreams == 1){
@@ -227,6 +272,8 @@
                 let url = `${upstream.RequireTLS?"https://":"http://"}${upstream.OriginIpOrDomain}`
                 let payload = encodeURIComponent(JSON.stringify(upstream));
                 let domUID = newUID();
+
+                //Timeout values are stored as ms in the backend
                 $("#upstreamTable").append(`<div class="ui upstreamEntry ${isActive?"":"inactive"} basic segment" data-domid="${domUID}" data-payload="${payload}" data-priority="${upstream.Priority}">
                     <h4 class="ui header">
                         <div class="ui toggle checkbox" style="display:inline-block;">
@@ -262,6 +309,39 @@
                             <label>Skip WebSocket Origin Check<br>
                             <small>Check this to allow cross-origin websocket requests</small></label>
                         </div><br>
+                        <!-- Advance Settings -->
+                         <div class="ui advanceUpstreamOptions accordion" style="margin-top:0.6em;">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Advanced Options
+                            </div>
+                            <div class="content">
+                                <p>Max Concurrent Connections</p>
+                                <div class="ui mini fluid input" style="margin-top: -0.6em;">
+                                    <input type="number" min="0" class="maxConn" value="${upstream.MaxConn}">
+                                </div>
+                                <small>Set to 0 for default value (32 connections)</small>
+                                <br>
+                                <p style="margin-top: 0.6em;">Response Timeout</p>
+                                <div class="ui mini right labeled fluid input" style="margin-top: -0.6em;">
+                                    <input type="number" min="0" class="respTimeout" value="${upstream.RespTimeout/1000}">
+                                     <div class="ui basic label">
+                                        Seconds
+                                    </div>
+                                </div>
+                                <small>Maximum waiting time before Zoraxy receive server header response, set to 0 for default</small>
+                                <br>
+                                <p style="margin-top: 0.6em;">Idle Timeout</p>
+                                <div class="ui mini right labeled fluid input" style="margin-top: -0.6em;">
+                                    <input type="number" min="0" class="idleTimeout" value="${upstream.IdleTimeout/1000}">
+                                     <div class="ui basic label">
+                                        Seconds
+                                    </div>
+                                </div>
+                                <small>Maximum allowed keep-alive time before Zoraxy forcefully close the connection, set to 0 for default</small>
+
+                            </div>
+                        </div>
                     </div>
                     <div class="upstreamActions">
                         <!-- Change Priority -->
@@ -316,11 +396,31 @@
                 let skipVerification = $("#skipTlsVerification")[0].checked;
                 let skipWebSocketOriginCheck = $("#SkipWebSocketOriginCheck")[0].checked;
                 let activateLoadbalancer = $("#activateNewUpstreamCheckbox")[0].checked;
+                let maxConn = $("#maxConn").val();
+                let respTimeout = $("#respTimeout").val();
+                let idleTimeout = $("#idleTimeout").val();
+
+                if (maxConn == "" || isNaN(maxConn)){ 
+                    maxConn = 0;
+                }
+
+                if (respTimeout == "" || isNaN(respTimeout)){
+                    respTimeout = 0;
+                }
+
+                if (idleTimeout == "" || isNaN(idleTimeout)){
+                    idleTimeout = 0;
+                }
+
 
                 if (origin == ""){
                     parent.msgbox("Upstream origin cannot be empty", false);
                     return;
                 }
+
+                //Convert seconds to ms
+                respTimeout = parseInt(respTimeout) * 1000;
+                idleTimeout = parseInt(idleTimeout) * 1000;
 
                 $.cjax({
                     url: "/api/proxy/upstream/add",
@@ -332,6 +432,9 @@
                         "tlsval": skipVerification,
                         "bpwsorg":skipWebSocketOriginCheck,
                         "active": activateLoadbalancer,
+                        "maxconn": maxConn,
+                        "respt": respTimeout,
+                        "idlet": idleTimeout,
                     },
                     success: function(data){
                         if (data.error != undefined){
@@ -340,6 +443,9 @@
                             parent.msgbox("New upstream origin added");
                             initOriginList();
                             $("#originURL").val("");
+                            $("#maxConn").val("0");
+                            $("#respTimeout").val("0");
+                            $("#idleTimeout").val("0");
                         }
                     }
                 })
@@ -356,11 +462,34 @@
                 let skipTLSVerification = $(upstream).find(".skipVerificationCheckbox")[0].checked;
                 let skipWebSocketOriginCheck = $(upstream).find(".SkipWebSocketOriginCheck")[0].checked;
 
+                //Advance options
+                let maxConn = $(upstream).find(".maxConn").val();
+                let respTimeout = $(upstream).find(".respTimeout").val();
+                let idleTimeout = $(upstream).find(".idleTimeout").val();
+
+                if (maxConn == "" || isNaN(maxConn)){ 
+                    maxConn = 0;
+                }
+
+                if (respTimeout == "" || isNaN(respTimeout)){
+                    respTimeout = 0;
+                }
+
+                if (idleTimeout == "" || isNaN(idleTimeout)){
+                    idleTimeout = 0;
+                }
+
+                respTimeout = parseInt(respTimeout) * 1000;
+                idleTimeout = parseInt(idleTimeout) * 1000;
+
                 //Update the original setting with new one just applied
                 originalSettings.OriginIpOrDomain = $(upstream).find(".newOrigin").val();
                 originalSettings.RequireTLS = requireTLS;
                 originalSettings.SkipCertValidations = skipTLSVerification;
                 originalSettings.SkipWebSocketOriginCheck = skipWebSocketOriginCheck;
+                originalSettings.MaxConn = parseInt(maxConn);
+                originalSettings.RespTimeout = respTimeout;
+                originalSettings.IdleTimeout = idleTimeout;
 
                 //console.log(originalSettings);
                 return originalSettings;
