@@ -1,3 +1,13 @@
+# v3.1.8 16 Feb 2025
+
++ Exposed timeout value from dpcore to UI
++ Added active load balancing (if uptime monitor is enabled on that rule)
++ Re-factorized io stats and remove dependencies over wmic by [eyerrock](https://github.com/eyerrock)
++ Removed SMTP input validation [#497](https://github.com/tobychui/zoraxy/issues/497)
++ Fixed sticky session bug
++ Fixed passive load balancer bug
++ Fixed dockerfile bug by [PassiveLemon](https://github.com/PassiveLemon)
+
 # v3.1.7 08 Feb 2025
 
 + Merged and added new tagging system for HTTP Proxy rules [by @adoolaard](https://github.com/adoolaard)
