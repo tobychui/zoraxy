@@ -28,12 +28,16 @@ If applicable, add screenshots to help explain your problem.
  - Browser [e.g. chrome, safari]
  - Version [e.g. 22]
 
-**Host Environment (please complete the following information):**
+**Host Environment (please complete following information, DO NOT REMOVE ANY FIELD(S)):**
 -  Arch: [e.g. arm64]
  - Device: [e.g. Bananapi R2 PRO]
  - OS: [e.g. Armbian]
  - Version [e.g.  23.02 Bullseye ]
- - Docker Version (if you are running Zoraxy in docker): [e.g. 3.0.4]
+ - Are you using Docker? (yes / no)
+ - Docker Version (fill in "N/A" for native deployment): [e.g. 3.0.4]
+
+**Supplementary links**
+If your issue is related to a particular open source project, paste the link here.
 
 **Additional context**
 Add any other context about the problem here.
