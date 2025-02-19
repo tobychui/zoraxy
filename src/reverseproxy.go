@@ -174,9 +174,15 @@ func ReverseProxtInit() {
 	}()
 }
 
+// Toggle the reverse proxy service on and off
 func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
-	enable, _ := utils.PostPara(r, "enable") //Support root, vdir and subd
-	if enable == "true" {
+	enable, err := utils.PostBool(r, "enable")
+	if err != nil {
+		utils.SendErrorResponse(w, "enable not defined")
+		return
+	}
+
+	if enable {
 		err := dynamicProxyRouter.StartProxyService()
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
