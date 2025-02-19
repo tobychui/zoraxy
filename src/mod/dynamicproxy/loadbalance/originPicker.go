@@ -13,6 +13,10 @@ import (
 	by this request.
 */
 
+const (
+	STICKY_SESSION_NAME = "zr_sticky_session"
+)
+
 // GetRequestUpstreamTarget return the upstream target where this
 // request should be routed
 func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.Request, origins []*Upstream, useStickySession bool) (*Upstream, error) {
@@ -50,7 +54,7 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 		return origins[targetOriginId], nil
 	}
 	//No sticky session, get a random origin
-	m.clearSessionHandler(w, r) //Clear the session
+	m.clearSessionHandler(w, r)
 
 	//Filter the offline origins
 	origins = m.FilterOfflineOrigins(origins)
@@ -78,7 +82,7 @@ func (m *RouteManager) GetUsableUpstreamCounts(origins []*Upstream) int {
 /* Features related to session access */
 //Set a new origin for this connection by session
 func (m *RouteManager) setSessionHandler(w http.ResponseWriter, r *http.Request, originIpOrDomain string, index int) error {
-	session, err := m.SessionStore.Get(r, "STICKYSESSION")
+	session, err := m.SessionStore.Get(r, STICKY_SESSION_NAME)
 	if err != nil {
 		return err
 	}
@@ -93,13 +97,15 @@ func (m *RouteManager) setSessionHandler(w http.ResponseWriter, r *http.Request,
 	return nil
 }
 
+// Clear the zoraxy only session values
 func (m *RouteManager) clearSessionHandler(w http.ResponseWriter, r *http.Request) error {
-	session, err := m.SessionStore.Get(r, "STICKYSESSION")
+	session, err := m.SessionStore.Get(r, STICKY_SESSION_NAME)
 	if err != nil {
 		return err
 	}
-	session.Options.MaxAge = -1
-	session.Options.Path = "/"
+
+	session.Values["zr_sid_origin"] = ""
+	session.Values["zr_sid_index"] = -1
 	err = session.Save(r, w)
 	if err != nil {
 		return err
@@ -110,7 +116,7 @@ func (m *RouteManager) clearSessionHandler(w http.ResponseWriter, r *http.Reques
 // Get the previous connected origin from session
 func (m *RouteManager) getSessionHandler(r *http.Request, upstreams []*Upstream) (int, error) {
 	// Get existing session
-	session, err := m.SessionStore.Get(r, "STICKYSESSION")
+	session, err := m.SessionStore.Get(r, STICKY_SESSION_NAME)
 	if err != nil {
 		return -1, err
 	}
@@ -119,7 +125,7 @@ func (m *RouteManager) getSessionHandler(r *http.Request, upstreams []*Upstream)
 	originDomainRaw := session.Values["zr_sid_origin"]
 	originIDRaw := session.Values["zr_sid_index"]
 
-	if originDomainRaw == nil || originIDRaw == nil {
+	if originDomainRaw == nil || originIDRaw == nil || originIDRaw == -1 {
 		return -1, errors.New("no session has been set")
 	}
 	originDomain := originDomainRaw.(string)
@@ -201,21 +207,3 @@ func getRandomUpstreamByWeight(upstreams []*Upstream) (*Upstream, int, error) {
 
 	return nil, -1, errors.New("failed to pick an upstream origin server")
 }
-
-// IntRange returns a random integer in the range from min to max.
-/*
-func intRange(min, max int) (int, error) {
-	var result int
-	switch {
-	case min > max:
-		// Fail with error
-		return result, errors.New("min is greater than max")
-	case max == min:
-		result = max
-	case max > min:
-		b := rand.Intn(max-min) + min
-		result = min + int(b)
-	}
-	return result, nil
-}
-*/
