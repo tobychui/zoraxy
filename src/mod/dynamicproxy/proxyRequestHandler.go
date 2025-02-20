@@ -3,7 +3,6 @@ package dynamicproxy
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -211,9 +210,6 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 			http.Error(w, "Request canceled", http.StatusRequestTimeout)
 			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", r.URL.Hostname())
 		} else {
-			//Notify the load balancer that the host is unreachable
-			fmt.Println(err.Error())
-			h.Parent.loadBalancer.NotifyHostUnreachableWithTimeout(selectedUpstream.OriginIpOrDomain, PassiveLoadBalanceNotifyTimeout)
 			http.ServeFile(w, r, "./web/rperror.html")
 			h.Parent.logRequest(r, false, 521, "host-http", r.URL.Hostname())
 		}

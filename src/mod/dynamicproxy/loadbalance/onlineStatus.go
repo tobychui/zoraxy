@@ -3,7 +3,6 @@ package loadbalance
 import (
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Return if the target host is online
@@ -36,6 +35,7 @@ func (m *RouteManager) NotifyHostOnlineState(upstreamIP string, isOnline bool) {
 
 // Set this host unreachable for a given amount of time defined in timeout
 // this shall be used in passive fallback. The uptime monitor should call to NotifyHostOnlineState() instead
+/*
 func (m *RouteManager) NotifyHostUnreachableWithTimeout(upstreamIp string, timeout int64) {
 	//if the upstream IP contains http or https, strip it
 	upstreamIp = strings.TrimPrefix(upstreamIp, "http://")
@@ -58,6 +58,7 @@ func (m *RouteManager) NotifyHostUnreachableWithTimeout(upstreamIp string, timeo
 		m.NotifyHostOnlineState(upstreamIp, true)
 	}()
 }
+*/
 
 // FilterOfflineOrigins return only online origins from a list of origins
 func (m *RouteManager) FilterOfflineOrigins(origins []*Upstream) []*Upstream {
