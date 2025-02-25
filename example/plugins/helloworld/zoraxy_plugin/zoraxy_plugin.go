@@ -1,4 +1,4 @@
-package plugins
+package zoraxy_plugin
 
 import (
 	"encoding/json"
@@ -10,9 +10,9 @@ import (
 /*
 	Plugins Includes.go
 
-	This file contains the common types and structs that are used by the plugins
-	If you are building a Zoraxy plugin with Golang, you can use this file to include
-	the common types and structs that are used by the plugins
+	This file is copied from Zoraxy source code
+	You can always find the latest version under mod/plugins/includes.go
+	Usually this file are backward compatible
 */
 
 type PluginType int

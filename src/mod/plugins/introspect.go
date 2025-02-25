@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"time"
@@ -29,6 +30,11 @@ func (m *Manager) LoadPluginSpec(pluginPath string) (*Plugin, error) {
 		return nil, err
 	}
 
+	err = validatePluginSpec(pluginSpec)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Plugin{
 		Spec:    pluginSpec,
 		Enabled: false,
@@ -37,12 +43,12 @@ func (m *Manager) LoadPluginSpec(pluginPath string) (*Plugin, error) {
 
 // GetPluginEntryPoint returns the plugin entry point
 func (m *Manager) GetPluginSpec(entryPoint string) (*IntroSpect, error) {
-	pluginSpec := &IntroSpect{}
+	pluginSpec := IntroSpect{}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, entryPoint, "-introspect")
-	err := cmd.Run()
+	output, err := cmd.Output()
 	if ctx.Err() == context.DeadlineExceeded {
 		return nil, fmt.Errorf("plugin introspect timed out")
 	}
@@ -50,5 +56,11 @@ func (m *Manager) GetPluginSpec(entryPoint string) (*IntroSpect, error) {
 		return nil, err
 	}
 
-	return pluginSpec, nil
+	// Assuming the output is JSON and needs to be unmarshaled into pluginSpec
+	err = json.Unmarshal(output, &pluginSpec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal plugin spec: %v", err)
+	}
+
+	return &pluginSpec, nil
 }

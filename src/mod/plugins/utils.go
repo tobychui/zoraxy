@@ -60,3 +60,22 @@ func getRandomPortNumber() int {
 	}
 	return portNo
 }
+
+func validatePluginSpec(pluginSpec *IntroSpect) error {
+	if pluginSpec.Name == "" {
+		return errors.New("plugin name is empty")
+	}
+	if pluginSpec.Description == "" {
+		return errors.New("plugin description is empty")
+	}
+	if pluginSpec.Author == "" {
+		return errors.New("plugin author is empty")
+	}
+	if pluginSpec.UIPath == "" {
+		return errors.New("plugin UI path is empty")
+	}
+	if pluginSpec.ID == "" {
+		return errors.New("plugin ID is empty")
+	}
+	return nil
+}

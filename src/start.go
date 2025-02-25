@@ -26,6 +26,7 @@ import (
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
+	"imuslab.com/zoraxy/mod/plugins"
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
@@ -315,6 +316,25 @@ func startupSequence() {
 	)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	/*
+		Plugin Manager
+	*/
+
+	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
+		PluginDir: "./plugins",
+		SystemConst: &plugins.RuntimeConstantValue{
+			ZoraxyVersion: SYSTEM_VERSION,
+			ZoraxyUUID:    nodeUUID,
+		},
+		Database: sysdb,
+		Logger:   SystemWideLogger,
+	})
+
+	err = pluginManager.LoadPluginsFromDisk()
+	if err != nil {
+		SystemWideLogger.PrintAndLog("Plugin Manager", "Failed to load plugins", err)
 	}
 
 	/* Docker UX Optimizer */

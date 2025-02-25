@@ -1,0 +1,40 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Plugins Manager</h2>
+        <p>Add custom features to Zoraxy</p>
+    </div>
+    <table class="ui celled table">
+        <thead>
+          <tr>
+            <th>Plugin Name</th>
+            <th>Descriptions</th>
+            <th>Catergory</th>
+            <th>Version</th>
+            <th>Author</th>
+            <th>Action</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td data-label="PluginName">{{plugin.name}}</td>
+            <td data-label="Descriptions">{{plugin.description}}</td>
+            <td data-label="Category">{{plugin.category}}</td>
+            <td data-label="Version">{{plugin.version}}</td>
+            <td data-label="Author">{{plugin.author}}</td>
+            <td data-label="Action">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" name="enable">
+                </div>
+                <button class="ui basic small circular icon button"><i class="ui edit icon"></i></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+</div>
+
+<script>
+
+
+</script>
+
+
+
