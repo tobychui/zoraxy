@@ -54,7 +54,8 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 		return origins[targetOriginId], nil
 	}
 	//No sticky session, get a random origin
-	m.clearSessionHandler(w, r)
+	//Commented due to issue #550
+	//m.clearSessionHandler(w, r)
 
 	//Filter the offline origins
 	origins = m.FilterOfflineOrigins(origins)
