@@ -53,10 +53,8 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 		//fmt.Println("DEBUG: (Sticky Session) Picking origin " + origins[targetOriginId].OriginIpOrDomain)
 		return origins[targetOriginId], nil
 	}
-	//No sticky session, get a random origin
-	//Commented due to issue #550
-	//m.clearSessionHandler(w, r)
 
+	//No sticky session, get a random origin
 	//Filter the offline origins
 	origins = m.FilterOfflineOrigins(origins)
 	if len(origins) == 0 {
@@ -91,22 +89,6 @@ func (m *RouteManager) setSessionHandler(w http.ResponseWriter, r *http.Request,
 	session.Values["zr_sid_index"] = index
 	session.Options.MaxAge = 86400 //1 day
 	session.Options.Path = "/"
-	err = session.Save(r, w)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Clear the zoraxy only session values
-func (m *RouteManager) clearSessionHandler(w http.ResponseWriter, r *http.Request) error {
-	session, err := m.SessionStore.Get(r, STICKY_SESSION_NAME)
-	if err != nil {
-		return err
-	}
-
-	session.Values["zr_sid_origin"] = ""
-	session.Values["zr_sid_index"] = -1
 	err = session.Save(r, w)
 	if err != nil {
 		return err
