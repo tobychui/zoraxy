@@ -1,7 +1,7 @@
 <div class="standardContainer">
     <div class="ui basic segment">
-        <h2>Plugins Manager</h2>
-        <p>Add custom features to Zoraxy</p>
+        <h2>Plugins</h2>
+        <p>Custom features on Zoraxy</p>
     </div>
     <table class="ui celled table">
         <thead>
@@ -9,30 +9,61 @@
             <th>Plugin Name</th>
             <th>Descriptions</th>
             <th>Catergory</th>
-            <th>Version</th>
-            <th>Author</th>
             <th>Action</th>
         </tr></thead>
-        <tbody>
-          <tr>
-            <td data-label="PluginName">{{plugin.name}}</td>
-            <td data-label="Descriptions">{{plugin.description}}</td>
-            <td data-label="Category">{{plugin.category}}</td>
-            <td data-label="Version">{{plugin.version}}</td>
-            <td data-label="Author">{{plugin.author}}</td>
-            <td data-label="Action">
-                <div class="ui toggle checkbox">
-                    <input type="checkbox" name="enable">
-                </div>
-                <button class="ui basic small circular icon button"><i class="ui edit icon"></i></button>
-            </td>
-          </tr>
+        <tbody id="pluginTable">
+          
         </tbody>
       </table>
 </div>
 
 <script>
 
+function initiatePluginList(){
+  $.get(`/api/plugins/list`, function(data){
+    const tbody = $("#pluginTable");
+    tbody.empty();
+
+    data.forEach(plugin => {
+      let authorContact = plugin.Spec.author_contact;
+      if(!authorContact.startsWith('http')){
+        authorContact = `mailto:${authorContact}`;
+      }
+
+      let versionString = `v${plugin.Spec.version_major}.${plugin.Spec.version_minor}.${plugin.Spec.version_patch}`;
+      const row = `
+        <tr>
+          <td data-label="PluginName">
+            <h4 class="ui header">
+              <img src="/api/plugins/icon?plugin_id=${plugin.Spec.id}" class="ui image">
+              <div class="content">
+                 ${plugin.Spec.name}
+                <div class="sub header">${versionString} by <a href="${authorContact}" target="_blank">${plugin.Spec.author}</a></div>
+              </div>
+            </h4>
+            </td>
+          <td data-label="Descriptions">${plugin.Spec.description}<br>
+          <a href="${plugin.Spec.url}" target="_blank">${plugin.Spec.url}</a></td>
+          <td data-label="Category">${plugin.Spec.type==0?"Router":"Utilities"}</td>
+          <td data-label="Action">
+            <div class="ui toggle checkbox">
+              <input type="checkbox" name="enable" ${plugin.Enabled ? 'checked' : ''}>
+            </div>
+            <button class="ui basic small circular icon button" onclick="openPluginUI('${plugin.Spec.id}');"><i class="ui edit icon"></i></button>
+          </td>
+        </tr>
+      `;
+      tbody.append(row);
+    });
+    console.log(data);
+  });
+}
+
+function openPluginUI(pluginid){
+  showSideWrapper(`/plugin.ui/${pluginid}/`);
+}
+
+initiatePluginList();
 
 </script>
 

@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
 
 func (m *Manager) StartPlugin(pluginID string) error {
@@ -77,18 +80,49 @@ func (m *Manager) StartPlugin(pluginID string) error {
 		}
 	}()
 
+	//Create a UI forwarder if the plugin has UI
+	err = m.StartUIHandlerForPlugin(thisPlugin, pluginConfiguration.Port)
+	if err != nil {
+		return err
+	}
+
 	// Store the cmd object so it can be accessed later for stopping the plugin
-	plugin.(*Plugin).Process = cmd
+	plugin.(*Plugin).process = cmd
 	plugin.(*Plugin).Enabled = true
+	return nil
+}
+
+// StartUIHandlerForPlugin starts a UI handler for the plugin
+func (m *Manager) StartUIHandlerForPlugin(targetPlugin *Plugin, pluginListeningPort int) error {
+	// Create a dpcore object to reverse proxy the plugin ui
+	pluginUIRelPath := targetPlugin.Spec.UIPath
+	if !strings.HasPrefix(pluginUIRelPath, "/") {
+		pluginUIRelPath = "/" + pluginUIRelPath
+	}
+
+	pluginUIURL, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(pluginListeningPort) + pluginUIRelPath)
+	if err != nil {
+		return err
+	}
+	if targetPlugin.Spec.UIPath != "" {
+		targetPlugin.uiProxy = dpcore.NewDynamicProxyCore(
+			pluginUIURL,
+			"",
+			&dpcore.DpcoreOptions{
+				IgnoreTLSVerification: true,
+			},
+		)
+		m.LoadedPlugins.Store(targetPlugin.Spec.ID, targetPlugin)
+	}
 	return nil
 }
 
 func (m *Manager) handlePluginSTDOUT(pluginID string, line string) {
 	thisPlugin, err := m.GetPluginByID(pluginID)
 	processID := -1
-	if thisPlugin.Process != nil && thisPlugin.Process.Process != nil {
+	if thisPlugin.process != nil && thisPlugin.process.Process != nil {
 		// Get the process ID of the plugin
-		processID = thisPlugin.Process.Process.Pid
+		processID = thisPlugin.process.Process.Pid
 	}
 	if err != nil {
 		m.Log("[unknown:"+strconv.Itoa(processID)+"] "+line, err)
@@ -104,16 +138,19 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	}
 
 	thisPlugin := plugin.(*Plugin)
-	thisPlugin.Process.Process.Signal(os.Interrupt)
+	thisPlugin.process.Process.Signal(os.Interrupt)
 	go func() {
 		//Wait for 10 seconds for the plugin to stop gracefully
 		time.Sleep(10 * time.Second)
-		if thisPlugin.Process.ProcessState == nil || !thisPlugin.Process.ProcessState.Exited() {
+		if thisPlugin.process.ProcessState == nil || !thisPlugin.process.ProcessState.Exited() {
 			m.Log("Plugin "+thisPlugin.Spec.Name+" failed to stop gracefully, killing it", nil)
-			thisPlugin.Process.Process.Kill()
+			thisPlugin.process.Process.Kill()
 		} else {
 			m.Log("Plugin "+thisPlugin.Spec.Name+" background process stopped", nil)
 		}
+
+		//Remove the UI proxy
+		thisPlugin.uiProxy = nil
 	}()
 	plugin.(*Plugin).Enabled = false
 	return nil
@@ -125,7 +162,10 @@ func (m *Manager) PluginStillRunning(pluginID string) bool {
 	if !ok {
 		return false
 	}
-	return plugin.(*Plugin).Process.ProcessState == nil
+	if plugin.(*Plugin).process == nil {
+		return false
+	}
+	return plugin.(*Plugin).process.ProcessState == nil
 }
 
 // BlockUntilAllProcessExited blocks until all the plugins processes have exited
@@ -134,7 +174,7 @@ func (m *Manager) BlockUntilAllProcessExited() {
 		plugin := value.(*Plugin)
 		if m.PluginStillRunning(value.(*Plugin).Spec.ID) {
 			//Wait for the plugin to exit
-			plugin.Process.Wait()
+			plugin.process.Wait()
 		}
 		return true
 	})

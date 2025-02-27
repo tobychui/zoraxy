@@ -384,6 +384,10 @@ func ShutdownSeq() {
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
 	}
+	//Close the plugin manager
+	SystemWideLogger.Println("Shutting down plugin manager")
+	pluginManager.Close()
+
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
 	os.RemoveAll("./tmp")

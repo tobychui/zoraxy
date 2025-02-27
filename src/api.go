@@ -235,6 +235,13 @@ func RegisterNetworkUtilsAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/tools/fwdproxy/port", forwardProxy.HandlePort)
 }
 
+func RegisterPluginAPIs(authRouter *auth.RouterDef) {
+	authRouter.HandleFunc("/api/plugins/list", pluginManager.HandleListPlugins)
+	authRouter.HandleFunc("/api/plugins/enable", pluginManager.HandleEnablePlugin)
+	authRouter.HandleFunc("/api/plugins/disable", pluginManager.HandleDisablePlugin)
+	authRouter.HandleFunc("/api/plugins/icon", pluginManager.HandleLoadPluginIcon)
+}
+
 // Register the APIs for Auth functions, due to scoping issue some functions are defined here
 func RegisterAuthAPIs(requireAuth bool, targetMux *http.ServeMux) {
 	targetMux.HandleFunc("/api/auth/login", authAgent.HandleLogin)
@@ -340,6 +347,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterNetworkUtilsAPIs(authRouter)
 	RegisterACMEAndAutoRenewerAPIs(authRouter)
 	RegisterStaticWebServerAPIs(authRouter)
+	RegisterPluginAPIs(authRouter)
 
 	//Account Reset
 	targetMux.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)

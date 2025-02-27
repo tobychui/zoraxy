@@ -2,12 +2,16 @@ package plugins
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 
+	_ "embed"
+
 	"imuslab.com/zoraxy/mod/database"
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -15,8 +19,10 @@ import (
 type Plugin struct {
 	RootDir string      //The root directory of the plugin
 	Spec    *IntroSpect //The plugin specification
-	Process *exec.Cmd   //The process of the plugin
 	Enabled bool        //Whether the plugin is enabled
+
+	uiProxy *dpcore.ReverseProxy //The reverse proxy for the plugin UI
+	process *exec.Cmd            //The process of the plugin
 }
 
 type ManagerOptions struct {
@@ -31,15 +37,21 @@ type Manager struct {
 	Options       *ManagerOptions
 }
 
+//go:embed no_img.png
+var noImg []byte
+
 // NewPluginManager creates a new plugin manager
 func NewPluginManager(options *ManagerOptions) *Manager {
+	//Create plugin directory if not exists
 	if options.PluginDir == "" {
 		options.PluginDir = "./plugins"
 	}
-
 	if !utils.FileExists(options.PluginDir) {
 		os.MkdirAll(options.PluginDir, 0755)
 	}
+
+	//Create database table
+	options.Database.NewTable("plugins")
 
 	return &Manager{
 		LoadedPlugins: sync.Map{},
@@ -63,17 +75,18 @@ func (m *Manager) LoadPluginsFromDisk() error {
 				m.Log("Failed to load plugin: "+filepath.Base(pluginPath), err)
 				continue
 			}
-			thisPlugin.RootDir = pluginPath
+			thisPlugin.RootDir = filepath.ToSlash(pluginPath)
 			m.LoadedPlugins.Store(thisPlugin.Spec.ID, thisPlugin)
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
-			//TODO: Move this to a separate function
-			// Enable the plugin if it is enabled in the database
-			err = m.StartPlugin(thisPlugin.Spec.ID)
-			if err != nil {
-				m.Log("Failed to enable plugin: "+thisPlugin.Spec.Name, err)
+			// If the plugin was enabled, start it now
+			fmt.Println(m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
+			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
+				err = m.StartPlugin(thisPlugin.Spec.ID)
+				if err != nil {
+					m.Log("Failed to enable plugin: "+thisPlugin.Spec.Name, err)
+				}
 			}
-
 		}
 	}
 
@@ -95,18 +108,40 @@ func (m *Manager) EnablePlugin(pluginID string) error {
 	if err != nil {
 		return err
 	}
-	//TODO: Add database record
+	m.Options.Database.Write("plugins", pluginID, true)
 	return nil
 }
 
 // DisablePlugin disables a plugin
 func (m *Manager) DisablePlugin(pluginID string) error {
 	err := m.StopPlugin(pluginID)
-	//TODO: Add database record
+	m.Options.Database.Write("plugins", pluginID, false)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// GetPluginPreviousEnableState returns the previous enable state of a plugin
+func (m *Manager) GetPluginPreviousEnableState(pluginID string) bool {
+	enableState := true
+	err := m.Options.Database.Read("plugins", pluginID, &enableState)
+	if err != nil {
+		//Default to true
+		return true
+	}
+	return enableState
+}
+
+// ListLoadedPlugins returns a list of loaded plugins
+func (m *Manager) ListLoadedPlugins() ([]*Plugin, error) {
+	var plugins []*Plugin
+	m.LoadedPlugins.Range(func(key, value interface{}) bool {
+		plugin := value.(*Plugin)
+		plugins = append(plugins, plugin)
+		return true
+	})
+	return plugins, nil
 }
 
 // Terminate all plugins and exit
@@ -114,7 +149,7 @@ func (m *Manager) Close() {
 	m.LoadedPlugins.Range(func(key, value interface{}) bool {
 		plugin := value.(*Plugin)
 		if plugin.Enabled {
-			m.DisablePlugin(plugin.Spec.ID)
+			m.StopPlugin(plugin.Spec.ID)
 		}
 		return true
 	})
