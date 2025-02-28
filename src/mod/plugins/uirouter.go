@@ -2,6 +2,9 @@ package plugins
 
 import (
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/utils"
@@ -28,14 +31,25 @@ func (m *Manager) HandlePluginUI(pluginID string, w http.ResponseWriter, r *http
 		return
 	}
 
+	upstreamOrigin := "127.0.0.1:" + strconv.Itoa(plugin.AssignedPort)
+	matchingPath := "/plugin.ui/" + plugin.Spec.ID
+
+	//Rewrite the request path to the plugin UI path
+	rewrittenURL := r.RequestURI
+	rewrittenURL = strings.TrimPrefix(rewrittenURL, matchingPath)
+	rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	r.URL, _ = url.Parse(rewrittenURL)
+
 	//Call the plugin UI handler
 	plugin.uiProxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		UseTLS:       false,
 		OriginalHost: r.Host,
-		ProxyDomain:  r.Host,
+		ProxyDomain:  upstreamOrigin,
 		NoCache:      true,
-		PathPrefix:   "/plugin.ui/" + pluginID,
+		PathPrefix:   matchingPath,
 		Version:      m.Options.SystemConst.ZoraxyVersion,
+		UpstreamHeaders: [][]string{
+			{"X-Zoraxy-Csrf", m.Options.CSRFTokenGen(r)},
+		},
 	})
-
 }

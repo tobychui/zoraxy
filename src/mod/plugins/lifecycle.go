@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
 func (m *Manager) StartPlugin(pluginID string) error {
@@ -37,7 +38,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	}
 
 	//Prepare plugin start configuration
-	pluginConfiguration := ConfigureSpec{
+	pluginConfiguration := zoraxyPlugin.ConfigureSpec{
 		Port:         getRandomPortNumber(),
 		RuntimeConst: *m.Options.SystemConst,
 	}
@@ -100,18 +101,25 @@ func (m *Manager) StartUIHandlerForPlugin(targetPlugin *Plugin, pluginListeningP
 		pluginUIRelPath = "/" + pluginUIRelPath
 	}
 
+	// Remove the trailing slash if it exists
+	pluginUIRelPath = strings.TrimSuffix(pluginUIRelPath, "/")
+
 	pluginUIURL, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(pluginListeningPort) + pluginUIRelPath)
 	if err != nil {
 		return err
 	}
+
+	// Generate the plugin subpath to be trimmed
+	pluginMatchingPath := filepath.ToSlash(filepath.Join("/plugin.ui/"+targetPlugin.Spec.ID+"/")) + "/"
 	if targetPlugin.Spec.UIPath != "" {
 		targetPlugin.uiProxy = dpcore.NewDynamicProxyCore(
 			pluginUIURL,
-			"",
+			pluginMatchingPath,
 			&dpcore.DpcoreOptions{
 				IgnoreTLSVerification: true,
 			},
 		)
+		targetPlugin.AssignedPort = pluginListeningPort
 		m.LoadedPlugins.Store(targetPlugin.Spec.ID, targetPlugin)
 	}
 	return nil

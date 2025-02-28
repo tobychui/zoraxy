@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"imuslab.com/zoraxy/mod/netutils"
+	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
 /*
@@ -61,7 +62,7 @@ func getRandomPortNumber() int {
 	return portNo
 }
 
-func validatePluginSpec(pluginSpec *IntroSpect) error {
+func validatePluginSpec(pluginSpec *zoraxyPlugin.IntroSpect) error {
 	if pluginSpec.Name == "" {
 		return errors.New("plugin name is empty")
 	}

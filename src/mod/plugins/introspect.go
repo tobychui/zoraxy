@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"time"
+
+	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
 // LoadPlugin loads a plugin from the plugin directory
@@ -42,8 +44,8 @@ func (m *Manager) LoadPluginSpec(pluginPath string) (*Plugin, error) {
 }
 
 // GetPluginEntryPoint returns the plugin entry point
-func (m *Manager) GetPluginSpec(entryPoint string) (*IntroSpect, error) {
-	pluginSpec := IntroSpect{}
+func (m *Manager) GetPluginSpec(entryPoint string) (*zoraxyPlugin.IntroSpect, error) {
+	pluginSpec := zoraxyPlugin.IntroSpect{}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

@@ -2,7 +2,7 @@ package plugins
 
 import (
 	"errors"
-	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,23 +13,27 @@ import (
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/info/logger"
+	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
 type Plugin struct {
-	RootDir string      //The root directory of the plugin
-	Spec    *IntroSpect //The plugin specification
-	Enabled bool        //Whether the plugin is enabled
+	RootDir string                   //The root directory of the plugin
+	Spec    *zoraxyPlugin.IntroSpect //The plugin specification
+	Enabled bool                     //Whether the plugin is enabled
 
-	uiProxy *dpcore.ReverseProxy //The reverse proxy for the plugin UI
-	process *exec.Cmd            //The process of the plugin
+	//Runtime
+	AssignedPort int                  //The assigned port for the plugin
+	uiProxy      *dpcore.ReverseProxy //The reverse proxy for the plugin UI
+	process      *exec.Cmd            //The process of the plugin
 }
 
 type ManagerOptions struct {
-	PluginDir   string
-	SystemConst *RuntimeConstantValue
-	Database    *database.Database
-	Logger      *logger.Logger
+	PluginDir    string
+	SystemConst  *zoraxyPlugin.RuntimeConstantValue
+	Database     *database.Database
+	Logger       *logger.Logger
+	CSRFTokenGen func(*http.Request) string //The CSRF token generator function
 }
 
 type Manager struct {
@@ -80,7 +84,6 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
 			// If the plugin was enabled, start it now
-			fmt.Println(m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
 			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
 				err = m.StartPlugin(thisPlugin.Spec.ID)
 				if err != nil {

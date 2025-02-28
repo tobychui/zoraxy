@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
@@ -27,6 +28,7 @@ import (
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
 	"imuslab.com/zoraxy/mod/plugins"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
@@ -324,12 +326,15 @@ func startupSequence() {
 
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir: "./plugins",
-		SystemConst: &plugins.RuntimeConstantValue{
+		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
 			ZoraxyVersion: SYSTEM_VERSION,
 			ZoraxyUUID:    nodeUUID,
 		},
 		Database: sysdb,
 		Logger:   SystemWideLogger,
+		CSRFTokenGen: func(r *http.Request) string {
+			return csrf.Token(r)
+		},
 	})
 
 	err = pluginManager.LoadPluginsFromDisk()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -9,12 +10,14 @@ import (
 	plugin "example.com/zoraxy/helloworld/zoraxy_plugin"
 )
 
-//go:embed index.html
-var indexHTML string
+const (
+	PLUGIN_ID = "com.example.helloworld"
+	UI_PATH   = "/"
+	WEB_ROOT  = "/www"
+)
 
-func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, indexHTML)
-}
+//go:embed www/*
+var content embed.FS
 
 func main() {
 	// Serve the plugin intro spect
@@ -33,17 +36,23 @@ func main() {
 
 		// As this is a utility plugin, we don't need to capture any traffic
 		// but only serve the UI, so we set the UI (relative to the plugin path) to "/"
-		UIPath: "/",
+		UIPath: UI_PATH,
 	})
-
 	if err != nil {
 		//Terminate or enter standalone mode here
 		panic(err)
 	}
 
-	// Serve the hello world page
-	// This will serve the index.html file embedded in the binary
-	http.HandleFunc("/", helloWorldHandler)
-	fmt.Println("Server started at http://localhost:" + strconv.Itoa(runtimeCfg.Port))
-	http.ListenAndServe(":"+strconv.Itoa(runtimeCfg.Port), nil)
+	// Register the shutdown handler
+	plugin.RegisterShutdownHandler(func() {
+		// Do cleanup here if needed
+		fmt.Println("Hello World Plugin Exited")
+	})
+
+	embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &content, WEB_ROOT, UI_PATH)
+
+	// Serve the hello world page in the www folder
+	http.Handle(UI_PATH, embedWebRouter.Handler())
+	fmt.Println("Hello World started at http://127.0.0.1:" + strconv.Itoa(runtimeCfg.Port))
+	http.ListenAndServe("127.0.0.1:"+strconv.Itoa(runtimeCfg.Port), nil)
 }

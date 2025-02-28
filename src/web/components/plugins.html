@@ -3,7 +3,7 @@
         <h2>Plugins</h2>
         <p>Custom features on Zoraxy</p>
     </div>
-    <table class="ui celled table">
+    <table class="ui basic celled table">
         <thead>
           <tr>
             <th>Plugin Name</th>
@@ -35,9 +35,9 @@ function initiatePluginList(){
         <tr>
           <td data-label="PluginName">
             <h4 class="ui header">
-              <img src="/api/plugins/icon?plugin_id=${plugin.Spec.id}" class="ui image">
+              <img onclick="openPluginUI('${plugin.Spec.id}');" class="clickable" src="/api/plugins/icon?plugin_id=${plugin.Spec.id}" class="ui image">
               <div class="content">
-                 ${plugin.Spec.name}
+                ${plugin.Spec.name}
                 <div class="sub header">${versionString} by <a href="${authorContact}" target="_blank">${plugin.Spec.author}</a></div>
               </div>
             </h4>
@@ -60,7 +60,7 @@ function initiatePluginList(){
 }
 
 function openPluginUI(pluginid){
-  showSideWrapper(`/plugin.ui/${pluginid}/`);
+  showSideWrapper(`/plugin.ui/${pluginid}/`, true);
 }
 
 initiatePluginList();

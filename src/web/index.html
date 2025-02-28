@@ -414,13 +414,19 @@
                 Toggles for side wrapper
             */
 
-            function showSideWrapper(scriptpath=""){
+            function showSideWrapper(scriptpath="", extendedMode=false){
                 if (scriptpath != ""){
                     $(".sideWrapper iframe").attr("src", scriptpath);
                 }
 
                 if ($(".sideWrapper .content").transition("is animating") || $(".sideWrapper .content").transition("is visible")){
                     return
+                }
+
+                if (extendedMode){
+                    $(".sideWrapper").addClass("extendedMode");
+                }else{
+                    $(".sideWrapper").removeClass("extendedMode");
                 }
                 $(".sideWrapper").show();
                 $(".sideWrapper .fadingBackground").fadeIn("fast");

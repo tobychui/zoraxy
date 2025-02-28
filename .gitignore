@@ -45,3 +45,4 @@ src/log/
 # dev-tags
 /Dockerfile
 /Entrypoint.sh
+example/plugins/zerotiernc/authtoken.secret
