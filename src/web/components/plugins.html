@@ -1,7 +1,11 @@
 <div class="standardContainer">
     <div class="ui basic segment">
         <h2>Plugins</h2>
-        <p>Custom features on Zoraxy</p>
+        <p>Add custom features to your Zoraxy!</p>
+    </div>
+    <div class="ui yellow message">
+      <div class="header">Experimental Feature</div>
+      <p>This feature is experimental and may not work as expected. Use with caution.</p>
     </div>
     <table class="ui basic celled table">
         <thead>
@@ -18,6 +22,29 @@
 </div>
 
 <script>
+
+function initPluginSideMenu(){
+  $("#pluginMenu").html("");
+  $.get(`/api/plugins/list`, function(data){
+    data.forEach(plugin => {
+      $("#pluginMenu").append(`
+        <a class="item" tag="pluginContextWindow" pluginid="${plugin.Spec.id}" onclick="loadPluginUIContextIfAvailable();">
+            <img style="width: 20px;" class="ui mini right spaced image" src="/api/plugins/icon?plugin_id=${plugin.Spec.id}"> ${plugin.Spec.name}
+        </a>
+      `);
+      
+    });
+  });
+}
+initPluginSideMenu();
+
+function loadPluginUIContextIfAvailable(){
+  if(typeof(initPluginUIView) != "undefined"){
+    initPluginUIView();
+  }
+}
+
+
 
 function initiatePluginList(){
   $.get(`/api/plugins/list`, function(data){
@@ -49,7 +76,6 @@ function initiatePluginList(){
             <div class="ui toggle checkbox">
               <input type="checkbox" name="enable" ${plugin.Enabled ? 'checked' : ''}>
             </div>
-            <button class="ui basic small circular icon button" onclick="openPluginUI('${plugin.Spec.id}');"><i class="ui edit icon"></i></button>
           </td>
         </tr>
       `;
@@ -57,10 +83,6 @@ function initiatePluginList(){
     });
     console.log(data);
   });
-}
-
-function openPluginUI(pluginid){
-  showSideWrapper(`/plugin.ui/${pluginid}/`, true);
 }
 
 initiatePluginList();

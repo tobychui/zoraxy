@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"imuslab.com/zoraxy/mod/utils"
@@ -17,6 +18,11 @@ func (m *Manager) HandleListPlugins(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	//Sort the plugin by its name
+	sort.Slice(plugins, func(i, j int) bool {
+		return plugins[i].Spec.Name < plugins[j].Spec.Name
+	})
 
 	js, err := json.Marshal(plugins)
 	if err != nil {
