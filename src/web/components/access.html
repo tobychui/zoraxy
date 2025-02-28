@@ -694,6 +694,7 @@
                         <tr>
                         <th>IP</th>
                         <th>Access Count</th>
+                        <th>Country of Origin</th>
                         <th>Blacklist</th>
                         </tr>
                     </thead>
@@ -1489,15 +1490,30 @@
     
     //Load the summary to ip access table
     function initBlacklistQuickBanTable(){
-        $.get("/api/stats/summary", function(data){
-            initIpAccessTable(data.RequestClientIp);
+        $.get("/api/quickban/list", function(data){
+            //Convert the data to a dictionary
+            var ipAccessCounts = {};
+            access_ip_country_map = {};
+            data.forEach(function(entry){
+               ipAccessCounts[entry.IpAddr] = entry.Count
+               access_ip_country_map[entry.IpAddr] = entry.CountryCode;
+            });
+            initIpAccessTable(ipAccessCounts);
         })
     }
     initBlacklistQuickBanTable();
 
+    function getCountryISOFromQuickBan(ip){
+        if (access_ip_country_map[ip] === "") {
+            return "LAN / Reserved";
+        }
+        return access_ip_country_map[ip];
+    }
+
     var blacklist_entriesPerPage = 30;
     var blacklist_currentPage = 1;
     var blacklist_totalPages = 0;
+    var access_ip_country_map = {};
 
     function initIpAccessTable(ipAccessCounts){
         blacklist_totalPages = Math.ceil(Object.keys(ipAccessCounts).length / blacklist_entriesPerPage);
@@ -1533,6 +1549,7 @@
                 var row = $("<tr>").appendTo(tableBody);
                 $("<td>").text(ip).appendTo(row);
                 $("<td>").text(accessCount).appendTo(row);
+                $("<td>").text(getCountryISOFromQuickBan(ip)).appendTo(row);
                 if (ipInBlacklist(ip)){
                     $("<td>").html(`<button class="ui basic green tiny icon button" title"Unban IP" onclick="handleUnban('${ip}');"><i class="green check icon"></i></button>`).appendTo(row);
                 }else{
@@ -1542,7 +1559,7 @@
 
             if (slicedEntries.length == 0){
                 var row = $("<tr>").appendTo(tableBody);
-                $("<td colspan='3'>").html(`
+                $("<td colspan='4'>").html(`
                     <i class="ui green circle check icon"></i> There are no HTTP requests recorded today     
                 `).appendTo(row);
                 

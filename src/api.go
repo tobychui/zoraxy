@@ -114,6 +114,9 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/whitelist/ip/add", handleIpWhitelistAdd)
 	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
 	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
+
+	/* Quick Ban List */
+	authRouter.HandleFunc("/api/quickban/list", handleListQuickBan)
 }
 
 // Register the APIs for path blocking rules management functions, WIP
