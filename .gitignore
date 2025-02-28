@@ -46,3 +46,4 @@ src/log/
 /Dockerfile
 /Entrypoint.sh
 example/plugins/zerotiernc/authtoken.secret
+example/plugins/ztnc/ztnc.db

@@ -9,7 +9,7 @@ import (
 	"os/user"
 	"strings"
 
-	"aroz.org/zoraxy/zerotiernc/mod/utils"
+	"aroz.org/zoraxy/ztnc/mod/utils"
 )
 
 func readAuthTokenAsAdmin() (string, error) {

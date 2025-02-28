@@ -91,6 +91,7 @@ func (p *PluginUiRouter) Handler() http.Handler {
 		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
 		r.URL, _ = url.Parse(rewrittenURL)
 		r.RequestURI = rewrittenURL
+
 		//Serve the file from the embed.FS
 		subFS, err := fs.Sub(*p.TargetFs, strings.TrimPrefix(p.TargetFsPrefix, "/"))
 		if err != nil {

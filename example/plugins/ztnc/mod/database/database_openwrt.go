@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"aroz.org/zoraxy/zerotiernc/mod/database/dbinc"
+	"aroz.org/zoraxy/ztnc/mod/database/dbinc"
 )
 
 /*
