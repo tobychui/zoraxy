@@ -51,17 +51,17 @@ func main() {
 		panic(err)
 	}
 
+	// Create a new PluginEmbedUIRouter that will serve the UI from web folder
+	uiRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &content, EMBED_FS_ROOT, UI_RELPATH)
+
 	// Register the shutdown handler
-	plugin.RegisterShutdownHandler(func() {
-		fmt.Println("Shutting down ZeroTier Network Controller")
+	uiRouter.RegisterTerminateHandler(func() {
+		// Do cleanup here if needed
 		if sysdb != nil {
 			sysdb.Close()
 		}
-		fmt.Println("ZeroTier Network Controller Exited")
-	})
-
-	// Create a new PluginEmbedUIRouter that will serve the UI from web folder
-	uiRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &content, EMBED_FS_ROOT, UI_RELPATH)
+		fmt.Println("ztnc Exited")
+	}, nil)
 
 	// This will serve the index.html file embedded in the binary
 	http.Handle(UI_RELPATH+"/", uiRouter.Handler())

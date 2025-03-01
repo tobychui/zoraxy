@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 )
 
 /*
@@ -173,26 +171,4 @@ See the ServeIntroSpect and RecvConfigureSpec for more details
 func ServeAndRecvSpec(pluginSpect *IntroSpect) (*ConfigureSpec, error) {
 	ServeIntroSpect(pluginSpect)
 	return RecvConfigureSpec()
-}
-
-/*
-
-Shutdown handler
-
-This function will register a shutdown handler for the plugin
-The shutdown callback will be called when the plugin is shutting down
-You can use this to clean up resources like closing database connections
-*/
-
-func RegisterShutdownHandler(shutdownCallback func()) {
-	// Set up a channel to receive OS signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Start a goroutine to listen for signals
-	go func() {
-		<-sigChan
-		shutdownCallback()
-		os.Exit(0)
-	}()
 }

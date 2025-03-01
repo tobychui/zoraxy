@@ -43,16 +43,21 @@ func main() {
 		panic(err)
 	}
 
-	// Register the shutdown handler
-	plugin.RegisterShutdownHandler(func() {
+	// Create a new PluginEmbedUIRouter that will serve the UI from web folder
+	// The router will also help to handle the termination of the plugin when
+	// a user wants to stop the plugin via Zoraxy Web UI
+	embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &content, WEB_ROOT, UI_PATH)
+	embedWebRouter.RegisterTerminateHandler(func() {
 		// Do cleanup here if needed
 		fmt.Println("Hello World Plugin Exited")
-	})
-
-	embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &content, WEB_ROOT, UI_PATH)
+	}, nil)
 
 	// Serve the hello world page in the www folder
 	http.Handle(UI_PATH, embedWebRouter.Handler())
 	fmt.Println("Hello World started at http://127.0.0.1:" + strconv.Itoa(runtimeCfg.Port))
-	http.ListenAndServe("127.0.0.1:"+strconv.Itoa(runtimeCfg.Port), nil)
+	err = http.ListenAndServe("127.0.0.1:"+strconv.Itoa(runtimeCfg.Port), nil)
+	if err != nil {
+		panic(err)
+	}
+
 }

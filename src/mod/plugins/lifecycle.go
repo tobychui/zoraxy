@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
@@ -146,20 +148,55 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	}
 
 	thisPlugin := plugin.(*Plugin)
-	thisPlugin.process.Process.Signal(os.Interrupt)
-	go func() {
-		//Wait for 10 seconds for the plugin to stop gracefully
-		time.Sleep(10 * time.Second)
+	var err error
+
+	//Make a GET request to plugin ui path /term to gracefully stop the plugin
+	if thisPlugin.uiProxy != nil {
+		requestURI := "http://127.0.0.1:" + strconv.Itoa(thisPlugin.AssignedPort) + "/" + thisPlugin.Spec.UIPath + "/term"
+		resp, err := http.Get(requestURI)
+		if err != nil {
+			//Plugin do not support termination request, do it the hard way
+			m.Log("Plugin "+thisPlugin.Spec.ID+" termination request failed. Force shutting down", nil)
+		} else {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				if resp.StatusCode == http.StatusNotFound {
+					m.Log("Plugin "+thisPlugin.Spec.ID+" does not support termination request", nil)
+				} else {
+					m.Log("Plugin "+thisPlugin.Spec.ID+" termination request returned status: "+resp.Status, nil)
+				}
+
+			}
+		}
+	}
+
+	if runtime.GOOS == "windows" && thisPlugin.process != nil {
+		//There is no SIGTERM in windows, kill the process directly
+		time.Sleep(300 * time.Millisecond)
+		thisPlugin.process.Process.Kill()
+	} else {
+		//Send SIGTERM to the plugin process, if it is still running
+		err = thisPlugin.process.Process.Signal(syscall.SIGTERM)
+		if err != nil {
+			m.Log("Failed to send Interrupt signal to plugin "+thisPlugin.Spec.Name+": "+err.Error(), nil)
+		}
+
+		//Wait for the plugin to stop
+		for range 5 {
+			time.Sleep(1 * time.Second)
+			if thisPlugin.process.ProcessState != nil && thisPlugin.process.ProcessState.Exited() {
+				m.Log("Plugin "+thisPlugin.Spec.Name+" background process stopped", nil)
+				break
+			}
+		}
 		if thisPlugin.process.ProcessState == nil || !thisPlugin.process.ProcessState.Exited() {
 			m.Log("Plugin "+thisPlugin.Spec.Name+" failed to stop gracefully, killing it", nil)
 			thisPlugin.process.Process.Kill()
-		} else {
-			m.Log("Plugin "+thisPlugin.Spec.Name+" background process stopped", nil)
 		}
+	}
 
-		//Remove the UI proxy
-		thisPlugin.uiProxy = nil
-	}()
+	//Remove the UI proxy
+	thisPlugin.uiProxy = nil
 	plugin.(*Plugin).Enabled = false
 	return nil
 }

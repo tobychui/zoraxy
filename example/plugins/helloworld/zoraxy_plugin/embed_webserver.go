@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -15,6 +16,8 @@ type PluginUiRouter struct {
 	TargetFs       *embed.FS //The embed.FS where the UI files are stored
 	TargetFsPrefix string    //The prefix of the embed.FS where the UI files are stored, e.g. /web
 	HandlerPrefix  string    //The prefix of the handler used to route this router, e.g. /ui
+
+	terminateHandler func() //The handler to be called when the plugin is terminated
 }
 
 // NewPluginEmbedUIRouter creates a new PluginUiRouter with embed.FS
@@ -91,6 +94,7 @@ func (p *PluginUiRouter) Handler() http.Handler {
 		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
 		r.URL, _ = url.Parse(rewrittenURL)
 		r.RequestURI = rewrittenURL
+
 		//Serve the file from the embed.FS
 		subFS, err := fs.Sub(*p.TargetFs, strings.TrimPrefix(p.TargetFsPrefix, "/"))
 		if err != nil {
@@ -101,5 +105,24 @@ func (p *PluginUiRouter) Handler() http.Handler {
 
 		// Replace {{csrf_token}} with the actual CSRF token and serve the file
 		p.populateCSRFToken(r, http.FileServer(http.FS(subFS))).ServeHTTP(w, r)
+	})
+}
+
+// RegisterTerminateHandler registers the terminate handler for the PluginUiRouter
+// The terminate handler will be called when the plugin is terminated from Zoraxy plugin manager
+// if mux is nil, the handler will be registered to http.DefaultServeMux
+func (p *PluginUiRouter) RegisterTerminateHandler(termFunc func(), mux *http.ServeMux) {
+	p.terminateHandler = termFunc
+	if mux == nil {
+		mux = http.DefaultServeMux
+	}
+	mux.HandleFunc(p.HandlerPrefix+"/term", func(w http.ResponseWriter, r *http.Request) {
+		p.terminateHandler()
+		w.WriteHeader(http.StatusOK)
+		go func() {
+			//Make sure the response is sent before the plugin is terminated
+			time.Sleep(100 * time.Millisecond)
+			os.Exit(0)
+		}()
 	})
 }

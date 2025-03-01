@@ -50,7 +50,7 @@ import (
 /* SIGTERM handler, do shutdown sequences before closing */
 func SetupCloseHandler() {
 	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		<-c
 		ShutdownSeq()

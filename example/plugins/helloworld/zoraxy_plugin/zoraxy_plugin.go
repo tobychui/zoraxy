@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 )
 
 /*
@@ -79,9 +77,8 @@ type IntroSpect struct {
 		Once plugin is enabled these rules always applies, no matter which HTTP Proxy rule it is enabled on
 		This captures the whole traffic of Zoraxy
 
-		Notes: Will raise a warning on the UI when the user enables the plugin on a HTTP Proxy rule
 	*/
-	GlobalCapturePath    []CaptureRule `json:"global_capture_path"`    //Global traffic capture path of your plugin
+	GlobalCapturePaths   []CaptureRule `json:"global_capture_path"`    //Global traffic capture path of your plugin
 	GlobalCaptureIngress string        `json:"global_capture_ingress"` //Global traffic capture ingress path of your plugin (e.g. /g_handler)
 
 	/*
@@ -90,19 +87,8 @@ type IntroSpect struct {
 		Once the plugin is enabled on a given HTTP Proxy rule,
 		these always applies
 	*/
-	AlwaysCapturePath    []CaptureRule `json:"always_capture_path"`    //Always capture path of your plugin when enabled on a HTTP Proxy rule (e.g. /myapp)
+	AlwaysCapturePaths   []CaptureRule `json:"always_capture_path"`    //Always capture path of your plugin when enabled on a HTTP Proxy rule (e.g. /myapp)
 	AlwaysCaptureIngress string        `json:"always_capture_ingress"` //Always capture ingress path of your plugin when enabled on a HTTP Proxy rule (e.g. /a_handler)
-
-	/*
-		Dynamic Capture Settings
-
-		Once the plugin is enabled on a given HTTP Proxy rule,
-		the plugin can capture the request and decided if the request
-		shall be handled by itself or let it pass through
-
-	*/
-	DynmaicCaptureIngress string `json:"capture_path"` //Traffic capture path of your plugin (e.g. /capture)
-	DynamicHandleIngress  string `json:"handle_path"`  //Traffic handle path of your plugin (e.g. /handler)
 
 	/* UI Path for your plugin */
 	UIPath string `json:"ui_path"` //UI path of your plugin (e.g. /ui), will proxy the whole subpath tree to Zoraxy Web UI as plugin UI
@@ -185,26 +171,4 @@ See the ServeIntroSpect and RecvConfigureSpec for more details
 func ServeAndRecvSpec(pluginSpect *IntroSpect) (*ConfigureSpec, error) {
 	ServeIntroSpect(pluginSpect)
 	return RecvConfigureSpec()
-}
-
-/*
-
-Shutdown handler
-
-This function will register a shutdown handler for the plugin
-The shutdown callback will be called when the plugin is shutting down
-You can use this to clean up resources like closing database connections
-*/
-
-func RegisterShutdownHandler(shutdownCallback func()) {
-	// Set up a channel to receive OS signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Start a goroutine to listen for signals
-	go func() {
-		<-sigChan
-		shutdownCallback()
-		os.Exit(0)
-	}()
 }

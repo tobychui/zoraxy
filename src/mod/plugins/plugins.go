@@ -112,7 +112,7 @@ func (m *Manager) GetPluginPreviousEnableState(pluginID string) bool {
 
 // ListLoadedPlugins returns a list of loaded plugins
 func (m *Manager) ListLoadedPlugins() ([]*Plugin, error) {
-	var plugins []*Plugin
+	var plugins []*Plugin = []*Plugin{}
 	m.LoadedPlugins.Range(func(key, value interface{}) bool {
 		plugin := value.(*Plugin)
 		plugins = append(plugins, plugin)

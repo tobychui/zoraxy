@@ -4,13 +4,23 @@
     </iframe>
 </div>
 <script>
-    function initPluginUIView(){
+    function initPluginUIView(forceOverwritePluginID = undefined){
+        if (typeof(forceOverwritePluginID) != "undefined"){
+            let pluginID = forceOverwritePluginID;
+            console.log("Launching plugin UI for plugin with ID:", pluginID);
+            loadPluginContext(pluginID);
+            return;
+        }
         let pluginID = getPluginIDFromWindowHash();
+        if (pluginID == ""){
+            return;
+        }
         console.log("Launching plugin UI for plugin with ID:", pluginID);
         loadPluginContext(pluginID);
     }
 
     function loadPluginContext(pluginID){
+        //Check if the iframe is currently visable
         let pluginContextURL = `/plugin.ui/${pluginID}/`;
         $("#pluginContextLoader").attr("src", pluginContextURL);
     }
