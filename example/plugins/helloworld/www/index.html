@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- CSRF token, if your plugin need to make POST request to backend -->
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <link rel="stylesheet" href="/script/semantic/semantic.min.css">
+    <script src="/script/jquery-3.6.0.min.js"></script>
+    <script src="/script/semantic/semantic.min.js"></script>
+    <script src="/script/utils.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/main.css">
+    <title>Hello World</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background:none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Dark theme script must be included after body tag-->
+    <link rel="stylesheet" href="/darktheme.css">
+    <script src="/script/darktheme.js"></script>
+    <div style="text-align: center;">
+        <h1>Hello World</h1>
+        <p>Welcome to your first Zoraxy plugin</p>
+    </div>
+</body>
+</html>

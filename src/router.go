@@ -58,6 +58,19 @@ func FSHandler(handler http.Handler) http.Handler {
 			return
 		}
 
+		//For Plugin Routing
+		if strings.HasPrefix(r.URL.Path, "/plugin.ui/") {
+			//Extract the plugin ID from the request path
+			parts := strings.Split(r.URL.Path, "/")
+			if len(parts) > 2 {
+				pluginID := parts[2]
+				pluginManager.HandlePluginUI(pluginID, w, r)
+			} else {
+				http.Error(w, "Invalid Usage", http.StatusInternalServerError)
+			}
+			return
+		}
+
 		//For WebSSH Routing
 		//Example URL Path: /web.ssh/{{instance_uuid}}/*
 		if strings.HasPrefix(r.URL.Path, "/web.ssh/") {

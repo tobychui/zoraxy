@@ -1,0 +1,167 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Plugins</h2>
+        <p>Add custom features to your Zoraxy!</p>
+    </div>
+    <div class="ui yellow message">
+      <div class="header">Experimental Feature</div>
+      <p>This feature is experimental and may not work as expected. Use with caution.</p>
+    </div>
+    <table class="ui basic celled table">
+        <thead>
+          <tr>
+            <th>Plugin Name</th>
+            <th>Descriptions</th>
+            <th>Catergory</th>
+            <th>Action</th>
+        </tr></thead>
+        <tbody id="pluginTable">
+          
+        </tbody>
+      </table>
+</div>
+
+<script>
+
+function initPluginSideMenu(){
+  $.get(`/api/plugins/list`, function(data){
+    $("#pluginMenu").html("");
+    let enabledPluginCount = 0;
+    data.forEach(plugin => {
+      if (!plugin.Enabled){
+        return;
+      }
+      $("#pluginMenu").append(`
+        <a class="item" tag="pluginContextWindow" pluginid="${plugin.Spec.id}">
+            <img style="width: 20px;" class="ui mini right spaced image" src="/api/plugins/icon?plugin_id=${plugin.Spec.id}"> ${plugin.Spec.name}
+        </a>
+      `);
+      enabledPluginCount++;
+    });
+    if (enabledPluginCount == 0){
+      $("#pluginMenu").append(`
+         <a class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+            <i class="green circle check icon"></i> No Plugins Installed
+        </a>
+      `);
+    }
+
+    //Rebind events for the plugin menu
+    $("#pluginMenu").find(".item").each(function(){
+        $(this).off("click").on("click", function(event){
+            let tabid = $(this).attr("tag");
+            openTabById(tabid, $(this));
+            loadPluginUIContextIfAvailable();
+        });
+    });
+
+  });
+}
+initPluginSideMenu();
+
+function loadPluginUIContextIfAvailable(){
+  if(typeof(initPluginUIView) != "undefined"){
+    initPluginUIView();
+  }
+}
+
+function initiatePluginList(){
+  $.get(`/api/plugins/list`, function(data){
+    $("#pluginTable").html("");
+
+    data.forEach(plugin => {
+      let authorContact = plugin.Spec.author_contact;
+      if(!authorContact.startsWith('http')){
+        authorContact = `mailto:${authorContact}`;
+      }
+
+      let versionString = `v${plugin.Spec.version_major}.${plugin.Spec.version_minor}.${plugin.Spec.version_patch}`;
+      const row = `
+        <tr>
+          <td data-label="PluginName">
+            <h4 class="ui header">
+              <img src="/api/plugins/icon?plugin_id=${plugin.Spec.id}" class="ui image">
+              <div class="content">
+                ${plugin.Spec.name}
+                <div class="sub header">${versionString} by <a href="${authorContact}" target="_blank">${plugin.Spec.author}</a></div>
+              </div>
+            </h4>
+            </td>
+          <td data-label="Descriptions">${plugin.Spec.description}<br>
+          <a href="${plugin.Spec.url}" target="_blank">${plugin.Spec.url}</a></td>
+          <td data-label="Category">${plugin.Spec.type==0?"Router":"Utilities"}</td>
+          <td data-label="Action">
+            <div class="ui small basic buttons">
+              <button onclick="stopPlugin('${plugin.Spec.id}', this);" class="ui button pluginEnableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? '' : 'style="display:none;"'}>
+                <i class="red stop circle icon"></i> Stop
+              </button>
+              <button onclick="startPlugin('${plugin.Spec.id}', this);" class="ui button pluginDisableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? 'style="display:none;"' : ''}>
+                <i class="green play circle icon"></i> Start
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      $("#pluginTable").append(row);
+    });
+
+    if (data.length == 0){
+      $("#pluginTable").append(`
+        <tr>
+          <td colspan="4" style="text-align: center;"><i class="ui green circle check icon"></i> No plugins installed</td>
+        </tr>
+      `);
+    }
+
+    console.log(data);
+  });
+}
+
+initiatePluginList();
+
+function startPlugin(pluginId, btn=undefined){
+  if (btn) {
+    $(btn).html('<i class="spinner loading icon"></i> Starting');
+    $(btn).addClass('disabled');
+  }
+  $.cjax({
+    url: '/api/plugins/enable',
+    type: 'POST',
+    data: {plugin_id: pluginId},
+    success: function(data){
+      if (data.error != undefined){
+        msgbox(data.error, false);
+      }else{
+        msgbox("Plugin started", true);
+      }
+      initiatePluginList();
+      initPluginSideMenu();
+    }
+  });
+}
+
+function stopPlugin(pluginId, btn=undefined){
+  if (btn) {
+    $(btn).html('<i class="spinner loading icon"></i> Stopping');
+    $(btn).addClass('disabled');
+  }
+  $.cjax({
+    url: '/api/plugins/disable',
+    type: 'POST',
+    data: {plugin_id: pluginId},
+    success: function(data){
+      if (data.error != undefined){
+        msgbox(data.error, false);
+      }else{
+        msgbox("Plugin stopped", true);
+      }
+      initiatePluginList();
+      initPluginSideMenu();
+    }
+  });
+}
+
+</script>
+
+
+

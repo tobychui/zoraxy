@@ -1,0 +1,747 @@
+<!-- This is being loaded in index.html as ajax -->
+<div class="standardContainer">
+    <button onclick="exitToGanList();" class="ui large circular black icon button"><i class="angle left icon"></i></button>
+    <div style="max-width: 300px; margin-top: 1em;">
+        <button onclick='$("#gannetDetailEdit").slideToggle("fast");' class="ui mini basic right floated circular icon button" style="display: inline-block; margin-top: 2.5em;"><i class="ui edit icon"></i></button>
+        <h1 class="ui header">
+            <span class="ganetID"></span>
+            <div class="sub header ganetName"></div>
+        </h1>
+        <div class="ui divider"></div>
+        <p><span class="ganetDesc"></span></p>
+        
+    </div>
+    <div id="gannetDetailEdit" class="ui form" style="margin-top: 1em; display:none;">
+        <div class="ui divider"></div>
+        <p>You can change the network name and description below. <br>The name and description is only for easy management purpose and will not effect the network operation.</p>
+        <div class="field">
+            <label>Network Name</label>
+            <input type="text" id="gaNetNameInput" placeholder="">
+        </div>
+        <div class="field">
+        <label>Network Description</label>
+        <textarea id="gaNetDescInput" style="resize: none;"></textarea>
+        <button onclick="saveNameAndDesc(this);" class="ui basic right floated button" style="margin-top: 0.6em;"><i class="ui save icon"></i> Save</button>
+        <button onclick='$("#gannetDetailEdit").slideUp("fast");' class="ui basic right floated button" style="margin-top: 0.6em;"><i class="ui red remove icon"></i> Cancel</button>
+        </div>
+        <br><br>
+    </div>
+    <div class="ui divider"></div>
+    <h2>Settings</h2>
+    <div class="" style="overflow-x: auto;">
+        <table class="ui basic celled unstackable table" style="min-width: 560px;">
+            <thead>
+                <tr>
+                    <th colspan="4">IPv4 Auto-Assign</th>
+                </tr>
+            </thead>
+            <tbody id="ganetRangeTable">
+                
+            </tbody>
+        </table>
+    </div>
+    <br>
+    <div class="ui form">
+        <h3>Custom IP Range</h3>
+        <p>Manual IP Range Configuration. The IP range must be within the selected CIDR range. 
+        <br>Use <code>Utilities > IP to CIDR tool</code> if you are not too familiar with CIDR notations.</p>
+        <div class="two fields">
+            <div class="field">
+                <label>IP Start</label>
+                <input type="text" class="ganIpStart" placeholder="">
+            </div>
+            <div class="field">
+                <label>IP End</label>
+                <input type="text" class="ganIpEnd" placeholder="">
+            </div>
+        </div>
+    </div>
+    <button onclick="setNetworkRange();" class="ui basic button"><i class="ui blue save icon"></i> Save Settings</button>
+
+    <div class="ui divider"></div>
+    <h2>Members</h2>
+    <p>To join this network using command line, type <code>sudo zerotier-cli join <span class="ganetID"></span></code> on your device terminal</p>
+    <div class="ui checkbox" style="margin-bottom: 1em;">
+        <input id="showUnauthorizedMembers" type="checkbox" onchange="changeUnauthorizedVisibility(this.checked);" checked>
+        <label>Show Unauthorized Members</label>
+    </div>
+    <div class="" style="overflow-x: auto;">
+        <table class="ui celled unstackable table">
+            <thead>
+                <tr>
+                    <th>Auth</th>
+                    <th>Address</th>
+                    <th>Name</th>
+                    <th>Managed IP</th>
+                    <th>Authorized Since</th>
+                    <th>Version</th>
+                    <th>Remove</th>
+                </tr>
+            </thead>
+            <tbody id="networkMemeberTable">
+                <tr>
+                    
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="ui divider"></div>
+    <h4>Add Controller as Member</h4>
+    <p>Optionally you can add the network controller (ZeroTier running on the Zoraxy node) as member for cross GAN reverse proxy to bypass NAT limitations.</p>
+    <button class="ui basic small button addControllerToNetworkBtn" onclick="ganAddControllerToNetwork(this);"><i class="green add icon"></i> Add Controller as Member</button>
+    <button class="ui basic small button removeControllerFromNetworkBtn" onclick="ganRemoveControllerFromNetwork(this);"><i class="red sign-out icon"></i> Remove Controller from Member</button>
+    <br><br>
+</div>
+<script>
+    $(".checkbox").checkbox();
+    var currentGANetID = "";
+    var currentGANNetMemeberListener = undefined;
+    var currentGaNetDetails = {};
+    var currentGANMemberList = [];
+    var netRanges = {
+            "10.147.17.*": "10.147.17.0/24",
+            "10.147.18.*": "10.147.18.0/24",
+            "10.147.19.*": "10.147.19.0/24",
+            "10.147.20.*": "10.147.20.0/24",
+            "10.144.*.*": "10.144.0.0/16",
+            "10.241.*.*": "10.241.0.0/16",
+            "10.242.*.*": "10.242.0.0/16",
+            "10.243.*.*": "10.243.0.0/16",
+            "10.244.*.*": "10.244.0.0/16",
+            "172.22.*.*": "172.22.0.0/15",
+            "172.23.*.*": "172.23.0.0/16",
+            "172.24.*.*": "172.24.0.0/14",
+            "172.25.*.*": "172.25.0.0/16",
+            "172.26.*.*": "172.26.0.0/15",
+            "172.27.*.*": "172.27.0.0/16",
+            "172.28.*.*": "172.28.0.0/15",
+            "172.29.*.*": "172.29.0.0/16",
+            "172.30.*.*": "172.30.0.0/15",
+            "192.168.191.*": "192.168.191.0/24",
+            "192.168.192.*": "192.168.192.0/24",
+            "192.168.193.*": "192.168.193.0/24",
+            "192.168.194.*": "192.168.194.0/24",
+            "192.168.195.*": "192.168.195.0/24",
+            "192.168.196.*": "192.168.196.0/24"
+        }
+
+    function generateIPRangeTable(netRanges) {
+        $("#ganetRangeTable").empty();
+        const tableBody = document.getElementById('ganetRangeTable');
+        const cidrs = Object.values(netRanges);
+        
+        // Set the number of rows and columns to display in the table
+        const numRows = 6;
+        const numCols = 4;
+
+        let row = document.createElement('tr');
+        let col = 0;
+        for (let i = 0; i < cidrs.length; i++) {
+            if (col >= numCols) {
+            tableBody.appendChild(row);
+            row = document.createElement('tr');
+            col = 0;
+            }
+
+            const td = document.createElement('td');
+            td.setAttribute('class', `clickable iprange`);
+            td.setAttribute('CIDR', cidrs[i]);
+            td.innerHTML = cidrs[i];
+            let thisCidr = cidrs[i];
+            td.onclick = function(){
+                selectNetworkRange(thisCidr, td);
+            };
+            
+            row.appendChild(td);
+            col++;
+        }
+
+        // Add any remaining cells to the table
+        if (col > 0) {
+            for (let i = col; i < numCols; i++) {
+                row.appendChild(document.createElement('td'));
+            }
+            tableBody.appendChild(row);
+        }
+    }
+
+    function highlightCurrentGANetCIDR(){
+        var currentCIDR = currentGaNetDetails.routes[0].target;
+        $(".iprange").each(function(){
+            if ($(this).attr("CIDR") == currentCIDR){
+                $(this).addClass("active");
+                populateStartEndIpByCidr(currentCIDR);
+            }
+        })
+    }
+
+    function populateStartEndIpByCidr(cidr){
+        function cidrToRange(cidr) {
+            var range = [2];
+            cidr = cidr.split('/');
+            var start = ip2long(cidr[0]);
+            range[0] = long2ip(start);
+            range[1] = long2ip(Math.pow(2, 32 - cidr[1]) + start - 1);
+            return range;
+        }
+        var cidrRange = cidrToRange(cidr);
+        $(".ganIpStart").val(cidrRange[0]);
+        $(".ganIpEnd").val(cidrRange[1]);
+    }
+
+    function selectNetworkRange(cidr, object){
+        populateStartEndIpByCidr(cidr);
+
+        $(".iprange.active").removeClass("active");
+        $(object).addClass("active");
+    }
+
+    function setNetworkRange(){
+        var ipstart = $(".ganIpStart").val().trim();
+        var ipend = $(".ganIpEnd").val().trim();
+
+        if (ipstart == ""){
+            $(".ganIpStart").parent().addClass("error");
+        }else{
+            $(".ganIpStart").parent().removeClass("error");
+        }
+
+        if (ipend == ""){
+            $(".ganIpEnd").parent().addClass("error");
+        }else{
+            $(".ganIpEnd").parent().removeClass("error");
+        }
+
+        //Get CIDR from selected range group
+        var cidr = $(".iprange.active").attr("cidr");
+
+        $.cjax({
+            url: "./api/gan/network/setRange",
+            metohd: "POST",
+            data:{
+                netid: currentGANetID,
+                cidr: cidr,
+                ipstart: ipstart,
+                ipend: ipend
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000)
+                }else{
+                    msgbox("Network Range Updated")
+                }
+            }
+        })
+    }
+
+
+    function saveNameAndDesc(object=undefined){
+        var name = $("#gaNetNameInput").val();
+        var desc = $("#gaNetDescInput").val();
+        if (object != undefined){
+            $(object).addClass("loading");
+        }
+        $.cjax({
+            url: "./api/gan/network/name",
+            method: "POST",
+            data: {
+                netid: currentGANetID,
+                name: name,
+                desc: desc,
+            },
+            success: function(data){
+                initNetNameAndDesc();
+                if (object != undefined){
+                    $(object).removeClass("loading");
+                    msgbox("Network Metadata Updated");
+                }
+                $("#gannetDetailEdit").slideUp("fast");
+            }
+        });
+    }
+
+    function initNetNameAndDesc(){
+        //Get the details of the net
+        $.get("./api/gan/network/name?netid=" + currentGANetID, function(data){
+            if (data.error !== undefined){
+                msgbox(data.error, false, 6000);
+            }else{
+                $("#gaNetNameInput").val(data[0]);
+                $(".ganetName").html(data[0]);
+                $("#gaNetDescInput").val(data[1]);
+                $(".ganetDesc").text(data[1]);
+            }
+        });
+    }
+
+    function initNetDetails(){
+        //Get the details of the net
+        $.get("./api/gan/network/list?netid=" + currentGANetID, function(data){
+            if (data.error !== undefined){
+                msgbox(data.error, false, 6000);
+            }else{
+                currentGaNetDetails = data;
+                highlightCurrentGANetCIDR();
+            }
+        });
+    }
+
+    //Handle delete IP from memeber
+    function deleteIpFromMemeber(memberid, ip){
+        $.cjax({
+            url: "./api/gan/members/ip",
+            metohd: "POST",
+            data: {
+                netid: currentGANetID, 
+                memid: memberid,
+                opr: "del",
+                ip: ip,
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                }else{
+                    msgbox("IP removed from member " + memberid)
+                }
+                renderMemeberTable();
+            }
+        });
+    }
+
+    function addIpToMemeberFromInput(memberid, newip){
+        function isValidIPv4Address(address) {
+            // Split the address into its 4 components
+            const parts = address.split('.');
+            
+            // Check that there are 4 components
+            if (parts.length !== 4) {
+                return false;
+            }
+            
+            // Check that each component is a number between 0 and 255
+            for (let i = 0; i < 4; i++) {
+                const part = parseInt(parts[i], 10);
+                if (isNaN(part) || part < 0 || part > 255) {
+                return false;
+                }
+            }
+            
+            // The address is valid
+            return true;
+        }
+
+        if (!isValidIPv4Address(newip)){
+            msgbox(newip + " is not a valid IPv4 address", false, 5000)
+            return
+        }
+
+        $.cjax({
+            url: "./api/gan/members/ip",
+            metohd: "POST",
+            data: {
+                netid: currentGANetID, 
+                memid: memberid,
+                opr: "add",
+                ip: newip,
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                }else{
+                    msgbox("IP added to member " + memberid)
+                }
+                renderMemeberTable();
+            }
+        })
+    }
+
+    //Member table populate
+    function renderMemeberTable(forceUpdate = false) {
+        $.ajax({
+            url: './api/gan/members/list?netid=' + currentGANetID + '&detail=true',
+            type: 'GET',
+            success: function(data) {
+                let tableBody = $('#networkMemeberTable');
+                if (tableBody.length == 0){
+                    return;
+                }
+                data.sort((a, b) => a.address.localeCompare(b.address));
+                //Check if the new object equal to the old one
+                if (objectEqual(currentGANMemberList, data) && !forceUpdate){
+                    //Do not need to update it
+                    return;
+                }
+                tableBody.empty();
+                currentGANMemberList = data;
+
+                var authroziedCount = 0;
+                data.forEach((member) => {
+                    let lastAuthTime = new Date(member.lastAuthorizedTime).toLocaleString();
+                    if (member.lastAuthorizedTime == 0){
+                        lastAuthTime = "Never";
+                    }
+
+                    let version = `${member.vMajor}.${member.vMinor}.${member.vProto}.${member.vRev}`;
+                    if (member.vMajor == -1){
+                        version = "Unknown";
+                    }
+
+                    let authorizedCheckbox = `<div class="ui fitted checkbox">
+                        <input type="checkbox" addr="${member.address}" name="isAuthrozied" onchange="handleMemberAuth(this);">
+                        <label></label>
+                    </div>`;
+                    if (member.authorized){
+                        authorizedCheckbox = `<div class="ui fitted checkbox">
+                            <input type="checkbox" addr="${member.address}" name="isAuthrozied" onchange="handleMemberAuth(this);" checked="">
+                            <label></label>
+                        </div>`
+                    }
+
+                    let rowClass = "authorized";
+                    let unauthorizedStyle = "";
+                    if (!$("#showUnauthorizedMembers")[0].checked && !member.authorized){
+                        unauthorizedStyle = "display:none;";
+                    }
+                    if (!member.authorized){
+                        rowClass = "unauthorized";
+                    }else{
+                        authroziedCount++;
+                    }
+                    
+                    let assignedIp = "";
+
+                    if (member.ipAssignments.length == 0){
+                        assignedIp = "Not assigned"
+                    }else{
+                        assignedIp = `<div class="ui list">`
+                        member.ipAssignments.forEach(function(thisIp){
+                            assignedIp += `<div class="item" style="width: 100%;">${thisIp} <a style="cursor:pointer; float: right;" title="Remove IP" onclick="deleteIpFromMemeber('${member.address}','${thisIp}');"><i class="red remove icon"></i></a></div>`;
+                        })
+                        assignedIp += `</div>`
+                    }
+                    const row = $(`<tr class="GANetMemberEntity ${rowClass}" style="${unauthorizedStyle}">`);
+                    row.append($(`<td class="GANetMember ${rowClass}" style="text-align: center;">`).html(authorizedCheckbox));
+                    row.append($('<td>').text(member.address));
+                    row.append($('<td>').html(`<span class="memberName" addr="${member.address}"></span> <a style="cursor:pointer; float: right;" title="Edit Memeber Name" onclick="renameMember('${member.address}');"><i class="grey edit icon"></i></a>`));
+                    row.append($('<td>').html(`${assignedIp}
+                        <div class="ui action mini fluid input" style="min-width: 200px;">
+                            <input type="text" placeholder="IPv4" onchange="$(this).val($(this).val().trim());">
+                            <button onclick="addIpToMemeberFromInput('${member.address}',$(this).parent().find('input').val());" class="ui basic icon button">
+                                <i class="add icon"></i>
+                            </button>
+                        </div>`));
+                    row.append($('<td>').text(lastAuthTime));
+                    row.append($('<td>').text(version));
+                    row.append($(`<td title="Deauthorize & Delete Memeber" style="text-align: center;" onclick="handleMemberDelete('${member.address}');">`).html(`<button class="ui basic mini icon button"><i class="red remove icon"></i></button>`));
+
+                    tableBody.append(row);
+                });
+
+                if (data.length == 0){
+                    tableBody.append(`<tr>
+                        <td colspan="7"><i class="green check circle icon"></i> No member has joined this network yet.</td>
+                    </tr>`);
+                }
+
+                if (data.length > 0 && authroziedCount == 0 && !$("#showUnauthorizedMembers")[0].checked){
+                    //All nodes are unauthorized. Show tips to enable unauthorize display
+                    tableBody.append(`<tr>
+                        <td colspan="7"><i class="yellow exclamation circle icon"></i> Unauthorized nodes detected. Enable "Show Unauthorized Member" to change member access permission.</td>
+                    </tr>`);
+                }
+
+                initNameForMembers();
+            },
+            error: function(xhr, status, error) {
+                console.log('Error:', error);
+            }
+        });
+    }
+
+    function initNameForMembers(){
+        $(".memberName").each(function(){
+            let addr = $(this).attr("addr");
+            let targetDOM = $(this);
+            $.cjax({
+                url: "./api/gan/members/name",
+                method: "POST",
+                data: {
+                    netid: currentGANetID,
+                    memid: addr,
+                },
+                success: function(data){
+                    if (data.error != undefined){
+                        $(targetDOM).text("N/A");
+                    }else{
+                        $(targetDOM).text(data.Name);
+                    }
+                }
+            });
+        })
+    }
+
+    function renameMember(targetMemberAddr){
+        if (targetMemberAddr == ""){
+            msgbox("Member address cannot be empty", false, 5000)
+            return
+        }
+
+        let newname = prompt("Enter a easy manageable name for " + targetMemberAddr, "");
+        if (newname != null && newname.trim() != "") {
+        $.cjax({
+            url: "./api/gan/members/name",
+            method: "POST",
+            data: {
+                netid: currentGANetID,
+                memid: targetMemberAddr,
+                name: newname
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    msgbox("Member Name Updated"); 
+                }
+                renderMemeberTable(true);
+            }
+        })
+        }
+    }
+
+    //Helper function to check if two objects are equal recursively
+    function objectEqual(obj1, obj2) {
+        // compare types
+        if (typeof obj1 !== typeof obj2) {
+            return false;
+        }
+
+        // compare values
+        if (typeof obj1 !== 'object' || obj1 === null) {
+            return obj1 === obj2;
+        }
+
+        const keys1 = Object.keys(obj1);
+        const keys2 = Object.keys(obj2);
+
+        // compare keys
+        if (keys1.length !== keys2.length) {
+            return false;
+        }
+
+        for (const key of keys1) {
+            if (!keys2.includes(key)) {
+            return false;
+            }
+
+            // recursively compare values
+            if (!objectEqual(obj1[key], obj2[key])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    function changeUnauthorizedVisibility(visable){
+        if(visable){
+            $(".GANetMemberEntity.unauthorized").show();
+        }else{
+            $(".GANetMemberEntity.unauthorized").hide();
+        }
+    }
+
+    function handleMemberAuth(object){
+        let targetMemberAddr = $(object).attr("addr");
+        let isAuthed = object.checked;
+        $.cjax({
+            url: "./api/gan/members/authorize",
+            method: "POST",
+            data: {
+                netid:currentGANetID, 
+                memid: targetMemberAddr, 
+                auth: isAuthed
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    if (isAuthed){
+                        msgbox("Member Authorized");
+                    }else{
+                        msgbox("Member Deauthorized");
+                    }
+                    
+                }
+
+                renderMemeberTable(true);
+            }
+        })
+    }
+
+    function handleMemberDelete(addr){
+        if (confirm("Confirm delete member " + addr + " ?")){
+            $.cjax({
+                url: "./api/gan/members/delete",
+                method: "POST",
+                data: {
+                    netid:currentGANetID, 
+                    memid: addr, 
+                },
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 6000);
+                    }else{
+                        msgbox("Member Deleted");
+                    }
+                    renderMemeberTable(true);
+                }
+            });
+        }
+    
+    }
+
+    //Add and remove this controller node to network as member
+    function ganAddControllerToNetwork(){
+        $(".addControllerToNetworkBtn").addClass("disabled");
+        $(".addControllerToNetworkBtn").addClass("loading");
+    
+        $.cjax({
+            url: "./api/gan/network/join",
+            method: "POST",
+            data: {
+                netid:currentGANetID, 
+            },
+            success: function(data){
+                $(".addControllerToNetworkBtn").removeClass("disabled");
+                $(".addControllerToNetworkBtn").removeClass("loading");
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    msgbox("Controller joint " + currentGANetID);
+                }
+                setTimeout(function(){
+                    renderMemeberTable(true);
+                }, 3000)
+            }
+        });
+    }
+
+    function ganRemoveControllerFromNetwork(){
+        $(".removeControllerFromNetworkBtn").addClass("disabled");
+        $(".removeControllerFromNetworkBtn").addClass("loading");
+        
+        $.cjax({
+            url: "./api/gan/network/leave",
+            method: "POST",
+            data: {
+                netid:currentGANetID, 
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                }else{
+                    msgbox("Controller left " + currentGANetID);
+                }
+                renderMemeberTable(true);
+                $(".removeControllerFromNetworkBtn").removeClass("disabled");
+                $(".removeControllerFromNetworkBtn").removeClass("loading");
+            }
+        });
+    }
+
+    //Entry points
+    function initGanetDetails(ganetId){
+        currentGANetID = ganetId;
+        $(".ganetID").text(ganetId);
+        initNetNameAndDesc(ganetId);
+        generateIPRangeTable(netRanges);msgbox 
+        initNetDetails();
+        renderMemeberTable(true);
+
+        //Setup a listener to listen for member list change
+        if (currentGANNetMemeberListener == undefined){
+            currentGANNetMemeberListener = setInterval(function(){
+                if ($('#networkMemeberTable').length > 0 && currentGANetID){
+                    renderMemeberTable();
+                }
+            }, 3000);
+        }
+        
+    }
+
+    //Exit point
+    function exitToGanList(){
+        location.href = "./index.html"
+    }
+
+    //Debug functions
+
+    if (typeof(msgbox) == "undefined"){
+        msgbox = function(msg, error=false, timeout=3000){
+            console.log(msg);
+        }
+    }
+
+    function ip2long (argIP) {
+        //  discuss at: https://locutus.io/php/ip2long/
+        // original by: Waldo Malqui Silva (https://waldo.malqui.info)
+        // improved by: Victor
+        //  revised by: fearphage (https://my.opera.com/fearphage/)
+        //  revised by: Theriault (https://github.com/Theriault)
+        //    estarget: es2015
+        //   example 1: ip2long('192.0.34.166')
+        //   returns 1: 3221234342
+        //   example 2: ip2long('0.0xABCDEF')
+        //   returns 2: 11259375
+        //   example 3: ip2long('255.255.255.256')
+        //   returns 3: false
+        let i = 0
+        // PHP allows decimal, octal, and hexadecimal IP components.
+        // PHP allows between 1 (e.g. 127) to 4 (e.g 127.0.0.1) components.
+        const pattern = new RegExp([
+            '^([1-9]\\d*|0[0-7]*|0x[\\da-f]+)',
+            '(?:\\.([1-9]\\d*|0[0-7]*|0x[\\da-f]+))?',
+            '(?:\\.([1-9]\\d*|0[0-7]*|0x[\\da-f]+))?',
+            '(?:\\.([1-9]\\d*|0[0-7]*|0x[\\da-f]+))?$'
+        ].join(''), 'i')
+        argIP = argIP.match(pattern) // Verify argIP format.
+        if (!argIP) {
+            // Invalid format.
+            return false
+        }
+        // Reuse argIP variable for component counter.
+        argIP[0] = 0
+        for (i = 1; i < 5; i += 1) {
+            argIP[0] += !!((argIP[i] || '').length)
+            argIP[i] = parseInt(argIP[i]) || 0
+        }
+        // Continue to use argIP for overflow values.
+        // PHP does not allow any component to overflow.
+        argIP.push(256, 256, 256, 256)
+        // Recalculate overflow of last component supplied to make up for missing components.
+        argIP[4 + argIP[0]] *= Math.pow(256, 4 - argIP[0])
+        if (argIP[1] >= argIP[5] ||
+            argIP[2] >= argIP[6] ||
+            argIP[3] >= argIP[7] ||
+            argIP[4] >= argIP[8]) {
+            return false
+        }
+        return argIP[1] * (argIP[0] === 1 || 16777216) +
+            argIP[2] * (argIP[0] <= 2 || 65536) +
+            argIP[3] * (argIP[0] <= 3 || 256) +
+            argIP[4] * 1
+    }
+
+    function long2ip (ip) {
+        //  discuss at: https://locutus.io/php/long2ip/
+        // original by: Waldo Malqui Silva (https://fayr.us/waldo/)
+        //   example 1: long2ip( 3221234342 )
+        //   returns 1: '192.0.34.166'
+        if (!isFinite(ip)) {
+            return false
+        }
+        return [ip >>> 24 & 0xFF, ip >>> 16 & 0xFF, ip >>> 8 & 0xFF, ip & 0xFF].join('.')
+    }
+    
+</script>

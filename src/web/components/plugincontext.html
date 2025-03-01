@@ -1,0 +1,62 @@
+<div class="">
+    <iframe id="pluginContextLoader" src="" style="width: 100%; border: none;">
+
+    </iframe>
+</div>
+<script>
+    function initPluginUIView(forceOverwritePluginID = undefined){
+        if (typeof(forceOverwritePluginID) != "undefined"){
+            let pluginID = forceOverwritePluginID;
+            console.log("Launching plugin UI for plugin with ID:", pluginID);
+            loadPluginContext(pluginID);
+            return;
+        }
+        let pluginID = getPluginIDFromWindowHash();
+        if (pluginID == ""){
+            return;
+        }
+        console.log("Launching plugin UI for plugin with ID:", pluginID);
+        loadPluginContext(pluginID);
+    }
+
+    function loadPluginContext(pluginID){
+        //Check if the iframe is currently visable
+        let pluginContextURL = `/plugin.ui/${pluginID}/`;
+        $("#pluginContextLoader").attr("src", pluginContextURL);
+    }
+
+    function getPluginIDFromWindowHash(){
+        let tabID = window.location.hash.substr(1);
+        let pluginID = "";
+        if (tabID.startsWith("{")) {
+            tabID = decodeURIComponent(tabID);
+            try {
+                let parsedData = JSON.parse(tabID);
+                if (typeof(parsedData.pluginID) != "undefined"){
+                    pluginID = parsedData.pluginID;
+                }
+            } catch (e) {
+                console.error("Invalid JSON data:", e);
+            }
+        }
+        return pluginID;
+    }
+
+    function resizeIframe() {
+        let iframe = document.getElementById('pluginContextLoader');
+        let mainMenuHeight = document.getElementById('mainmenu').offsetHeight;
+        iframe.style.height = mainMenuHeight + 'px';
+    }
+
+    $(window).on("resize", function(){
+        resizeIframe();
+    });
+
+    //Bind event to tab switch
+    tabSwitchEventBind["pluginContextWindow"] = function(){
+        //On switch over to this page, load info
+        resizeIframe();
+    }
+
+    initPluginUIView();
+</script>

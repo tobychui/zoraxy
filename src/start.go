@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
@@ -26,6 +27,8 @@ import (
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
+	"imuslab.com/zoraxy/mod/plugins"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
@@ -317,6 +320,28 @@ func startupSequence() {
 		log.Fatal(err)
 	}
 
+	/*
+		Plugin Manager
+	*/
+
+	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
+		PluginDir: "./plugins",
+		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
+			ZoraxyVersion: SYSTEM_VERSION,
+			ZoraxyUUID:    nodeUUID,
+		},
+		Database: sysdb,
+		Logger:   SystemWideLogger,
+		CSRFTokenGen: func(r *http.Request) string {
+			return csrf.Token(r)
+		},
+	})
+
+	err = pluginManager.LoadPluginsFromDisk()
+	if err != nil {
+		SystemWideLogger.PrintAndLog("Plugin Manager", "Failed to load plugins", err)
+	}
+
 	/* Docker UX Optimizer */
 	if runtime.GOOS == "windows" && *runningInDocker {
 		SystemWideLogger.PrintAndLog("warning", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
@@ -364,6 +389,10 @@ func ShutdownSeq() {
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
 	}
+	//Close the plugin manager
+	SystemWideLogger.Println("Shutting down plugin manager")
+	pluginManager.Close()
+
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
 	os.RemoveAll("./tmp")

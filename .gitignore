@@ -45,3 +45,7 @@ src/log/
 # dev-tags
 /Dockerfile
 /Entrypoint.sh
+
+# plugins
+example/plugins/ztnc/ztnc.db
+example/plugins/ztnc/authtoken.secret

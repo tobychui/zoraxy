@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -544,4 +545,40 @@ func handleWhitelistEnable(w http.ResponseWriter, r *http.Request) {
 
 		utils.SendOK(w)
 	}
+}
+
+// List all quick ban ip address
+func handleListQuickBan(w http.ResponseWriter, r *http.Request) {
+	currentSummary := statisticCollector.GetCurrentDailySummary()
+	type quickBanEntry struct {
+		IpAddr      string
+		Count       int
+		CountryCode string
+	}
+	result := []quickBanEntry{}
+	currentSummary.RequestClientIp.Range(func(key, value interface{}) bool {
+		ip := key.(string)
+		count := value.(int)
+		thisEntry := quickBanEntry{
+			IpAddr: ip,
+			Count:  count,
+		}
+
+		//Get the country code
+		geoinfo, err := geodbStore.ResolveCountryCodeFromIP(ip)
+		if err == nil {
+			thisEntry.CountryCode = geoinfo.CountryIsoCode
+		}
+
+		result = append(result, thisEntry)
+		return true
+	})
+
+	//Sort result based on count
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Count > result[j].Count
+	})
+
+	js, _ := json.Marshal(result)
+	utils.SendJSONResponse(w, string(js))
 }

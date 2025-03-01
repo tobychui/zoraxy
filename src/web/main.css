@@ -188,6 +188,10 @@ body{
     z-index: 10;
 }
 
+.sideWrapper.extendedMode{
+    max-width: calc(80% - 1em);
+}
+
 .sideWrapper .content{
     height: 100%;
     width: 100%;
