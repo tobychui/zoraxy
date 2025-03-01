@@ -10,6 +10,7 @@ package main
 import (
 	"embed"
 	"flag"
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 	"net/http"
 	"time"
 
@@ -141,7 +142,8 @@ var (
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 
 	//Authentication Provider
-	autheliaRouter *authelia.AutheliaRouter //Authelia router for Authelia authentication
+	autheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
+	authentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

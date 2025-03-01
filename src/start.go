@@ -1,6 +1,7 @@
 package main
 
 import (
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 	"log"
 	"net/http"
 	"os"
@@ -144,6 +145,13 @@ func startupSequence() {
 		AutheliaURL: "",    // Automatic populate in router initiation
 		Logger:      SystemWideLogger,
 		Database:    sysdb,
+	})
+
+	authentikRouter = authentik.NewAuthentikRouter(&authentik.AuthentikRouterOptions{
+		UseHTTPS:     false, // Automatic populate in router initiation
+		AuthentikURL: "",    // Automatic populate in router initiation
+		Logger:       SystemWideLogger,
+		Database:     sysdb,
 	})
 
 	//Create a statistic collector

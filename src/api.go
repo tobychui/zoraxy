@@ -81,6 +81,7 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 // Register the APIs for Authentication handlers like Authelia and OAUTH2
 func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/Authelia", autheliaRouter.HandleSetAutheliaURLAndHTTPS)
+	authRouter.HandleFunc("/api/sso/Authentik", authentikRouter.HandleSetAuthentikURLAndHTTPS)
 }
 
 // Register the APIs for redirection rules management functions

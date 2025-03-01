@@ -9,6 +9,7 @@ package dynamicproxy
 */
 import (
 	_ "embed"
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 	"net"
 	"net/http"
 	"sync"
@@ -61,7 +62,8 @@ type RouterOption struct {
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
 
 	/* Authentication Providers */
-	AutheliaRouter *authelia.AutheliaRouter //Authelia router for Authelia authentication
+	AutheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
+	AuthentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
 
 	/* Utilities */
 	Logger *logger.Logger //Logger for reverse proxy requets
@@ -141,6 +143,7 @@ const (
 	AuthMethodBasic                      //Basic Auth
 	AuthMethodAuthelia                   //Authelia
 	AuthMethodOauth2                     //Oauth2
+	AuthMethodAuthentik
 )
 
 type AuthenticationProvider struct {
