@@ -106,7 +106,7 @@ func (ar *AuthentikRouter) HandleAuthentikAuth(w http.ResponseWriter, r *http.Re
 	reqUrl := scheme + "://" + r.Host + r.RequestURI
 	// Pass request to outpost if path matches outpost prefix
 	if reqPath := strings.TrimPrefix(r.URL.Path, "/"); strings.HasPrefix(reqPath, outpostPrefix) {
-		req, err := http.NewRequest(r.Method, authentikBaseURL+r.URL.Path, nil)
+		req, err := http.NewRequest(r.Method, authentikBaseURL+r.RequestURI, r.Body)
 		if err != nil {
 			ar.options.Logger.PrintAndLog("Authentik", "Unable to create request", err)
 			w.WriteHeader(401)
@@ -144,7 +144,7 @@ func (ar *AuthentikRouter) HandleAuthentikAuth(w http.ResponseWriter, r *http.Re
 		return errors.New("unauthorized")
 	}
 
-	req.Header.Add("X-Original-URL", reqUrl)
+	req.Header.Set("X-Original-URL", reqUrl)
 
 	// Copy cookies from the incoming request
 	for _, cookie := range r.Cookies() {
