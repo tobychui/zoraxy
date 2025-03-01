@@ -1,3 +1,14 @@
+# v3.1.9 1 Mar 2025
+
++ Fixed netstat underflow bug
++ Fixed origin picker cookie bug [#550](https://github.com/tobychui/zoraxy/issues/550)
++ Added prototype plugin system
++ Added plugin examples
++ Added notice for build-in Zerotier network controller deprecation (and will be moved to plugins)
++ Added country code display for quickban list [#247](https://github.com/tobychui/zoraxy/issues/247)
++ Removed passive load balancer and default to active lb only [#554](https://github.com/tobychui/zoraxy/issues/554)
+
+
 # v3.1.8 16 Feb 2025
 
 + Exposed timeout value from dpcore to UI
