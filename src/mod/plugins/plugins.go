@@ -39,7 +39,8 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 
 	return &Manager{
 		LoadedPlugins: sync.Map{},
-		TagPluginMap:  sync.Map{},
+		tagPluginMap:  sync.Map{},
+		tagPluginList: make(map[string][]*Plugin),
 		Options:       options,
 	}
 }
@@ -76,7 +77,7 @@ func (m *Manager) LoadPluginsFromDisk() error {
 	}
 
 	//Generate the static forwarder radix tree
-	m.UpdateTagsToTree()
+	m.UpdateTagsToPluginMaps()
 
 	return nil
 }
@@ -98,7 +99,7 @@ func (m *Manager) EnablePlugin(pluginID string) error {
 	}
 	m.Options.Database.Write("plugins", pluginID, true)
 	//Generate the static forwarder radix tree
-	m.UpdateTagsToTree()
+	m.UpdateTagsToPluginMaps()
 	return nil
 }
 
@@ -110,7 +111,7 @@ func (m *Manager) DisablePlugin(pluginID string) error {
 		return err
 	}
 	//Generate the static forwarder radix tree
-	m.UpdateTagsToTree()
+	m.UpdateTagsToPluginMaps()
 	return nil
 }
 
@@ -184,11 +185,17 @@ func (m *Plugin) StartAllStaticPathRouters() {
 	}
 }
 
+// StopAllStaticPathRouters stops all static path routers
 func (m *Plugin) StopAllStaticPathRouters() {
-
+	for path := range m.staticRouteProxy {
+		m.staticRouteProxy[path] = nil
+		delete(m.staticRouteProxy, path)
+	}
+	m.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
 }
 
-func (p *Plugin) HandleRoute(w http.ResponseWriter, r *http.Request, longestPrefix string) {
+// HandleStaticRoute handles the request to the plugin via static path captures (static forwarder)
+func (p *Plugin) HandleStaticRoute(w http.ResponseWriter, r *http.Request, longestPrefix string) {
 	longestPrefix = strings.TrimSuffix(longestPrefix, "/")
 	targetRouter := p.staticRouteProxy[longestPrefix]
 	if targetRouter == nil {

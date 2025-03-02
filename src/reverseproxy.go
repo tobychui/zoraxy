@@ -931,7 +931,11 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 // Report the current status of the reverse proxy server
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
-	js, _ := json.Marshal(dynamicProxyRouter)
+	js, err := json.Marshal(dynamicProxyRouter)
+	if err != nil {
+		utils.SendErrorResponse(w, "Unable to marshal status data")
+		return
+	}
 	utils.SendJSONResponse(w, string(js))
 }
 

@@ -15,12 +15,25 @@ import (
 	request path registered when the plugin started
 */
 
-func (m *Manager) UpdateTagsToTree() {
+func (m *Manager) UpdateTagsToPluginMaps() {
 	//build the tag to plugin pointer sync.Map
-	m.TagPluginMap = sync.Map{}
+	m.tagPluginMap = sync.Map{}
 	for tag, pluginIds := range m.Options.PluginGroups {
 		tree := m.GetForwarderRadixTreeFromPlugins(pluginIds)
-		m.TagPluginMap.Store(tag, tree)
+		m.tagPluginMap.Store(tag, tree)
+	}
+
+	//build the plugin list for each tag
+	m.tagPluginList = make(map[string][]*Plugin)
+	for tag, pluginIds := range m.Options.PluginGroups {
+		for _, pluginId := range pluginIds {
+			plugin, err := m.GetPluginByID(pluginId)
+			if err != nil {
+				m.Log("Failed to get plugin by ID: "+pluginId, err)
+				continue
+			}
+			m.tagPluginList[tag] = append(m.tagPluginList[tag], plugin)
+		}
 	}
 }
 
@@ -61,8 +74,6 @@ func (m *Manager) GetForwarderRadixTreeFromPlugins(pluginIds []string) *radix.Tr
 				} else {
 					//The path has already been assigned to another plugin
 					pluginList, _ := r.Get(captureRule.CapturePath)
-					//pluginList = append(pluginList.([]*Plugin), plugin)
-					//r.Insert(captureRule.CapturePath, pluginList)
 
 					//Warn the path is already assigned to another plugin
 					if plugin.Spec.ID == pluginList.([]*Plugin)[0].Spec.ID {

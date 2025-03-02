@@ -43,16 +43,18 @@ func (p *PathRouter) SetDebugPrintMode(enable bool) {
 	p.enableDebugPrint = enable
 }
 
-func (p *PathRouter) RegisterHandle(capture_ingress string, mux *http.ServeMux) {
+// StartStaticCapture starts the static capture ingress
+func (p *PathRouter) RegisterStaticCaptureHandle(capture_ingress string, mux *http.ServeMux) {
 	if !strings.HasSuffix(capture_ingress, "/") {
 		capture_ingress = capture_ingress + "/"
 	}
 	mux.Handle(capture_ingress, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
+		p.staticCaptureServeHTTP(w, r)
 	}))
 }
 
-func (p *PathRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// staticCaptureServeHTTP serves the static capture path using user defined handler
+func (p *PathRouter) staticCaptureServeHTTP(w http.ResponseWriter, r *http.Request) {
 	capturePath := r.Header.Get("X-Zoraxy-Capture")
 	if capturePath != "" {
 		if p.enableDebugPrint {

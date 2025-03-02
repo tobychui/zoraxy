@@ -46,6 +46,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	}
 	js, _ := json.Marshal(pluginConfiguration)
 
+	//Start the plugin with given configuration
 	m.Log("Starting plugin "+thisPlugin.Spec.Name+" at :"+strconv.Itoa(pluginConfiguration.Port), nil)
 	cmd := exec.Command(absolutePath, "-configure="+string(js))
 	cmd.Dir = filepath.Dir(absolutePath)
@@ -95,6 +96,12 @@ func (m *Manager) StartPlugin(pluginID string) error {
 
 	//Create a new static forwarder router for each of the static capture paths
 	plugin.(*Plugin).StartAllStaticPathRouters()
+
+	//If the plugin contains dynamic capture, create a dynamic capture handler
+	if thisPlugin.AcceptDynamicRoute() {
+		plugin.(*Plugin).StartDynamicForwardRouter()
+	}
+
 	return nil
 }
 
@@ -202,6 +209,7 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	thisPlugin.uiProxy = nil
 	plugin.(*Plugin).Enabled = false
 	plugin.(*Plugin).StopAllStaticPathRouters()
+	plugin.(*Plugin).StopDynamicForwardRouter()
 	return nil
 }
 
