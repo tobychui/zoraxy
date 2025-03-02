@@ -2,6 +2,7 @@ package dpcore
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -130,6 +131,9 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 
 	if dpcOptions.IgnoreTLSVerification {
 		//Ignore TLS certificate validation error
+		if thisTransporter.(*http.Transport).TLSClientConfig == nil {
+			thisTransporter.(*http.Transport).TLSClientConfig = &tls.Config{}
+		}
 		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 	}
 
