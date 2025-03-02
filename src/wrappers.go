@@ -348,7 +348,6 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 		Development:       DEVELOPMENT_BUILD,
 		BootTime:          displayBootTime,
 		EnableSshLoopback: displayAllowSSHLB,
-		ZerotierConnected: ganManager.ControllerID != "",
 	}
 
 	js, _ := json.MarshalIndent(info, "", " ")
