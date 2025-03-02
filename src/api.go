@@ -144,24 +144,6 @@ func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)
 }
 
-// Register the APIs for Global Area Network management functions, Will be moving to plugin soon
-func RegisterGANAPIs(authRouter *auth.RouterDef) {
-	authRouter.HandleFunc("/api/gan/network/info", ganManager.HandleGetNodeID)
-	authRouter.HandleFunc("/api/gan/network/add", ganManager.HandleAddNetwork)
-	authRouter.HandleFunc("/api/gan/network/remove", ganManager.HandleRemoveNetwork)
-	authRouter.HandleFunc("/api/gan/network/list", ganManager.HandleListNetwork)
-	authRouter.HandleFunc("/api/gan/network/name", ganManager.HandleNetworkNaming)
-	//authRouter.HandleFunc("/api/gan/network/detail", ganManager.HandleNetworkDetails)
-	authRouter.HandleFunc("/api/gan/network/setRange", ganManager.HandleSetRanges)
-	authRouter.HandleFunc("/api/gan/network/join", ganManager.HandleServerJoinNetwork)
-	authRouter.HandleFunc("/api/gan/network/leave", ganManager.HandleServerLeaveNetwork)
-	authRouter.HandleFunc("/api/gan/members/list", ganManager.HandleMemberList)
-	authRouter.HandleFunc("/api/gan/members/ip", ganManager.HandleMemberIP)
-	authRouter.HandleFunc("/api/gan/members/name", ganManager.HandleMemberNaming)
-	authRouter.HandleFunc("/api/gan/members/authorize", ganManager.HandleMemberAuthorization)
-	authRouter.HandleFunc("/api/gan/members/delete", ganManager.HandleMemberDelete)
-}
-
 // Register the APIs for Stream (TCP / UDP) Proxy management functions
 func RegisterStreamProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/streamprox/config/add", streamProxyManager.HandleAddProxyConfig)
@@ -344,7 +326,6 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterAccessRuleAPIs(authRouter)
 	RegisterPathRuleAPIs(authRouter)
 	RegisterStatisticalAPIs(authRouter)
-	RegisterGANAPIs(authRouter)
 	RegisterStreamProxyAPIs(authRouter)
 	RegisterMDNSAPIs(authRouter)
 	RegisterNetworkUtilsAPIs(authRouter)

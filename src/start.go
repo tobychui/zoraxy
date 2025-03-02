@@ -20,7 +20,6 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
-	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
@@ -156,6 +155,7 @@ func startupSequence() {
 	if err != nil {
 		panic(err)
 	}
+	statisticCollector.SetAutoSave(STATISTIC_AUTO_SAVE_INTERVAL)
 
 	//Start the static web server
 	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
@@ -247,24 +247,6 @@ func startupSequence() {
 		}
 	}
 
-	/*
-		Global Area Network
-
-		Require zerotier token to work
-	*/
-	usingZtAuthToken := *ztAuthToken
-	if usingZtAuthToken == "" {
-		usingZtAuthToken, err = ganserv.TryLoadorAskUserForAuthkey()
-		if err != nil {
-			SystemWideLogger.Println("Failed to load ZeroTier controller API authtoken")
-		}
-	}
-	ganManager = ganserv.NewNetworkManager(&ganserv.NetworkManagerOptions{
-		AuthToken: usingZtAuthToken,
-		ApiPort:   *ztAPIPort,
-		Database:  sysdb,
-	})
-
 	//Create WebSSH Manager
 	webSshManager = sshprox.NewSSHProxyManager()
 
@@ -332,6 +314,12 @@ func startupSequence() {
 		},
 		Database: sysdb,
 		Logger:   SystemWideLogger,
+		//TODO: REMOVE AFTER DEBUG
+		PluginGroups: map[string][]string{
+			"debug": {
+				"org.aroz.zoraxy.debugger",
+			},
+		},
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},
