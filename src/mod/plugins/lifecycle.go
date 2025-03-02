@@ -92,6 +92,9 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	// Store the cmd object so it can be accessed later for stopping the plugin
 	plugin.(*Plugin).process = cmd
 	plugin.(*Plugin).Enabled = true
+
+	//Create a new static forwarder router for each of the static capture paths
+	plugin.(*Plugin).StartAllStaticPathRouters()
 	return nil
 }
 
@@ -198,6 +201,7 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	//Remove the UI proxy
 	thisPlugin.uiProxy = nil
 	plugin.(*Plugin).Enabled = false
+	plugin.(*Plugin).StopAllStaticPathRouters()
 	return nil
 }
 

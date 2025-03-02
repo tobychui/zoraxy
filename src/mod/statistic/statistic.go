@@ -50,6 +50,8 @@ type CollectorOption struct {
 
 type Collector struct {
 	rtdataStopChan chan bool
+	autoSaveTicker *time.Ticker
+	autSaveStop    chan bool
 	DailySummary   *DailySummary
 	Option         *CollectorOption
 }
@@ -76,6 +78,35 @@ func NewStatisticCollector(option CollectorOption) (*Collector, error) {
 	thisCollector.rtdataStopChan = rtstatStopChan
 
 	return &thisCollector, nil
+}
+
+// Set the autosave duration, the collector will save the daily summary to database
+// set saveInterval to 0 to disable autosave
+func (c *Collector) SetAutoSave(saveInterval int) {
+	//Stop the current ticker if exists
+	if c.autSaveStop != nil {
+		c.autSaveStop <- true
+	}
+
+	if saveInterval == 0 {
+		return
+	}
+
+	c.autSaveStop = make(chan bool)
+	ticker := time.NewTicker(time.Duration(saveInterval) * time.Second)
+	c.autoSaveTicker = ticker
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				c.SaveSummaryOfDay()
+			case <-c.autSaveStop:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 // Write the current in-memory summary to database file
@@ -122,7 +153,6 @@ func (c *Collector) Close() {
 
 	//Write the buffered data into database
 	c.SaveSummaryOfDay()
-
 }
 
 // Main function to record all the inbound traffics

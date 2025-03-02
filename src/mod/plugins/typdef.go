@@ -21,13 +21,15 @@ type Plugin struct {
 	Enabled bool                     //Whether the plugin is enabled
 
 	//Runtime
-	AssignedPort int                  //The assigned port for the plugin
-	uiProxy      *dpcore.ReverseProxy //The reverse proxy for the plugin UI
-	process      *exec.Cmd            //The process of the plugin
+	AssignedPort     int                             //The assigned port for the plugin
+	uiProxy          *dpcore.ReverseProxy            //The reverse proxy for the plugin UI
+	staticRouteProxy map[string]*dpcore.ReverseProxy //Storing longest prefix => dpcore map for static route
+	process          *exec.Cmd                       //The process of the plugin
 }
 
 type ManagerOptions struct {
-	PluginDir    string
+	PluginDir    string              //The directory where the plugins are stored
+	PluginGroups map[string][]string //The plugin groups,key is the tag name and the value is an array of plugin IDs
 	SystemConst  *zoraxyPlugin.RuntimeConstantValue
 	Database     *database.Database
 	Logger       *logger.Logger
@@ -36,5 +38,6 @@ type ManagerOptions struct {
 
 type Manager struct {
 	LoadedPlugins sync.Map //Storing *Plugin
+	TagPluginMap  sync.Map //Storing *radix.Tree for each plugin tag
 	Options       *ManagerOptions
 }

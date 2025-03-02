@@ -11,10 +11,16 @@ package plugins
 
 import (
 	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -33,6 +39,7 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 
 	return &Manager{
 		LoadedPlugins: sync.Map{},
+		TagPluginMap:  sync.Map{},
 		Options:       options,
 	}
 }
@@ -54,6 +61,7 @@ func (m *Manager) LoadPluginsFromDisk() error {
 				continue
 			}
 			thisPlugin.RootDir = filepath.ToSlash(pluginPath)
+			thisPlugin.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
 			m.LoadedPlugins.Store(thisPlugin.Spec.ID, thisPlugin)
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
@@ -66,6 +74,9 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			}
 		}
 	}
+
+	//Generate the static forwarder radix tree
+	m.UpdateTagsToTree()
 
 	return nil
 }
@@ -86,6 +97,8 @@ func (m *Manager) EnablePlugin(pluginID string) error {
 		return err
 	}
 	m.Options.Database.Write("plugins", pluginID, true)
+	//Generate the static forwarder radix tree
+	m.UpdateTagsToTree()
 	return nil
 }
 
@@ -96,6 +109,8 @@ func (m *Manager) DisablePlugin(pluginID string) error {
 	if err != nil {
 		return err
 	}
+	//Generate the static forwarder radix tree
+	m.UpdateTagsToTree()
 	return nil
 }
 
@@ -121,6 +136,16 @@ func (m *Manager) ListLoadedPlugins() ([]*Plugin, error) {
 	return plugins, nil
 }
 
+// Log a message with the plugin name
+func (m *Manager) LogForPlugin(p *Plugin, message string, err error) {
+	processID := -1
+	if p.process != nil && p.process.Process != nil {
+		// Get the process ID of the plugin
+		processID = p.process.Process.Pid
+	}
+	m.Log("["+p.Spec.Name+":"+strconv.Itoa(processID)+"] "+message, err)
+}
+
 // Terminate all plugins and exit
 func (m *Manager) Close() {
 	m.LoadedPlugins.Range(func(key, value interface{}) bool {
@@ -133,4 +158,66 @@ func (m *Manager) Close() {
 
 	//Wait until all loaded plugin process are terminated
 	m.BlockUntilAllProcessExited()
+}
+
+/* Plugin Functions */
+func (m *Plugin) StartAllStaticPathRouters() {
+	// Create a dpcore object for each of the static capture paths of the plugin
+	for _, captureRule := range m.Spec.StaticCapturePaths {
+		//Make sure the captureRule consists / prefix and no trailing /
+		if captureRule.CapturePath == "" {
+			continue
+		}
+		if !strings.HasPrefix(captureRule.CapturePath, "/") {
+			captureRule.CapturePath = "/" + captureRule.CapturePath
+		}
+		captureRule.CapturePath = strings.TrimSuffix(captureRule.CapturePath, "/")
+
+		// Create a new dpcore object to forward the traffic to the plugin
+		targetURL, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(m.AssignedPort) + m.Spec.StaticCaptureIngress)
+		if err != nil {
+			fmt.Println("Failed to parse target URL: "+targetURL.String(), err)
+			continue
+		}
+		thisRouter := dpcore.NewDynamicProxyCore(targetURL, captureRule.CapturePath, &dpcore.DpcoreOptions{})
+		m.staticRouteProxy[captureRule.CapturePath] = thisRouter
+	}
+}
+
+func (m *Plugin) StopAllStaticPathRouters() {
+
+}
+
+func (p *Plugin) HandleRoute(w http.ResponseWriter, r *http.Request, longestPrefix string) {
+	longestPrefix = strings.TrimSuffix(longestPrefix, "/")
+	targetRouter := p.staticRouteProxy[longestPrefix]
+	if targetRouter == nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		fmt.Println("Error: target router not found for prefix", longestPrefix)
+		return
+	}
+
+	originalRequestURI := r.RequestURI
+
+	//Rewrite the request path to the plugin UI path
+	rewrittenURL := r.RequestURI
+	rewrittenURL = strings.TrimPrefix(rewrittenURL, longestPrefix)
+	rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	if rewrittenURL == "" {
+		rewrittenURL = "/"
+	}
+	r.URL, _ = url.Parse(rewrittenURL)
+
+	targetRouter.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+		UseTLS:       false,
+		OriginalHost: r.Host,
+		ProxyDomain:  "127.0.0.1:" + strconv.Itoa(p.AssignedPort),
+		NoCache:      true,
+		PathPrefix:   longestPrefix,
+		UpstreamHeaders: [][]string{
+			{"X-Zoraxy-Capture", longestPrefix},
+			{"X-Zoraxy-URI", originalRequestURI},
+		},
+	})
+
 }

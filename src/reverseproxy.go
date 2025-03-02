@@ -108,6 +108,7 @@ func ReverseProxtInit() {
 		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
+		/* Routing Service Managers */
 		TlsManager:         tlsCertManager,
 		RedirectRuleTable:  redirectTable,
 		GeodbStore:         geodbStore,
@@ -116,7 +117,9 @@ func ReverseProxtInit() {
 		AccessController:   accessController,
 		AutheliaRouter:     autheliaRouter,
 		LoadBalancer:       loadBalancer,
-		Logger:             SystemWideLogger,
+		PluginManager:      pluginManager,
+		/* Utilities */
+		Logger: SystemWideLogger,
 	})
 	if err != nil {
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to create dynamic proxy router", err)

@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	PLUGIN_ID = "org.aroz.zoraxy.debugger"
-	UI_PATH   = "/debug"
+	PLUGIN_ID              = "org.aroz.zoraxy.debugger"
+	UI_PATH                = "/debug"
+	STATIC_CAPTURE_INGRESS = "/s_capture"
 )
 
 func main() {
@@ -28,15 +29,15 @@ func main() {
 		VersionMinor:  0,
 		VersionPatch:  0,
 
-		GlobalCapturePaths: []plugin.CaptureRule{
+		StaticCapturePaths: []plugin.StaticCaptureRule{
 			{
-				CapturePath:     "/debug_test", //Capture all traffic of all HTTP proxy rule
-				IncludeSubPaths: true,
+				CapturePath: "/test_a",
+			},
+			{
+				CapturePath: "/test_b",
 			},
 		},
-		GlobalCaptureIngress: "",
-		AlwaysCapturePaths:   []plugin.CaptureRule{},
-		AlwaysCaptureIngress: "",
+		StaticCaptureIngress: "/s_capture",
 
 		UIPath: UI_PATH,
 
@@ -50,21 +51,42 @@ func main() {
 		panic(err)
 	}
 
-	// Register the shutdown handler
-	plugin.RegisterShutdownHandler(func() {
-		// Do cleanup here if needed
-		fmt.Println("Debugger Terminated")
-	})
+	//Create a path handler for the capture paths
+	pathRouter := plugin.NewPathRouter()
+	pathRouter.SetDebugPrintMode(true)
+	pathRouter.RegisterPathHandler("/test_a", http.HandlerFunc(HandleCaptureA))
+	pathRouter.RegisterPathHandler("/test_b", http.HandlerFunc(HandleCaptureB))
+	pathRouter.SetDefaultHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//In theory this should never be called
+		//but just in case the request is not captured by the path handlers
+		//this will be the fallback handler
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("This request is captured by the default handler!<br>Request URI: " + r.URL.String()))
+	}))
+	pathRouter.RegisterHandle(STATIC_CAPTURE_INGRESS, http.DefaultServeMux)
 
 	http.HandleFunc(UI_PATH+"/", RenderDebugUI)
-	http.HandleFunc("/gcapture", HandleIngressCapture)
 	fmt.Println("Debugger started at http://127.0.0.1:" + strconv.Itoa(runtimeCfg.Port))
 	http.ListenAndServe("127.0.0.1:"+strconv.Itoa(runtimeCfg.Port), nil)
 }
 
 // Handle the captured request
-func HandleIngressCapture(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Capture request received")
+func HandleCaptureA(w http.ResponseWriter, r *http.Request) {
+	for key, values := range r.Header {
+		for _, value := range values {
+			fmt.Printf("%s: %s\n", key, value)
+		}
+	}
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte("This request is captured by the debugger"))
+	w.Write([]byte("This request is captured by A handler!<br>Request URI: " + r.URL.String()))
+}
+
+func HandleCaptureB(w http.ResponseWriter, r *http.Request) {
+	for key, values := range r.Header {
+		for _, value := range values {
+			fmt.Printf("%s: %s\n", key, value)
+		}
+	}
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte("This request is captured by the B handler!<br>Request URI: " + r.URL.String()))
 }

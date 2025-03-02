@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	plugin "example.com/zoraxy/helloworld/zoraxy_plugin"
+	plugin "example.com/zoraxy/helloworld/mod/zoraxy_plugin"
 )
 
 const (

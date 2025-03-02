@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 )
 
 /*
@@ -24,9 +22,9 @@ const (
 	PluginType_Utilities PluginType = 1 //Utilities Plugin, used for utilities like Zerotier or Static Web Server that do not require interception with the dpcore
 )
 
-type CaptureRule struct {
-	CapturePath     string `json:"capture_path"`
-	IncludeSubPaths bool   `json:"include_sub_paths"`
+type StaticCaptureRule struct {
+	CapturePath string `json:"capture_path"`
+	//To be expanded
 }
 
 type ControlStatusCode int
@@ -74,23 +72,24 @@ type IntroSpect struct {
 	*/
 
 	/*
-		Global Capture Settings
+		Static Capture Settings
 
-		Once plugin is enabled these rules always applies, no matter which HTTP Proxy rule it is enabled on
-		This captures the whole traffic of Zoraxy
-
+		Once plugin is enabled these rules always applies to the enabled HTTP Proxy rule
+		This is faster than dynamic capture, but less flexible
 	*/
-	GlobalCapturePaths   []CaptureRule `json:"global_capture_path"`    //Global traffic capture path of your plugin
-	GlobalCaptureIngress string        `json:"global_capture_ingress"` //Global traffic capture ingress path of your plugin (e.g. /g_handler)
+	StaticCapturePaths   []StaticCaptureRule `json:"static_capture_paths"`   //Static capture paths of your plugin, see Zoraxy documentation for more details
+	StaticCaptureIngress string              `json:"static_capture_ingress"` //Static capture ingress path of your plugin (e.g. /s_handler)
 
 	/*
-		Always Capture Settings
+		Dynamic Capture Settings
 
-		Once the plugin is enabled on a given HTTP Proxy rule,
-		these always applies
+		Once plugin is enabled, these rules will be captured and forward to plugin sniff
+		if the plugin sniff returns 280, the traffic will be captured
+		otherwise, the traffic will be forwarded to the next plugin
+		This is slower than static capture, but more flexible
 	*/
-	AlwaysCapturePaths   []CaptureRule `json:"always_capture_path"`    //Always capture path of your plugin when enabled on a HTTP Proxy rule (e.g. /myapp)
-	AlwaysCaptureIngress string        `json:"always_capture_ingress"` //Always capture ingress path of your plugin when enabled on a HTTP Proxy rule (e.g. /a_handler)
+	DynamicCaptureSniff   string `json:"dynamic_capture_sniff"`   //Dynamic capture sniff path of your plugin (e.g. /d_sniff)
+	DynamicCaptureIngress string `json:"dynamic_capture_ingress"` //Dynamic capture ingress path of your plugin (e.g. /d_handler)
 
 	/* UI Path for your plugin */
 	UIPath string `json:"ui_path"` //UI path of your plugin (e.g. /ui), will proxy the whole subpath tree to Zoraxy Web UI as plugin UI
@@ -173,26 +172,4 @@ See the ServeIntroSpect and RecvConfigureSpec for more details
 func ServeAndRecvSpec(pluginSpect *IntroSpect) (*ConfigureSpec, error) {
 	ServeIntroSpect(pluginSpect)
 	return RecvConfigureSpec()
-}
-
-/*
-
-Shutdown handler
-
-This function will register a shutdown handler for the plugin
-The shutdown callback will be called when the plugin is shutting down
-You can use this to clean up resources like closing database connections
-*/
-
-func RegisterShutdownHandler(shutdownCallback func()) {
-	// Set up a channel to receive OS signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Start a goroutine to listen for signals
-	go func() {
-		<-sigChan
-		shutdownCallback()
-		os.Exit(0)
-	}()
 }

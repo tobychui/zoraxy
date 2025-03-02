@@ -49,3 +49,4 @@ src/log/
 # plugins
 example/plugins/ztnc/ztnc.db
 example/plugins/ztnc/authtoken.secret
+example/plugins/ztnc/ztnc.db.lock

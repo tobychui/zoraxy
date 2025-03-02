@@ -23,7 +23,6 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/forwardproxy"
-	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
@@ -43,23 +42,24 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.1.9"
-	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
+	SYSTEM_VERSION    = "3.2.0"
+	DEVELOPMENT_BUILD = true /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
-	TMP_FOLDER                 = "./tmp"
-	WEBSERV_DEFAULT_PORT       = 5487
-	MDNS_HOSTNAME_PREFIX       = "zoraxy_" /* Follow by node UUID */
-	MDNS_IDENTIFY_DEVICE_TYPE  = "Network Gateway"
-	MDNS_IDENTIFY_DOMAIN       = "zoraxy.aroz.org"
-	MDNS_IDENTIFY_VENDOR       = "imuslab.com"
-	MDNS_SCAN_TIMEOUT          = 30 /* Seconds */
-	MDNS_SCAN_UPDATE_INTERVAL  = 15 /* Minutes */
-	GEODB_CACHE_CLEAR_INTERVAL = 15 /* Minutes */
-	ACME_AUTORENEW_CONFIG_PATH = "./conf/acme_conf.json"
-	CSRF_COOKIENAME            = "zoraxy_csrf"
-	LOG_PREFIX                 = "zr"
-	LOG_EXTENSION              = ".log"
+	TMP_FOLDER                   = "./tmp"
+	WEBSERV_DEFAULT_PORT         = 5487
+	MDNS_HOSTNAME_PREFIX         = "zoraxy_" /* Follow by node UUID */
+	MDNS_IDENTIFY_DEVICE_TYPE    = "Network Gateway"
+	MDNS_IDENTIFY_DOMAIN         = "zoraxy.aroz.org"
+	MDNS_IDENTIFY_VENDOR         = "imuslab.com"
+	MDNS_SCAN_TIMEOUT            = 30 /* Seconds */
+	MDNS_SCAN_UPDATE_INTERVAL    = 15 /* Minutes */
+	GEODB_CACHE_CLEAR_INTERVAL   = 15 /* Minutes */
+	ACME_AUTORENEW_CONFIG_PATH   = "./conf/acme_conf.json"
+	CSRF_COOKIENAME              = "zoraxy_csrf"
+	LOG_PREFIX                   = "zr"
+	LOG_EXTENSION                = ".log"
+	STATISTIC_AUTO_SAVE_INTERVAL = 600 /* Seconds */
 
 	/* Configuration Folder Storage Path Constants */
 	CONF_HTTP_PROXY   = "./conf/proxy"
@@ -132,7 +132,6 @@ var (
 	statisticCollector *statistic.Collector      //Collecting statistic from visitors
 	uptimeMonitor      *uptime.Monitor           //Uptime monitor service worker
 	mdnsScanner        *mdns.MDNSHost            //mDNS discovery services
-	ganManager         *ganserv.NetworkManager   //Global Area Network Manager
 	webSshManager      *sshprox.Manager          //Web SSH connection service
 	streamProxyManager *streamproxy.Manager      //Stream Proxy Manager for TCP / UDP forwarding
 	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew

@@ -22,6 +22,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/plugins"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/tlscert"
 )
@@ -59,6 +60,7 @@ type RouterOption struct {
 	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
 	WebDirectory       string                    //The static web server directory containing the templates folder
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
+	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
 
 	/* Authentication Providers */
 	AutheliaRouter *authelia.AutheliaRouter //Authelia router for Authelia authentication
