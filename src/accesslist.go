@@ -547,6 +547,38 @@ func handleWhitelistEnable(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleWhitelistAllowLoopback(w http.ResponseWriter, r *http.Request) {
+	enable, _ := utils.PostPara(r, "enable")
+	ruleID, err := utils.PostPara(r, "id")
+	if err != nil {
+		ruleID = "default"
+	}
+
+	rule, err := accessController.GetAccessRuleByID(ruleID)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	if enable == "" {
+		//Return the current enabled state
+		currentEnabled := rule.WhitelistAllowLocalAndLoopback
+		js, _ := json.Marshal(currentEnabled)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		if enable == "true" {
+			rule.ToggleAllowLoopback(true)
+		} else if enable == "false" {
+			rule.ToggleAllowLoopback(false)
+		} else {
+			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
+			return
+		}
+
+		utils.SendOK(w)
+	}
+}
+
 // List all quick ban ip address
 func handleListQuickBan(w http.ResponseWriter, r *http.Request) {
 	currentSummary := statisticCollector.GetCurrentDailySummary()

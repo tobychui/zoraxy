@@ -151,6 +151,7 @@ func (m *Manager) handlePluginSTDOUT(pluginID string, line string) {
 	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
 }
 
+// StopPlugin stops a plugin, it is garanteed that the plugin is stopped after this function
 func (m *Manager) StopPlugin(pluginID string) error {
 	plugin, ok := m.LoadedPlugins.Load(pluginID)
 	if !ok {
@@ -223,16 +224,4 @@ func (m *Manager) PluginStillRunning(pluginID string) bool {
 		return false
 	}
 	return plugin.(*Plugin).process.ProcessState == nil
-}
-
-// BlockUntilAllProcessExited blocks until all the plugins processes have exited
-func (m *Manager) BlockUntilAllProcessExited() {
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
-		if m.PluginStillRunning(value.(*Plugin).Spec.ID) {
-			//Wait for the plugin to exit
-			plugin.process.Wait()
-		}
-		return true
-	})
 }

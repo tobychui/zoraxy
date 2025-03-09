@@ -312,14 +312,14 @@ func startupSequence() {
 			ZoraxyVersion: SYSTEM_VERSION,
 			ZoraxyUUID:    nodeUUID,
 		},
-		Database: sysdb,
-		Logger:   SystemWideLogger,
-		//TODO: REMOVE AFTER DEBUG
-		PluginGroups: map[string][]string{
+		Database:           sysdb,
+		Logger:             SystemWideLogger,
+		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
+		/*PluginGroups: map[string][]string{
 			"debug": {
 				"org.aroz.zoraxy.debugger",
 			},
-		},
+		},*/
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},
@@ -377,6 +377,12 @@ func ShutdownSeq() {
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
 	}
+
+	if accessController != nil {
+		SystemWideLogger.Println("Closing Access Controller")
+		accessController.Close()
+	}
+
 	//Close the plugin manager
 	SystemWideLogger.Println("Shutting down plugin manager")
 	pluginManager.Close()

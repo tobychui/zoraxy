@@ -45,6 +45,7 @@ func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []str
 		wg.Add(1)
 		go func(thisTag string) {
 			defer wg.Done()
+			m.tagPluginListMutex.RLock()
 			for _, plugin := range m.tagPluginList[thisTag] {
 				if plugin.Enabled && plugin.Spec.DynamicCaptureSniff != "" && plugin.Spec.DynamicCaptureIngress != "" {
 					mutex.Lock()
@@ -52,6 +53,7 @@ func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []str
 					mutex.Unlock()
 				}
 			}
+			m.tagPluginListMutex.RUnlock()
 		}(tag)
 	}
 	wg.Wait()

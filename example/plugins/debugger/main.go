@@ -78,8 +78,8 @@ func main() {
 		Dynamic Captures
 	*/
 	pathRouter.RegisterDynamicSniffHandler("/d_sniff", http.DefaultServeMux, func(dsfr *plugin.DynamicSniffForwardRequest) plugin.SniffResult {
-		fmt.Println("Dynamic Capture Sniffed Request:")
-		fmt.Println("Request URI: " + dsfr.RequestURI)
+		//fmt.Println("Dynamic Capture Sniffed Request:")
+		//fmt.Println("Request URI: " + dsfr.RequestURI)
 
 		//In this example, we want to capture all URI
 		//that start with /test_ and forward it to the dynamic capture handler

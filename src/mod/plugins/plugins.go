@@ -10,6 +10,7 @@ package plugins
 */
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,14 +35,24 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 		os.MkdirAll(options.PluginDir, 0755)
 	}
 
+	//Create the plugin config file if not exists
+	if !utils.FileExists(options.PluginGroupsConfig) {
+		js, _ := json.Marshal(map[string][]string{})
+		err := os.WriteFile(options.PluginGroupsConfig, js, 0644)
+		if err != nil {
+			options.Logger.PrintAndLog("plugin-manager", "Failed to create plugin group config file", err)
+		}
+	}
+
 	//Create database table
 	options.Database.NewTable("plugins")
 
 	return &Manager{
-		LoadedPlugins: sync.Map{},
-		tagPluginMap:  sync.Map{},
-		tagPluginList: make(map[string][]*Plugin),
-		Options:       options,
+		LoadedPlugins:      sync.Map{},
+		tagPluginMap:       sync.Map{},
+		tagPluginListMutex: sync.RWMutex{},
+		tagPluginList:      make(map[string][]*Plugin),
+		Options:            options,
 	}
 }
 
@@ -73,6 +84,14 @@ func (m *Manager) LoadPluginsFromDisk() error {
 					m.Log("Failed to enable plugin: "+thisPlugin.Spec.Name, err)
 				}
 			}
+		}
+	}
+
+	if m.Options.PluginGroupsConfig != "" {
+		//Load the plugin groups from the config file
+		err = m.LoadPluginGroupsFromConfig()
+		if err != nil {
+			m.Log("Failed to load plugin groups", err)
 		}
 	}
 
@@ -156,9 +175,6 @@ func (m *Manager) Close() {
 		}
 		return true
 	})
-
-	//Wait until all loaded plugin process are terminated
-	m.BlockUntilAllProcessExited()
 }
 
 /* Plugin Functions */

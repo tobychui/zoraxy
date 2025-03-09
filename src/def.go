@@ -62,12 +62,13 @@ const (
 	STATISTIC_AUTO_SAVE_INTERVAL = 600 /* Seconds */
 
 	/* Configuration Folder Storage Path Constants */
-	CONF_HTTP_PROXY   = "./conf/proxy"
-	CONF_STREAM_PROXY = "./conf/streamproxy"
-	CONF_CERT_STORE   = "./conf/certs"
-	CONF_REDIRECTION  = "./conf/redirect"
-	CONF_ACCESS_RULE  = "./conf/access"
-	CONF_PATH_RULE    = "./conf/rules/pathrules"
+	CONF_HTTP_PROXY    = "./conf/proxy"
+	CONF_STREAM_PROXY  = "./conf/streamproxy"
+	CONF_CERT_STORE    = "./conf/certs"
+	CONF_REDIRECTION   = "./conf/redirect"
+	CONF_ACCESS_RULE   = "./conf/access"
+	CONF_PATH_RULE     = "./conf/rules/pathrules"
+	CONF_PLUGIN_GROUPS = "./conf/plugin_groups.json"
 )
 
 /* System Startup Flags */

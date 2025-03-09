@@ -375,6 +375,21 @@
                 <div class="toggleSucc" style="float: right; display:none; color: #2abd4d;" >
                     <i class="ui green checkmark icon"></i> Setting Saved
                 </div>
+                <div class="ui basic segment advanceoptions">
+                    <div class="ui accordion advanceSettings">
+                        <div class="title">
+                          <i class="dropdown icon"></i>
+                            Advance Settings
+                        </div>
+                        <div class="content">
+                            <div class="ui toggle checkbox">
+                                <input type="checkbox" id="enableWhitelistLoopback">
+                                <label>Enable LAN and Loopback<br>
+                                    <small>Allowing loopback request from your public IP address and local area network devices</small></label>
+                            </div>
+                        </div>
+                    </div>  
+                </div>
                 <h4>Country Whitelist</h4>
                     <p><i class="yellow exclamation triangle icon"></i>
                     This will allow all requests from the selected country. The requester's location is estimated from their IP address and may not be 100% accurate.</p>
@@ -1043,6 +1058,31 @@
                 enableWhitelist();
             })
         });
+
+        $.get("/api/whitelist/allowLocal", function(data){
+            if (data == true){
+                $('#enableWhitelistLoopback').parent().checkbox("set checked");
+            }else{
+                $('#enableWhitelistLoopback').parent().checkbox("set unchecked");
+            }
+
+            //Register on change event
+            $("#enableWhitelistLoopback").off("change").on("change", function(){
+                enableWhitelistLoopback();
+            })
+        });
+    }
+    
+    function enableWhitelistLoopback(){
+        var isChecked = $('#enableWhitelistLoopback').is(':checked');
+        $.cjax({
+            type: 'POST',
+            url: '/api/whitelist/allowLocal',
+            data: { enable: isChecked, id: currentEditingAccessRule},
+            success: function(data){
+                msgbox("Loopback whitelist " + (isChecked ? "enabled" : "disabled"), true);
+            }
+        });
     }
     
     /*
@@ -1606,4 +1646,7 @@
     function handleUnban(targetIp){
         removeIpBlacklist(targetIp);
     }
+
+    //Bind UI events
+    $(".advanceSettings").accordion();
 </script>

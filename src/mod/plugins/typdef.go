@@ -29,19 +29,24 @@ type Plugin struct {
 }
 
 type ManagerOptions struct {
-	PluginDir    string              //The directory where the plugins are stored
-	PluginGroups map[string][]string //The plugin groups,key is the tag name and the value is an array of plugin IDs
+	PluginDir          string              //The directory where the plugins are stored
+	PluginGroups       map[string][]string //The plugin groups,key is the tag name and the value is an array of plugin IDs
+	PluginGroupsConfig string              //The group / tag configuration file, if set the plugin groups will be loaded from this file
 
 	/* Runtime */
 	SystemConst  *zoraxyPlugin.RuntimeConstantValue
 	CSRFTokenGen func(*http.Request) string `json:"-"` //The CSRF token generator function
 	Database     *database.Database         `json:"-"`
 	Logger       *logger.Logger             `json:"-"`
+
+	/* Internal */
+	pluginGroupsMutex sync.RWMutex //Mutex for the pluginGroups
 }
 
 type Manager struct {
-	LoadedPlugins sync.Map             //Storing *Plugin
-	tagPluginMap  sync.Map             //Storing *radix.Tree for each plugin tag
-	tagPluginList map[string][]*Plugin //Storing the plugin list for each tag, only concurrent READ is allowed
-	Options       *ManagerOptions
+	LoadedPlugins      sync.Map             //Storing *Plugin
+	tagPluginMap       sync.Map             //Storing *radix.Tree for each plugin tag
+	tagPluginListMutex sync.RWMutex         //Mutex for the tagPluginList
+	tagPluginList      map[string][]*Plugin //Storing the plugin list for each tag, only concurrent READ is allowed
+	Options            *ManagerOptions
 }

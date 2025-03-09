@@ -114,7 +114,7 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/whitelist/ip/add", handleIpWhitelistAdd)
 	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
 	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
-
+	authRouter.HandleFunc("/api/whitelist/allowLocal", handleWhitelistAllowLoopback)
 	/* Quick Ban List */
 	authRouter.HandleFunc("/api/quickban/list", handleListQuickBan)
 }

@@ -24,6 +24,7 @@ func (m *Manager) UpdateTagsToPluginMaps() {
 	}
 
 	//build the plugin list for each tag
+	m.tagPluginListMutex.Lock()
 	m.tagPluginList = make(map[string][]*Plugin)
 	for tag, pluginIds := range m.Options.PluginGroups {
 		for _, pluginId := range pluginIds {
@@ -35,6 +36,7 @@ func (m *Manager) UpdateTagsToPluginMaps() {
 			m.tagPluginList[tag] = append(m.tagPluginList[tag], plugin)
 		}
 	}
+	m.tagPluginListMutex.Unlock()
 }
 
 // GenerateForwarderRadixTree generates the radix tree for static forwarders
