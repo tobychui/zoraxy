@@ -42,7 +42,6 @@ func (u *Upstream) StartProxy() error {
 		IgnoreTLSVerification:   u.SkipCertValidations,
 		FlushInterval:           100 * time.Millisecond,
 		ResponseHeaderTimeout:   u.RespTimeout,
-		IdleConnectionTimeout:   u.IdleTimeout,
 		MaxConcurrentConnection: u.MaxConn,
 	})
 

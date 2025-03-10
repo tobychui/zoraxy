@@ -11,6 +11,11 @@ import (
 	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
+const (
+	RND_PORT_MIN = 5800
+	RND_PORT_MAX = 6000
+)
+
 /*
 Check if the folder contains a valid plugin in either one of the forms
 
@@ -44,7 +49,7 @@ func (m *Manager) GetPluginEntryPoint(folderpath string) (string, error) {
 		return filepath.Join(folderpath, "start.bat"), nil
 	}
 
-	return "", errors.New("No valid entry point found")
+	return "", errors.New("no valid entry point found")
 }
 
 // Log logs a message with an optional error
@@ -54,10 +59,10 @@ func (m *Manager) Log(message string, err error) {
 
 // getRandomPortNumber generates a random port number between 49152 and 65535
 func getRandomPortNumber() int {
-	portNo := rand.Intn(65535-49152) + 49152
+	portNo := rand.Intn(RND_PORT_MAX-RND_PORT_MIN) + RND_PORT_MIN
 	//Check if the port is already in use
 	for netutils.CheckIfPortOccupied(portNo) {
-		portNo = rand.Intn(65535-49152) + 49152
+		portNo = rand.Intn(RND_PORT_MAX-RND_PORT_MIN) + RND_PORT_MIN
 	}
 	return portNo
 }

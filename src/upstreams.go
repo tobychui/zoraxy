@@ -86,12 +86,6 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 		respTimeout = 0
 	}
 
-	//Idle timeout in seconds, set to 0 for default
-	idleTimeout, err := utils.PostInt(r, "idlet")
-	if err != nil {
-		idleTimeout = 0
-	}
-
 	//Max concurrent connection to dpcore instance, set to 0 for default
 	maxConn, err := utils.PostInt(r, "maxconn")
 	if err != nil {
@@ -112,7 +106,6 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 		Weight:                   1,
 		MaxConn:                  maxConn,
 		RespTimeout:              int64(respTimeout),
-		IdleTimeout:              int64(idleTimeout),
 	}
 
 	//Add the new upstream to endpoint

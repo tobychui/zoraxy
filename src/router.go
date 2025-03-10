@@ -63,6 +63,7 @@ func FSHandler(handler http.Handler) http.Handler {
 			//Extract the plugin ID from the request path
 			parts := strings.Split(r.URL.Path, "/")
 			if len(parts) > 2 {
+				//There is always a prefix slash, so [2] is the plugin ID
 				pluginID := parts[2]
 				pluginManager.HandlePluginUI(pluginID, w, r)
 			} else {

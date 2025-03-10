@@ -21,7 +21,7 @@ func (c *Controller) StartPublicIPUpdater() {
 	go func() {
 		for {
 			select {
-			case <-stopChan:
+			case <-c.publicIpTickerStop:
 				ticker.Stop()
 				return
 			case <-ticker.C:

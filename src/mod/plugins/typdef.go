@@ -44,9 +44,12 @@ type ManagerOptions struct {
 }
 
 type Manager struct {
-	LoadedPlugins      sync.Map             //Storing *Plugin
+	LoadedPlugins      map[string]*Plugin   //Storing *Plugin
 	tagPluginMap       sync.Map             //Storing *radix.Tree for each plugin tag
 	tagPluginListMutex sync.RWMutex         //Mutex for the tagPluginList
 	tagPluginList      map[string][]*Plugin //Storing the plugin list for each tag, only concurrent READ is allowed
 	Options            *ManagerOptions
+
+	/* Internal */
+	loadedPluginsMutex sync.RWMutex //Mutex for the loadedPlugins
 }

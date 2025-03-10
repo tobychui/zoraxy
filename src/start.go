@@ -315,21 +315,17 @@ func startupSequence() {
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
-		/*PluginGroups: map[string][]string{
-			"debug": {
-				"org.aroz.zoraxy.debugger",
-			},
-		},*/
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},
 	})
 
-	err = pluginManager.LoadPluginsFromDisk()
-	if err != nil {
-		SystemWideLogger.PrintAndLog("Plugin Manager", "Failed to load plugins", err)
-	}
-
+	/*
+		err = pluginManager.LoadPluginsFromDisk()
+		if err != nil {
+			SystemWideLogger.PrintAndLog("Plugin Manager", "Failed to load plugins", err)
+		}
+	*/
 	/* Docker UX Optimizer */
 	if runtime.GOOS == "windows" && *runningInDocker {
 		SystemWideLogger.PrintAndLog("warning", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)

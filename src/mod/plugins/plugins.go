@@ -48,11 +48,13 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 	options.Database.NewTable("plugins")
 
 	return &Manager{
-		LoadedPlugins:      sync.Map{},
+		LoadedPlugins:      make(map[string]*Plugin),
 		tagPluginMap:       sync.Map{},
 		tagPluginListMutex: sync.RWMutex{},
 		tagPluginList:      make(map[string][]*Plugin),
 		Options:            options,
+		/* Internal */
+		loadedPluginsMutex: sync.RWMutex{},
 	}
 }
 
@@ -74,7 +76,9 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			}
 			thisPlugin.RootDir = filepath.ToSlash(pluginPath)
 			thisPlugin.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
-			m.LoadedPlugins.Store(thisPlugin.Spec.ID, thisPlugin)
+			m.loadedPluginsMutex.Lock()
+			m.LoadedPlugins[thisPlugin.Spec.ID] = thisPlugin
+			m.loadedPluginsMutex.Unlock()
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
 			// If the plugin was enabled, start it now
@@ -103,11 +107,13 @@ func (m *Manager) LoadPluginsFromDisk() error {
 
 // GetPluginByID returns a plugin by its ID
 func (m *Manager) GetPluginByID(pluginID string) (*Plugin, error) {
-	plugin, ok := m.LoadedPlugins.Load(pluginID)
+	m.loadedPluginsMutex.RLock()
+	defer m.loadedPluginsMutex.RUnlock()
+	plugin, ok := m.LoadedPlugins[pluginID]
 	if !ok {
 		return nil, errors.New("plugin not found")
 	}
-	return plugin.(*Plugin), nil
+	return plugin, nil
 }
 
 // EnablePlugin enables a plugin
@@ -147,12 +153,12 @@ func (m *Manager) GetPluginPreviousEnableState(pluginID string) bool {
 
 // ListLoadedPlugins returns a list of loaded plugins
 func (m *Manager) ListLoadedPlugins() ([]*Plugin, error) {
-	var plugins []*Plugin = []*Plugin{}
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
+	plugins := []*Plugin{}
+	m.loadedPluginsMutex.RLock()
+	defer m.loadedPluginsMutex.RUnlock()
+	for _, plugin := range m.LoadedPlugins {
 		plugins = append(plugins, plugin)
-		return true
-	})
+	}
 	return plugins, nil
 }
 
@@ -168,13 +174,14 @@ func (m *Manager) LogForPlugin(p *Plugin, message string, err error) {
 
 // Terminate all plugins and exit
 func (m *Manager) Close() {
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
+	m.loadedPluginsMutex.Lock()
+	defer m.loadedPluginsMutex.Unlock()
+	for _, plugin := range m.LoadedPlugins {
 		if plugin.Enabled {
+			m.Options.Logger.PrintAndLog("plugin-manager", "Stopping plugin: "+plugin.Spec.Name, nil)
 			m.StopPlugin(plugin.Spec.ID)
 		}
-		return true
-	})
+	}
 }
 
 /* Plugin Functions */

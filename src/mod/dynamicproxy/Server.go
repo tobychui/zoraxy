@@ -92,7 +92,8 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//Plugin routing
-		if h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags) {
+
+		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags) {
 			//Request handled by subroute
 			return
 		}

@@ -45,11 +45,12 @@ func (m *Manager) GetForwarderRadixTreeFromPlugins(pluginIds []string) *radix.Tr
 	r := radix.New()
 
 	// Iterate over the loaded plugins and insert their paths into the radix tree
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
+	m.loadedPluginsMutex.RLock()
+	defer m.loadedPluginsMutex.RUnlock()
+	for _, plugin := range m.LoadedPlugins {
 		if !plugin.Enabled {
 			//Ignore disabled plugins
-			return true
+			continue
 		}
 
 		// Check if the plugin ID is in the list of plugin IDs
@@ -60,7 +61,7 @@ func (m *Manager) GetForwarderRadixTreeFromPlugins(pluginIds []string) *radix.Tr
 			}
 		}
 		if !includeThisPlugin {
-			return true
+			continue
 		}
 
 		//For each of the plugin, insert the requested static capture paths
@@ -88,8 +89,7 @@ func (m *Manager) GetForwarderRadixTreeFromPlugins(pluginIds []string) *radix.Tr
 				}
 			}
 		}
-		return true
-	})
+	}
 
 	return r
 }
