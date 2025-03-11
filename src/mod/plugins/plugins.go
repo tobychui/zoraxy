@@ -108,8 +108,8 @@ func (m *Manager) LoadPluginsFromDisk() error {
 // GetPluginByID returns a plugin by its ID
 func (m *Manager) GetPluginByID(pluginID string) (*Plugin, error) {
 	m.loadedPluginsMutex.RLock()
-	defer m.loadedPluginsMutex.RUnlock()
 	plugin, ok := m.LoadedPlugins[pluginID]
+	m.loadedPluginsMutex.RUnlock()
 	if !ok {
 		return nil, errors.New("plugin not found")
 	}
@@ -155,10 +155,10 @@ func (m *Manager) GetPluginPreviousEnableState(pluginID string) bool {
 func (m *Manager) ListLoadedPlugins() ([]*Plugin, error) {
 	plugins := []*Plugin{}
 	m.loadedPluginsMutex.RLock()
-	defer m.loadedPluginsMutex.RUnlock()
 	for _, plugin := range m.LoadedPlugins {
 		plugins = append(plugins, plugin)
 	}
+	m.loadedPluginsMutex.RUnlock()
 	return plugins, nil
 }
 
@@ -175,13 +175,19 @@ func (m *Manager) LogForPlugin(p *Plugin, message string, err error) {
 // Terminate all plugins and exit
 func (m *Manager) Close() {
 	m.loadedPluginsMutex.Lock()
-	defer m.loadedPluginsMutex.Unlock()
+	pluginsToStop := make([]*Plugin, 0)
 	for _, plugin := range m.LoadedPlugins {
 		if plugin.Enabled {
-			m.Options.Logger.PrintAndLog("plugin-manager", "Stopping plugin: "+plugin.Spec.Name, nil)
-			m.StopPlugin(plugin.Spec.ID)
+			pluginsToStop = append(pluginsToStop, plugin)
 		}
 	}
+	m.loadedPluginsMutex.Unlock()
+
+	for _, thisPlugin := range pluginsToStop {
+		m.Options.Logger.PrintAndLog("plugin-manager", "Stopping plugin: "+thisPlugin.Spec.Name, nil)
+		m.StopPlugin(thisPlugin.Spec.ID)
+	}
+
 }
 
 /* Plugin Functions */
