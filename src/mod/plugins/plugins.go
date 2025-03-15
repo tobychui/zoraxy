@@ -82,6 +82,7 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
 			// If the plugin was enabled, start it now
+			fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
 			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
 				err = m.StartPlugin(thisPlugin.Spec.ID)
 				if err != nil {
@@ -118,11 +119,11 @@ func (m *Manager) GetPluginByID(pluginID string) (*Plugin, error) {
 
 // EnablePlugin enables a plugin
 func (m *Manager) EnablePlugin(pluginID string) error {
+	m.Options.Database.Write("plugins", pluginID, true)
 	err := m.StartPlugin(pluginID)
 	if err != nil {
 		return err
 	}
-	m.Options.Database.Write("plugins", pluginID, true)
 	//Generate the static forwarder radix tree
 	m.UpdateTagsToPluginMaps()
 	return nil

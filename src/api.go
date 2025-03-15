@@ -29,6 +29,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/status", ReverseProxyStatus)
 	authRouter.HandleFunc("/api/proxy/toggle", ReverseProxyToggleRuleSet)
 	authRouter.HandleFunc("/api/proxy/list", ReverseProxyList)
+	authRouter.HandleFunc("/api/proxy/listTags", ReverseProxyListTags)
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
 	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
@@ -225,6 +226,11 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/enable", pluginManager.HandleEnablePlugin)
 	authRouter.HandleFunc("/api/plugins/disable", pluginManager.HandleDisablePlugin)
 	authRouter.HandleFunc("/api/plugins/icon", pluginManager.HandleLoadPluginIcon)
+
+	authRouter.HandleFunc("/api/plugins/groups/list", pluginManager.HandleListPluginGroups)
+	authRouter.HandleFunc("/api/plugins/groups/add", pluginManager.HandleAddPluginToGroup)
+	authRouter.HandleFunc("/api/plugins/groups/remove", pluginManager.HandleRemovePluginFromGroup)
+	authRouter.HandleFunc("/api/plugins/groups/deleteTag", pluginManager.HandleRemovePluginGroup)
 }
 
 // Register the APIs for Auth functions, due to scoping issue some functions are defined here

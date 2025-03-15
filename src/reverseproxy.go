@@ -1005,6 +1005,23 @@ func ReverseProxyListDetail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// List all tags used in the proxy rules
+func ReverseProxyListTags(w http.ResponseWriter, r *http.Request) {
+	results := []string{}
+	dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		thisEndpoint := value.(*dynamicproxy.ProxyEndpoint)
+		for _, tag := range thisEndpoint.Tags {
+			if !utils.StringInArray(results, tag) {
+				results = append(results, tag)
+			}
+		}
+		return true
+	})
+
+	js, _ := json.Marshal(results)
+	utils.SendJSONResponse(w, string(js))
+}
+
 func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {

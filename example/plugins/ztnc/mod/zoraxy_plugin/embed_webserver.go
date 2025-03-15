@@ -74,6 +74,20 @@ func (p *PluginUiRouter) populateCSRFToken(r *http.Request, fsHandler http.Handl
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(body))
 			return
+		} else if strings.HasSuffix(r.URL.Path, "/") {
+			// Check if the directory has an index.html file
+			indexFilePath := strings.TrimPrefix(r.URL.Path, "/") + "index.html"
+			indexFilePath = p.TargetFsPrefix + "/" + indexFilePath
+			indexFilePath = strings.TrimPrefix(indexFilePath, "/")
+			indexFileContent, err := fs.ReadFile(*p.TargetFs, indexFilePath)
+			if err == nil {
+				body := string(indexFileContent)
+				body = strings.ReplaceAll(body, "{{.csrfToken}}", csrfToken)
+				w.Header().Set("Content-Type", "text/html")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(body))
+				return
+			}
 		}
 
 		//Call the next handler
@@ -129,4 +143,14 @@ func (p *PluginUiRouter) RegisterTerminateHandler(termFunc func(), mux *http.Ser
 			os.Exit(0)
 		}()
 	})
+}
+
+// Attach the embed UI handler to the target http.ServeMux
+func (p *PluginUiRouter) AttachHandlerToMux(mux *http.ServeMux) {
+	if mux == nil {
+		mux = http.DefaultServeMux
+	}
+
+	p.HandlerPrefix = strings.TrimSuffix(p.HandlerPrefix, "/")
+	mux.Handle(p.HandlerPrefix+"/", p.Handler())
 }

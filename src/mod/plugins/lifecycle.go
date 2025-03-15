@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -53,10 +52,16 @@ func (m *Manager) StartPlugin(pluginID string) error {
 		return err
 	}
 
+	stdErrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
+	//Create a goroutine to handle the STDOUT of the plugin
 	go func() {
 		buf := make([]byte, 1)
 		lineBuf := ""
@@ -79,6 +84,48 @@ func (m *Manager) StartPlugin(pluginID string) error {
 				}
 				break
 			}
+		}
+	}()
+
+	//Create a goroutine to handle the STDERR of the plugin
+	go func() {
+		buf := make([]byte, 1)
+		lineBuf := ""
+		for {
+			n, err := stdErrPipe.Read(buf)
+			if n > 0 {
+				lineBuf += string(buf[:n])
+				for {
+					if idx := strings.IndexByte(lineBuf, '\n'); idx != -1 {
+						m.handlePluginSTDERR(pluginID, lineBuf[:idx])
+						lineBuf = lineBuf[idx+1:]
+					} else {
+						break
+					}
+				}
+			}
+			if err != nil {
+				if err != io.EOF {
+					m.handlePluginSTDERR(pluginID, lineBuf) // handle any remaining data
+				}
+				break
+			}
+		}
+	}()
+
+	//Create a goroutine to wait for the plugin to exit
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			//In theory this should not happen except for a crash
+			m.Log("plugin "+thisPlugin.Spec.ID+" encounted a fatal error. Disabling plugin...", err)
+
+			//Set the plugin state to disabled
+			thisPlugin.Enabled = false
+
+			//Generate a new static forwarder radix tree
+			m.UpdateTagsToPluginMaps()
+			return
 		}
 	}()
 
@@ -119,8 +166,6 @@ func (m *Manager) StartUIHandlerForPlugin(targetPlugin *Plugin, pluginListeningP
 		return err
 	}
 
-	fmt.Println("DEBUG: Requesting Plugin UI URL: ", pluginUIURL)
-
 	// Generate the plugin subpath to be trimmed
 	pluginMatchingPath := filepath.ToSlash(filepath.Join("/plugin.ui/"+targetPlugin.Spec.ID+"/")) + "/"
 	if targetPlugin.Spec.UIPath != "" {
@@ -144,6 +189,19 @@ func (m *Manager) handlePluginSTDOUT(pluginID string, line string) {
 	if err != nil {
 		m.Log("[unknown:"+strconv.Itoa(processID)+"] "+line, err)
 		return
+	}
+	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
+}
+
+func (m *Manager) handlePluginSTDERR(pluginID string, line string) {
+	thisPlugin, err := m.GetPluginByID(pluginID)
+	if err != nil {
+		return
+	}
+	processID := -1
+	if thisPlugin.process != nil && thisPlugin.process.Process != nil {
+		// Get the process ID of the plugin
+		processID = thisPlugin.process.Process.Pid
 	}
 	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
 }

@@ -102,7 +102,7 @@
         }
     
         function initGANetID(){
-            $.get("/api/gan/network/info", function(data){
+            $.get("./api/gan/network/info", function(data){
                 if (data.error !== undefined){
                     msgbox(data.error, false, 5000)
                 }else{

@@ -13,8 +13,6 @@ func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []str
 		return false
 	}
 
-	return false
-
 	//For each tag, check if the request path matches the static capture path                    //Wait group for the goroutines
 	var staticRoutehandlers []*Plugin          //The handler for the request, can be multiple plugins
 	var longestPrefixAcrossAlltags string = "" //The longest prefix across all tags
