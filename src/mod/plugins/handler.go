@@ -173,6 +173,28 @@ func (m *Manager) HandleListPlugins(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+func (m *Manager) HandlePluginInfo(w http.ResponseWriter, r *http.Request) {
+	pluginID, err := utils.GetPara(r, "plugin_id")
+	if err != nil {
+		utils.SendErrorResponse(w, "plugin_id not found")
+		return
+	}
+
+	plugin, err := m.GetPluginByID(pluginID)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	js, err := json.Marshal(plugin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	utils.SendJSONResponse(w, string(js))
+}
+
 func (m *Manager) HandleLoadPluginIcon(w http.ResponseWriter, r *http.Request) {
 	pluginID, err := utils.GetPara(r, "plugin_id")
 	if err != nil {

@@ -63,6 +63,42 @@
   .selectedPluginItem.active .selectedIcon{
     display: block;
   }
+
+  .pluginAddRemoveButtons{
+    border-left: 1px solid var(--divider_color); 
+    border-right: 1px solid var(--divider_color);
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important;
+  }
+
+  .pluginAddRemoveButtons .mobileViewOnly{
+      display: none;
+  }
+
+  .selectColTitle{
+    font-weight: bold;
+    margin-bottom: 0.4em;
+    text-align: center;
+    width: 100%;
+  }
+
+  @media (max-width: 780px) {
+    .pluginAddRemoveButtons {
+      border-left: none;
+      border-right: none;
+      border-top: 1px solid var(--divider_color);
+      border-bottom:  1px solid var(--divider_color);
+    }
+
+    .pluginAddRemoveButtons .mobileViewOnly{
+      display: block;
+    }
+
+    .pluginAddRemoveButtons .wideViewOnly{
+      display: none;
+    }
+  }
 </style>
 <div class="standardContainer">
     <div class="ui basic segment">
@@ -77,25 +113,38 @@
       Plugin Map
      <div class="sub header">Assigning a plugin to a tag will make the plugin available to the HTTP Proxy rule with the same tag.</div>
     </h4>
+    <br>
     <div class="ui stackable grid">
       <div class="seven wide column">
         <!-- Selectable plugin list -->
+        <div class="selectColTitle">Unassigned Plugins</div>
         <div id="selectablePluginList" class="ui relaxed divided list" style="border: 1px solid var(--divider_color);">
           <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
             <i class="ui arrow up icon"></i> Select a tag to view available plugins
           </div>
         </div>
       </div>
-      <div class="two wide column" style="display: flex; align-items: center; justify-content: center;">
+      <div class="two wide column pluginAddRemoveButtons">
         <!-- Add and Remove button -->
         <div>
-          <button id="removeSelectedPluginFromTagBtn" class="ui basic red icon button" title="Remove selected plugin from tag">
-            <i class="left arrow icon"></i>
-          </button>
-          <br>
-          <button id="addSelectedPluginTotagBtn" class="ui basic green icon button" title="Add selected plugin to tag" style="margin-top: 0.4em;">
-            <i class="right arrow icon"></i>
-          </button>
+          <div class="wideViewOnly">
+            <button class="ui basic red icon button removeSelectedPluginFromTagBtn" title="Remove selected plugin from tag">
+              <i class="left arrow icon"></i>
+            </button>
+            <br>
+            <button class="ui basic green icon button addSelectedPluginTotagBtn" title="Add selected plugin to tag" style="margin-top: 0.4em;">
+              <i class="right arrow icon"></i>
+            </button>
+          </div>
+          <div class="mobileViewOnly">
+            <button class="ui basic red icon button removeSelectedPluginFromTagBtn" title="Remove selected plugin from tag">
+              <i class="up arrow icon"></i>
+            </button>
+            <br>
+            <button class="ui basic green icon button addSelectedPluginTotagBtn" title="Add selected plugin to tag" style="margin-top: 0.4em;">
+              <i class="down arrow icon"></i>
+            </button>
+          </div>
         </div>
       </div>
       <div class="seven wide column">
@@ -110,6 +159,7 @@
         </div>
         <button class="ui basic fluid button" onclick="loadTags();" style="margin-top: 0.4em;"><i class="ui green refresh icon"></i> Refresh Tag List</button>
         <div class="ui divider"></div>
+        <div class="selectColTitle">Assigned Plugins</div>
         <div id="selectedTagPluginList" class="ui relaxed divided list" style="border: 1px solid var(--divider_color);">
             <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
             <i class="ui arrow up icon"></i> Select a tag to view assigned plugins
@@ -117,6 +167,7 @@
         </div>
       </div>
     </div>
+    <br>
     <div class="ui divider"></div>
     <h4 class="ui header">
        Plugin List
@@ -280,7 +331,7 @@ function bindEventsToSelectableItems(){
 
 //Bind events for the buttons
 function bindTagAssignButtonEvents(){
-  $("#addSelectedPluginTotagBtn").on("click", function(){
+  $(".addSelectedPluginTotagBtn").on("click", function(){
     const selectedPlugin = $(".selectablePluginItem.active");
     const selectedTag = $("#pluginTagList").dropdown("get value");
     if (selectedPlugin.length == 0){
@@ -295,7 +346,7 @@ function bindTagAssignButtonEvents(){
     addPluginToTag(pluginId, selectedTag);
   });
 
-  $("#removeSelectedPluginFromTagBtn").on("click", function(){
+  $(".removeSelectedPluginFromTagBtn").on("click", function(){
     const selectedPlugin = $(".selectedPluginItem.active");
     const selectedTag = $("#pluginTagList").dropdown("get value");
     if (selectedPlugin.length == 0){
@@ -429,14 +480,15 @@ function initiatePluginList(){
           <a href="${plugin.Spec.url}" target="_blank">${plugin.Spec.url}</a></td>
           <td data-label="Category">${plugin.Spec.type==0?"Router":"Utilities"}</td>
           <td data-label="Action">
-            <div class="ui small basic buttons">
-              <button onclick="stopPlugin('${plugin.Spec.id}', this);" class="ui button pluginEnableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? '' : 'style="display:none;"'}>
-                <i class="red stop circle icon"></i> Stop
-              </button>
-              <button onclick="startPlugin('${plugin.Spec.id}', this);" class="ui button pluginDisableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? 'style="display:none;"' : ''}>
-                <i class="green play circle icon"></i> Start
-              </button>
-            </div>
+            <button onclick="getPluginInfo('${plugin.Spec.id}', this);" class="ui basic icon button" pluginid="${plugin.Spec.id}">
+              <i class="info circle icon"></i>
+            </button>
+            <button onclick="stopPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginEnableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? '' : 'style="display:none;"'}>
+              <i class="red stop circle icon"></i> Stop
+            </button>
+            <button onclick="startPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginDisableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? 'style="display:none;"' : ''}>
+              <i class="green play circle icon"></i> Start
+            </button>
           </td>
         </tr>
       `;
@@ -503,6 +555,12 @@ function stopPlugin(pluginId, btn=undefined){
       initPluginSideMenu();
     }
   });
+}
+
+/* Plugin information */
+function getPluginInfo(pluginId, btn){
+  let payload = encodeURIComponent(JSON.stringify({plugin_id: pluginId}));
+  showSideWrapper("snippet/pluginInfo.html?t=" + Date.now() + "#" + payload);
 }
 
 </script>

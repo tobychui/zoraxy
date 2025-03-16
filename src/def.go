@@ -80,8 +80,6 @@ var (
 	allowSshLoopback           = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
 	allowMdnsScanning          = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
 	mdnsName                   = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
-	ztAuthToken                = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
-	ztAPIPort                  = flag.Int("ztport", 9993, "ZeroTier controller API port")
 	runningInDocker            = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 	acmeAutoRenewInterval      = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 	acmeCertAutoRenewDays      = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
