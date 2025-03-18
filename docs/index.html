@@ -1,128 +1,116 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
   <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta content="Reverse Proxy, Cluster, Gateway, Go, Homelab, Network Tools" name="keywords">
-    <meta content="A reverse proxy server and cluster network gateway for noobs" name="description">
+    <meta content="Reverse Proxy, Open Source, Aroz, Go, OS, NAS, Cloud" name="keywords">
+    <meta content="Simplify your self-hosted services with Zoraxy, the ultimate homelab networking toolbox" name="description">
     <meta name="author" content="tobychui">
 
     <!-- HTML Meta Tags -->
-    <title>Reverse Proxy Server | Zoraxy</title>
-    <meta name="description" content="A reverse proxy server and cluster network gateway for noobs">
+    <title>Homelab Gateway | Zoraxy</title>
+    <meta name="description" content="Simplify your self-hosted services with Zoraxy, the ultimate homelab networking toolbox">
 
     <!-- Facebook Meta Tags -->
     <meta property="og:url" content="https://zoraxy.aroz.org/">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Cluster Proxy Gateway | Zoraxy">
-    <meta property="og:description" content="A reverse proxy server and cluster network gateway for noobs">
+    <meta property="og:title" content="Hello Zoraxy">
+    <meta property="og:description" content="Simplify your self-hosted services with Zoraxy, the ultimate homelab networking toolbox">
     <meta property="og:image" content="https://zoraxy.aroz.org/img/og.png">
 
     <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta property="twitter:domain" content="aroz.org">
+    <meta property="twitter:domain" content="os.aroz.org">
     <meta property="twitter:url" content="https://zoraxy.aroz.org/">
-    <meta name="twitter:title" content="Cluster Proxy Gateway | Zoraxy">
-    <meta name="twitter:description" content="A reverse proxy server and cluster network gateway for noobs">
+    <meta name="twitter:title" content="Hello Zoraxy">
+    <meta name="twitter:description" content="Simplify your self-hosted services with Zoraxy, the ultimate homelab networking toolbox">
     <meta name="twitter:image" content="https://zoraxy.aroz.org/img/og.png">
 
+    <!-- JavaScript Libs-->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="dom-i18n.min.js"></script>
+    <link href="main.css" rel="stylesheet">
+    <script src="main.js" defer></script>
+
+    <!-- Css stuffs-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.js" integrity="sha512-gnoBksrDbaMnlE0rhhkcx3iwzvgBGz6mOEj4/Y5ZY09n55dYddx6+WYc72A55qEesV8VX2iMomteIwobeGK1BQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.css" integrity="sha512-3quBdRGJyLy79hzhDDcBzANW+mVqPctrGCfIPosHQtMKb3rKsCxfyslzwlz2wj1dT8A7UX+sEvDjaUv+WExQrA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <!-- Favicons -->
-    <link href="favicon.png" rel="icon">
+    <link href="img/favicon.png" rel="icon">
+    <link href="img/apple-touch-icon.png" rel="apple-touch-icon">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@100;300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p&family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100;300;400&display=swap" rel="stylesheet">
 
-    <!-- Main Stylesheet File -->
-    <link href="style.css" rel="stylesheet">
-    <script
-      src="https://code.jquery.com/jquery-3.7.0.min.js"
-      integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g="
-      crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.js" integrity="sha512-5cguXwRllb+6bcc2pogwIeQmQPXEzn2ddsqAexIBhh7FO1z5Hkek1J9mrK2+rmZCTU6b6pERxI7acnp1MpAg4Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.css" integrity="sha512-n//BDM4vMPvyca4bJjZPDh7hlqsQ7hqbP9RH18GF2hTXBY5amBwM2501M0GPiwCU/v9Tor2m13GOTFjk00tkQA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <style>
-      p,a,div,span,h1,h2,h3,h4,h5,h6{
-        font-family: 'Source Sans Pro', sans-serif !important;
-        color: #404040;
-      }
-    </style>
+    <!-- AOS.js-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" integrity="sha512-A7AYk1fGKX6S2SsHywmPkrnzTZHrgiVT7GcQkLGDe2ev0aWb8zejytzS8wjo7PGEXKqJOrjQ4oORtnimIRZBtw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" integrity="sha512-1cK78a1o+ht2JcaW6g8OXYwqpev9+6GqOkz9xmBN9iUUhIndKtxwILGWYOSibOKjLsEdjyjZvYDq/cZwNeak0w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <div class="main section">
-      <div class="left-menu">
-        <div class="iconWrapper">
-          <a href="index.html"><img class="ui fluid image" src="img/icon.png"></a>
-        </div>
-        <a href="#home" class="menu-item active" align="center">
-          <img src="img/icons/home.svg">
-        </a>
-        <a href="#features" class="menu-item" align="center">
-          <img src="img/icons/awesome.svg">
-        </a>
-        <a href="#screenshots" class="menu-item" align="center">
-          <img src="img/icons/screenshots.svg">
-        </a>
-        <a href="#plugins" class="menu-item" align="center">
-          <img src="img/icons/plugin.svg">
-        </a>
-        <a href="#source" class="menu-item" align="center">
-          <img src="img/icons/code.svg">
-        </a>
-      </div>
-      <div class="right-content">
-        <!-- Hero Banner Section -->
-        <div class="headbanner"></div>
-        <div id="home" class="herotext">
-          <div class="ui basic segment">
-            <div class="bannerHeaderWrapper">
-              <h1 class="bannerHeader">Zoraxy</h1>
-			  <div class="ui divider"></div><br>
-              <p class="bannerSubheader">Beyond Reverse Proxy: Your Ultimate Homelab Network Tool</p>
+    <div id="backToTopBtn" class="ui big icon button" onclick="backToTop();">
+       <i class="ui arrow up icon"></i>
+    </div>
+    <button id="rwdmenubtn" class="ui black big icon button"><i class="ui bars icon"></i></button>
+    <div id="mainmenu" class="ui segment" style="background: transparent !important;">
+        <div class="ui container">
+            <div class="ui small stackable secondary menu">
+                <div class="item">
+                    <img class="ui tiny image" src="img/logo.png">
+                </div>
+                <a class="item" href="#mainmenu" i18n>
+                    Home // 主頁
+                </a>
+                <a class="item" href="#about" i18n>
+                    About Zoraxy // 關於 Zoraxy
+                </a>
+                <a class="item" href="#features" i18n>
+                    Screenshots // 系統截圖
+                </a>
+                <a class="item" href="#techspec" i18n>
+                    Videos // 介紹影片
+                </a>
+                <a class="item" href="#download" i18n>
+                    Download // 下載
+                </a>
+                <a class="item" href="#learnmore" i18n>
+                    Learn More // 了解更多
+                </a>
+                <a class="right floated item">
+                    <div class="ui small selection dropdown">
+                        <input type="hidden" id="language">
+                        <div class="default text" style="color: #6cacff;"><i class="language icon"></i> Default</div>
+                        <i class="dropdown icon"></i>
+                        <div class="menu">
+                            <div class="item" data-value="en">English</div>
+                            <div class="item" data-value="zh">中文（正體）</div>
+                        </div>
+                    </div>
+                </a>
             </div>
-            <br><br>
-            <a class="ui basic big button" style="background-color: white;" href="#features"><i class="ui blue arrow down icon"></i> Learn More</a>
-            <br><br>
-            <table class="ui very basic collapsing unstackable celled table">
-              <thead>
-                <tr><th colspan="2">Quick Access</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <h4 class="ui image header">
-                    <i class="ui download icon"></i>
-                    <div class="content">
-                      Download
-                      <div class="sub header">Prebuild Binary
-                    </div>
-                  </div>
-                </h4></td>
-                <td>
-                  <a href="https://github.com/tobychui/zoraxy/releases" target="_blank">Open <i class="ui external icon"></i></a>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4 class="ui image header">
-                    <i class="ui github icon"></i>
-                    <div class="content">
-                      Github
-                      <div class="sub header">Source Code
-                    </div>
-                  </div>
-                </h4></td>
-                <td>
-                  <a href="https://github.com/tobychui/zoraxy" target="_blank">Open <i class="ui external icon"></i></a>
-                </td>
-              </tr>
-            </table>
-          </div>
-		  
-		  <div id="wavesWrapper">
+        </div>
+    </div>
+    <div id="slideshowBanner">
+        <div class="title">
+            <h1 i18n>Zoraxy</h1>
+            <div class="ui divider" style="border-top: 1px solid rgba(255,255,255,0.5); "></div>
+            <p i18n>The ultimate homelab networking toolbox for self-hosted services
+                // 簡化自家伺服器部署之事，初學者居家網絡必備良器
+            </p>
+            <a href="https://github.com/tobychui/zoraxy/releases" class="ui basic white button" target="_blank"><i style="color:white;" class="ui download icon"></i><span i18n>Download // 立即下載</span></a>
+            <a href="https://github.com/tobychui/zoraxy" class="ui basic white button" target="_blank"><i style="color: white;" class="ui code icon"></i><span i18n>Source Code // 查看原始碼</span></a>
+            
+            <div class="scrolldownTips">
+                <img class="ui tiny image" src="img/scrolldown.webp"><br>
+                <span i18n>Scroll down to learn more // 向下滑以了解更多 // スクロールダウンして詳細をご覧ください // 下滑了解更多</span>
+            </div>
+        </div>
+        <div id="wavesWrapper">
             <!-- CSS waves-->
             <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
             viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
@@ -137,250 +125,354 @@
                 </g>
             </svg>
         </div>
-        </div>
-
-        <!-- Features -->
-        <div id="features" class="section">
-          <div class="ui container">
-            <div class="ui basic segment">
-              <h1 class="ui header">
-                <img class="ui small image" src="img/icons/awesome.svg">
-                <div class="content">
-                    Features
-                    <div class="sub header">Highlighting a few important features of Zoraxy</div>
-                </div>
-              </h1>
-              <br>
-              <div class="ui stackable grid featureList">
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/proxy.svg">
-                    <div class="content">
-                      Reverse Proxy
-                    </div>
-                  </h3>
-                  <p>Simple to use noob-friendly reverse proxy server that can be easily set up using a web form and a few toggle switches.</p>
-                </div>
-
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/redirect.svg">
-                    <div class="content">
-                      Redirection
-                    </div>
-                  </h3>
-                  <p>Direct and intuitive redirection rules with basic rewrite options. Suitable for most simple use cases.</p>
-                </div>
-
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/blacklist.svg">
-                    <div class="content">
-                      Geo-IP & Blacklist
-                    </div>
-                  </h3>
-                  <p>Blacklist with GeoIP support. Allows easy setup for regional services.</p>
-                </div>
-
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/gan.svg">
-                    <div class="content">
-                      Global Area Network
-                    </div>
-                  </h3>
-                  <p>ZeroTier controller integrated GAN. Enable unlimited nodes in your network with a few clicks.</p>
-                </div>
-
-                <!-- Row 2-->
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/terminal.svg">
-                    <div class="content">
-                      Web SSH
-                    </div>
-                  </h3>
-                  <p>Integration with Gotty Web SSH terminal allows one-stop management of your nodes inside private LAN via gateway nodes.</p>
-                </div>
-
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/stats.svg">
-                    <div class="content">
-                      Real Time Statistics
-                    </div>
-                  </h3>
-                  <p>Traffic data collection and real-time analytic tools provide you the best insight of visitors data without cookies.</p>
-                </div>
-
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/scan.svg">
-                    <div class="content">
-                      Scanner & Utilities
-                    </div>
-                  </h3>
-                  <p>Build in IP scanner and mDNS discovery service to enable automatic service discovery within LAN.</p>
-                </div>
-
-                <div class="four wide column featureItem">
-                  <h3 class="ui header featureHeader">
-                    <img class="ui image" src="img/icons/code.svg">
-                    <div class="content">
-                      Open Source
-                    </div>
-                  </h3>
-                  <p>Project is open-source under AGPL on Github. Feel free to contribute on missing functions you need! </p>
-                </div>
-              </div>
+    </div>
+    <br><br><br><br>
+    <!-- About ArozOS-->
+    <div id="about" class="ui text container">
+        <div class="ui stackable grid" data-aos="fade-up">
+            <div class="six wide column" align="right">
+                <img class="ui medium image" src="img/preview-pc.png">
             </div>
-          </div>
-        </div>
+            <div class="ten wide column">
+                <div class="about-text-wrapper">
+                    <p class="about-title"><b i18n>Reverse Proxy // 反向代理</b></p>
+                    <p><span i18n>Easy setups with dynamic updates // 讓你想不到般簡單易用、迅速設定、動態更新</span></p>
+                    <p i18n>Access your reverse proxy and self-hosted services from any computer with a browser, anytime, anywhere.
+                        // 透過瀏覽器，隨時隨地在任何裝置上存取您的反向代理及自家伺服器服務。
+                   
+                    </p>
+                    <div class="ui list">
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                Simple setups with web UI
+                                // 透過網頁介面簡單設定即可使用
+                               
+                            </div>
+                        </div>
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                Change settings on the fly without restarting
+                                // 即時更改設定，無需重新啟動
+  
+                            </div>
+                        </div>
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                One of the best reverse proxy manager for beginners
+                                // 可能是最適合初學者的反向代理管理器之一
 
-        <!-- Screenshots -->
-        <div id="screenshots" class="ui container">
-          <div class="ui basic segment">
-            <br>
-            <h1 class="ui header">
-              <img class="ui small image" src="img/icons/screenshots.svg">
-              <div class="content">
-                  Screenshots
-                  <div class="sub header">A quick overview of the UI designs</div>
-              </div>
-            </h1>
-            
-            <div class="ui three column stackable grid">
-              <div class="column">
-                <a href="img/screenshots/1.png" target="_blank"><img src="img/screenshots/1.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/2.png" target="_blank"><img src="img/screenshots/2.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/3.png" target="_blank"><img src="img/screenshots/3.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/4.png" target="_blank"><img src="img/screenshots/4.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/5.png" target="_blank"><img src="img/screenshots/5.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/6.png" target="_blank"><img src="img/screenshots/6.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/7.png" target="_blank"><img src="img/screenshots/7.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/8.png" target="_blank"><img src="img/screenshots/8.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/9.png" target="_blank"><img src="img/screenshots/9.png" class="ui fluid image screenshot"></a>
-              </div>
-              <div class="column">
-                <a href="img/screenshots/10.png" target="_blank"><img src="img/screenshots/10.png" class="ui fluid image screenshot"></a>
-              </div>
-            </div> 
-          </div>
-        </div>
-
-        <!-- Plugin Developments -->
-        <div id="plugins" class="ui container">
-          <div class="ui basic segment">
-            <br>
-            <h1 class="ui header">
-              <img class="ui small image" src="img/icons/plugin.svg">
-              <div class="content">
-                  Plugins
-                  <div class="sub header">Add custom routing rules via simple scripts</div>
-              </div>
-            </h1>
-            <div style="width: 100%; text-align: center;">
-              <br>
-              <p>Documentation work in progress</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Source code -->
-        <div id="source" class="ui container">
-          <div class="ui basic segment">
-            <br>
-            <h1 class="ui header">
-              <img class="ui small image" src="img/icons/code.svg">
-              <div class="content">
-                  Source Code
-                  <div class="sub header">Feel free to give us a ⭐ star ⭐.</div>
-              </div>
-            </h1>
-            <br>
-            <div class="ui two column stackable grid">
-              <div class="column">
-                  <h3 class="ui header">
-                    <i class="grey github icon"></i>
-                    <div class="content" style="text-align: left;">
-                      <a href="https://github.com/tobychui/zoraxy">
-                        Github
-                        <div class="sub header">https://github.com/tobychui/zoraxy</div>
-                      </a>
+                            </div>
+                        </div>
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                Easily install plugins and edit configurations
+                                // 輕鬆安裝插件並編輯設定
+                            </div>
+                        </div>
                     </div>
-                  </h3>
-              </div>
-              <div class="column">
-                <h3 class="ui header">
-                  <i class="blue mail icon"></i>
-                  <div class="content" style="text-align: left;">
-                    <a href="mailto:toby@imuslab.com">
-                      Email Contact
-                      <div class="sub header">toby@imuslab.com</div>
-                    </a>
-                  </div>
-                </h3>
-              </div>
+                </div>
             </div>
-          </div>
         </div>
+        <div class="ui stackable grid" data-aos="fade-up">
+            <div class="six wide column" align="right">
+                <img class="ui medium image" src="img/preview-mobile.png">
+            </div>
+            <div class="ten wide column">
+                <div class="about-text-wrapper">
+                    <p class="about-title"><b i18n>Real-time Analytics // 即時流量分析</b></p>
+                    <p><span i18n>Dynamic statistic and access control // 動態流量數據、權限與路由設定</span></p>
+                    <p i18n>Provide real time statistical overview, take advantage of the real time traffic and situations to make better decisions.
+                        // 提供即時統計概覽，利用即時流量和情況做出更好的決策。
 
-        <br><br>
-        <div class="ui container">
-          <p style="color: #3a3a3a">CopyRight Zoraxy Project and its authors © 2021 - <span class="year"></span></p>
+                    </p>
+                    <div class="ui list">
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                Real time visitor statistic
+                                // 即時訪客統計概覽
+
+                            </div>
+                        </div>
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                Instant network utilitization overview
+                                // 即時網路使用率概覽
+
+                            </div>
+                        </div>
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                No-reload access control and settings
+                                // 即時生效存取控制和設定
+
+                            </div>
+                        </div>
+                        <div class="item">
+                            <i class="caret right icon"></i>
+                            <div class="content" i18n>
+                                One-click setting change with no downtime
+                                // 一鍵設定更改，無需停機
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br><br><br><br>
+    <!-- Features -->
+    <div class="ui divider"></div>
+    <div id="features" class="ui container">
+        <div class="centered title">
+            <h1 i18n>Screenshots // 系統截圖</h1>
+        </div>
+        <div class="ui three column grid">
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/1.png">
+            </div>
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/2.png">
+            </div>
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/3.png">
+            </div>
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/4.png">
+            </div>  
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/5.png">
+            </div>  
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/6.png">
+            </div>
+            <!-- <div class="column">
+                <img class="ui fluid image" src="img/screenshots/7.png">
+            </div> -->
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/8.png">
+            </div>
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/9.png">
+            </div>
+            <div class="column">
+                <img class="ui fluid image" src="img/screenshots/10.png">
+            </div>
         </div>
         <br><br><br>
-      </div>
     </div>
-    <br>
+
+    <!-- Spec -->
+    <div id="techspec" class="blackbanner">
+        <br><br>
+        <div class="centered title">
+            <h1 i18n>Review Videos // 介紹影片 </h1>
+        </div>
+        <div>
+            <div class="videoScrollBar">
+                <div class="introvideo"><iframe width="560" height="315" src="https://www.youtube.com/embed/5-lps8DC6_Y?si=rkfePn9kiYKCvYUZ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+                <div class="introvideo"><iframe width="560" height="315" src="https://www.youtube.com/embed/49xQYLpmedE?si=fgba2iK55s1760Xr" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+                <div class="introvideo"><iframe width="560" height="315" src="https://www.youtube.com/embed/I_F97he5F2A?si=qKEXwDcjkX1nPejq" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+                <div class="introvideo"><iframe width="560" height="315" src="https://www.youtube.com/embed/FNU08-ufByM?si=I2hq9vsapeXB2Oqb" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+            </div>   
+        </div>
+        <br><br><br>
+    </div>
+
+    <!-- Download -->
+    <div id="download" class="ui text container">
+        <br><br>
+        <div class="centered title">
+            <h1 i18n>Download // 下載</h1>
+        </div>
+        
+        <div class="downloadTabWrapper">
+            <div class="ui top attached fluid stackable tabular menu">
+                <a class="active item" data-tab="linux"><i class="grey linux icon"></i> Linux</a>
+                <a class="item" data-tab="windows"><i class="blue windows icon"></i> Windows</a>
+                <a class="item" data-tab="rpi"><i class="red raspberry pi icon"></i><span i18n>SBCs // ARM 開發板 </span></a>
+                <a class="item" data-tab="build"><i class="code icon"></i> <span i18n>Build from source // 從原始碼建置 </span> </a>
+            </div>
+            <div class="ui bottom attached active tab segment" data-tab="linux">
+                <p i18n>Install with command line // 使用 CLI 下載並執行發行版本 </p>
+                <div class="ui black message">
+                    <code>
+                        wget https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_amd64<br>
+                        chmod +x ./zoraxy_linux_amd64<br>
+                        sudo ./zoraxy_linux_amd64
+                    </code>
+                </div>
+                <br>
+                <p i18n>Install with precompiled binary // 下載發行版本 </p>
+                <button class="ui basic downloadButton button" onclick='handleDownload("zoraxy_linux_amd64");'><i class="black linux icon"></i> <span i18n>Download x64 // 下載 64位元 執行檔 </span></button>
+                <span style="font-size: 1.2em; font-weight: 600; margin-right: 0.4em">OR</span>
+                <button class="ui basic downloadButton button" onclick='handleDownload("zoraxy_linux_386");'><i class="black linux icon"></i> <span i18n>Download x32 // 下載 32位元 執行檔 </span></button>
+            </div>
+            <div class="ui bottom attached tab segment" data-tab="windows">
+                <p i18n>Install with precompiled binary // 下載發行版本 </p>
+                <button class="ui basic downloadButton button" onclick='handleDownload("zoraxy_windows_amd64.exe");'><i class="blue windows icon"></i> <span i18n>Download Zoraxy for Windows // 下載 Windows 版 Zoraxy</span></button>
+                <br><br>
+            </div>
+            <div class="ui bottom attached tab segment" data-tab="rpi">
+                <p i18n>Install with command line (armv6-7, arm64, x86) // 使用 CLI 下載並執行 （armv6-7, arm64, x86）</p>
+                <div class="ui black message">
+                    <code>
+                        # Check your CPU architecture<br>
+                        uname -m <br>
+                        <br>
+                        # For arm64 (aarch64) CPU<br>
+                        wget -O zoraxy https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_arm64<br>
+                        <br>
+                        # For armv6 (armv6l) / armv7 (armv7l) CPU<br>
+                        wget -O zoraxy https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_arm<br>
+                        <br>
+                        # For RISC-V (riscv64) CPU<br>
+                        wget -O zoraxy https://github.com/tobychui/zoraxy/releases/latest/download/zoraxy_linux_riscv64<br>
+                        <br>
+
+                        chmod +x ./zoraxy<br>
+                        sudo ./zoraxy <br>
+                    </code>
+                </div>
+                <br>
+                <p i18n>Install with precompiled binary // 下載發行版本</p>
+                <button class="ui basic downloadButton button" onclick='handleDownload("zoraxy_linux_arm");'><i class="black download icon"></i> <span i18n></span>arm (v6, v7)</button>
+                <button class="ui basic downloadButton button" onclick='handleDownload("zoraxy_linux_arm64");'><i class="black download icon"></i> <span i18n></span>arm64</button>
+                <button class="ui basic downloadButton button" onclick='handleDownload("zoraxy_linux_riscv64");'><i class="grey download icon"></i> <span i18n></span>riscv64</button>
+            </div>
+            <div class="ui bottom attached tab segment" data-tab="build">
+                <p i18n>Require Go (Golang) compiler. Details build from source instruction can be found on Zoraxy Github README file. 
+                    // 需要 Go (Go 語言）編譯器。建置詳情可以在 Zoraxy Github README 檔案中找到。
+                </p>
+                <div class="ui black message">
+                    <code>
+                        git clone https://github.com/tobychui/zoraxy<br>
+                        cd ./zoraxy/src/<br>
+                        go mod tidy<br>
+                        go build<br>
+                        sudo ./zoraxy <br>
+                    </code>
+                </div>
+            </div>
+        </div>
+        <p i18n>After the Zoraxy is started, navigate to http://localhost:8000 to continue account and system setup.
+            // 當 Zoraxy 執行檔 / 服務啟動後，使用瀏覽器開啟 http://localhost:8000 以繼續帳戶和系統設定。
+        </p>
+        <br><br>
+    </div>
+
+    <!-- Learn More -->
+    <div class="ui divider"></div>
+    <div id="learnmore" class="ui text container">
+        <div class="centered title" style="margin-bottom: 0px;">
+            <h1 i18n>Learn More // 了解更多</h1>
+            <p i18n>If you like this project, please feel free to give us a ⭐ star ⭐.
+                // 如果您喜歡這個開源專案，歡迎來給我們一顆 ⭐星星⭐ 喔！!
+            </p>
+        </div>
+        <div class="ui basic segment linkicons">
+            <div class="ui big breadcrumb">
+                <a class="section externallink" href="https://github.com/tobychui/zoraxy" target="_blank">
+                    <div class="ui icon header">
+                        <i class="black github icon"></i>
+                        <div class="content" i18n>
+                            Github
+                            // 源碼
+                        </div>
+                    </div>
+                </a>
+                <i class="divider"> </i>
+                <a class="section externallink" href="" target="_blank">
+                    <div class="ui icon header">
+                        <i class="green code icon"></i>
+                        <div class="content" i18n>
+                            Plugin Devs
+                            // 插件開發
+                        </div>
+                    </div>
+                </a>
+                <i class=" divider"> </i>
+                <a class="section externallink" href="mailto:toby@imuslab.com" target="_blank">
+                    <div class="ui icon header">
+                        <i class="yellow mail icon"></i>
+                        <div class="content" i18n>
+                            Email
+                            // 電子郵件
+                        </div>
+                    </div>
+                </a>
+                <i class=" divider"> </i>
+                <a class="section externallink" href="https://t.me/ArOZBeta" target="_blank">
+                    <div class="ui icon header">
+                        <i class="blue telegram icon"></i>
+                        <div class="content">
+                            Telegram
+                        </div>
+                    </div>
+                </a>
+            </div>  
+        </div>
+        <br><br><br><br>
+    </div>
+
+     <!-- Footer -->
+     <div id="footer">
+        <div class="ui container">
+            <br><br>
+            <div class="ui stackable grid" style="height: 100%;">
+                <div class="six wide column" style="height: 100%;">
+                    <a href="https://zoraxy.aroz.org"><img src="img/logo_white.png" class="ui small image"></a>
+                    <p><span style="font-weight: 300;">The Zoraxy Project</span><br>
+                        © Toby Chui</p>
+                       
+                    <div class="bottom-attach">
+                       <br><br>
+                        <div class="ui breadcrumb" style="margin-top: 0.4em;">
+                            <div class="section" i18n><a style="color: white;" href="https://zoraxy.aroz.org" target="_blank">zoraxy.aroz.org</a></div>
+                            <div class="divider"> / </div>
+                            <div class="section">2018 - <span class="year">now</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="three wide column">
+                    <div class="ui list">
+                        <div class="item title" i18n>Developer Tools // 開發者工具</div>
+                        <div class="item"><a href="" target="_blank">Zoraxy Wiki</a></div>
+                        <div class="item"><a href="" target="_blank">Source Code</a></div>
+                        <div class="item"><a href="" target="_blank">Offical Plugin List</a></div>
+                        <div class="item"><a href="" target="_blank">Plugin Development Guide</a></div>
+                    </div>
+                </div>	
+                <div class="three wide column">
+                    <div class="ui list">
+                        <div class="item title" i18n>Project Spin-offs // 衍生開源計劃</div>
+                        <div class="item"><a href="https://os.aroz.org" target="_blank">ArozOS</a></div>
+                    </div>
+                </div>
+                <div class="three wide column">
+                    <div class="ui list">
+                        <div class="item title" i18n>Related Links // 相關連接</div>
+                        <div class="item"><a href="" target="_blank" i18n>Getting Started</a></div>
+                        <div class="item"><a href="" target="_blank">Zoraxy Release</a></div>
+                        <div class="item"><a href="" target="_blank">Zoraxy Docker</a></div>
+                        <div class="item"><a href="https://imuslab.com" target="_blank">imuslab</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br><br><br><br>
+    </div>
+    
     <script>
-      $(".year").text(new Date().getFullYear()  );
-
-      $(".menu-item").on("click", function(){
-        $(".menu-item.active").removeClass("active");
-        $(this).addClass("active");
-      });
-
-      $(".right-content").on("scroll", function() {
-        var scrollPos = $(".right-content").scrollTop();
-        if (scrollPos < 10){
-          //Reaching the top
-          $('.menu-item.active').removeClass("active");
-          $($('.menu-item')[0]).addClass('active');
-          return;
-        }else if ($(".right-content")[0].scrollHeight  ==  $(".right-content").scrollTop() + window.innerHeight ){
-          //Reaching the bottom
-          $('.menu-item.active').removeClass("active");
-          $($('.menu-item').get().reverse()[0]).addClass('active');
-          return
-        }
-        $('.menu-item').each(function() {
-          var currLink = $(this);
-          var refElement = $(currLink.attr("href"));
-          if (refElement.offset().top <= (window.innerHeight / 2)) {
-            $('.menu-item.active').removeClass("active");
-            currLink.addClass("active");
-            console.log(currLink.attr("href"));
-          }
-        });
-      });
-
+        AOS.init();
+        $(".year").text(new Date().getFullYear());
     </script>
   </body>
 </html>
