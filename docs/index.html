@@ -95,6 +95,13 @@
             </div>
         </div>
     </div>
+    <div class="messageBanner">
+        <div class="ui text container">
+            <p i18n>This site is currently under development. Some information might not be ready.
+                // 本網站目前仍在開發中，部分資訊可能尚未準備好。
+            </p>
+        </div>
+    </div>
     <div id="slideshowBanner">
         <div class="title">
             <h1 i18n>Zoraxy</h1>
@@ -236,34 +243,34 @@
         </div>
         <div class="ui three column grid">
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/1.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/1.png">
             </div>
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/2.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/2.png">
             </div>
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/3.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/3.png">
             </div>
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/4.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/4.png">
             </div>  
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/5.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/5.png">
             </div>  
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/6.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/6.png">
             </div>
             <!-- <div class="column">
-                <img class="ui fluid image" src="img/screenshots/7.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/7.png">
             </div> -->
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/8.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/8.png">
             </div>
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/9.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/9.png">
             </div>
             <div class="column">
-                <img class="ui fluid image" src="img/screenshots/10.png">
+                <img class="ui fluid image screenshot" src="img/screenshots/10.png">
             </div>
         </div>
         <br><br><br>
@@ -273,7 +280,7 @@
     <div id="techspec" class="blackbanner">
         <br><br>
         <div class="centered title">
-            <h1 i18n>Review Videos // 介紹影片 </h1>
+            <h1 style="font-weight: 600;" i18n>Review Videos // 介紹影片 </h1>
         </div>
         <div>
             <div class="videoScrollBar">
@@ -362,8 +369,9 @@
                 </div>
             </div>
         </div>
-        <p i18n>After the Zoraxy is started, navigate to http://localhost:8000 to continue account and system setup.
-            // 當 Zoraxy 執行檔 / 服務啟動後，使用瀏覽器開啟 http://localhost:8000 以繼續帳戶和系統設定。
+        <p><span i18n>After the Zoraxy is started, navigate to // 當 Zoraxy 執行檔 / 服務啟動後，使用瀏覽器開啟</span> 
+            <a href="http://localhost:8000" target="_blank">http://localhost:8000</a> 
+            <span i18n>to continue account and system setup. // 以繼續帳戶和系統設定。</span>
         </p>
         <br><br>
     </div>
@@ -444,8 +452,8 @@
                 <div class="three wide column">
                     <div class="ui list">
                         <div class="item title" i18n>Developer Tools // 開發者工具</div>
-                        <div class="item"><a href="" target="_blank">Zoraxy Wiki</a></div>
-                        <div class="item"><a href="" target="_blank">Source Code</a></div>
+                        <div class="item"><a href="https://github.com/tobychui/zoraxy/wiki" target="_blank">Zoraxy Wiki</a></div>
+                        <div class="item"><a href="https://github.com/tobychui/zoraxy" target="_blank">Source Code</a></div>
                         <div class="item"><a href="" target="_blank">Offical Plugin List</a></div>
                         <div class="item"><a href="" target="_blank">Plugin Development Guide</a></div>
                     </div>
@@ -459,9 +467,9 @@
                 <div class="three wide column">
                     <div class="ui list">
                         <div class="item title" i18n>Related Links // 相關連接</div>
-                        <div class="item"><a href="" target="_blank" i18n>Getting Started</a></div>
-                        <div class="item"><a href="" target="_blank">Zoraxy Release</a></div>
-                        <div class="item"><a href="" target="_blank">Zoraxy Docker</a></div>
+                        <div class="item"><a href="https://github.com/tobychui/zoraxy/wiki/Getting-Started" target="_blank" i18n>Getting Started</a></div>
+                        <div class="item"><a href="https://github.com/tobychui/zoraxy/releases" target="_blank">Zoraxy Release</a></div>
+                        <div class="item"><a href="https://hub.docker.com/r/zoraxydocker/zoraxy" target="_blank">Zoraxy Docker</a></div>
                         <div class="item"><a href="https://imuslab.com" target="_blank">imuslab</a></div>
                     </div>
                 </div>
@@ -473,6 +481,46 @@
     <script>
         AOS.init();
         $(".year").text(new Date().getFullYear());
+
+        // Function to open the modal with the clicked image using jQuery
+        function openModal(src) {
+            // Remove the old modal if it exists
+            $('#imageModal').remove();
+
+            const modal = $('<div style="display:none;">', { id: 'imageModal' }).css({
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: '1000'
+            });
+
+            const img = $('<img>', { src: src }).css({
+                maxWidth: '80%',
+                maxHeight: '80%',
+                boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)'
+            });
+
+            modal.append(img);
+            $("body").css("overflow", "hidden");
+
+            modal.on('click', function() {
+                modal.remove();
+                $("body").css("overflow", "auto");
+            });
+
+            $('body').append(modal);
+        }
+
+        // Add click event listener to all screenshot images using jQuery
+        $('.screenshot').on('click', function() {
+            openModal($(this).attr('src'));
+        });
     </script>
   </body>
 </html>

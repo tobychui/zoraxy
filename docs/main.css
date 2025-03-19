@@ -30,6 +30,17 @@ body.zh-cn *:not(i){
     font-weight: 300 !important;
 }
 
+.messageBanner{
+    width: 100%;
+    background: #6cacff;
+    text-align: center;
+    color: white;
+    padding: 10px;
+}
+.messageBanner .header{
+    font-weight: 500;
+}
+
 #backToTopBtn{
     position: fixed;
     bottom: 1em;
@@ -37,7 +48,7 @@ body.zh-cn *:not(i){
     display:none;
     z-index: 999;
     border: 1px solid white;
-    background: #8debff;
+    background: #6cacff;
 }
 
 #backToTopBtn:hover{
@@ -173,7 +184,7 @@ body.zh-cn *:not(i){
     font-size: 1.2em;
 }
 
-/* About ArozOS */
+/* About Zoraxy */
 .about-text-wrapper{
     margin-top: 3em;
 }
@@ -195,12 +206,21 @@ body.zh-cn *:not(i){
     padding-top: 0.15em;
 }
 
-/* Features */
+/* Screenshots */
 #features{
     margin-bottom: 3em;
 }
 
-/* Tech Spec */
+#features .screenshot{
+    transition: opacity 0.1s ease-in-out;
+    cursor: pointer;
+}
+
+#features .screenshot:hover{
+    opacity: 0.5;
+}
+
+/* Videos */
 #techspec .centered.title{
     color: white;
 }
@@ -213,7 +233,7 @@ body.zh-cn *:not(i){
     overflow-x: scroll; 
     display: block; 
     white-space: nowrap; 
-    scrollbar-color: #dee6f7 #5888f0;
+    scrollbar-color: #e7e7e7 rgba(0, 0, 0, 0.1);
     padding-top: 2em;
     padding-bottom: 3em;
 }
@@ -225,8 +245,8 @@ body.zh-cn *:not(i){
 
 .blackbanner{
     width: 100%;
-    background: rgb(85,131,238);
-    background: linear-gradient(48deg, rgba(85,131,238,1) 21%, rgba(108,172,255,1) 73%);
+    background: rgb(108,172,255);
+    background: linear-gradient(48deg, rgba(108,172,255,1) 8%, rgba(141,235,255,1) 65%); 
     min-height: 300px;
 
 }
