@@ -310,6 +310,10 @@ body.zh-cn *:not(i){
     color: rgb(209, 224, 255);
 }
 
+#footer a:hover{
+    color: rgb(255, 255, 255);
+}
+
 #footer .bottom-attach .divider{
     color: rgb(212, 212, 212);
 }

@@ -6,7 +6,7 @@
 
     And then add the language ISO key to the list below.
 */
-let languages = ['en', 'zh', 'jp', 'zh-cn'];
+let languages = ['en', 'zh', 'de'];
 
 
 //Bind language change dropdown events
@@ -24,7 +24,15 @@ var i18n = domI18n({
     languages: languages,
     defaultLanguage: 'en'
 });
-i18n.changeLanguage('en');
+
+let userLang = navigator.language || navigator.userLanguage;
+console.log("User language: " + userLang);
+userLang = userLang.split("-")[0];
+if (!languages.includes(userLang)) {
+    userLang = 'en';
+}
+i18n.changeLanguage(userLang);
+
 
 /* Main Menu */
 $("#rwdmenubtn").on("click", function(){
