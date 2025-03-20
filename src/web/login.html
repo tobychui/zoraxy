@@ -14,7 +14,28 @@
     <script type="application/javascript" src="script/semantic/semantic.min.js"></script>
     <style>
         body {
-            background: linear-gradient(60deg, rgba(84,58,183,1) 0%, rgba(0,172,193,1) 100%);
+            background: rgb(231, 231, 231);
+        }
+
+        /* Time based background */
+        body.morning{
+            background: rgb(171,199,255);
+            background: linear-gradient(48deg, rgba(171,199,255,1) 21%, rgba(193,227,255,1) 79%); 
+        }
+
+        body.afternoon{
+            background: rgb(108,172,255);
+            background: linear-gradient(21deg, rgba(108,172,255,1) 21%, rgba(141,235,255,1) 79%); 
+        }
+
+        body.evening{
+            background: rgb(247,143,173);
+            background: linear-gradient(21deg, rgba(247,143,173,1) 21%, rgba(253,235,130,1) 79%); 
+        }
+
+        body.night{
+            background: rgb(18,19,23);
+            background: linear-gradient(48deg, rgba(18,19,23,1) 21%, rgba(50,59,66,1) 79%); 
         }
 
         #errmsg{
@@ -119,6 +140,20 @@
     </style>
     </head>
     <body>
+        <script>
+            $(document).ready(function() {
+                var currentHour = new Date().getHours();
+                if (currentHour >= 5 && currentHour < 12) {
+                    $("body").addClass("morning");
+                } else if (currentHour >= 12 && currentHour < 17) {
+                    $("body").addClass("afternoon");
+                } else if (currentHour >= 17 && currentHour < 20) {
+                    $("body").addClass("evening");
+                } else {
+                    $("body").addClass("night");
+                }
+            });
+        </script>
         <div id="loginForm" class="ui middle aligned center aligned grid" data-aos="fade-up">
             <div class="column" style="padding-top: 0 !important;">
                 <form class="ui large form content">

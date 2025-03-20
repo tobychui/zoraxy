@@ -45,6 +45,11 @@ body{
     z-index: 10;
 }
 
+body.darkTheme .menubar{
+    background: rgb(18,19,23);
+    background: linear-gradient(48deg, rgba(18,19,23,1) 21%, rgba(50,59,66,1) 79%); 
+}
+
 .menubar .logo{
     height: 36px;
 }
@@ -360,7 +365,7 @@ body{
 }
 
 #serverstatus.green{
-    background: linear-gradient(60deg, #27e7ff, #00ca52);
+    background: var(--theme_green);
 }
 #serverstatus.green .sub.header{
     color: rgb(224, 224, 224);
@@ -379,7 +384,7 @@ body{
 }
 
 #serverstatus:not(.green){
-    background: linear-gradient(215deg, rgba(38,60,71,1) 13%, rgba(2,3,42,1) 84%);
+    background: var(--theme_background_inverted);
 }
 
 #serverstatus:not(.green) #statusTitle,
@@ -433,7 +438,7 @@ body{
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: #d9d9d9;
+    background-color: #ffffff;
     margin-right: 6px;
     animation-name: dot-animation;
     animation-duration: 4s;
@@ -459,7 +464,7 @@ body{
   
   @keyframes dot-animation {
     0% {
-      background-color: #d9d9d9;
+      background-color: #ffffff;
       transform: scale(1);
     }
     50% {
@@ -467,7 +472,7 @@ body{
       transform: scale(1.5);
     }
     100% {
-      background-color: #d9d9d9;
+      background-color: #ffffff;
       transform: scale(1);
     }
   }
