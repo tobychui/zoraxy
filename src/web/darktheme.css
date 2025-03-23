@@ -32,7 +32,7 @@ body:not(.darkTheme){
 
     --theme_background: linear-gradient(60deg, rgb(84, 58, 183) 0%, rgb(0, 172, 193) 100%);
     --theme_background_inverted: linear-gradient(45deg, rgba(18,19,23,1) 21%, rgba(50,59,66,1) 79%);
-    --theme_green: linear-gradient(45deg, rgba(153,229,162,1) 21%, rgba(212,252,120,1) 79%);
+    --theme_green: linear-gradient(45deg, rgba(65,199,175,1) 21%, rgba(84,227,142,1) 79%);
     --theme_red: linear-gradient(203deg, rgba(250,172,38,1) 17%, rgba(202,0,37,1) 78%);
 }
 
@@ -55,7 +55,7 @@ body.darkTheme{
     --button_border_color: #646464;
     --buttom_toggle_active: #01dc64;
     --buttom_toggle_disabled: #2b2b2b;
-    --table_header_color: #323b42;
+    --table_header_color: rgba(85,131,238,1);
     --table_bg_default: #121214;
     --status_dot_bg: #232323;
 
@@ -797,6 +797,13 @@ body.darkTheme .ui.message {
     border: 1px solid var(--message_border_color) !important;
 }
 
+body.darkTheme .ui.yellow.message {
+    background-color: #b58105 !important;
+}
+
+body.darkTheme .ui.yellow.message .header {
+    color: var(--text_color) !important;
+}
 /* 
     Access Rules 
 */
