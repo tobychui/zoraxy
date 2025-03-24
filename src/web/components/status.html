@@ -713,8 +713,8 @@
     }
 
     function updateChart() {
-        //networkStatisticChart.data.datasets[0].data = rxValues;
-        //networkStatisticChart.data.datasets[1].data = txValues;
+        networkStatisticChart.data.datasets[0].data = rxValues;
+        networkStatisticChart.data.datasets[1].data = txValues;
         if (networkStatisticChart != undefined){
             networkStatisticChart.update();
         }
