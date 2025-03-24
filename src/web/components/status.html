@@ -713,8 +713,10 @@
     }
 
     function updateChart() {
+        //Do not remove these 3 lines, it will cause memory leak
         networkStatisticChart.data.datasets[0].data = rxValues;
         networkStatisticChart.data.datasets[1].data = txValues;
+        networkStatisticChart.data.labels = timestamps;
         if (networkStatisticChart != undefined){
             networkStatisticChart.update();
         }
