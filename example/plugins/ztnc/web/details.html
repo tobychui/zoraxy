@@ -226,9 +226,9 @@
             },
             success: function(data){
                 if (data.error != undefined){
-                    msgbox(data.error, false, 5000)
+                    parent.msgbox(data.error, false, 5000)
                 }else{
-                    msgbox("Network Range Updated")
+                    parent.msgbox("Network Range Updated")
                 }
             }
         })
@@ -253,7 +253,7 @@
                 initNetNameAndDesc();
                 if (object != undefined){
                     $(object).removeClass("loading");
-                    msgbox("Network Metadata Updated");
+                    parent.msgbox("Network Metadata Updated");
                 }
                 $("#gannetDetailEdit").slideUp("fast");
             }
@@ -264,7 +264,7 @@
         //Get the details of the net
         $.get("./api/gan/network/name?netid=" + currentGANetID, function(data){
             if (data.error !== undefined){
-                msgbox(data.error, false, 6000);
+                parent.msgbox(data.error, false, 6000);
             }else{
                 $("#gaNetNameInput").val(data[0]);
                 $(".ganetName").html(data[0]);
@@ -278,7 +278,7 @@
         //Get the details of the net
         $.get("./api/gan/network/list?netid=" + currentGANetID, function(data){
             if (data.error !== undefined){
-                msgbox(data.error, false, 6000);
+                parent.msgbox(data.error, false, 6000);
             }else{
                 currentGaNetDetails = data;
                 highlightCurrentGANetCIDR();
@@ -299,9 +299,9 @@
             },
             success: function(data){
                 if (data.error != undefined){
-                    msgbox(data.error, false, 5000);
+                    parent.msgbox(data.error, false, 5000);
                 }else{
-                    msgbox("IP removed from member " + memberid)
+                    parent.msgbox("IP removed from member " + memberid)
                 }
                 renderMemeberTable();
             }
@@ -331,7 +331,7 @@
         }
 
         if (!isValidIPv4Address(newip)){
-            msgbox(newip + " is not a valid IPv4 address", false, 5000)
+            parent.msgbox(newip + " is not a valid IPv4 address", false, 5000)
             return
         }
 
@@ -346,9 +346,9 @@
             },
             success: function(data){
                 if (data.error != undefined){
-                    msgbox(data.error, false, 5000);
+                    parent.msgbox(data.error, false, 5000);
                 }else{
-                    msgbox("IP added to member " + memberid)
+                    parent.msgbox("IP added to member " + memberid)
                 }
                 renderMemeberTable();
             }
@@ -482,7 +482,7 @@
 
     function renameMember(targetMemberAddr){
         if (targetMemberAddr == ""){
-            msgbox("Member address cannot be empty", false, 5000)
+            parent.msgbox("Member address cannot be empty", false, 5000)
             return
         }
 
@@ -498,9 +498,9 @@
             },
             success: function(data){
                 if (data.error != undefined){
-                    msgbox(data.error, false, 6000);
+                    parent.msgbox(data.error, false, 6000);
                 }else{
-                    msgbox("Member Name Updated"); 
+                    parent.msgbox("Member Name Updated"); 
                 }
                 renderMemeberTable(true);
             }
@@ -564,12 +564,12 @@
             },
             success: function(data){
                 if (data.error != undefined){
-                    msgbox(data.error, false, 6000);
+                    parent.msgbox(data.error, false, 6000);
                 }else{
                     if (isAuthed){
-                        msgbox("Member Authorized");
+                        parent.msgbox("Member Authorized");
                     }else{
-                        msgbox("Member Deauthorized");
+                        parent.msgbox("Member Deauthorized");
                     }
                     
                 }
@@ -580,25 +580,26 @@
     }
 
     function handleMemberDelete(addr){
-        if (confirm("Confirm delete member " + addr + " ?")){
-            $.cjax({
-                url: "./api/gan/members/delete",
-                method: "POST",
-                data: {
-                    netid:currentGANetID, 
-                    memid: addr, 
-                },
-                success: function(data){
-                    if (data.error != undefined){
-                        msgbox(data.error, false, 6000);
-                    }else{
-                        msgbox("Member Deleted");
+       parent.confirmBox("Confirm delete member " + addr + " ?", function(choice){
+            if (choice){
+                $.cjax({
+                    url: "./api/gan/members/delete",
+                    method: "POST",
+                    data: {
+                        netid:currentGANetID, 
+                        memid: addr, 
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false, 6000);
+                        }else{
+                            parent.msgbox("Member Deleted");
+                        }
+                        renderMemeberTable(true);
                     }
-                    renderMemeberTable(true);
-                }
-            });
-        }
-    
+                });
+            }
+        });
     }
 
     //Add and remove this controller node to network as member
@@ -616,13 +617,18 @@
                 $(".addControllerToNetworkBtn").removeClass("disabled");
                 $(".addControllerToNetworkBtn").removeClass("loading");
                 if (data.error != undefined){
-                    msgbox(data.error, false, 6000);
+                    parent.msgbox(data.error, false, 6000);
                 }else{
-                    msgbox("Controller joint " + currentGANetID);
+                    parent.msgbox("Controller joint " + currentGANetID);
                 }
                 setTimeout(function(){
                     renderMemeberTable(true);
                 }, 3000)
+            },
+            error: function(){
+                $(".addControllerToNetworkBtn").removeClass("disabled");
+                $(".addControllerToNetworkBtn").removeClass("loading");
+
             }
         });
     }
@@ -639,9 +645,9 @@
             },
             success: function(data){
                 if (data.error != undefined){
-                    msgbox(data.error, false, 6000);
+                    parent.msgbox(data.error, false, 6000);
                 }else{
-                    msgbox("Controller left " + currentGANetID);
+                    parent.msgbox("Controller left " + currentGANetID);
                 }
                 renderMemeberTable(true);
                 $(".removeControllerFromNetworkBtn").removeClass("disabled");
@@ -655,7 +661,7 @@
         currentGANetID = ganetId;
         $(".ganetID").text(ganetId);
         initNetNameAndDesc(ganetId);
-        generateIPRangeTable(netRanges);msgbox 
+        generateIPRangeTable(netRanges); 
         initNetDetails();
         renderMemeberTable(true);
 
@@ -676,7 +682,6 @@
     }
 
     //Debug functions
-
     if (typeof(msgbox) == "undefined"){
         msgbox = function(msg, error=false, timeout=3000){
             console.log(msg);

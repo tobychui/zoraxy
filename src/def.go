@@ -97,6 +97,7 @@ var (
 	path_uuid      = flag.String("uuid", "./sys.uuid", "sys.uuid file path")
 	path_logFile   = flag.String("log", "./log", "Log folder path")
 	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
+	path_plugin    = flag.String("plugin", "./plugins", "Plugin folder path")
 
 	/* Maintaince Function Flags */
 	geoDbUpdate = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")

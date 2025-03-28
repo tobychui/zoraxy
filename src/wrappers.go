@@ -145,7 +145,7 @@ func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 	if uptimeMonitor != nil {
 		uptimeMonitor.HandleUptimeLogRead(w, r)
 	} else {
-		http.Error(w, "500 - Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "500 - Internal Server Error (Still initializing)", http.StatusInternalServerError)
 		return
 	}
 }

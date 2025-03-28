@@ -34,10 +34,10 @@ type ManagerOptions struct {
 	PluginGroupsConfig string              //The group / tag configuration file, if set the plugin groups will be loaded from this file
 
 	/* Runtime */
-	SystemConst  *zoraxyPlugin.RuntimeConstantValue
-	CSRFTokenGen func(*http.Request) string `json:"-"` //The CSRF token generator function
-	Database     *database.Database         `json:"-"`
-	Logger       *logger.Logger             `json:"-"`
+	SystemConst  *zoraxyPlugin.RuntimeConstantValue //The system constant value
+	CSRFTokenGen func(*http.Request) string         `json:"-"` //The CSRF token generator function
+	Database     *database.Database                 `json:"-"`
+	Logger       *logger.Logger                     `json:"-"`
 
 	/* Internal */
 	pluginGroupsMutex sync.RWMutex //Mutex for the pluginGroups

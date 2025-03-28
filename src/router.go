@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,27 +22,12 @@ import (
 
 func FSHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		/*
-			Development Mode Override
-			=> Web root is located in /
-		*/
-		if DEVELOPMENT_BUILD && strings.HasPrefix(r.URL.Path, "/web/") {
-			u, _ := url.Parse(strings.TrimPrefix(r.URL.Path, "/web"))
-			r.URL = u
-		}
-
-		/*
-			Production Mode Override
-			=> Web root is located in /web
-		*/
-		if !DEVELOPMENT_BUILD && r.URL.Path == "/" {
-			//Redirect to web UI
-			http.Redirect(w, r, "/web/", http.StatusTemporaryRedirect)
-			return
-		}
-
 		// Allow access to /script/*, /img/pubic/* and /login.html without authentication
-		if strings.HasPrefix(r.URL.Path, ppf("/script/")) || strings.HasPrefix(r.URL.Path, ppf("/img/public/")) || r.URL.Path == ppf("/login.html") || r.URL.Path == ppf("/reset.html") || r.URL.Path == ppf("/favicon.png") {
+		if strings.HasPrefix(r.URL.Path, "/script/") ||
+			strings.HasPrefix(r.URL.Path, "/img/public/") ||
+			r.URL.Path == "/login.html" ||
+			r.URL.Path == "/reset.html" ||
+			r.URL.Path == "/favicon.png" {
 			if isHTMLFilePath(r.URL.Path) {
 				handleInjectHTML(w, r, r.URL.Path)
 				return
@@ -54,7 +38,7 @@ func FSHandler(handler http.Handler) http.Handler {
 
 		// Check authentication
 		if !authAgent.CheckAuth(r) && requireAuth {
-			http.Redirect(w, r, ppf("/login.html"), http.StatusTemporaryRedirect)
+			http.Redirect(w, r, "/login.html", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -105,14 +89,6 @@ func FSHandler(handler http.Handler) http.Handler {
 	})
 }
 
-// Production path fix wrapper. Fix the path on production or development environment
-func ppf(relativeFilepath string) string {
-	if !DEVELOPMENT_BUILD {
-		return strings.ReplaceAll(filepath.Join("/web/", relativeFilepath), "\\", "/")
-	}
-	return relativeFilepath
-}
-
 func isHTMLFilePath(requestURI string) bool {
 	return strings.HasSuffix(requestURI, ".html") || strings.HasSuffix(requestURI, "/")
 }
@@ -136,9 +112,10 @@ func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath s
 	} else {
 		//Load from embedded fs, require trimming off the prefix slash for relative path
 		relativeFilepath = strings.TrimPrefix(relativeFilepath, "/")
+		relativeFilepath = filepath.ToSlash(filepath.Join("web/", relativeFilepath))
 		content, err = webres.ReadFile(relativeFilepath)
 		if err != nil {
-			SystemWideLogger.Println("load embedded web file failed: ", err)
+			SystemWideLogger.Println("Load embedded web file failed: ", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}

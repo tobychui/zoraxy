@@ -94,7 +94,7 @@ func startupSequence() {
 	}
 	authAgent = auth.NewAuthenticationAgent(SYSTEM_NAME, []byte(sessionKey), sysdb, true, SystemWideLogger, func(w http.ResponseWriter, r *http.Request) {
 		//Not logged in. Redirecting to login page
-		http.Redirect(w, r, ppf("/login.html"), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/login.html", http.StatusTemporaryRedirect)
 	})
 
 	//Create a TLS certificate manager
@@ -305,12 +305,14 @@ func startupSequence() {
 	/*
 		Plugin Manager
 	*/
-
+	pluginFolder := *path_plugin
+	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
-		PluginDir: "./plugins",
+		PluginDir: pluginFolder,
 		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
-			ZoraxyVersion: SYSTEM_VERSION,
-			ZoraxyUUID:    nodeUUID,
+			ZoraxyVersion:    SYSTEM_VERSION,
+			ZoraxyUUID:       nodeUUID,
+			DevelopmentBuild: DEVELOPMENT_BUILD,
 		},
 		Database:           sysdb,
 		Logger:             SystemWideLogger,

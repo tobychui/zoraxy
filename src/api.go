@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/fs"
 	"net/http"
 	"net/http/pprof"
 
@@ -315,13 +316,20 @@ func initAPIs(targetMux *http.ServeMux) {
 		},
 	})
 
-	//Register the standard web services urls
-	fs := http.FileServer(http.FS(webres))
+	// Register the standard web services URLs
+	var staticWebRes http.Handler
 	if DEVELOPMENT_BUILD {
-		fs = http.FileServer(http.Dir("web/"))
+		staticWebRes = http.FileServer(http.Dir("web/"))
+	} else {
+		subFS, err := fs.Sub(webres, "web")
+		if err != nil {
+			panic("Failed to strip 'web/' from embedded resources: " + err.Error())
+		}
+		staticWebRes = http.FileServer(http.FS(subFS))
 	}
+
 	//Add a layer of middleware for advance control
-	advHandler := FSHandler(fs)
+	advHandler := FSHandler(staticWebRes)
 	targetMux.Handle("/", advHandler)
 
 	//Register the APIs

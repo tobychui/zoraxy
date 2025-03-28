@@ -42,8 +42,9 @@ type SubscriptionEvent struct {
 }
 
 type RuntimeConstantValue struct {
-	ZoraxyVersion string `json:"zoraxy_version"`
-	ZoraxyUUID    string `json:"zoraxy_uuid"`
+	ZoraxyVersion    string `json:"zoraxy_version"`
+	ZoraxyUUID       string `json:"zoraxy_uuid"`
+	DevelopmentBuild bool   `json:"development_build"` //Whether the Zoraxy is a development build or not
 }
 
 /*

@@ -155,6 +155,10 @@ body.darkTheme .ui.table tfoot td {
     color: #ffffff !important;
 }
 
+body.darkTheme .ui.table thead th{
+    background-color: var(--table_header_color);
+}
+
 body.darkTheme .ui.input input,
 body.darkTheme .ui.input input::placeholder,
 body.darkTheme .ui.input input:focus,
@@ -222,6 +226,22 @@ body.darkTheme .ui.checkbox:not(.toggle) input[type="checkbox"]{
 #sidemenuBtn{
     border: 1px solid var(--button_border_color) !important;
 }
+
+/* message box */
+body.darkTheme #messageBox i{
+    color: var(--text_color) !important;
+}
+body.darkTheme #messageBox.ui.green.message {
+    background-color: #1ebc30 !important;
+    color: white;
+}
+
+body.darkTheme #messageBox.ui.red.message {
+    background-color: #db2828 !important;
+    color: white;
+}
+
+
 
 /* Generic dropdown overwrites */
 body.darkTheme .ui.selection.dropdown {
@@ -364,7 +384,7 @@ body.darkTheme .ui.form .grouped.fields label {
 /* Confirm Box */
 
 body.darkTheme .confirmBoxBody {
-    background-color: var(--theme_bg) !important;
+    background-color: var(--text_color_inverted) !important;
     color: var(--text_color) !important;
     border: 1px solid var(--divider_color) !important;
 }
@@ -405,11 +425,11 @@ body.darkTheme .confirmBoxBody .questionToConfirm {
 }
 
 body.darkTheme #confirmBox .ui.top.attached.progress{
-    background-color: var(--theme_bg_secondary) !important;
+    background-color: var(--theme_highlight) !important;
 }
 
 body.darkTheme #confirmBox .ui.top.attached.progress .bar {
-    background-color: var(--theme_highlight) !important;
+    background-color: var(--buttom_toggle_active) !important;
 }
 
 /* Tour Modal */
