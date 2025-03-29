@@ -25,13 +25,16 @@ var i18n = domI18n({
     defaultLanguage: 'en'
 });
 
-let userLang = navigator.language || navigator.userLanguage;
-console.log("User language: " + userLang);
-userLang = userLang.split("-")[0];
-if (!languages.includes(userLang)) {
-    userLang = 'en';
-}
-i18n.changeLanguage(userLang);
+$(document).ready(function(){
+    let userLang = navigator.language || navigator.userLanguage;
+    console.log("User language: " + userLang);
+    userLang = userLang.split("-")[0];
+    if (!languages.includes(userLang)) {
+        userLang = 'en';
+    }
+    i18n.changeLanguage(userLang);
+    $("body").attr("class", userLang);
+});
 
 
 /* Main Menu */

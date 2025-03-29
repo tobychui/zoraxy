@@ -30,7 +30,6 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="dom-i18n.min.js"></script>
     <link href="main.css" rel="stylesheet">
-    <script src="main.js" defer></script>
 
     <!-- Css stuffs-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.js" integrity="sha512-gnoBksrDbaMnlE0rhhkcx3iwzvgBGz6mOEj4/Y5ZY09n55dYddx6+WYc72A55qEesV8VX2iMomteIwobeGK1BQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -57,7 +56,7 @@
        <i class="ui arrow up icon"></i>
     </div>
     <button id="rwdmenubtn" class="ui black big icon button"><i class="ui bars icon"></i></button>
-    <div id="mainmenu" class="ui segment" style="background: transparent !important;">
+    <div id="mainmenu" class="ui segment">
         <div class="ui container">
             <div class="ui small stackable secondary menu">
                 <div class="item">
@@ -594,5 +593,7 @@
             openModal($(this).attr('src'));
         });
     </script>
+    <!-- Locales -->
+    <script src="main.js" defer></script>
   </body>
 </html>

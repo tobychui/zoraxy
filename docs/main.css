@@ -66,6 +66,7 @@ body.zh-cn *:not(i){
     border-radius: 0;
     margin-bottom: 0;
     margin-top: 0;
+    background: transparent !important;
 }
 
 #slideshowBanner .ui.basic.white.button{
@@ -85,6 +86,9 @@ body.zh-cn *:not(i){
 #rwdmenubtn{
     display:none;
     position: absolute;
+    background: white;
+    border: 1px solid #6cacff;
+    color: #6cacff;
 }
 
 #mainmenu .ui.secondary.inverted.menu .link.item:not(.disabled), .ui.secondary.inverted.menu a.item:not(.disabled){
@@ -332,6 +336,7 @@ body.zh-cn *:not(i){
         top: 0;
         left: 0;
         width: 100%;
+        background: #fdfdfd !important;
     }
 
     #rwdmenubtn{
