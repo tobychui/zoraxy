@@ -67,9 +67,6 @@
                     <a class="item" tag="access">
                         <i class="simplistic ban icon"></i> Access Control
                     </a>
-                    <a class="item" tag="gan">
-                        <i class="simplistic globe icon"></i> Global Area Network
-                    </a>
                     <div class="ui divider menudivider">Security</div>
                     <a class="item" tag="cert">
                         <i class="simplistic lock icon"></i> TLS / SSL certificates
@@ -134,9 +131,6 @@
 
                 <!-- Blacklist -->
                 <div id="access" class="functiontab" target="access.html"></div>
-
-                <!-- Global Area Networking -->
-                <div id="gan" class="functiontab" target="gan.html"></div>
 
                 <!-- SSO / Oauth services -->
                 <div id="sso" class="functiontab" target="sso.html"></div>
@@ -215,7 +209,20 @@
 
         <br><br>
         <script>
-            $(".year").text(new Date().getFullYear());
+           /* 
+                Plugin Manager State 
+           
+                As some initiation must be done before the plugin manager
+                loaded up the plugin list, this state here tells the plugin
+                manager to do some actions after the plugin list is initiated
+           */
+            var plugin_manager_state = {
+                initated: false, //Whether the plugin manager has been initiated
+                initCallback: undefined, //Callback to be called when the plugin manager is initiated
+                listUpdateCallback:  undefined //Callback to be called when the plugin list is updated
+            }
+
+
             /*
                 Loader function
 
@@ -264,13 +271,22 @@
                         try {
                             let parsedData = JSON.parse(tabID);
                             tabID = parsedData.tabID;
-                           
+                            
                             //Open the plugin context window
                             if (tabID == "pluginContextWindow"){
                                 let pluginID = parsedData.pluginID;
-                                let button = $("#pluginMenu").find(`[pluginid="${pluginID}"]`);
-                                openTabById(tabID, button);
-                                loadPluginUIContextIfAvailable();
+                                if (pluginID == undefined){
+                                    //Do not swap page
+                                    return;
+                                }
+                                if (!openPluginTabByID(pluginID)){
+                                    //Let the plugin manager to load the plugin list first
+                                    plugin_manager_state.initCallback = function(){
+                                        let pid = pluginID;
+                                        openPluginTabByID(pid);
+                                    }
+                                }
+                               
                             }
                         } catch (e) {
                             console.error("Invalid JSON data:", e);
@@ -295,6 +311,17 @@
                 //Initialize all table that is sortable
                 $('table').tablesort();
             });
+
+            //Function to open a plugin tab by its plugin id
+            function openPluginTabByID(pluginID, tabID="pluginContextWindow"){
+                let button = $("#pluginMenu").find(`[pluginid="${pluginID}"]`);
+                if (button.length == 0){
+                    return false;
+                }
+                openTabById(tabID, button);
+                loadPluginUIContextIfAvailable();
+                return true;
+            }
 
             function logout() {
                 $.get("/api/auth/logout", function(response) {
@@ -501,6 +528,9 @@
                 });
                 $("body").css("overflow", "auto");
             }
+
+            /* Utilities */
+            $(".year").text(new Date().getFullYear());
         </script>
     </body>
 </html>

@@ -6,15 +6,18 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
 
 type PluginUiRouter struct {
-	PluginID       string    //The ID of the plugin
-	TargetFs       *embed.FS //The embed.FS where the UI files are stored
-	TargetFsPrefix string    //The prefix of the embed.FS where the UI files are stored, e.g. /web
-	HandlerPrefix  string    //The prefix of the handler used to route this router, e.g. /ui
+	PluginID         string    //The ID of the plugin
+	TargetFs         *embed.FS //The embed.FS where the UI files are stored
+	TargetFsPrefix   string    //The prefix of the embed.FS where the UI files are stored, e.g. /web
+	HandlerPrefix    string    //The prefix of the handler used to route this router, e.g. /ui
+	EnableDebug      bool      //Enable debug mode
+	terminateHandler func()    //The handler to be called when the plugin is terminated
 }
 
 // NewPluginEmbedUIRouter creates a new PluginUiRouter with embed.FS
@@ -55,11 +58,6 @@ func (p *PluginUiRouter) populateCSRFToken(r *http.Request, fsHandler http.Handl
 	//Return the middleware
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if the request is for an HTML file
-		if strings.HasSuffix(r.URL.Path, "/") {
-			// Redirect to the index.html
-			http.Redirect(w, r, r.URL.Path+"index.html", http.StatusFound)
-			return
-		}
 		if strings.HasSuffix(r.URL.Path, ".html") {
 			//Read the target file from embed.FS
 			targetFilePath := strings.TrimPrefix(r.URL.Path, "/")
@@ -72,8 +70,24 @@ func (p *PluginUiRouter) populateCSRFToken(r *http.Request, fsHandler http.Handl
 			}
 			body := string(targetFileContent)
 			body = strings.ReplaceAll(body, "{{.csrfToken}}", csrfToken)
-			http.ServeContent(w, r, r.URL.Path, time.Now(), strings.NewReader(body))
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(body))
 			return
+		} else if strings.HasSuffix(r.URL.Path, "/") {
+			// Check if the directory has an index.html file
+			indexFilePath := strings.TrimPrefix(r.URL.Path, "/") + "index.html"
+			indexFilePath = p.TargetFsPrefix + "/" + indexFilePath
+			indexFilePath = strings.TrimPrefix(indexFilePath, "/")
+			indexFileContent, err := fs.ReadFile(*p.TargetFs, indexFilePath)
+			if err == nil {
+				body := string(indexFileContent)
+				body = strings.ReplaceAll(body, "{{.csrfToken}}", csrfToken)
+				w.Header().Set("Content-Type", "text/html")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(body))
+				return
+			}
 		}
 
 		//Call the next handler
@@ -86,11 +100,18 @@ func (p *PluginUiRouter) populateCSRFToken(r *http.Request, fsHandler http.Handl
 func (p *PluginUiRouter) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//Remove the plugin UI handler path prefix
+		if p.EnableDebug {
+			fmt.Print("Request URL:", r.URL.Path, " rewriting to ")
+		}
+
 		rewrittenURL := r.RequestURI
 		rewrittenURL = strings.TrimPrefix(rewrittenURL, p.HandlerPrefix)
 		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
 		r.URL, _ = url.Parse(rewrittenURL)
 		r.RequestURI = rewrittenURL
+		if p.EnableDebug {
+			fmt.Println(r.URL.Path)
+		}
 
 		//Serve the file from the embed.FS
 		subFS, err := fs.Sub(*p.TargetFs, strings.TrimPrefix(p.TargetFsPrefix, "/"))
@@ -103,4 +124,33 @@ func (p *PluginUiRouter) Handler() http.Handler {
 		// Replace {{csrf_token}} with the actual CSRF token and serve the file
 		p.populateCSRFToken(r, http.FileServer(http.FS(subFS))).ServeHTTP(w, r)
 	})
+}
+
+// RegisterTerminateHandler registers the terminate handler for the PluginUiRouter
+// The terminate handler will be called when the plugin is terminated from Zoraxy plugin manager
+// if mux is nil, the handler will be registered to http.DefaultServeMux
+func (p *PluginUiRouter) RegisterTerminateHandler(termFunc func(), mux *http.ServeMux) {
+	p.terminateHandler = termFunc
+	if mux == nil {
+		mux = http.DefaultServeMux
+	}
+	mux.HandleFunc(p.HandlerPrefix+"/term", func(w http.ResponseWriter, r *http.Request) {
+		p.terminateHandler()
+		w.WriteHeader(http.StatusOK)
+		go func() {
+			//Make sure the response is sent before the plugin is terminated
+			time.Sleep(100 * time.Millisecond)
+			os.Exit(0)
+		}()
+	})
+}
+
+// Attach the embed UI handler to the target http.ServeMux
+func (p *PluginUiRouter) AttachHandlerToMux(mux *http.ServeMux) {
+	if mux == nil {
+		mux = http.DefaultServeMux
+	}
+
+	p.HandlerPrefix = strings.TrimSuffix(p.HandlerPrefix, "/")
+	mux.Handle(p.HandlerPrefix+"/", p.Handler())
 }

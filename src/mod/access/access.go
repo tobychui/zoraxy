@@ -94,7 +94,7 @@ func NewAccessController(options *Options) (*Controller, error) {
 		thisAccessRule := AccessRule{}
 		err = json.Unmarshal(configContent, &thisAccessRule)
 		if err != nil {
-			options.Logger.PrintAndLog("Access", "Unable to parse config "+filepath.Base(configFile), err)
+			options.Logger.PrintAndLog("access", "Unable to parse config "+filepath.Base(configFile), err)
 			continue
 		}
 		thisAccessRule.parent = &thisController
@@ -102,6 +102,19 @@ func NewAccessController(options *Options) (*Controller, error) {
 	}
 	thisController.ProxyAccessRule = &ProxyAccessRules
 
+	//Start the public ip ticker
+	if options.PublicIpCheckInterval <= 0 {
+		options.PublicIpCheckInterval = 12 * 60 * 60 //12 hours
+	}
+	thisController.ServerPublicIP = "127.0.0.1"
+	go func() {
+		err = thisController.UpdatePublicIP()
+		if err != nil {
+			options.Logger.PrintAndLog("access", "Unable to update public IP address", err)
+		}
+
+		thisController.StartPublicIPUpdater()
+	}()
 	return &thisController, nil
 }
 
@@ -147,11 +160,7 @@ func (c *Controller) ListAllAccessRules() []*AccessRule {
 // Check if an access rule exists given the rule id
 func (c *Controller) AccessRuleExists(ruleID string) bool {
 	r, _ := c.GetAccessRuleByID(ruleID)
-	if r != nil {
-		//An access rule with identical ID exists
-		return true
-	}
-	return false
+	return r != nil
 }
 
 // Add a new access rule to runtime and save it to file
@@ -218,4 +227,8 @@ func (c *Controller) RemoveAccessRuleByID(ruleID string) error {
 
 	//Remove it
 	return c.DeleteAccessRuleByID(ruleID)
+}
+
+func (c *Controller) Close() {
+	c.StopPublicIPUpdater()
 }

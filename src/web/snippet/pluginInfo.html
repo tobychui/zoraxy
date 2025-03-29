@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
+        <style>
+            .basic.segment.advanceoptions {
+                background-color: var(--theme_advance);
+                border-radius: 1em;
+            }
+        </style>
+    </head>
+    <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
+        <br>
+        <div class="ui container">
+            <div class="ui header">
+                <div class="content">
+                    Plugin Information
+                    <div class="sub header plugin_name"></div>
+                </div>
+            </div>
+        
+            <div class="ui divider"></div>
+            <div class="ui basic segment">
+                <div class="ui centered aligned container"></div>
+                <img id="plugin_image" src="" alt="Plugin Image" style="max-width: 100px;">
+            </div>
+            <div class="ui divider"></div>
+            <b>IntroSpect</b>
+            <p>The plugin registered the following information about itself</p>
+            <table class="ui very basic celled unstackable table">
+                <thead>
+                    <tr>
+                    <th>IntroSpect</th>
+                    <th>Response</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                    <td>Name</td>
+                    <td class="plugin_name"></td>
+                    </tr>
+                    <tr>
+                    <td>Version</td>
+                    <td id="plugin_version"></td>
+                    </tr>
+                    <tr>
+                    <td>Author</td>
+                    <td id="plugin_author"></td>
+                    </tr>
+                    <tr>
+                    <tr>
+                    <td>Description</td>
+                    <td id="plugin_description"></td>
+                    </tr>
+                    <tr>
+                    <td>Category</td>
+                    <td id="plugin_category"></td>
+                    </tr>
+                    <tr>
+                    <td>URL</td>
+                    <td id="plugin_url"></td>
+                    </tr>
+                    <tr>
+                    <td>Contact</td>
+                    <td id="plugin_contact"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="ui divider"></div>
+            <b>Runtime Values</b>
+            <p>Zoraxy assigned the following settings for its runtime</p>
+            <table class="ui very basic celled unstackable table">
+                <thead>
+                    <tr>
+                        <th>Properties</th>
+                        <th>Configuration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <td>Enabled</td>
+                    <td id="plugin_enabled"></td>
+                    </tr>
+                    <tr>
+                    <td>Assigned Port</td>
+                    <td id="plugin_assigned_port"></td>
+                    </tr>
+                    <tr>
+                    <td>Working Directory</td>
+                    <td id="plugin_root_dir"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="ui basic segment advanceoptions" style="margin-left: 0.4em; margin-right: 0.4em;">
+            <div class="ui accordion advanceSettings">
+                <div class="title">
+                  <i class="dropdown icon"></i>
+                    Developer Insights
+                </div>
+                <div class="content">
+                    <h4>Plugin IntroSpect Path Registration</h4>
+                    <p>The following static capture paths are registered by this plugin and will be intercepting all traffics that request these paths. <br>
+                        If dynamic capture path is not empty, all traffic headers will be forwarded to plugin for processing and optionally intercept.</p>
+                    <table class="ui basic celled unstackable table">
+                        <tbody>
+                            <tr>
+                                <td>Registered Static Capture Paths<br>
+                                <small>Paths (and subpaths) to be intercepted by this plugin</small></td>
+                                <td id="registered_static_capture_paths"></td>
+                            </tr>
+                            <tr>
+                                <td>Static Capture Ingress<br>
+                                <small>Static intercept request ingress path</small></td>
+                                <td id="static_capture_ingress"></td>
+                            </tr>
+                            <tr>
+                                <td>Dynamic Capture Sniffing Path<br>
+                                <small>Request header ingress for intercept precheck</small></td>
+                                <td id="dynamic_capture_sniffing_path"></td>
+                            </tr>
+                            <tr>
+                                <td>Dynamic Capture Ingress<br>
+                                <small>Dynamic intercept request ingress path</small></td>
+                                <td id="dynamic_capture_ingress"></td>
+                            </tr>
+                            <tr>
+                                <td>Registered UI Proxy Path<br>
+                                <small>The relative path of the web UI</small></td>
+                                <td id="registered_ui_proxy_path"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="ui divider"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ui divider"></div>
+        <div class="field" >
+            <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
+        </div>
+        <br><br><br>
+        <script>
+
+            //Get hash from windows
+            let hash = window.location.hash;
+            let payload = hash.substring(1);
+            let pluginID = "";
+            try{
+                payload = JSON.parse(decodeURIComponent(payload));
+                pluginID = payload.plugin_id;
+
+                getPluginInfo(pluginID);
+            }catch(e){
+                console.error(e);
+            }
+
+
+            function getPluginInfo(pluginId){
+            $.get(`/api/plugins/info?plugin_id=${pluginId}`, function(data){
+                let authorContact = data.Spec.author_contact;
+                if(!authorContact.startsWith('http')){
+                authorContact = `mailto:${authorContact}`;
+                }
+                let versionString = `v${data.Spec.version_major}.${data.Spec.version_minor}.${data.Spec.version_patch}`;
+                $(".plugin_name").text(data.Spec.name);
+                $("#plugin_image").attr("src", `/api/plugins/icon?plugin_id=${data.Spec.id}`);
+                $("#plugin_version").text(versionString);
+                $("#plugin_author").html(`<a href="${authorContact}" target="_blank">${data.Spec.author}</a>`);
+                $("#plugin_enabled").html(data.Enabled?`<i class="ui green check icon"></i>`:`<i class="ui red times icon"></i>`);
+                $("#plugin_assigned_port").text(data.AssignedPort);
+                $("#plugin_root_dir").text(data.RootDir + "/");
+                $("#plugin_description").text(data.Spec.description);
+                $("#plugin_category").text(data.Spec.type == 0 ? "Router" : "Utilities");
+                $("#plugin_url").html(`<a href="${data.Spec.url}" target="_blank">${data.Spec.url}</a>`);
+                $("#plugin_contact").html(`<a href="${authorContact}" target="_blank">${data.Spec.author_contact}</a>`);
+                $("#plugin_info_modal").modal('show');
+
+                //Update the developer insights
+                //Note that some paths might be empty string which means they are not registered
+                let registeredStaticCapturePaths = data.Spec.static_capture_paths;
+                if (registeredStaticCapturePaths  == null || registeredStaticCapturePaths.length == 0) {
+                    registeredStaticCapturePaths = [{capture_path: "No static capture paths registered"}];
+                }
+                let capturePathsList = '<div class="ui list">';
+                registeredStaticCapturePaths.forEach(function(path) {
+                    capturePathsList += `<div class="item">${path.capture_path}</div>`;
+                });
+                capturePathsList += '</ul>';
+                $("#registered_static_capture_paths").html(capturePathsList);
+
+
+                let staticCaptureIngress = data.Spec.static_capture_ingress;
+                if (staticCaptureIngress == null || staticCaptureIngress == "") {
+                    staticCaptureIngress = "Not registered";
+                }
+                let dynamicCaptureSniffingPath = data.Spec.dynamic_capture_sniff;
+                if (dynamicCaptureSniffingPath == null || dynamicCaptureSniffingPath == "") {
+                    dynamicCaptureSniffingPath = "Not registered";
+                }
+                let dynamicCaptureIngress = data.Spec.dynamic_capture_ingress;
+                if (dynamicCaptureIngress == null || dynamicCaptureIngress == "") {
+                    dynamicCaptureIngress = "Not registered";
+                }
+                let registeredUIProxyPath = data.Spec.ui_path;
+                if (registeredUIProxyPath == null || registeredUIProxyPath == "") {
+                    registeredUIProxyPath = "No UI registered";
+                }
+
+                $("#static_capture_ingress").text(staticCaptureIngress);
+                $("#dynamic_capture_sniffing_path").text(dynamicCaptureSniffingPath);
+                $("#dynamic_capture_ingress").text(dynamicCaptureIngress);
+                $("#registered_ui_proxy_path").text(registeredUIProxyPath);
+                });
+            }
+
+            $(".advanceSettings").accordion();
+
+            function closeThisWrapper(){
+                parent.hideSideWrapper(true);
+            }
+        </script>
+    </body>
+</html>

@@ -1,6 +1,6 @@
 <div class="">
-    <iframe id="pluginContextLoader" src="" style="width: 100%; border: none;">
-
+    <iframe id="pluginContextLoader" src="" style="width: 100%; border: none;" allow="scripts" sandbox="allow-scripts allow-same-origin">
+    
     </iframe>
 </div>
 <script>
@@ -45,6 +45,9 @@
     function resizeIframe() {
         let iframe = document.getElementById('pluginContextLoader');
         let mainMenuHeight = document.getElementById('mainmenu').offsetHeight;
+        if (mainMenuHeight == 0){
+            mainMenuHeight = window.innerHeight - 198; //Fallback to window height
+        }
         iframe.style.height = mainMenuHeight + 'px';
     }
 
@@ -57,6 +60,4 @@
         //On switch over to this page, load info
         resizeIframe();
     }
-
-    initPluginUIView();
 </script>

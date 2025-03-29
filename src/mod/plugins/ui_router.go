@@ -38,18 +38,25 @@ func (m *Manager) HandlePluginUI(pluginID string, w http.ResponseWriter, r *http
 	rewrittenURL := r.RequestURI
 	rewrittenURL = strings.TrimPrefix(rewrittenURL, matchingPath)
 	rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	if rewrittenURL == "" {
+		rewrittenURL = "/"
+	}
 	r.URL, _ = url.Parse(rewrittenURL)
 
 	//Call the plugin UI handler
-	plugin.uiProxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	_, err = plugin.uiProxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
 		UseTLS:       false,
 		OriginalHost: r.Host,
 		ProxyDomain:  upstreamOrigin,
-		NoCache:      true,
 		PathPrefix:   matchingPath,
 		Version:      m.Options.SystemConst.ZoraxyVersion,
 		UpstreamHeaders: [][]string{
 			{"X-Zoraxy-Csrf", m.Options.CSRFTokenGen(r)},
 		},
 	})
+
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+	}
+
 }

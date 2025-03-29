@@ -1,4 +1,5 @@
-FROM docker.io/golang:alpine AS build-zoraxy
+## Build Zoraxy
+FROM docker.io/golang:bookworm AS build-zoraxy
 
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /usr/local/bin/
@@ -12,7 +13,9 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     chmod 755 /usr/local/bin/zoraxy
 
-FROM docker.io/ubuntu:latest AS build-zerotier
+
+## Build ZeroTier
+FROM docker.io/golang:bookworm AS build-zerotier
 
 RUN mkdir -p /opt/zerotier/source/ &&\
     mkdir -p /usr/local/bin/
@@ -29,14 +32,20 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
     mv ./zerotier-one /usr/local/bin/zerotier-one &&\
     chmod 755 /usr/local/bin/zerotier-one
 
-FROM docker.io/ubuntu:latest
+
+FROM docker.io/golang:bookworm
+
+COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
+COPY --chmod=700 ./build_plugins.sh /usr/local/bin/build_plugins
+COPY --chmod=700 ./example/plugins/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
+
+COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
+COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
 
 RUN apt-get update -y &&\
     apt-get install -y bash sudo netcat-openbsd libssl-dev ca-certificates openssh-server
 
-COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
-COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
-COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
+RUN mkdir -p /opt/zoraxy/plugin/
 
 WORKDIR /opt/zoraxy/config/
 
@@ -51,14 +60,13 @@ ENV FASTGEOIP="false"
 ENV MDNS="true"
 ENV MDNSNAME="''"
 ENV NOAUTH="false"
+ENV PLUGIN="/opt/zoraxy/plugin/"
 ENV PORT="8000"
 ENV SSHLB="false"
 ENV UPDATE_GEOIP="false"
 ENV VERSION="false"
 ENV WEBFM="true"
 ENV WEBROOT="./www"
-ENV ZTAUTH=""
-ENV ZTPORT="9993"
 
 VOLUME [ "/opt/zoraxy/config/" ]
 

@@ -1,6 +1,16 @@
 #!/bin/bash
+# This script builds all the plugins in the current directory
+
+echo "Copying zoraxy_plugin to all mods"
+for dir in ./*; do
+    if [ -d "$dir" ]; then
+        cp -r ../mod/plugins/zoraxy_plugin "$dir/mod"
+    fi
+done
+
 
 # Iterate over all directories in the current directory
+echo "Running go mod tidy and go build for all directories"
 for dir in */; do
     if [ -d "$dir" ]; then
         echo "Processing directory: $dir"

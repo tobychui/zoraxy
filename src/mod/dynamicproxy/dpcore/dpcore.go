@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
-	"imuslab.com/zoraxy/mod/dynamicproxy/modh2c"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 )
 
@@ -87,8 +86,6 @@ type DpcoreOptions struct {
 	FlushInterval           time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
 	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
 	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
-	IdleConnectionTimeout   int64         //Idle connection timeout, set to 0 for default
-	UseH2CRoundTripper      bool          //Use H2C RoundTripper for HTTP/2.0 connection
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -108,34 +105,27 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	thisTransporter := http.DefaultTransport
 
 	//Hack the default transporter to handle more connections
-	optimalConcurrentConnection := 32
+
+	optimalConcurrentConnection := 256
 	if dpcOptions.MaxConcurrentConnection > 0 {
 		optimalConcurrentConnection = dpcOptions.MaxConcurrentConnection
 	}
+
 	thisTransporter.(*http.Transport).IdleConnTimeout = 30 * time.Second
 	thisTransporter.(*http.Transport).MaxIdleConns = optimalConcurrentConnection * 2
-	thisTransporter.(*http.Transport).MaxIdleConnsPerHost = optimalConcurrentConnection
-	thisTransporter.(*http.Transport).MaxConnsPerHost = optimalConcurrentConnection * 2
 	thisTransporter.(*http.Transport).DisableCompression = true
+	thisTransporter.(*http.Transport).DisableKeepAlives = false
 
 	if dpcOptions.ResponseHeaderTimeout > 0 {
 		//Set response header timeout
 		thisTransporter.(*http.Transport).ResponseHeaderTimeout = time.Duration(dpcOptions.ResponseHeaderTimeout) * time.Millisecond
 	}
 
-	if dpcOptions.IdleConnectionTimeout > 0 {
-		//Set idle connection timeout
-		thisTransporter.(*http.Transport).IdleConnTimeout = time.Duration(dpcOptions.IdleConnectionTimeout) * time.Millisecond
-	}
-
 	if dpcOptions.IgnoreTLSVerification {
 		//Ignore TLS certificate validation error
-		thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
-	}
-
-	if dpcOptions.UseH2CRoundTripper {
-		//Use H2C RoundTripper for HTTP/2.0 connection
-		thisTransporter = modh2c.NewH2CRoundTripper()
+		if thisTransporter.(*http.Transport).TLSClientConfig != nil {
+			thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+		}
 	}
 
 	return &ReverseProxy{
@@ -160,39 +150,17 @@ func singleJoiningSlash(a, b string) string {
 }
 
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
-
-	if a.RawPath == "" && b.RawPath == "" {
-
-		return singleJoiningSlash(a.Path, b.Path), ""
-
-	}
-
-	// Same as singleJoiningSlash, but uses EscapedPath to determine
-
-	// whether a slash should be added
-
-	apath := a.EscapedPath()
-
-	bpath := b.EscapedPath()
-
-	aslash := strings.HasSuffix(apath, "/")
-
-	bslash := strings.HasPrefix(bpath, "/")
+	apath, bpath := a.EscapedPath(), b.EscapedPath()
+	aslash, bslash := strings.HasSuffix(apath, "/"), strings.HasPrefix(bpath, "/")
 
 	switch {
-
 	case aslash && bslash:
-
 		return a.Path + b.Path[1:], apath + bpath[1:]
-
 	case !aslash && !bslash:
-
 		return a.Path + "/" + b.Path, apath + "/" + bpath
-
+	default:
+		return a.Path + b.Path, apath + bpath
 	}
-
-	return a.Path + b.Path, apath + bpath
-
 }
 
 func copyHeader(dst, src http.Header) {
@@ -288,26 +256,17 @@ func (p *ReverseProxy) logf(format string, args ...interface{}) {
 func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	transport := p.Transport
 
-	outreq := new(http.Request)
-	// Shallow copies of maps, like header
-	*outreq = *req
+	outreq := req.Clone(req.Context())
 
-	if cn, ok := rw.(http.CloseNotifier); ok {
-		if requestCanceler, ok := transport.(requestCanceler); ok {
-			// After the Handler has returned, there is no guarantee
-			// that the channel receives a value, so to make sure
-			reqDone := make(chan struct{})
-			defer close(reqDone)
-			clientGone := cn.CloseNotify()
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+	outreq = outreq.WithContext(ctx)
 
-			go func() {
-				select {
-				case <-clientGone:
-					requestCanceler.CancelRequest(outreq)
-				case <-reqDone:
-				}
-			}()
-		}
+	if requestCanceler, ok := transport.(requestCanceler); ok {
+		go func() {
+			<-ctx.Done()
+			requestCanceler.CancelRequest(outreq)
+		}()
 	}
 
 	p.Director(outreq)
@@ -350,8 +309,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		if p.Verbal {
 			p.logf("http: proxy error: %v", err)
 		}
-
-		//rw.WriteHeader(http.StatusBadGateway)
 		return http.StatusBadGateway, err
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/fs"
 	"net/http"
 	"net/http/pprof"
 
@@ -29,6 +30,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/status", ReverseProxyStatus)
 	authRouter.HandleFunc("/api/proxy/toggle", ReverseProxyToggleRuleSet)
 	authRouter.HandleFunc("/api/proxy/list", ReverseProxyList)
+	authRouter.HandleFunc("/api/proxy/listTags", ReverseProxyListTags)
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
 	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
@@ -114,7 +116,7 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/whitelist/ip/add", handleIpWhitelistAdd)
 	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
 	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
-
+	authRouter.HandleFunc("/api/whitelist/allowLocal", handleWhitelistAllowLoopback)
 	/* Quick Ban List */
 	authRouter.HandleFunc("/api/quickban/list", handleListQuickBan)
 }
@@ -142,24 +144,6 @@ func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
 	/* UpTime Monitor */
 	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)
-}
-
-// Register the APIs for Global Area Network management functions, Will be moving to plugin soon
-func RegisterGANAPIs(authRouter *auth.RouterDef) {
-	authRouter.HandleFunc("/api/gan/network/info", ganManager.HandleGetNodeID)
-	authRouter.HandleFunc("/api/gan/network/add", ganManager.HandleAddNetwork)
-	authRouter.HandleFunc("/api/gan/network/remove", ganManager.HandleRemoveNetwork)
-	authRouter.HandleFunc("/api/gan/network/list", ganManager.HandleListNetwork)
-	authRouter.HandleFunc("/api/gan/network/name", ganManager.HandleNetworkNaming)
-	//authRouter.HandleFunc("/api/gan/network/detail", ganManager.HandleNetworkDetails)
-	authRouter.HandleFunc("/api/gan/network/setRange", ganManager.HandleSetRanges)
-	authRouter.HandleFunc("/api/gan/network/join", ganManager.HandleServerJoinNetwork)
-	authRouter.HandleFunc("/api/gan/network/leave", ganManager.HandleServerLeaveNetwork)
-	authRouter.HandleFunc("/api/gan/members/list", ganManager.HandleMemberList)
-	authRouter.HandleFunc("/api/gan/members/ip", ganManager.HandleMemberIP)
-	authRouter.HandleFunc("/api/gan/members/name", ganManager.HandleMemberNaming)
-	authRouter.HandleFunc("/api/gan/members/authorize", ganManager.HandleMemberAuthorization)
-	authRouter.HandleFunc("/api/gan/members/delete", ganManager.HandleMemberDelete)
 }
 
 // Register the APIs for Stream (TCP / UDP) Proxy management functions
@@ -243,6 +227,12 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/enable", pluginManager.HandleEnablePlugin)
 	authRouter.HandleFunc("/api/plugins/disable", pluginManager.HandleDisablePlugin)
 	authRouter.HandleFunc("/api/plugins/icon", pluginManager.HandleLoadPluginIcon)
+	authRouter.HandleFunc("/api/plugins/info", pluginManager.HandlePluginInfo)
+
+	authRouter.HandleFunc("/api/plugins/groups/list", pluginManager.HandleListPluginGroups)
+	authRouter.HandleFunc("/api/plugins/groups/add", pluginManager.HandleAddPluginToGroup)
+	authRouter.HandleFunc("/api/plugins/groups/remove", pluginManager.HandleRemovePluginFromGroup)
+	authRouter.HandleFunc("/api/plugins/groups/deleteTag", pluginManager.HandleRemovePluginGroup)
 }
 
 // Register the APIs for Auth functions, due to scoping issue some functions are defined here
@@ -326,13 +316,20 @@ func initAPIs(targetMux *http.ServeMux) {
 		},
 	})
 
-	//Register the standard web services urls
-	fs := http.FileServer(http.FS(webres))
+	// Register the standard web services URLs
+	var staticWebRes http.Handler
 	if DEVELOPMENT_BUILD {
-		fs = http.FileServer(http.Dir("web/"))
+		staticWebRes = http.FileServer(http.Dir("web/"))
+	} else {
+		subFS, err := fs.Sub(webres, "web")
+		if err != nil {
+			panic("Failed to strip 'web/' from embedded resources: " + err.Error())
+		}
+		staticWebRes = http.FileServer(http.FS(subFS))
 	}
+
 	//Add a layer of middleware for advance control
-	advHandler := FSHandler(fs)
+	advHandler := FSHandler(staticWebRes)
 	targetMux.Handle("/", advHandler)
 
 	//Register the APIs
@@ -344,7 +341,6 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterAccessRuleAPIs(authRouter)
 	RegisterPathRuleAPIs(authRouter)
 	RegisterStatisticalAPIs(authRouter)
-	RegisterGANAPIs(authRouter)
 	RegisterStreamProxyAPIs(authRouter)
 	RegisterMDNSAPIs(authRouter)
 	RegisterNetworkUtilsAPIs(authRouter)

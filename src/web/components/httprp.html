@@ -665,6 +665,9 @@
     //Bind on tab switch events
     tabSwitchEventBind["httprp"] = function(){
         listProxyEndpoints();
+
+        //Reset the tag filter
+        $("#tagFilterDropdown").dropdown('set selected', "");
     }
 
     /* Tags & Search */

@@ -108,6 +108,7 @@ func ReverseProxtInit() {
 		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
+		/* Routing Service Managers */
 		TlsManager:         tlsCertManager,
 		RedirectRuleTable:  redirectTable,
 		GeodbStore:         geodbStore,
@@ -116,7 +117,9 @@ func ReverseProxtInit() {
 		AccessController:   accessController,
 		AutheliaRouter:     autheliaRouter,
 		LoadBalancer:       loadBalancer,
-		Logger:             SystemWideLogger,
+		PluginManager:      pluginManager,
+		/* Utilities */
+		Logger: SystemWideLogger,
 	})
 	if err != nil {
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to create dynamic proxy router", err)
@@ -928,7 +931,11 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 // Report the current status of the reverse proxy server
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
-	js, _ := json.Marshal(dynamicProxyRouter)
+	js, err := json.Marshal(dynamicProxyRouter)
+	if err != nil {
+		utils.SendErrorResponse(w, "Unable to marshal status data")
+		return
+	}
 	utils.SendJSONResponse(w, string(js))
 }
 
@@ -996,6 +1003,23 @@ func ReverseProxyListDetail(w http.ResponseWriter, r *http.Request) {
 	} else {
 		utils.SendErrorResponse(w, "Invalid type given")
 	}
+}
+
+// List all tags used in the proxy rules
+func ReverseProxyListTags(w http.ResponseWriter, r *http.Request) {
+	results := []string{}
+	dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		thisEndpoint := value.(*dynamicproxy.ProxyEndpoint)
+		for _, tag := range thisEndpoint.Tags {
+			if !utils.StringInArray(results, tag) {
+				results = append(results, tag)
+			}
+		}
+		return true
+	})
+
+	js, _ := json.Marshal(results)
+	utils.SendJSONResponse(w, string(js))
 }
 
 func ReverseProxyList(w http.ResponseWriter, r *http.Request) {

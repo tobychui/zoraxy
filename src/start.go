@@ -20,7 +20,6 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
-	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
@@ -95,7 +94,7 @@ func startupSequence() {
 	}
 	authAgent = auth.NewAuthenticationAgent(SYSTEM_NAME, []byte(sessionKey), sysdb, true, SystemWideLogger, func(w http.ResponseWriter, r *http.Request) {
 		//Not logged in. Redirecting to login page
-		http.Redirect(w, r, ppf("/login.html"), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/login.html", http.StatusTemporaryRedirect)
 	})
 
 	//Create a TLS certificate manager
@@ -156,6 +155,7 @@ func startupSequence() {
 	if err != nil {
 		panic(err)
 	}
+	statisticCollector.SetAutoSave(STATISTIC_AUTO_SAVE_INTERVAL)
 
 	//Start the static web server
 	staticWebServer = webserv.NewWebServer(&webserv.WebServerOptions{
@@ -247,24 +247,6 @@ func startupSequence() {
 		}
 	}
 
-	/*
-		Global Area Network
-
-		Require zerotier token to work
-	*/
-	usingZtAuthToken := *ztAuthToken
-	if usingZtAuthToken == "" {
-		usingZtAuthToken, err = ganserv.TryLoadorAskUserForAuthkey()
-		if err != nil {
-			SystemWideLogger.Println("Failed to load ZeroTier controller API authtoken")
-		}
-	}
-	ganManager = ganserv.NewNetworkManager(&ganserv.NetworkManagerOptions{
-		AuthToken: usingZtAuthToken,
-		ApiPort:   *ztAPIPort,
-		Database:  sysdb,
-	})
-
 	//Create WebSSH Manager
 	webSshManager = sshprox.NewSSHProxyManager()
 
@@ -323,15 +305,18 @@ func startupSequence() {
 	/*
 		Plugin Manager
 	*/
-
+	pluginFolder := *path_plugin
+	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
-		PluginDir: "./plugins",
+		PluginDir: pluginFolder,
 		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
-			ZoraxyVersion: SYSTEM_VERSION,
-			ZoraxyUUID:    nodeUUID,
+			ZoraxyVersion:    SYSTEM_VERSION,
+			ZoraxyUUID:       nodeUUID,
+			DevelopmentBuild: DEVELOPMENT_BUILD,
 		},
-		Database: sysdb,
-		Logger:   SystemWideLogger,
+		Database:           sysdb,
+		Logger:             SystemWideLogger,
+		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},
@@ -389,6 +374,12 @@ func ShutdownSeq() {
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
 	}
+
+	if accessController != nil {
+		SystemWideLogger.Println("Closing Access Controller")
+		accessController.Close()
+	}
+
 	//Close the plugin manager
 	SystemWideLogger.Println("Shutting down plugin manager")
 	pluginManager.Close()

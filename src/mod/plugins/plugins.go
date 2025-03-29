@@ -10,11 +10,18 @@ package plugins
 */
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -28,12 +35,26 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 		os.MkdirAll(options.PluginDir, 0755)
 	}
 
+	//Create the plugin config file if not exists
+	if !utils.FileExists(options.PluginGroupsConfig) {
+		js, _ := json.Marshal(map[string][]string{})
+		err := os.WriteFile(options.PluginGroupsConfig, js, 0644)
+		if err != nil {
+			options.Logger.PrintAndLog("plugin-manager", "Failed to create plugin group config file", err)
+		}
+	}
+
 	//Create database table
 	options.Database.NewTable("plugins")
 
 	return &Manager{
-		LoadedPlugins: sync.Map{},
-		Options:       options,
+		LoadedPlugins:      make(map[string]*Plugin),
+		tagPluginMap:       sync.Map{},
+		tagPluginListMutex: sync.RWMutex{},
+		tagPluginList:      make(map[string][]*Plugin),
+		Options:            options,
+		/* Internal */
+		loadedPluginsMutex: sync.RWMutex{},
 	}
 }
 
@@ -54,10 +75,14 @@ func (m *Manager) LoadPluginsFromDisk() error {
 				continue
 			}
 			thisPlugin.RootDir = filepath.ToSlash(pluginPath)
-			m.LoadedPlugins.Store(thisPlugin.Spec.ID, thisPlugin)
+			thisPlugin.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
+			m.loadedPluginsMutex.Lock()
+			m.LoadedPlugins[thisPlugin.Spec.ID] = thisPlugin
+			m.loadedPluginsMutex.Unlock()
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
 			// If the plugin was enabled, start it now
+			fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
 			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
 				err = m.StartPlugin(thisPlugin.Spec.ID)
 				if err != nil {
@@ -67,25 +92,40 @@ func (m *Manager) LoadPluginsFromDisk() error {
 		}
 	}
 
+	if m.Options.PluginGroupsConfig != "" {
+		//Load the plugin groups from the config file
+		err = m.LoadPluginGroupsFromConfig()
+		if err != nil {
+			m.Log("Failed to load plugin groups", err)
+		}
+	}
+
+	//Generate the static forwarder radix tree
+	m.UpdateTagsToPluginMaps()
+
 	return nil
 }
 
 // GetPluginByID returns a plugin by its ID
 func (m *Manager) GetPluginByID(pluginID string) (*Plugin, error) {
-	plugin, ok := m.LoadedPlugins.Load(pluginID)
+	m.loadedPluginsMutex.RLock()
+	plugin, ok := m.LoadedPlugins[pluginID]
+	m.loadedPluginsMutex.RUnlock()
 	if !ok {
 		return nil, errors.New("plugin not found")
 	}
-	return plugin.(*Plugin), nil
+	return plugin, nil
 }
 
 // EnablePlugin enables a plugin
 func (m *Manager) EnablePlugin(pluginID string) error {
+	m.Options.Database.Write("plugins", pluginID, true)
 	err := m.StartPlugin(pluginID)
 	if err != nil {
 		return err
 	}
-	m.Options.Database.Write("plugins", pluginID, true)
+	//Generate the static forwarder radix tree
+	m.UpdateTagsToPluginMaps()
 	return nil
 }
 
@@ -96,6 +136,8 @@ func (m *Manager) DisablePlugin(pluginID string) error {
 	if err != nil {
 		return err
 	}
+	//Generate the static forwarder radix tree
+	m.UpdateTagsToPluginMaps()
 	return nil
 }
 
@@ -112,25 +154,107 @@ func (m *Manager) GetPluginPreviousEnableState(pluginID string) bool {
 
 // ListLoadedPlugins returns a list of loaded plugins
 func (m *Manager) ListLoadedPlugins() ([]*Plugin, error) {
-	var plugins []*Plugin = []*Plugin{}
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
+	plugins := []*Plugin{}
+	m.loadedPluginsMutex.RLock()
+	for _, plugin := range m.LoadedPlugins {
 		plugins = append(plugins, plugin)
-		return true
-	})
+	}
+	m.loadedPluginsMutex.RUnlock()
 	return plugins, nil
+}
+
+// Log a message with the plugin name
+func (m *Manager) LogForPlugin(p *Plugin, message string, err error) {
+	processID := -1
+	if p.process != nil && p.process.Process != nil {
+		// Get the process ID of the plugin
+		processID = p.process.Process.Pid
+	}
+	m.Log("["+p.Spec.Name+":"+strconv.Itoa(processID)+"] "+message, err)
 }
 
 // Terminate all plugins and exit
 func (m *Manager) Close() {
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
+	m.loadedPluginsMutex.Lock()
+	pluginsToStop := make([]*Plugin, 0)
+	for _, plugin := range m.LoadedPlugins {
 		if plugin.Enabled {
-			m.StopPlugin(plugin.Spec.ID)
+			pluginsToStop = append(pluginsToStop, plugin)
 		}
-		return true
+	}
+	m.loadedPluginsMutex.Unlock()
+
+	for _, thisPlugin := range pluginsToStop {
+		m.Options.Logger.PrintAndLog("plugin-manager", "Stopping plugin: "+thisPlugin.Spec.Name, nil)
+		m.StopPlugin(thisPlugin.Spec.ID)
+	}
+
+}
+
+/* Plugin Functions */
+func (m *Plugin) StartAllStaticPathRouters() {
+	// Create a dpcore object for each of the static capture paths of the plugin
+	for _, captureRule := range m.Spec.StaticCapturePaths {
+		//Make sure the captureRule consists / prefix and no trailing /
+		if captureRule.CapturePath == "" {
+			continue
+		}
+		if !strings.HasPrefix(captureRule.CapturePath, "/") {
+			captureRule.CapturePath = "/" + captureRule.CapturePath
+		}
+		captureRule.CapturePath = strings.TrimSuffix(captureRule.CapturePath, "/")
+
+		// Create a new dpcore object to forward the traffic to the plugin
+		targetURL, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(m.AssignedPort) + m.Spec.StaticCaptureIngress)
+		if err != nil {
+			fmt.Println("Failed to parse target URL: "+targetURL.String(), err)
+			continue
+		}
+		thisRouter := dpcore.NewDynamicProxyCore(targetURL, captureRule.CapturePath, &dpcore.DpcoreOptions{})
+		m.staticRouteProxy[captureRule.CapturePath] = thisRouter
+	}
+}
+
+// StopAllStaticPathRouters stops all static path routers
+func (m *Plugin) StopAllStaticPathRouters() {
+	for path := range m.staticRouteProxy {
+		m.staticRouteProxy[path] = nil
+		delete(m.staticRouteProxy, path)
+	}
+	m.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
+}
+
+// HandleStaticRoute handles the request to the plugin via static path captures (static forwarder)
+func (p *Plugin) HandleStaticRoute(w http.ResponseWriter, r *http.Request, longestPrefix string) {
+	longestPrefix = strings.TrimSuffix(longestPrefix, "/")
+	targetRouter := p.staticRouteProxy[longestPrefix]
+	if targetRouter == nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		fmt.Println("Error: target router not found for prefix", longestPrefix)
+		return
+	}
+
+	originalRequestURI := r.RequestURI
+
+	//Rewrite the request path to the plugin UI path
+	rewrittenURL := r.RequestURI
+	rewrittenURL = strings.TrimPrefix(rewrittenURL, longestPrefix)
+	rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	if rewrittenURL == "" {
+		rewrittenURL = "/"
+	}
+	r.URL, _ = url.Parse(rewrittenURL)
+
+	targetRouter.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+		UseTLS:       false,
+		OriginalHost: r.Host,
+		ProxyDomain:  "127.0.0.1:" + strconv.Itoa(p.AssignedPort),
+		NoCache:      true,
+		PathPrefix:   longestPrefix,
+		UpstreamHeaders: [][]string{
+			{"X-Zoraxy-Capture", longestPrefix},
+			{"X-Zoraxy-URI", originalRequestURI},
+		},
 	})
 
-	//Wait until all loaded plugin process are terminated
-	m.BlockUntilAllProcessExited()
 }

@@ -81,7 +81,7 @@
     <div class="ui action fluid notloopbackOnly input" tourstep="incomingPort">
         <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
         <input type="text" id="incomingPort" placeholder="Incoming Port" value="443">
-        <button class="ui green notloopbackOnly button" style="background: linear-gradient(60deg, #27e7ff, #00ca52);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
+        <button class="ui green notloopbackOnly button" style="background: var(--theme_green);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
     </div>
     <br>
     <div id="tls" class="ui toggle notloopbackOnly checkbox">
@@ -139,8 +139,8 @@
         <table class="ui unstackable very basic celled table">
             <thead>
             <tr>
-                <th>Country ISO Code</th>
-                <th>Unique Visitors</th>
+                <th style="padding: 0.4em;">Country ISO Code</th>
+                <th style="padding: 0.4em;">Unique Visitors</th>
             </tr>
             </thead>
             <tbody id="countryCodetable">
@@ -155,8 +155,8 @@
         <table class="ui unstackable very basic celled table">
             <thead>
             <tr>
-                <th>Proxy Type</th>
-                <th>Count</th>
+                <th style="padding: 0.4em;">Proxy Type</th>
+                <th style="padding: 0.4em;">Count</th>
             </tr>
             </thead>
             <tbody id="forwardTypeTable">
@@ -713,8 +713,13 @@
     }
 
     function updateChart() {
-        //networkStatisticChart.data.datasets[0].data = rxValues;
-        //networkStatisticChart.data.datasets[1].data = txValues;
+        //Do not remove these 3 lines, it will cause memory leak
+        if (typeof(networkStatisticChart) == "undefined"){
+            return;
+        }
+        networkStatisticChart.data.datasets[0].data = rxValues;
+        networkStatisticChart.data.datasets[1].data = txValues;
+        networkStatisticChart.data.labels = timestamps;
         if (networkStatisticChart != undefined){
             networkStatisticChart.update();
         }

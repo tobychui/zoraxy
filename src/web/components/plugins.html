@@ -1,3 +1,105 @@
+<style>
+  #selectablePluginList{
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 0.4em;
+  }
+  #selectablePluginList .item {
+    cursor: pointer;
+    padding: 1em;
+  }
+
+  #selectablePluginList .item:hover {
+    background-color: var(--theme_bg_active);
+  }
+
+  #selectedTagPluginList{
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 0.4em;
+  }
+
+  #selectedTagPluginList .item {
+    padding: 1em;
+    cursor: pointer;
+  }
+
+  #selectedTagPluginList .item:hover {
+    background-color: var(--theme_bg_active);
+  }
+
+  .selectablePluginItem{
+    position: relative;
+  }
+
+  .selectablePluginItem.active{
+    background-color: var(--theme_bg_active);
+  }
+    
+  .selectablePluginItem .selectedIcon{
+    position: absolute;
+    right: 0.2em;
+    bottom: 0.2em;
+    display:none;
+  }
+  .selectablePluginItem.active .selectedIcon{
+    display: block;
+  }
+
+  .selectedPluginItem{
+    position: relative;
+  }
+
+  .selectedPluginItem.active{
+    background-color: var(--theme_bg_active);
+  }
+    
+  .selectedPluginItem .selectedIcon{
+    position: absolute;
+    right: 0.2em;
+    bottom: 0.2em;
+    display:none;
+  }
+  .selectedPluginItem.active .selectedIcon{
+    display: block;
+  }
+
+  .pluginAddRemoveButtons{
+    border-left: 1px solid var(--divider_color); 
+    border-right: 1px solid var(--divider_color);
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important;
+  }
+
+  .pluginAddRemoveButtons .mobileViewOnly{
+      display: none;
+  }
+
+  .selectColTitle{
+    font-weight: bold;
+    margin-bottom: 0.4em;
+    text-align: center;
+    width: 100%;
+  }
+
+  @media (max-width: 780px) {
+    .pluginAddRemoveButtons {
+      border-left: none;
+      border-right: none;
+      border-top: 1px solid var(--divider_color);
+      border-bottom:  1px solid var(--divider_color);
+    }
+
+    .pluginAddRemoveButtons .mobileViewOnly{
+      display: block;
+    }
+
+    .pluginAddRemoveButtons .wideViewOnly{
+      display: none;
+    }
+  }
+</style>
 <div class="standardContainer">
     <div class="ui basic segment">
         <h2>Plugins</h2>
@@ -7,6 +109,70 @@
       <div class="header">Experimental Feature</div>
       <p>This feature is experimental and may not work as expected. Use with caution.</p>
     </div>
+    <h4 class="ui header">
+      Plugin Map
+     <div class="sub header">Assigning a plugin to a tag will make the plugin available to the HTTP Proxy rule with the same tag.</div>
+    </h4>
+    <br>
+    <div class="ui stackable grid">
+      <div class="seven wide column">
+        <!-- Selectable plugin list -->
+        <div class="selectColTitle">Unassigned Plugins</div>
+        <div id="selectablePluginList" class="ui relaxed divided list" style="border: 1px solid var(--divider_color);">
+          <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+            <i class="ui arrow up icon"></i> Select a tag to view available plugins
+          </div>
+        </div>
+      </div>
+      <div class="two wide column pluginAddRemoveButtons">
+        <!-- Add and Remove button -->
+        <div>
+          <div class="wideViewOnly">
+            <button class="ui basic red icon button removeSelectedPluginFromTagBtn" title="Remove selected plugin from tag">
+              <i class="left arrow icon"></i>
+            </button>
+            <br>
+            <button class="ui basic green icon button addSelectedPluginTotagBtn" title="Add selected plugin to tag" style="margin-top: 0.4em;">
+              <i class="right arrow icon"></i>
+            </button>
+          </div>
+          <div class="mobileViewOnly">
+            <button class="ui basic red icon button removeSelectedPluginFromTagBtn" title="Remove selected plugin from tag">
+              <i class="up arrow icon"></i>
+            </button>
+            <br>
+            <button class="ui basic green icon button addSelectedPluginTotagBtn" title="Add selected plugin to tag" style="margin-top: 0.4em;">
+              <i class="down arrow icon"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="seven wide column">
+        <!-- Tag / Plugin List -->
+        <div class="ui fluid selection dropdown" id="pluginTagList">
+          <input type="hidden" name="tag">
+          <i class="dropdown icon"></i>
+          <div class="default text">Select Tag</div>
+          <div class="menu">
+            <!-- <div class="item" data-value="tag1">Tag 1</div> -->
+          </div>
+        </div>
+        <button class="ui basic fluid button" onclick="loadTags();" style="margin-top: 0.4em;"><i class="ui green refresh icon"></i> Refresh Tag List</button>
+        <div class="ui divider"></div>
+        <div class="selectColTitle">Assigned Plugins</div>
+        <div id="selectedTagPluginList" class="ui relaxed divided list" style="border: 1px solid var(--divider_color);">
+            <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+            <i class="ui arrow up icon"></i> Select a tag to view assigned plugins
+            </div>
+        </div>
+      </div>
+    </div>
+    <br>
+    <div class="ui divider"></div>
+    <h4 class="ui header">
+       Plugin List
+      <div class="sub header">A list of installed plugins and their enable state</div>
+    </h4>
     <table class="ui basic celled table">
         <thead>
           <tr>
@@ -22,11 +188,220 @@
 </div>
 
 <script>
+var plugin_list = [];
 
+/* Plugin Tag Assignment */
+$('#pluginTagList').dropdown();
+$('#pluginTagList').on('change', function() {
+  const selectedTag = $(this).dropdown('get value');
+  loadPluginsForTag(selectedTag);
+});
+
+function loadPluginsForTag(tag) {
+  $.get(`/api/plugins/groups/list?tag=${tag}`, function(data) {
+    $("#selectedTagPluginList").html("");
+
+    let selectedPluginIDs = [];
+    data.forEach(plugin => {
+      $("#selectedTagPluginList").append(`
+        <div class="item selectedPluginItem" pluginid="${plugin.Spec.id}">
+          <img class="ui avatar image" src="/api/plugins/icon?plugin_id=${plugin.Spec.id}">
+          <div class="content">
+            <a class="header">${plugin.Spec.name}</a>
+            <div class="description">${plugin.Spec.description}</div>
+          </div>
+          <div class="selectedIcon">
+            <i class="ui large green circle check icon"></i>
+          </div>
+        </div>
+      `);
+
+      selectedPluginIDs.push(plugin.Spec.id);
+    });
+
+    if (data.length == 0){
+      $("#selectedTagPluginList").append(`
+        <div class="item"  style="pointer-events: none; user-select: none; opacity: 0.6;">
+          <i class="ui green circle check icon"></i> No plugins assigned to this tag
+        </div>
+      `);
+    }
+
+    //Load the remaining plugins to the selectable list
+    $("#selectablePluginList").html("");
+    let selectablePluginCount = 0;
+    plugin_list.forEach(plugin => {
+      if (plugin.Spec.type != 0) {
+        //This is not a router plugin, skip
+        return;
+      }
+      if (!selectedPluginIDs.includes(plugin.Spec.id)) {
+        $("#selectablePluginList").append(`
+          <div class="item selectablePluginItem" pluginid="${plugin.Spec.id}">
+            <img class="ui avatar image" src="/api/plugins/icon?plugin_id=${plugin.Spec.id}">
+            <div class="content">
+              <a class="header">${plugin.Spec.name}</a>
+              <div class="description">${plugin.Spec.description}</div>
+            </div>
+            <div class="selectedIcon">
+              <i class="ui large green circle check icon"></i>
+            </div>
+          </div>
+        `);
+        selectablePluginCount++;
+      }
+    });
+
+    if (selectablePluginCount == 0){
+      $("#selectablePluginList").append(`
+        <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+          <i class="ui green circle check icon"></i> No plugins available to assign
+        </div>
+      `);
+    }
+
+    bindEventsToSelectableItems();
+  });
+}
+
+//Load all the tags from the server
+function loadTags(){
+  $.get(`/api/proxy/listTags`, function(data){
+    $("#pluginTagList").find(".menu").html("");
+    if (data.error != undefined){
+      msgbox(data.error, false);
+      return;
+    }
+    $("#pluginTagList").find(".menu").html("");
+    data.forEach(tag => {
+      $("#pluginTagList").find(".menu").append(`
+        <div class="item" data-value="${tag}">${tag}</div>
+      `);
+    });
+  });
+
+}
+loadTags();
+
+//This is used as a dummy function to initialize the selectable plugin list
+function initSelectablePluginList(){
+  $("#selectablePluginList").html("");
+  $.get(`/api/plugins/list`, function(data){
+      data.forEach(plugin => {
+      if (plugin.Spec.type != 0) {
+        //This is not a router plugin, skip
+        return;
+      }
+      $("#selectablePluginList").append(`
+        <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+          <img class="ui avatar image" src="/api/plugins/icon?plugin_id=${plugin.Spec.id}">
+          <div class="content">
+            <a class="header">${plugin.Spec.name}</a>
+            <div class="description">${plugin.Spec.description}</div>
+          </div>
+        </div>
+      `);
+      
+    });
+
+    if (data.length == 0){
+      $("#selectablePluginList").append(`
+        <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+          <p><i class="ui green circle check icon"></i> No plugins available to assign</p>
+          <p>Plugins can be installed to Zoraxy by placing the plugin files in the plugins directory.</p>
+        </div>
+      `);
+    }
+  });
+  
+}
+initSelectablePluginList();
+
+function bindEventsToSelectableItems(){
+  $(".selectablePluginItem").on("click", function(){
+    $(".selectablePluginItem.active").removeClass("active");
+    $(this).addClass("active");
+  });
+
+  $(".selectedPluginItem").on("click", function(){
+      $(".selectedPluginItem.active").removeClass("active");
+      $(this).addClass("active");
+  });
+}
+
+//Bind events for the buttons
+function bindTagAssignButtonEvents(){
+  $(".addSelectedPluginTotagBtn").on("click", function(){
+    const selectedPlugin = $(".selectablePluginItem.active");
+    const selectedTag = $("#pluginTagList").dropdown("get value");
+    if (selectedPlugin.length == 0){
+      msgbox("Please select a plugin to add", false);
+      return;
+    }
+    if (selectedTag == ""){
+      msgbox("Please select a tag to add the plugin to", false);
+      return;
+    }
+    const pluginId = selectedPlugin.attr("pluginid");
+    addPluginToTag(pluginId, selectedTag);
+  });
+
+  $(".removeSelectedPluginFromTagBtn").on("click", function(){
+    const selectedPlugin = $(".selectedPluginItem.active");
+    const selectedTag = $("#pluginTagList").dropdown("get value");
+    if (selectedPlugin.length == 0){
+      msgbox("Please select a plugin to remove", false);
+      return;
+    }
+    if (selectedTag == ""){
+      msgbox("Please select a tag to remove the plugin from", false);
+      return;
+    }
+    const pluginId = selectedPlugin.attr("pluginid");
+    removePluginFromTag(pluginId, selectedTag);
+  });
+}
+bindTagAssignButtonEvents();
+
+function addPluginToTag(pluginId, tag){
+  $.cjax({
+    url: '/api/plugins/groups/add',
+    type: 'POST',
+    data: {plugin_id: pluginId, tag: tag},
+    success: function(data){
+      if (data.error != undefined){
+        msgbox(data.error, false);
+      }else{
+        msgbox("Plugin added to tag", true);
+      }
+      loadPluginsForTag(tag);
+    }
+  });
+}
+
+function removePluginFromTag(pluginId, tag){
+  $.cjax({
+    url: '/api/plugins/groups/remove',
+    type: 'POST',
+    data: {plugin_id: pluginId, tag: tag},
+    success: function(data){
+      if (data.error != undefined){
+        msgbox(data.error, false);
+      }else{
+        msgbox("Plugin removed from tag", true);
+      }
+      loadPluginsForTag(tag);
+    }
+  });
+}
+
+/* Plugin List */
+//Render the plugin list to Zoraxy homepage side menu
 function initPluginSideMenu(){
   $.get(`/api/plugins/list`, function(data){
     $("#pluginMenu").html("");
     let enabledPluginCount = 0;
+    plugin_list = data;
     data.forEach(plugin => {
       if (!plugin.Enabled){
         return;
@@ -54,6 +429,20 @@ function initPluginSideMenu(){
             loadPluginUIContextIfAvailable();
         });
     });
+
+    /* Handling Plugin Manager State, see index.html */
+    //Callback to be called when the plugin list is updated
+    if (plugin_manager_state && !plugin_manager_state.initated){
+      plugin_manager_state.initated = true;
+      if (plugin_manager_state.initCallback){
+        plugin_manager_state.initCallback();
+      }
+    }
+
+    //Callback to be called when the plugin list is updated
+    if (plugin_manager_state && plugin_manager_state.listUpdateCallback){
+      plugin_manager_state.listUpdateCallback();
+    }
 
   });
 }
@@ -91,14 +480,15 @@ function initiatePluginList(){
           <a href="${plugin.Spec.url}" target="_blank">${plugin.Spec.url}</a></td>
           <td data-label="Category">${plugin.Spec.type==0?"Router":"Utilities"}</td>
           <td data-label="Action">
-            <div class="ui small basic buttons">
-              <button onclick="stopPlugin('${plugin.Spec.id}', this);" class="ui button pluginEnableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? '' : 'style="display:none;"'}>
-                <i class="red stop circle icon"></i> Stop
-              </button>
-              <button onclick="startPlugin('${plugin.Spec.id}', this);" class="ui button pluginDisableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? 'style="display:none;"' : ''}>
-                <i class="green play circle icon"></i> Start
-              </button>
-            </div>
+            <button onclick="getPluginInfo('${plugin.Spec.id}', this);" class="ui basic icon button" pluginid="${plugin.Spec.id}">
+              <i class="info circle icon"></i>
+            </button>
+            <button onclick="stopPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginEnableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? '' : 'style="display:none;"'}>
+              <i class="red stop circle icon"></i> Stop
+            </button>
+            <button onclick="startPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginDisableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? 'style="display:none;"' : ''}>
+              <i class="green play circle icon"></i> Start
+            </button>
           </td>
         </tr>
       `;
@@ -119,6 +509,12 @@ function initiatePluginList(){
 
 initiatePluginList();
 
+/* Tag Assignment */
+
+
+
+
+/* Plugin Lifecycle */
 function startPlugin(pluginId, btn=undefined){
   if (btn) {
     $(btn).html('<i class="spinner loading icon"></i> Starting');
@@ -159,6 +555,12 @@ function stopPlugin(pluginId, btn=undefined){
       initPluginSideMenu();
     }
   });
+}
+
+/* Plugin information */
+function getPluginInfo(pluginId, btn){
+  let payload = encodeURIComponent(JSON.stringify({plugin_id: pluginId}));
+  showSideWrapper("snippet/pluginInfo.html?t=" + Date.now() + "#" + payload);
 }
 
 </script>

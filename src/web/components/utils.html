@@ -151,11 +151,6 @@
                         <td>Running Since</td>
                         <td class="boottime"></td>
                     </tr>
-                    
-                    <tr>
-                        <td>ZeroTier Linked</td>
-                        <td class="zt"></td>
-                    </tr>
                     <tr>
                         <td>Enable SSH Loopback</td>
                         <td class="sshlb"></td>
@@ -224,7 +219,6 @@
         $("#zoraxyinfo .version").text(data.Version);
         $(".zrversion").text("v." + data.Version); //index footer
         $("#zoraxyinfo .boottime").text(timeConverter(data.BootTime) + ` ( ${secondsToDhms(parseInt(Date.now()/1000) - data.BootTime)} ago)`);
-        $("#zoraxyinfo .zt").html(data.ZerotierConnected?`<i class="ui green check icon"></i> Connected`:`<i class="ui red times icon"></i> Link Error`);
         $("#zoraxyinfo .sshlb").html(data.EnableSshLoopback?`<i class="ui yellow exclamation triangle icon"></i> Enabled`:`Disabled`);
     });
 

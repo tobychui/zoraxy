@@ -48,7 +48,6 @@ type Upstream struct {
 	//HTTP Transport Config
 	MaxConn     int   //Maxmium concurrent requests to this upstream dpcore instance
 	RespTimeout int64 //Response header timeout in milliseconds
-	IdleTimeout int64 //Idle connection timeout in milliseconds
 
 	//currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
 	proxy *dpcore.ReverseProxy

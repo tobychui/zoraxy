@@ -23,6 +23,7 @@ docker run -d \
   -p 443:443 \
   -p 8000:8000 \
   -v /path/to/zoraxy/config/:/opt/zoraxy/config/ \
+  -v /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/ \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /etc/localtime:/etc/localtime \
   -e FASTGEOIP="true" \
@@ -43,6 +44,7 @@ services:
       - 8000:8000
     volumes:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
+      - /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime
     environment:
@@ -62,6 +64,7 @@ services:
 | Volume | Details |
 |:-|:-|
 | `/opt/zoraxy/config/` | Zoraxy configuration. |
+| `/opt/zoraxy/plugin/` | Zoraxy plugins. |
 | `/var/run/docker.sock` | Docker socket. Used for additional functionality with Zoraxy. |
 | `/etc/localtime` | Localtime. Set to ensure the host and container are synchronized. |
 
@@ -80,6 +83,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `MDNS` | `true` (Boolean) | Enable mDNS scanner and transponder. |
 | `MDNSNAME` | `''` (String) | mDNS name, leave empty to use default (zoraxy_{node-uuid}.local). |
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |
+| `PLUGIN` | `/opt/zoraxy/plugin/` (String) | Set the path for Zoraxy plugins. Only change this if you know what you are doing. |
 | `PORT` | `8000` (Integer) | Management web interface listening port |
 | `SSHLB` | `false` (Boolean) | Allow loopback web ssh connection (DANGER). |
 | `UPDATE_GEOIP` | `false` (Boolean) | Download the latest GeoIP data and exit. |
@@ -87,17 +91,24 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `WEBFM` | `true` (Boolean) | Enable web file manager for static web server root folder. |
 | `WEBROOT` | `./www` (String) | Static web server root folder. Only allow change in start parameters. |
 | `ZEROTIER` | `false` (Boolean) | Enable ZeroTier functionality for GAN. |
-| `ZTAUTH` | `""` (String) | ZeroTier authtoken for the local node. |
-| `ZTPORT` | `9993` (Integer) | ZeroTier controller API port. |
 
 > [!IMPORTANT]
 > Contrary to the Zoraxy README, Docker usage of the port flag should NOT include the colon. Ex: `-e PORT="8000"` for Docker run and `PORT: "8000"` for Docker compose.
+
+### Plugins
+
+You can find official plugins at https://github.com/aroz-online/zoraxy-official-plugins
+
+Place your plugins inside the volume `/path/to/zoraxy/plugin/:/opt/zoraxy/plugin/` (Adjust to your actual install location). Any plugins you have added will then be built and used on the next restart.
+
+> [!IMPORTANT]
+> Plugins are currently experimental.
 
 ### Building
 
 To build the Docker image:
   - Check out the repository/branch.
-  - Copy the Zoraxy `src/` directory into the `docker/` (here) directory.
+  - Copy the Zoraxy `src/` and `example/` directory into the `docker/` (here) directory.
   - Run the build command with `docker build -t zoraxy_build .`
   - You can now use the image `zoraxy_build`
     - If you wish to change the image name, then modify`zoraxy_build` in the previous step and then build again.

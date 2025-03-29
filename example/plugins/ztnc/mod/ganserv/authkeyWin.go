@@ -5,12 +5,10 @@ package ganserv
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	"aroz.org/zoraxy/ztnc/mod/utils"
 	"golang.org/x/sys/windows"
@@ -44,15 +42,6 @@ func readAuthTokenAsAdmin() (string, error) {
 	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
 	if err != nil {
 		return "", err
-	}
-
-	log.Println("Please click agree to allow access to ZeroTier authtoken from ProgramData")
-	retry := 0
-	time.Sleep(3 * time.Second)
-	for !utils.FileExists("./conf/authtoken.secret") && retry < 10 {
-		time.Sleep(3 * time.Second)
-		log.Println("Waiting for ZeroTier authtoken extraction...")
-		retry++
 	}
 
 	authKey, err := os.ReadFile("./conf/authtoken.secret")

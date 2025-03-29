@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- CSRF token, if your plugin need to make POST request to backend -->
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <title>UPnP Port Forwarder | Zoraxy</title>
+    <link rel="stylesheet" href="/script/semantic/semantic.min.css">
+    <script src="/script/jquery-3.6.0.min.js"></script>
+    <script src="/script/semantic/semantic.min.js"></script>
+    <script src="/script/utils.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/main.css">
+    <style>
+        body {
+            background:none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Dark theme script must be included after body tag-->
+    <link rel="stylesheet" href="/darktheme.css">
+    <script src="/script/darktheme.js"></script>
+    <div id="upnpForwarder" class="standardContainer">
+        <div id="upnpRouterNotFoundWarning" class="ui basic segment" style="display: none;">
+            <h2>UPnP Port Forwarder</h2>
+            <p>Port forward using UPnP protocol, only works with some of the supported gateway routers</p>
+        </div>
+        <div class="ui basic segment">
+            <div class="ui message">
+                <div class="header"><i class="yellow exclamation triangle icon"></i> UPnP Gateway Not Found</div>
+                <p>No UPnP router found in network. Please ensure your router supports UPnP and is enabled.</p>
+                <button id="retryBtn" onclick="searchUpnpRouter();" class="ui basic small button"><i class="green refresh icon"></i> Search again</button>
+            </div>
+            <div class="ui basic segment">
+                <h3 class="ui header">UPnP Port Forwarder</h3>
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="upnpToggle" onchange="toggleUpnpState();">
+                    <label>Enable UPnP Forwarding</label>
+                </div>
+            </div>
+
+            <div class="ui divider"></div>
+            <table class="ui celled table">
+                <thead>
+                    <tr>
+                        <th>Rule Name</th>
+                        <th>Forwarded Port</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="forwardList">
+                    <tr>
+                        <td>Example Rule</td>
+                        <td>8080</td>
+                        <td>
+                            <button class="ui button">Edit</button>
+                            <button class="ui button">Remove</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="ui divider"></div>
+            <div>
+                <h4>Port Forward Rules</h4>
+                <form class="ui form" id="addRuleForm">
+                    <div class="field">
+                        <label>Rule Name</label>
+                        <input type="text" name="ruleName" placeholder="Rule Name">
+                    </div>
+                    <div class="field">
+                        <label>Port</label>
+                        <input type="number" name="port" placeholder="Port" min="1" max="65535">
+                    </div>
+                    <button onclick="handleAddForward(event);" class="ui small basic button"><i class="ui blue add icon"></i> Add Rule</button>
+                </form>
+
+            </div>
+
+        </div>
+    </div>
+    <script>
+
+        function toggleUpnpState() {
+            let isChecked = $("#upnpToggle").prop("checked");
+            $.cjax({
+                url: './api/toggle',
+                method: "POST",
+                data: {
+                    enable: isChecked
+                },
+                success: function(data) {
+                    if (data.error != undefined) {
+                        // Error
+                        parent.msgbox(data.error, false);
+                    } else {
+                        // Success
+                        parent.msgbox("UPnP Forwarding " + (isChecked ? "enabled" : "disabled"), true);
+                    }
+                }
+            });
+        }
+
+        function initUPnPEnableState(){
+            $.cjax({
+                url: './api/enable',
+                success: function(data) {
+                    if (data == true){
+                        //Upnp forwarding enabled
+                        $("#upnpToggle").prop("checked", true);
+                    }else{
+                        //Upnp forwarding disabled
+                        $("#upnpToggle").prop("checked", false);
+                    }
+                }
+            });
+        }
+        initUPnPEnableState();
+
+        function searchUpnpRouter(){
+            $("#retryBtn").addClass("loading");
+            parent.msgbox("Searching for UPnP router (will take a few minutes)...", true);
+            $.cjax({
+                url: './api/usable',
+                method: "POST",
+                success: function(data) {
+                    if (data.error != undefined){
+                        //Not found
+                        parent.msgbox("UPnP router not found", false);
+                    }else{
+                        //Found
+                        parent.msgbox("UPnP router discovered", true);
+                    }
+                    initUpnpUsableState();
+                    $("#retryBtn").removeClass("loading");
+                }
+            });
+        }
+
+        //Check if UPnP is usable
+        function initUpnpUsableState(){
+            $.cjax({
+                url: './api/usable',
+                success: function(data) {
+                    if (data == true){
+                        //Upnp router found in network, enable the page
+                        $('#upnpRouterNotFoundWarning').hide();
+                    }else{
+                        //No upnp router found in network, disable the page
+                        $('#upnpForwarder').addClass('disabled');
+                        $('#upnpRouterNotFoundWarning').show();
+                    }
+                }
+            });
+        }
+
+        function handleAddForward(event){
+            event.preventDefault();
+            let ruleName = $("#addRuleForm input[name='ruleName']").val();
+            let port = $("#addRuleForm input[name='port']").val();
+            if (ruleName == "" || port == ""){
+                parent.msgbox("Please fill in all fields", false);
+                return;
+            }
+            $.cjax({
+                url: './api/forward',
+                method: "POST",
+                data: {
+                    name: ruleName,
+                    port: port
+                },
+                success: function(data) {
+                    if (data.error != undefined){
+                        //Error
+                        parent.msgbox(data.error, false);
+                    }else{
+                        //Success
+                        parent.msgbox("Rule added successfully", true);
+                        initForwardList();
+                    }
+
+                    $("#addRuleForm input[name='ruleName']").val('');
+                    $("#addRuleForm input[name='port']").val('');
+                }
+            });
+        }
+
+        function handleRemoveForward(portNo){
+            $.cjax({
+                url: './api/remove',
+                method: "POST",
+                data: {
+                    port: portNo
+                },
+                success: function(data) {
+                    if (data.error != undefined){
+                        //Error
+                        parent.msgbox(data.error, false);
+                    }else{
+                        //Success
+                        parent.msgbox("Rule removed successfully", true);
+                        initForwardList();
+                    }
+                }
+            });
+        }
+
+        function editForwardRule(row){
+            let ruleName = $(row).closest('tr').find('td:eq(0)').text();
+            let portNumber = $(row).closest('tr').find('td:eq(1)').text();
+            $(row).closest('tr').html(`
+                <td>
+                    <div class="ui fluid input">
+                        <input type="text" value="${ruleName}" onkeypress="if(event.key === 'Enter') $(this).closest('tr').find('td:eq(1) input').focus();">
+                    </div>
+                </td>
+                <td>
+                    <div class="ui fluid input">
+                        <input type="number" value="${portNumber}" class="ui input" min="1" max="65535" onkeypress="if(event.key === 'Enter') saveForwardRule(this, '${portNumber}');">
+                    </div>
+                </td>
+                <td>
+                    <button onclick="saveForwardRule(this, '${portNumber}');" class="ui basic small circular icon button"><i class="ui green save icon"></i></button>
+                    <button onclick="cancelEditForwardRule(this, '${ruleName}', '${portNumber}');" class="ui basic small circular icon button"><i class="ui cancel icon"></i></button>
+                </td>
+            `);
+        }
+
+        function cancelEditForwardRule(){
+            initForwardList();
+        }
+
+        function saveForwardRule(row, portNo){
+            let ruleName = $(row).closest('tr').find('td:eq(0) input').val();
+            let newPortNo = $(row).closest('tr').find('td:eq(1) input').val();
+            if (ruleName == "" || newPortNo == ""){
+                parent.msgbox("Please fill in all fields", false);
+                return;
+            }
+            $.cjax({
+                url: './api/edit',
+                method: "POST",
+                data: {
+                    name: ruleName,
+                    port: newPortNo,
+                    oldPort: portNo
+                },
+                success: function(data) {
+                    if (data.error != undefined){
+                        //Error
+                        parent.msgbox(data.error, false);
+                    }else{
+                        //Success
+                        parent.msgbox("Rule updated successfully", true);
+                        initForwardList();
+                    }
+                }
+            });
+        }
+        
+        //Load forward list
+        function initForwardList(){
+            $("#forwardList").html('<tr><td colspan="3"> <i class="ui loading spinner icon"></i> Loading...</tr>');
+            $.cjax({
+                url: './api/forward',
+                success: function(data) {
+                    if (data.error != undefined){
+                        //Error
+                        parent.msgbox(data.error, false);
+                    }else{
+                        //Success
+                        $("#forwardList").empty();
+                        let rows = '';
+                        data.forEach(row => {
+                            $("#forwardList").append(`
+                                <tr>
+                                    <td>${row.RuleName}</td>
+                                    <td>${row.PortNumber}</td>
+                                    <td>
+                                        <button onclick="editForwardRule(this);" class="ui basic small circular icon button"><i class="ui edit icon"></i></button>
+                                        <button onclick="handleRemoveForward(${row.PortNumber});" class="ui basic small red circular icon button"><i class="ui red trash icon"></i></button>
+                                    </td>
+                                </tr>
+                            `);
+                        });
+
+                        if (data == null || data.length == 0){
+                            //No rules
+                            $("#forwardList").append(`
+                                <tr>
+                                    <td colspan="3"><i class="ui green check circle icon"></i> No running port forward rules</td>
+                                </tr>`);
+                        }
+                    } 
+                }
+            });
+        }
+        initUpnpUsableState();
+        initForwardList();
+    </script>
+</body>
+</html>

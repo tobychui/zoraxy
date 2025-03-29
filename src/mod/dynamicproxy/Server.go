@@ -23,6 +23,7 @@ import (
 		- Rate Limitor
 		- SSO Auth
 		- Basic Auth
+		- Plugin Router
 		- Vitrual Directory Proxy
 		- Subdomain Proxy
 	- Root router (default site router)
@@ -83,9 +84,16 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		//Validate basic auth
+		//Validate auth (basic auth or SSO auth)
 		respWritten := handleAuthProviderRouting(sep, w, r, h)
 		if respWritten {
+			//Request handled by subroute
+			return
+		}
+
+		//Plugin routing
+
+		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags) {
 			//Request handled by subroute
 			return
 		}

@@ -23,7 +23,6 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/forwardproxy"
-	"imuslab.com/zoraxy/mod/ganserv"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
@@ -43,31 +42,33 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.1.9"
+	SYSTEM_VERSION    = "3.2.0"
 	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
-	TMP_FOLDER                 = "./tmp"
-	WEBSERV_DEFAULT_PORT       = 5487
-	MDNS_HOSTNAME_PREFIX       = "zoraxy_" /* Follow by node UUID */
-	MDNS_IDENTIFY_DEVICE_TYPE  = "Network Gateway"
-	MDNS_IDENTIFY_DOMAIN       = "zoraxy.aroz.org"
-	MDNS_IDENTIFY_VENDOR       = "imuslab.com"
-	MDNS_SCAN_TIMEOUT          = 30 /* Seconds */
-	MDNS_SCAN_UPDATE_INTERVAL  = 15 /* Minutes */
-	GEODB_CACHE_CLEAR_INTERVAL = 15 /* Minutes */
-	ACME_AUTORENEW_CONFIG_PATH = "./conf/acme_conf.json"
-	CSRF_COOKIENAME            = "zoraxy_csrf"
-	LOG_PREFIX                 = "zr"
-	LOG_EXTENSION              = ".log"
+	TMP_FOLDER                   = "./tmp"
+	WEBSERV_DEFAULT_PORT         = 5487
+	MDNS_HOSTNAME_PREFIX         = "zoraxy_" /* Follow by node UUID */
+	MDNS_IDENTIFY_DEVICE_TYPE    = "Network Gateway"
+	MDNS_IDENTIFY_DOMAIN         = "zoraxy.aroz.org"
+	MDNS_IDENTIFY_VENDOR         = "imuslab.com"
+	MDNS_SCAN_TIMEOUT            = 30 /* Seconds */
+	MDNS_SCAN_UPDATE_INTERVAL    = 15 /* Minutes */
+	GEODB_CACHE_CLEAR_INTERVAL   = 15 /* Minutes */
+	ACME_AUTORENEW_CONFIG_PATH   = "./conf/acme_conf.json"
+	CSRF_COOKIENAME              = "zoraxy_csrf"
+	LOG_PREFIX                   = "zr"
+	LOG_EXTENSION                = ".log"
+	STATISTIC_AUTO_SAVE_INTERVAL = 600 /* Seconds */
 
 	/* Configuration Folder Storage Path Constants */
-	CONF_HTTP_PROXY   = "./conf/proxy"
-	CONF_STREAM_PROXY = "./conf/streamproxy"
-	CONF_CERT_STORE   = "./conf/certs"
-	CONF_REDIRECTION  = "./conf/redirect"
-	CONF_ACCESS_RULE  = "./conf/access"
-	CONF_PATH_RULE    = "./conf/rules/pathrules"
+	CONF_HTTP_PROXY    = "./conf/proxy"
+	CONF_STREAM_PROXY  = "./conf/streamproxy"
+	CONF_CERT_STORE    = "./conf/certs"
+	CONF_REDIRECTION   = "./conf/redirect"
+	CONF_ACCESS_RULE   = "./conf/access"
+	CONF_PATH_RULE     = "./conf/rules/pathrules"
+	CONF_PLUGIN_GROUPS = "./conf/plugin_groups.json"
 )
 
 /* System Startup Flags */
@@ -79,8 +80,6 @@ var (
 	allowSshLoopback           = flag.Bool("sshlb", false, "Allow loopback web ssh connection (DANGER)")
 	allowMdnsScanning          = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
 	mdnsName                   = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
-	ztAuthToken                = flag.String("ztauth", "", "ZeroTier authtoken for the local node")
-	ztAPIPort                  = flag.Int("ztport", 9993, "ZeroTier controller API port")
 	runningInDocker            = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 	acmeAutoRenewInterval      = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 	acmeCertAutoRenewDays      = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
@@ -98,6 +97,7 @@ var (
 	path_uuid      = flag.String("uuid", "./sys.uuid", "sys.uuid file path")
 	path_logFile   = flag.String("log", "./log", "Log folder path")
 	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
+	path_plugin    = flag.String("plugin", "./plugins", "Plugin folder path")
 
 	/* Maintaince Function Flags */
 	geoDbUpdate = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
@@ -132,7 +132,6 @@ var (
 	statisticCollector *statistic.Collector      //Collecting statistic from visitors
 	uptimeMonitor      *uptime.Monitor           //Uptime monitor service worker
 	mdnsScanner        *mdns.MDNSHost            //mDNS discovery services
-	ganManager         *ganserv.NetworkManager   //Global Area Network Manager
 	webSshManager      *sshprox.Manager          //Web SSH connection service
 	streamProxyManager *streamproxy.Manager      //Stream Proxy Manager for TCP / UDP forwarding
 	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew

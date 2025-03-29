@@ -93,6 +93,13 @@ func (s *AccessRule) IsIPWhitelisted(ipAddr string) bool {
 		}
 	}
 
+	//Check for loopback match
+	if s.WhitelistAllowLocalAndLoopback {
+		if s.parent.IsLoopbackRequest(ipAddr) || s.parent.IsPrivateIPRange(ipAddr) {
+			return true
+		}
+	}
+
 	return false
 }
 

@@ -53,6 +53,7 @@ func main() {
 
 	// Create a new PluginEmbedUIRouter that will serve the UI from web folder
 	uiRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &content, EMBED_FS_ROOT, UI_RELPATH)
+	uiRouter.EnableDebug = true
 
 	// Register the shutdown handler
 	uiRouter.RegisterTerminateHandler(func() {
@@ -64,7 +65,8 @@ func main() {
 	}, nil)
 
 	// This will serve the index.html file embedded in the binary
-	http.Handle(UI_RELPATH+"/", uiRouter.Handler())
+	targetHandler := uiRouter.Handler()
+	http.Handle(UI_RELPATH+"/", targetHandler)
 
 	// Start the GAN Network Controller
 	err = startGanNetworkController()

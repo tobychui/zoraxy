@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 
-trap cleanup TERM INT
-
 cleanup() {
-  echo "Shutting down..."
+  echo "Stop signal received. Shutting down..."
   kill -TERM "$(pidof zoraxy)" &> /dev/null && echo "Zoraxy stopped."
   kill -TERM "$(pidof zerotier-one)" &> /dev/null && echo "ZeroTier-One stopped."
+  unlink /var/lib/zerotier-one/zerotier/
   exit 0
 }
 
-update-ca-certificates
-echo "CA certificates updated."
+trap cleanup SIGTERM SIGINT TERM INT
 
-zoraxy -update_geoip=true
-echo "Updated GeoIP data."
+update-ca-certificates && echo "CA certificates updated."
+zoraxy -update_geoip=true && echo "GeoIP data updated ."
+
+echo "Building plugins..."
+cd /opt/zoraxy/plugin/ || exit 1
+build_plugins "$PWD"
+echo "Plugins built."
+cd /opt/zoraxy/config/ || exit 1
 
 if [ "$ZEROTIER" = "true" ]; then
   if [ ! -d "/opt/zoraxy/config/zerotier/" ]; then
@@ -36,17 +40,16 @@ zoraxy \
   -mdns="$MDNS" \
   -mdnsname="$MDNSNAME" \
   -noauth="$NOAUTH" \
+  -plugin="$PLUGIN" \
   -port=:"$PORT" \
   -sshlb="$SSHLB" \
   -update_geoip="$UPDATE_GEOIP" \
   -version="$VERSION" \
   -webfm="$WEBFM" \
   -webroot="$WEBROOT" \
-  -ztauth="$ZTAUTH" \
-  -ztport="$ZTPORT" \
   &
 
 zoraxypid=$!
-wait $zoraxypid
-wait $zerotierpid
+wait "$zoraxypid"
+wait "$zerotierpid"
 

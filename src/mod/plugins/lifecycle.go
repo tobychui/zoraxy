@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -19,12 +18,10 @@ import (
 )
 
 func (m *Manager) StartPlugin(pluginID string) error {
-	plugin, ok := m.LoadedPlugins.Load(pluginID)
-	if !ok {
-		return errors.New("plugin not found")
+	thisPlugin, err := m.GetPluginByID(pluginID)
+	if err != nil {
+		return err
 	}
-
-	thisPlugin := plugin.(*Plugin)
 
 	//Get the plugin Entry point
 	pluginEntryPoint, err := m.GetPluginEntryPoint(thisPlugin.RootDir)
@@ -46,6 +43,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	}
 	js, _ := json.Marshal(pluginConfiguration)
 
+	//Start the plugin with given configuration
 	m.Log("Starting plugin "+thisPlugin.Spec.Name+" at :"+strconv.Itoa(pluginConfiguration.Port), nil)
 	cmd := exec.Command(absolutePath, "-configure="+string(js))
 	cmd.Dir = filepath.Dir(absolutePath)
@@ -54,10 +52,16 @@ func (m *Manager) StartPlugin(pluginID string) error {
 		return err
 	}
 
+	stdErrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
+	//Create a goroutine to handle the STDOUT of the plugin
 	go func() {
 		buf := make([]byte, 1)
 		lineBuf := ""
@@ -83,6 +87,48 @@ func (m *Manager) StartPlugin(pluginID string) error {
 		}
 	}()
 
+	//Create a goroutine to handle the STDERR of the plugin
+	go func() {
+		buf := make([]byte, 1)
+		lineBuf := ""
+		for {
+			n, err := stdErrPipe.Read(buf)
+			if n > 0 {
+				lineBuf += string(buf[:n])
+				for {
+					if idx := strings.IndexByte(lineBuf, '\n'); idx != -1 {
+						m.handlePluginSTDERR(pluginID, lineBuf[:idx])
+						lineBuf = lineBuf[idx+1:]
+					} else {
+						break
+					}
+				}
+			}
+			if err != nil {
+				if err != io.EOF {
+					m.handlePluginSTDERR(pluginID, lineBuf) // handle any remaining data
+				}
+				break
+			}
+		}
+	}()
+
+	//Create a goroutine to wait for the plugin to exit
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			//In theory this should not happen except for a crash
+			m.Log("plugin "+thisPlugin.Spec.ID+" encounted a fatal error. Disabling plugin...", err)
+
+			//Set the plugin state to disabled
+			thisPlugin.Enabled = false
+
+			//Generate a new static forwarder radix tree
+			m.UpdateTagsToPluginMaps()
+			return
+		}
+	}()
+
 	//Create a UI forwarder if the plugin has UI
 	err = m.StartUIHandlerForPlugin(thisPlugin, pluginConfiguration.Port)
 	if err != nil {
@@ -90,8 +136,17 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	}
 
 	// Store the cmd object so it can be accessed later for stopping the plugin
-	plugin.(*Plugin).process = cmd
-	plugin.(*Plugin).Enabled = true
+	thisPlugin.process = cmd
+	thisPlugin.Enabled = true
+
+	//Create a new static forwarder router for each of the static capture paths
+	thisPlugin.StartAllStaticPathRouters()
+
+	//If the plugin contains dynamic capture, create a dynamic capture handler
+	if thisPlugin.AcceptDynamicRoute() {
+		thisPlugin.StartDynamicForwardRouter()
+	}
+
 	return nil
 }
 
@@ -117,12 +172,9 @@ func (m *Manager) StartUIHandlerForPlugin(targetPlugin *Plugin, pluginListeningP
 		targetPlugin.uiProxy = dpcore.NewDynamicProxyCore(
 			pluginUIURL,
 			pluginMatchingPath,
-			&dpcore.DpcoreOptions{
-				IgnoreTLSVerification: true,
-			},
+			&dpcore.DpcoreOptions{},
 		)
 		targetPlugin.AssignedPort = pluginListeningPort
-		m.LoadedPlugins.Store(targetPlugin.Spec.ID, targetPlugin)
 	}
 	return nil
 }
@@ -141,21 +193,40 @@ func (m *Manager) handlePluginSTDOUT(pluginID string, line string) {
 	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
 }
 
-func (m *Manager) StopPlugin(pluginID string) error {
-	plugin, ok := m.LoadedPlugins.Load(pluginID)
-	if !ok {
-		return errors.New("plugin not found")
+func (m *Manager) handlePluginSTDERR(pluginID string, line string) {
+	thisPlugin, err := m.GetPluginByID(pluginID)
+	if err != nil {
+		return
 	}
+	processID := -1
+	if thisPlugin.process != nil && thisPlugin.process.Process != nil {
+		// Get the process ID of the plugin
+		processID = thisPlugin.process.Process.Pid
+	}
+	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
+}
 
-	thisPlugin := plugin.(*Plugin)
-	var err error
+// StopPlugin stops a plugin, it is garanteed that the plugin is stopped after this function
+func (m *Manager) StopPlugin(pluginID string) error {
+	thisPlugin, err := m.GetPluginByID(pluginID)
+	if err != nil {
+		return err
+	}
 
 	//Make a GET request to plugin ui path /term to gracefully stop the plugin
 	if thisPlugin.uiProxy != nil {
-		requestURI := "http://127.0.0.1:" + strconv.Itoa(thisPlugin.AssignedPort) + "/" + thisPlugin.Spec.UIPath + "/term"
-		resp, err := http.Get(requestURI)
+		uiRelativePath := thisPlugin.Spec.UIPath
+		if !strings.HasPrefix(uiRelativePath, "/") {
+			uiRelativePath = "/" + uiRelativePath
+		}
+		requestURI := "http://127.0.0.1:" + strconv.Itoa(thisPlugin.AssignedPort) + uiRelativePath + "/term"
+
+		client := http.Client{
+			Timeout: 3 * time.Second,
+		}
+		resp, err := client.Get(requestURI)
 		if err != nil {
-			//Plugin do not support termination request, do it the hard way
+			// Plugin does not support termination request, do it the hard way
 			m.Log("Plugin "+thisPlugin.Spec.ID+" termination request failed. Force shutting down", nil)
 		} else {
 			defer resp.Body.Close()
@@ -165,7 +236,6 @@ func (m *Manager) StopPlugin(pluginID string) error {
 				} else {
 					m.Log("Plugin "+thisPlugin.Spec.ID+" termination request returned status: "+resp.Status, nil)
 				}
-
 			}
 		}
 	}
@@ -197,30 +267,20 @@ func (m *Manager) StopPlugin(pluginID string) error {
 
 	//Remove the UI proxy
 	thisPlugin.uiProxy = nil
-	plugin.(*Plugin).Enabled = false
+	thisPlugin.Enabled = false
+	thisPlugin.StopAllStaticPathRouters()
+	thisPlugin.StopDynamicForwardRouter()
 	return nil
 }
 
 // Check if the plugin is still running
 func (m *Manager) PluginStillRunning(pluginID string) bool {
-	plugin, ok := m.LoadedPlugins.Load(pluginID)
-	if !ok {
+	plugin, err := m.GetPluginByID(pluginID)
+	if err != nil {
 		return false
 	}
-	if plugin.(*Plugin).process == nil {
+	if plugin.process == nil {
 		return false
 	}
-	return plugin.(*Plugin).process.ProcessState == nil
-}
-
-// BlockUntilAllProcessExited blocks until all the plugins processes have exited
-func (m *Manager) BlockUntilAllProcessExited() {
-	m.LoadedPlugins.Range(func(key, value interface{}) bool {
-		plugin := value.(*Plugin)
-		if m.PluginStillRunning(value.(*Plugin).Spec.ID) {
-			//Wait for the plugin to exit
-			plugin.process.Wait()
-		}
-		return true
-	})
+	return plugin.process.ProcessState == nil
 }
