@@ -169,7 +169,6 @@ body.zh-cn *:not(i){
     text-align: left;
     position: absolute;
     top: 50%;
-    left: 10%;
     transform: translateX(0%) translateY(-50%);
     color: white;
 }
@@ -362,6 +361,10 @@ body.zh-cn *:not(i){
         width: auto;
     }
 
+    #slideshowBanner .title{
+        padding: 1em;
+    }
+
     #slideshowBanner .title .scrolldownTips{
         margin-top: 2em;
         display: block;
@@ -370,6 +373,24 @@ body.zh-cn *:not(i){
     #slideshowBanner .title .scrolldownTips img{
         left: 50%;
         transform: translateX(-50%);
+    }
+
+    #techspec .videoScrollBar{
+        overflow-x: auto; 
+        display: block;  
+        scrollbar-color: #e7e7e7 rgba(0, 0, 0, 0.1);
+        padding-top: 2em;
+        padding-bottom: 3em;
+    }
+
+    .introvideo {
+        display: block !important;
+        width: 100%;
+        margin-bottom: 1em;
+    }
+
+    .introvideo iframe{
+        width: 100%;
     }
 
     #download .stackable.tabular.menu .active.item{
