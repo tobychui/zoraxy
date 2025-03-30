@@ -169,7 +169,7 @@ body.zh-cn *:not(i){
     text-align: left;
     position: absolute;
     top: 50%;
-    padding-left: 3em;
+    margin-left: 10%;
     transform: translateX(0%) translateY(-50%);
     color: white;
 }
@@ -364,6 +364,7 @@ body.zh-cn *:not(i){
 
     #slideshowBanner .title{
         padding: 1em;
+        margin-left: 0;
     }
 
     #slideshowBanner .title .scrolldownTips{
