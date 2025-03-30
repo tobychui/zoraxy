@@ -121,6 +121,8 @@ Usage of zoraxy:
         mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)
   -noauth
         Disable authentication for management interface
+  -plugin string
+        Plugin folder path (default "./plugins")
   -port string
         Management web interface listening port (default ":8000")
   -sshlb
@@ -135,10 +137,6 @@ Usage of zoraxy:
         Enable web file manager for static web server root folder (default true)
   -webroot string
         Static web server root folder. Only allow change in start paramters (default "./www")
-  -ztauth string
-        ZeroTier authtoken for the local node
-  -ztport int
-        ZeroTier controller API port (default 9993)
 ```
 
 ### External Permission Management Mode
