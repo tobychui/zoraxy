@@ -169,6 +169,7 @@ body.zh-cn *:not(i){
     text-align: left;
     position: absolute;
     top: 50%;
+    padding-left: 3em;
     transform: translateX(0%) translateY(-50%);
     color: white;
 }
