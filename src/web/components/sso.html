@@ -34,6 +34,27 @@
         </form>
     </div>
     <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h3>Authentik</h3>
+        <p>Configuration settings for Authentik authentication provider.</p>
+
+        <form class="ui form">
+            <div class="field">
+                <label for="authentikServerUrl">Authentik Server URL</label>
+                <input type="text" id="authentikServerUrl" name="authentikServerUrl" placeholder="Enter Authentik Server URL">
+                <small>Example: auth.example.com</small>
+            </div>
+            <div class="field">
+                <div class="ui checkbox">
+                    <input type="checkbox" id="authentikUseHttps" name="useHttps">
+                    <label for="authentikUseHttps">Use HTTPS</label>
+                    <small>Check this if your Authentik server uses HTTPS</small>
+                </div>
+            </div>
+            <button class="ui basic button" onclick="event.preventDefault(); updateAuthentikSettings();"><i class="green check icon"></i> Apply Change</button>
+        </form>
+    </div>
+    <div class="ui divider"></div>
 </div>
 
 <script>
@@ -45,6 +66,18 @@
             success: function(data) {
                 $('#autheliaServerUrl').val(data.autheliaURL);
                 $('#useHttps').prop('checked', data.useHTTPS);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching SSO settings:', textStatus, errorThrown);
+            }
+        });
+        $.cjax({
+            url: '/api/sso/Authentik',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                $('#authentikServerUrl').val(data.authentikURL);
+                $('#authentikUseHttps').prop('checked', data.useHTTPS);
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
@@ -73,6 +106,30 @@
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error updating Authelia settings:', textStatus, errorThrown);
+            }
+        });
+    }
+    function updateAuthentikSettings(){
+        var authentikServerUrl = $('#authentikServerUrl').val();
+        var useHttps = $('#authentikUseHttps').prop('checked');
+
+        $.cjax({
+            url: '/api/sso/Authentik',
+            method: 'POST',
+            data: {
+                authentikURL: authentikServerUrl,
+                useHTTPS: useHttps
+            },
+            success: function(data) {
+                if (data.error != undefined) {
+                    $.msgbox(data.error, false);
+                    return;
+                }
+                msgbox('Authentik settings updated', true);
+                console.log('Authentik settings updated:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Authentik settings:', textStatus, errorThrown);
             }
         });
     }

@@ -43,6 +43,12 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
 			return true
 		}
+	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodAuthentik {
+		err := h.handleAuthentikAuth(w, r)
+		if err != nil {
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
+			return true
+		}
 	}
 
 	//No authentication provider, do not need to handle
@@ -105,4 +111,8 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 // Handle authelia auth routing
 func (h *ProxyHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Request) error {
 	return h.Parent.Option.AutheliaRouter.HandleAutheliaAuth(w, r)
+}
+
+func (h *ProxyHandler) handleAuthentikAuth(w http.ResponseWriter, r *http.Request) error {
+	return h.Parent.Option.AuthentikRouter.HandleAuthentikAuth(w, r)
 }
