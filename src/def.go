@@ -10,9 +10,10 @@ package main
 import (
 	"embed"
 	"flag"
-	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 	"net/http"
 	"time"
+
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
@@ -43,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.0"
+	SYSTEM_VERSION    = "3.2.1"
 	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */

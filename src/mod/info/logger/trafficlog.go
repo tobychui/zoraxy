@@ -16,7 +16,7 @@ import (
 
 // Log HTTP request. Note that this must run in go routine to prevent any blocking
 // in reverse proxy router
-func (l *Logger) LogHTTPRequest(r *http.Request, reqclass string, statusCode int) {
+func (l *Logger) LogHTTPRequest(r *http.Request, reqclass string, statusCode int, downstreamHostname string, upstreamHostname string) {
 	go func() {
 		l.ValidateAndUpdateLogFilepath()
 		if l.logger == nil || l.file == nil {
@@ -26,7 +26,9 @@ func (l *Logger) LogHTTPRequest(r *http.Request, reqclass string, statusCode int
 		clientIP := netutils.GetRequesterIP(r)
 		requestURI := r.RequestURI
 		statusCodeString := strconv.Itoa(statusCode)
-		//fmt.Println("[" + time.Now().Format("2006-01-02 15:04:05.000000") + "] [router:" + reqclass + "] [client " + clientIP + "] " + r.Method + " " + requestURI + " " + statusCodeString)
-		l.logger.Println("[" + time.Now().Format("2006-01-02 15:04:05.000000") + "] [router:" + reqclass + "] [origin:" + r.URL.Hostname() + "] [client: " + clientIP + "] [useragent: " + r.UserAgent() + "] " + r.Method + " " + requestURI + " " + statusCodeString)
+
+		//Pretty print for debugging
+		//fmt.Printf("------------\nRequest URL: %s (class: %s) \nUpstream Hostname: %s\nDownstream Hostname: %s\nStatus Code: %s\n", r.URL, reqclass, upstreamHostname, downstreamHostname, statusCodeString)
+		l.logger.Println("[" + time.Now().Format("2006-01-02 15:04:05.000000") + "] [router:" + reqclass + "] [origin:" + downstreamHostname + "] [client: " + clientIP + "] [useragent: " + r.UserAgent() + "] " + r.Method + " " + requestURI + " " + statusCodeString)
 	}()
 }
