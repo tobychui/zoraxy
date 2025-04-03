@@ -105,7 +105,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	thisTransporter := http.DefaultTransport
 
 	//Hack the default transporter to handle more connections
-
 	optimalConcurrentConnection := 256
 	if dpcOptions.MaxConcurrentConnection > 0 {
 		optimalConcurrentConnection = dpcOptions.MaxConcurrentConnection
@@ -135,18 +134,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		Verbal:        false,
 		Transport:     thisTransporter,
 	}
-}
-
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
 }
 
 func joinURLPath(a, b *url.URL) (path, rawpath string) {

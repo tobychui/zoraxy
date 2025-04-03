@@ -320,6 +320,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 				UserAgent:                     r.UserAgent(),
 				RequestURL:                    r.Host + r.RequestURI,
 				Target:                        originalHostname,
+				Upstream:                      upstreamHostname,
 			}
 			router.Option.StatisticCollector.RecordRequest(requestInfo)
 		}()

@@ -184,7 +184,46 @@
                     </div>
                 </div>
             </div>
-        </div>  
+        </div> 
+        <div class="ui divider"></div>
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h3>Requested Hostnames</h3>
+                <p>Most requested hostnames from downstream</p>
+                <div>
+                    <div style="height: 500px; overflow-y: auto;">
+                        <table class="ui unstackable striped celled table">
+                            <thead>
+                              <tr>
+                                <th class="no-sort">Hostname</th>
+                                <th class="no-sort">Requests</th>
+                            </tr></thead>
+                            <tbody id="stats_downstreamTable">
+                             
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="eight wide column">
+                <h3>Forwarded Upstreams</h3>
+                <p>The Top 100 upstreams where the requests are forwarded to</p>
+                <div>
+                    <div style="height: 500px; overflow-y: auto;">
+                        <table class="ui unstackable striped celled table">
+                            <thead>
+                              <tr>
+                                <th class="no-sort">Upstream Endpoint</th>
+                                <th class="no-sort">Requests</th>
+                            </tr></thead>
+                            <tbody id="stats_upstreamTable">
+                             
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div> 
         <div class="ui divider"></div>
         <div class="ui basic segment" id="trendGraphs">
             <h3>Visitor Trend Analysis</h3>
@@ -262,6 +301,22 @@
 
             //Render Referer header
             renderRefererTable(data.Referer);
+
+            if (data.Downstreams == null){
+                //No downstream data to show
+                $("#stats_downstreamTable").html("<tr><td colspan='2'>No data</td></tr>");
+            }else{
+                //Render the downstream table
+                renderDownstreamTable(data.Downstreams);
+            }
+
+            if (data.Upstreams == null){
+                //No upstream data to show
+                $("#stats_upstreamTable").html("<tr><td colspan='2'>No data</td></tr>");
+            }else{
+                //Render the upstream table
+                renderUpstreamTable(data.Upstreams);
+            }
 
             //Hide the trend graphs
             $("#trendGraphs").hide();
@@ -409,6 +464,46 @@
                 </tr>`);
         }
    }
+
+   function renderDownstreamTable(downstreamList){
+        const sortedEntries = Object.entries(downstreamList).sort(([, valueA], [, valueB]) => valueB - valueA);
+        $("#stats_downstreamTable").html("");
+        let endStop = 100;
+        if (sortedEntries.length < 100){
+            endStop = sortedEntries.length;
+        }
+        for (var i = 0; i < endStop; i++) {
+            let referer = (decodeURIComponent(sortedEntries[i][0])).replace(/(<([^>]+)>)/ig,"");
+            if (sortedEntries[i][0] == ""){
+                //Root
+                referer = `<span style="color: #b5b5b5;">(<i class="eye slash outline icon"></i> Unknown or Hidden)</span>`;
+            }
+            $("#stats_downstreamTable").append(`<tr>
+                    <td>${referer}</td>
+                    <td>${sortedEntries[i][1]}</td>
+                </tr>`);
+        }
+   }
+
+    function renderUpstreamTable(upstreamList){
+          const sortedEntries = Object.entries(upstreamList).sort(([, valueA], [, valueB]) => valueB - valueA);
+          $("#stats_upstreamTable").html("");
+          let endStop = 100;
+          if (sortedEntries.length < 100){
+                endStop = sortedEntries.length;
+          }
+          for (var i = 0; i < endStop; i++) {
+                let referer = (decodeURIComponent(sortedEntries[i][0])).replace(/(<([^>]+)>)/ig,"");
+                if (sortedEntries[i][0] == ""){
+                 //Root
+                 referer = `<span style="color: #b5b5b5;">(<i class="eye slash outline icon"></i> Unknown or Hidden)</span>`;
+                }
+                $("#stats_upstreamTable").append(`<tr>
+                      <td>${referer}</td>
+                      <td>${sortedEntries[i][1]}</td>
+                 </tr>`);
+          }
+    }
 
    function renderFileTypeGraph(requestURLs){
      //Create the device chart
