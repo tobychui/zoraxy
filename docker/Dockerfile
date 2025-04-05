@@ -37,7 +37,7 @@ FROM docker.io/golang:bookworm
 
 COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
 COPY --chmod=700 ./build_plugins.sh /usr/local/bin/build_plugins
-COPY --chmod=700 ./example/plugins/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
+COPY --chmod=700 ../example/plugins/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
 
 COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
