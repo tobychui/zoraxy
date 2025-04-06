@@ -49,7 +49,7 @@ func replaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS b
 		//That usually means the user have invalidly configured the web server to use port 80 or 443
 		//for http or https. We should not modify the location header in this case.
 
-	} else {
+	} else if strings.Contains(u.Host, ":") && err == nil {
 		//Other port numbers. Do not modify location header
 		return urlString, nil
 	}
