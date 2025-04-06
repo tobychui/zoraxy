@@ -339,7 +339,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			}
 		} else if strings.HasPrefix(originLocation, "/") && rrr.PathPrefix != "" {
 			//Back to the root of this proxy object
-			//fmt.Println(rrr.ProxyDomain, rrr.OriginalHost)
 			locationRewrite = strings.TrimSuffix(rrr.PathPrefix, "/") + originLocation
 		} else {
 			//Relative path. Do not modifiy location header
