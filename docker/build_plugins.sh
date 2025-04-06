@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "Copying zoraxy_plugin to all mods..."
 for dir in "$1"/*; do
