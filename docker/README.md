@@ -95,6 +95,20 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 > [!IMPORTANT]
 > Contrary to the Zoraxy README, Docker usage of the port flag should NOT include the colon. Ex: `-e PORT="8000"` for Docker run and `PORT: "8000"` for Docker compose.
 
+### ZeroTier
+
+If you are running with ZeroTier, make sure to add the following flags to ensure ZeroTier functionality:
+  
+`--cap_add NET_ADMIN` and `--device /dev/net/tun:/dev/net/tun`
+
+Or for Docker Compose:
+```
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun:/dev/net/tun
+```
+
 ### Plugins
 
 You can find official plugins at https://github.com/aroz-online/zoraxy-official-plugins
