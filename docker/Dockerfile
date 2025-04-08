@@ -35,6 +35,8 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
 
 FROM docker.io/golang:bookworm
 
+# If you build it yourself, you will need to add the example directory into the docker directory.
+
 COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
 COPY --chmod=700 ./build_plugins.sh /usr/local/bin/build_plugins
 COPY --chmod=700 ./example/plugins/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/

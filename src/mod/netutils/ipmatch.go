@@ -57,7 +57,7 @@ func GetRequesterIP(r *http.Request) string {
 		//e.g. [15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7]
 		requesterRawIp = requesterRawIp[1 : len(requesterRawIp)-1]
 	}
-
+	
 	return requesterRawIp
 }
 
@@ -87,6 +87,11 @@ func MatchIpWildcard(ipAddress, wildcard string) bool {
 
 // Match ip address with CIDR
 func MatchIpCIDR(ip string, cidr string) bool {
+	// Trim away scope ID if present in IP (e.g. fe80::1%eth0)
+	if i := strings.Index(ip, "%"); i != -1 {
+		ip = ip[:i]
+	}
+	
 	// parse the CIDR string
 	_, cidrnet, err := net.ParseCIDR(cidr)
 	if err != nil {
