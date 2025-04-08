@@ -58,6 +58,11 @@ func GetRequesterIP(r *http.Request) string {
 		requesterRawIp = requesterRawIp[1 : len(requesterRawIp)-1]
 	}
 
+	// Trim away scope ID if present (e.g. %eth0 in IPv6)
+	if i := strings.Index(requesterRawIp, "%"); i != -1 {
+		requesterRawIp = requesterRawIp[:i]
+	}
+
 	return requesterRawIp
 }
 
