@@ -91,102 +91,124 @@
             }else{
                 //Sort by RootOrMatchingDomain field
                 data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0))
-                data.forEach(subd => {
-                    let subdData = encodeURIComponent(JSON.stringify(subd));
-                    
-                    //Build the upstream list
-                    let upstreams = "";
-                    if (subd.ActiveOrigins.length == 0){
-                        //Invalid config
-                        upstreams = `<i class="ui yellow exclamation triangle icon"></i> No Active Upstream Origin<br>`;
-                    }else{
-                        subd.ActiveOrigins.forEach(upstream => {
-                            console.log(upstream);
-                            //Check if the upstreams require TLS connections
-                            let tlsIcon = "";
-                            if (upstream.RequireTLS){
-                                tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
-                                if (upstream.SkipCertValidations){
-                                    tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                //Confirm the proxy port
+                //Default set to 443
+                let proxy_port = `443`;
+                $.get("/api/proxy/status", function(data_1) {
+                    if (data_1.error !== undefined) {
+                        //Cannot access API, don't change port.
+                        proxy_port = `443`;
+                    } else {
+                        //Use port in the API
+                        proxy_port = data_1.Option.Port;
+                    }
+
+                    data.forEach(subd => {
+                        let subdData = encodeURIComponent(JSON.stringify(subd));
+                        
+                        //Build the upstream list
+                        let upstreams = "";
+                        if (subd.ActiveOrigins.length == 0){
+                            //Invalid config
+                            upstreams = `<i class="ui yellow exclamation triangle icon"></i> No Active Upstream Origin<br>`;
+                        }else{
+                            subd.ActiveOrigins.forEach(upstream => {
+                                console.log(upstream);
+                                //Check if the upstreams require TLS connections
+                                let tlsIcon = "";
+                                if (upstream.RequireTLS){
+                                    tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                                    if (upstream.SkipCertValidations){
+                                        tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                                    }
                                 }
-                            }
 
-                            let upstreamLink = `${upstream.RequireTLS?"https://":"http://"}${upstream.OriginIpOrDomain}`;
+                                let upstreamLink = `${upstream.RequireTLS?"https://":"http://"}${upstream.OriginIpOrDomain}`;
 
-                            upstreams += `<a href="${upstreamLink}" target="_blank">${upstream.OriginIpOrDomain} ${tlsIcon}</a><br>`;
-                        })
-                    }
-
-                    let inboundTlsIcon = "";
-                    if ($("#tls").checkbox("is checked")){
-                        inboundTlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
-                        if (subd.BypassGlobalTLS){
-                            inboundTlsIcon = `<i class="grey lock icon" title="TLS Bypass Enabled"></i>`;
+                                upstreams += `<a href="${upstreamLink}" target="_blank">${upstream.OriginIpOrDomain} ${tlsIcon}</a><br>`;
+                            })
                         }
-                    }else{
-                        inboundTlsIcon = `<i class="yellow lock open icon" title="Plain Text Mode"></i>`;
-                    }
-                    
-                    //Build the virtual directory list
-                    var vdList = `<div class="ui list">`;
-                    subd.VirtualDirectories.forEach(vdir => {
-                        vdList += `<div class="item">${vdir.MatchingPath} <i class="green angle double right icon"></i> ${vdir.Domain}</div>`;
-                    });
-                    vdList += `</div>`;
 
-                    if (subd.VirtualDirectories.length == 0){
-                        vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Virtual Directory</small>`;
-                    }
-
-                    let enableChecked = "checked";
-                    if (subd.Disabled){
-                        enableChecked = "";
-                    }
-
-                    let aliasDomains = ``;
-                    if (subd.MatchingDomainAlias != undefined && subd.MatchingDomainAlias.length > 0){
-                        aliasDomains = `<small class="aliasDomains" eptuuid="${subd.RootOrMatchingDomain}" style="color: #636363;">Alias: `;
-                        subd.MatchingDomainAlias.forEach(alias => {
-                            aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+                        let inboundTlsIcon = "";
+                        if ($("#tls").checkbox("is checked")){
+                            inboundTlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                            if (subd.BypassGlobalTLS){
+                                inboundTlsIcon = `<i class="grey lock icon" title="TLS Bypass Enabled"></i>`;
+                            }
+                        }else{
+                            inboundTlsIcon = `<i class="yellow lock open icon" title="Plain Text Mode"></i>`;
+                        }
+                        
+                        //Build the virtual directory list
+                        var vdList = `<div class="ui list">`;
+                        subd.VirtualDirectories.forEach(vdir => {
+                            vdList += `<div class="item">${vdir.MatchingPath} <i class="green angle double right icon"></i> ${vdir.Domain}</div>`;
                         });
-                        aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
-                        aliasDomains += `</small><br>`;
-                    }
+                        vdList += `</div>`;
 
-                    $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
-                        <td data-label="" editable="true" datatype="inbound">
-                            <a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}<br>
-                            ${aliasDomains}
-                            <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
-                        </td>
-                        <td data-label="" editable="true" datatype="domain">
-                            <div class="upstreamList">
-                                ${upstreams}        
-                            </div>
-                        </td>
-                        <td data-label="" editable="true" datatype="vdir">${vdList}</td>
-                        <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags">
-                            <div class="tags-list">
-                            ${subd.Tags.length >0 ? subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join(""):"<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>"}
-                            </div>
-                        </td>
-                        <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
-                            ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
-                            ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
-                            ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> Oauth2`:``}
-                            ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
-                            ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
-                            ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
-                        </td>
-                        <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
-                            <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
-                                <input type="checkbox" class="enableToggle" name="active" ${enableChecked} eptuuid="${subd.RootOrMatchingDomain}" onchange="handleProxyRuleToggle(this);">
-                                <label></label>
-                            </div>
-                            <button title="Edit Proxy Rule" class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
-                            <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
-                        </td>
-                    </tr>`);
+                        if (subd.VirtualDirectories.length == 0){
+                            vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Virtual Directory</small>`;
+                        }
+
+                        let enableChecked = "checked";
+                        if (subd.Disabled){
+                            enableChecked = "";
+                        }
+
+                        let aliasDomains = ``;
+                        if (subd.MatchingDomainAlias != undefined && subd.MatchingDomainAlias.length > 0){
+                            aliasDomains = `<small class="aliasDomains" eptuuid="${subd.RootOrMatchingDomain}" style="color: #636363;">Alias: `;
+                            subd.MatchingDomainAlias.forEach(alias => {
+                                if (proxy_port != `443`) {
+                                    //Not standard port
+                                    alias += `:` + proxy_port;
+                                }
+                                aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+                            });
+                            aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
+                            aliasDomains += `</small><br>`;
+                        }
+
+                        let subdomain = subd.RootOrMatchingDomain;
+                        if (proxy_port != "443") {
+                            //Not standard port
+                            subdomain += `:` + proxy_port;
+                        }
+                        $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
+                            <td data-label="" editable="true" datatype="inbound">
+                                <a href="//${subdomain}" target="_blank">${subdomain}</a> ${inboundTlsIcon}<br>
+                                ${aliasDomains}
+                                <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
+                            </td>
+                            <td data-label="" editable="true" datatype="domain">
+                                <div class="upstreamList">
+                                    ${upstreams}        
+                                </div>
+                            </td>
+                            <td data-label="" editable="true" datatype="vdir">${vdList}</td>
+                            <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags">
+                                <div class="tags-list">
+                                ${subd.Tags.length >0 ? subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join(""):"<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>"}
+                                </div>
+                            </td>
+                            <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
+                                ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
+                                ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
+                                ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> Oauth2`:``}
+                                ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
+                                ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
+                                ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
+                            </td>
+                            <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
+                                <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
+                                    <input type="checkbox" class="enableToggle" name="active" ${enableChecked} eptuuid="${subd.RootOrMatchingDomain}" onchange="handleProxyRuleToggle(this);">
+                                    <label></label>
+                                </div>
+                                <button title="Edit Proxy Rule" class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
+                                <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
+                            </td>
+                        </tr>`);
+                    });
                 });
                 populateTagFilterDropdown(data);
             }
@@ -206,12 +228,24 @@
         let aliasDomains = ``;
         if (newAliasDomainList != undefined && newAliasDomainList.length > 0){
             aliasDomains = `Alias: `;
-            newAliasDomainList.forEach(alias => {
-                aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+            $.get("/api/proxy/status", function(data_1) {
+                if (data_1.error !== undefined) {
+                    //Cannot access API, don't change port.
+                    proxy_port = `443`;
+                } else {
+                    //Use port in the API
+                    proxy_port = data_1.Option.Port;
+                }
+                newAliasDomainList.forEach(alias => {
+                    if (proxy_port != "443") {
+                        alias += `:` + proxy_port;
+                    }
+                    aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+                });
+                aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
+                $(targetEle).html(aliasDomains);
+                $(targetEle).show();
             });
-            aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
-            $(targetEle).html(aliasDomains);
-            $(targetEle).show();
         }else{
             $(targetEle).hide();
         }
