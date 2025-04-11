@@ -48,6 +48,8 @@
             </div>
         </div>
         <div class="ui small input" style="width: 300px; height: 38px;">
+            <!-- Prevent the browser from filling the saved Zoraxy login account into the  input searchInput below -->
+            <input type="password"  autocomplete="off" hidden/>
             <input type="text" id="searchInput" placeholder="Quick Search" onkeydown="handleSearchInput(event);" onchange="handleSearchInput(event);" onblur="handleSearchInput(event);">
         </div>
     </div>
