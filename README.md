@@ -195,6 +195,16 @@ Loopback web SSH connections, by default, are disabled. This means that if you a
 ./zoraxy -sshlb=true
 ```
 
+## Community Maintained Sections
+
+Some section of Zoraxy are contributed by our amazing community and if you have any issues regarding those sections, it would be more efficient if you can tag them directly when creating an issue report.
+
+Authelia Support added by @7brend7
+Authentik Support added by @JokerQyou
+Docker Container List by @eyerrock
+
+Thank you so much for your contributions!
+
 ## Sponsor This Project
 
 If you like the project and want to support us, please consider a donation. You can use the links below
