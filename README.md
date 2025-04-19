@@ -199,9 +199,9 @@ Loopback web SSH connections, by default, are disabled. This means that if you a
 
 Some section of Zoraxy are contributed by our amazing community and if you have any issues regarding those sections, it would be more efficient if you can tag them directly when creating an issue report.
 
-Authelia Support added by @7brend7
-Authentik Support added by @JokerQyou
-Docker Container List by @eyerrock
+- Authelia Support added by [@7brend7](https://github.com/7brend7)
+- Authentik Support added by [@JokerQyou](https://github.com/JokerQyou)
+- Docker Container List by [@eyerrock](https://github.com/eyerrock)
 
 Thank you so much for your contributions!
 
