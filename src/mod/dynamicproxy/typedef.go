@@ -9,13 +9,12 @@ package dynamicproxy
 */
 import (
 	_ "embed"
-	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 	"net"
 	"net/http"
 	"sync"
 
 	"imuslab.com/zoraxy/mod/access"
-	"imuslab.com/zoraxy/mod/auth/sso/authelia"
+	"imuslab.com/zoraxy/mod/auth/sso/forward"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -64,8 +63,7 @@ type RouterOption struct {
 	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
 
 	/* Authentication Providers */
-	AutheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
-	AuthentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
+	ForwardAuthRouter *forward.AuthRouter
 
 	/* Utilities */
 	Logger *logger.Logger //Logger for reverse proxy requets
@@ -141,11 +139,10 @@ type HeaderRewriteRules struct {
 type AuthMethod int
 
 const (
-	AuthMethodNone     AuthMethod = iota //No authentication required
-	AuthMethodBasic                      //Basic Auth
-	AuthMethodAuthelia                   //Authelia
-	AuthMethodOauth2                     //Oauth2
-	AuthMethodAuthentik
+	AuthMethodNone    AuthMethod = iota //No authentication required
+	AuthMethodBasic                     //Basic Auth
+	AuthMethodForward                   //Forward
+	AuthMethodOauth2                    //Oauth2
 )
 
 type AuthenticationProvider struct {
@@ -155,9 +152,10 @@ type AuthenticationProvider struct {
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
 	BasicAuthGroupIDs       []string                  //Group IDs that are allowed to access this endpoint
 
-	/* Authelia Settings */
-	AutheliaURL string //URL of the Authelia server, leave empty to use global settings e.g. authelia.example.com
-	UseHTTPS    bool   //Whether to use HTTPS for the Authelia server
+	/* Forward Auth Settings */
+	ForwardAuthURL                    string   // Full URL of the Forward Auth endpoint. Example: https://auth.example.com/api/authz/forward-auth
+	ForwardAuthResponseHeaders        []string // List of headers to copy from the forward auth server response to the request.
+	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
 }
 
 // A proxy endpoint record, a general interface for handling inbound routing
