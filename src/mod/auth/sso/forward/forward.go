@@ -55,7 +55,7 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestExcludedCookies, &requestExcludedCookies)
 
 	options.ResponseHeaders = strings.Split(responseHeaders, ",")
-	options.ResponseClientHeaders = strings.Split(responseHeaders, ",")
+	options.ResponseClientHeaders = strings.Split(responseClientHeaders, ",")
 	options.RequestHeaders = strings.Split(requestHeaders, ",")
 	options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
 
