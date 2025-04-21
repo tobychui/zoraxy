@@ -42,8 +42,8 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.0"
-	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
+	SYSTEM_VERSION    = "3.2.1"
+	DEVELOPMENT_BUILD = true /* Development: Set to false to use embedded web fs */
 
 	/* System Constants */
 	TMP_FOLDER                   = "./tmp"
