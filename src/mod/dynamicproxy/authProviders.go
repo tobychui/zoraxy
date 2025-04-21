@@ -31,14 +31,15 @@ and return a boolean indicate if the request is written to http.ResponseWriter
 - false: the request is not handled (usually means auth ok), continue to the next handler
 */
 func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *http.Request, h *ProxyHandler) bool {
-	if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
+	switch sep.AuthenticationProvider.AuthMethod {
+	case AuthMethodBasic:
 		err := h.handleBasicAuthRouting(w, r, sep)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
 			return true
 		}
-	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodAuthelia {
-		err := h.handleAutheliaAuth(w, r)
+	case AuthMethodForward:
+		err := h.handleForwardAuth(w, r)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
 			return true
@@ -100,9 +101,9 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 	return nil
 }
 
-/* Authelia */
+/* Forward Auth */
 
-// Handle authelia auth routing
-func (h *ProxyHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Request) error {
-	return h.Parent.Option.AutheliaRouter.HandleAutheliaAuth(w, r)
+// Handle forward auth routing
+func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request) error {
+	return h.Parent.Option.ForwardAuthRouter.HandleAuthProviderRouting(w, r)
 }

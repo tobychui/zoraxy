@@ -13,7 +13,7 @@ import (
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
-	"imuslab.com/zoraxy/mod/auth/sso/authelia"
+	"imuslab.com/zoraxy/mod/auth/sso/forward"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
@@ -141,11 +141,10 @@ func startupSequence() {
 	}
 
 	//Create authentication providers
-	autheliaRouter = authelia.NewAutheliaRouter(&authelia.AutheliaRouterOptions{
-		UseHTTPS:    false, // Automatic populate in router initiation
-		AutheliaURL: "",    // Automatic populate in router initiation
-		Logger:      SystemWideLogger,
-		Database:    sysdb,
+	forwardAuthRouter = forward.NewAuthRouter(&forward.AuthRouterOptions{
+		Address:  "",
+		Logger:   SystemWideLogger,
+		Database: sysdb,
 	})
 
 	//Create a statistic collector

@@ -115,7 +115,7 @@ func ReverseProxtInit() {
 		StatisticCollector: statisticCollector,
 		WebDirectory:       *path_webserver,
 		AccessController:   accessController,
-		AutheliaRouter:     autheliaRouter,
+		ForwardAuthRouter:  forwardAuthRouter,
 		LoadBalancer:       loadBalancer,
 		PluginManager:      pluginManager,
 		/* Utilities */
@@ -584,7 +584,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	if authProviderType == 1 {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
 	} else if authProviderType == 2 {
-		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodAuthelia
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
 	} else if authProviderType == 3 {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
 	} else {
