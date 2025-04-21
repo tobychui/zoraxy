@@ -106,7 +106,7 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 
 	// These are optional fields and can be empty strings.
 	responseHeaders, _ := utils.PostPara(r, DatabaseKeyResponseHeaders)
-	responseClientHeaders, _ := utils.PostPara(r, DatabaseKeyResponseHeaders)
+	responseClientHeaders, _ := utils.PostPara(r, DatabaseKeyResponseClientHeaders)
 	requestHeaders, _ := utils.PostPara(r, DatabaseKeyRequestHeaders)
 	requestExcludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestExcludedCookies)
 
