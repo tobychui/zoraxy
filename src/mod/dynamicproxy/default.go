@@ -17,12 +17,13 @@ import (
 // GetDefaultAuthenticationProvider return a default authentication provider
 func GetDefaultAuthenticationProvider() *AuthenticationProvider {
 	return &AuthenticationProvider{
-		AuthMethod:              AuthMethodNone,
-		BasicAuthCredentials:    []*BasicAuthCredentials{},
-		BasicAuthExceptionRules: []*BasicAuthExceptionRule{},
-		BasicAuthGroupIDs:       []string{},
-		AutheliaURL:             "",
-		UseHTTPS:                false,
+		AuthMethod:                        AuthMethodNone,
+		BasicAuthCredentials:              []*BasicAuthCredentials{},
+		BasicAuthExceptionRules:           []*BasicAuthExceptionRule{},
+		BasicAuthGroupIDs:                 []string{},
+		ForwardAuthURL:                    "",
+		ForwardAuthResponseHeaders:        []string{},
+		ForwardAuthRequestExcludedCookies: []string{},
 	}
 }
 

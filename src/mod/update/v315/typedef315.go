@@ -59,7 +59,7 @@ type AuthProvider int
 const (
 	AuthProviderNone AuthProvider = iota
 	AuthProviderBasicAuth
-	AuthProviderAuthelia
+	AuthProviderForward
 	AuthProviderOauth2
 )
 
