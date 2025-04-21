@@ -113,6 +113,7 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	// Write changes to runtime
 	ar.options.Address = address
 	ar.options.ResponseHeaders = strings.Split(responseHeaders, ",")
+	ar.options.ResponseClientHeaders = strings.Split(responseClientHeaders, ",")
 	ar.options.RequestHeaders = strings.Split(requestHeaders, ",")
 	ar.options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
 
