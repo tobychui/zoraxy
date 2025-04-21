@@ -9,6 +9,8 @@ const (
 
 	DatabaseKeyAddress                = "address"
 	DatabaseKeyResponseHeaders        = "responseHeaders"
+	DatabaseKeyResponseClientHeaders  = "responseClientHeaders"
+	DatabaseKeyRequestHeaders         = "requestHeaders"
 	DatabaseKeyRequestExcludedCookies = "requestExcludedCookies"
 
 	HeaderXForwardedProto  = "X-Forwarded-Proto"

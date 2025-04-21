@@ -41,12 +41,22 @@
                     <div class="field">
                         <label for="forwardAuthResponseHeaders">Response Headers</label>
                         <input type="text" id="forwardAuthResponseHeaders" name="forwardAuthResponseHeaders" placeholder="Enter Forward Auth Response Headers">
-                        <small>Comma separated list of case-insensitive headers to copy from the authorization servers response, to the request to the backend. <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code></small>
+                        <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the request sent to the backend. If not set no headers are copied. <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code></small>
+                    </div>
+                    <div class="field">
+                        <label for="forwardAuthResponseClientHeaders">Response Client Headers</label>
+                        <input type="text" id="forwardAuthResponseClientHeaders" name="forwardAuthResponseClientHeaders" placeholder="Enter Forward Auth Response Client Headers">
+                        <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the response sent to the client. If not set no headers are copied. <strong>Example:</strong> <code>Set-Cookie,WWW-Authenticate</code></small>
+                    </div>
+                    <div class="field">
+                        <label for="forwardAuthRequestHeaders">Request Headers</label>
+                        <input type="text" id="forwardAuthRequestHeaders" name="forwardAuthRequestHeaders" placeholder="Enter Forward Auth Request Headers">
+                        <small>Comma separated list of case-insensitive headers to copy from the original request to the request made to the authorization server. If not set all headers are copied. <strong>Example:</strong> <code>Cookie,Authorization</code></small>
                     </div>
                     <div class="field">
                         <label for="forwardAuthRequestExcludedCookies">Request Excluded Cookies</label>
                         <input type="text" id="forwardAuthRequestExcludedCookies" name="forwardAuthRequestExcludedCookies" placeholder="Enter Forward Auth Request Excluded Cookies">
-                        <small>Comma separated list of case-sensitive cookie names to exclude from the request to the backend. <strong>Example:</strong> <code>authelia_session,another_session</code></small>
+                        <small>Comma separated list of case-sensitive cookie names to exclude from the request to the backend. If not set no cookies are excluded. <strong>Example:</strong> <code>authelia_session,another_session</code></small>
                     </div>
                 </div>
             </div><br />
@@ -65,6 +75,8 @@
             success: function(data) {
                 $('#forwardAuthAddress').val(data.address);
                 $('#forwardAuthResponseHeaders').val(data.responseHeaders.join(","));
+                $('#forwardAuthResponseClientHeaders').val(data.responseClientHeaders.join(","));
+                $('#forwardAuthRequestHeaders').val(data.requestHeaders.join(","));
                 $('#forwardAuthRequestExcludedCookies').val(data.requestExcludedCookies.join(","));
             },
             error: function(jqXHR, textStatus, errorThrown) {
@@ -76,9 +88,11 @@
     function updateForwardAuthSettings() {
         const address = $('#forwardAuthAddress').val();
         const responseHeaders = $('#forwardAuthResponseHeaders').val();
+        const responseClientHeaders = $('#forwardAuthResponseClientHeaders').val();
+        const requestHeaders = $('#forwardAuthRequestHeaders').val();
         const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
 
-        console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Request Excluded Cookies: ${requestExcludedCookies}.`);
+        console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Excluded Cookies: ${requestExcludedCookies}.`);
 
         $.cjax({
             url: '/api/sso/forward-auth',
@@ -86,6 +100,8 @@
             data: {
                 address: address,
                 responseHeaders: responseHeaders,
+                responseClientHeaders: responseClientHeaders,
+                requestHeaders: requestHeaders,
                 requestExcludedCookies: requestExcludedCookies
             },
             success: function(data) {

@@ -155,6 +155,8 @@ type AuthenticationProvider struct {
 	/* Forward Auth Settings */
 	ForwardAuthURL                    string   // Full URL of the Forward Auth endpoint. Example: https://auth.example.com/api/authz/forward-auth
 	ForwardAuthResponseHeaders        []string // List of headers to copy from the forward auth server response to the request.
+	ForwardAuthResponseClientHeaders  []string // List of headers to copy from the forward auth server response to the client response.
+	ForwardAuthRequestHeaders         []string // List of headers to copy from the original request to the auth server. If empty all are copied.
 	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
 }
 

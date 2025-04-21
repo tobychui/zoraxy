@@ -23,6 +23,8 @@ func GetDefaultAuthenticationProvider() *AuthenticationProvider {
 		BasicAuthGroupIDs:                 []string{},
 		ForwardAuthURL:                    "",
 		ForwardAuthResponseHeaders:        []string{},
+		ForwardAuthResponseClientHeaders:  []string{},
+		ForwardAuthRequestHeaders:         []string{},
 		ForwardAuthRequestExcludedCookies: []string{},
 	}
 }
