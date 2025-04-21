@@ -82,7 +82,7 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
 			// If the plugin was enabled, start it now
-			fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
+			//fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
 			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
 				err = m.StartPlugin(thisPlugin.Spec.ID)
 				if err != nil {

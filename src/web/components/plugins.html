@@ -185,6 +185,8 @@
           
         </tbody>
       </table>
+      <br>
+      <button class="ui violet button" onclick="openPluginStore();"><i class="cart arrow down icon"></i>Get More Plugins!</button>
 </div>
 
 <script>
@@ -561,6 +563,11 @@ function stopPlugin(pluginId, btn=undefined){
 function getPluginInfo(pluginId, btn){
   let payload = encodeURIComponent(JSON.stringify({plugin_id: pluginId}));
   showSideWrapper("snippet/pluginInfo.html?t=" + Date.now() + "#" + payload);
+}
+
+function openPluginStore(){
+  //Open plugin store in extended mode
+  showSideWrapper("snippet/pluginstore.html?t=" + Date.now(), true);
 }
 
 </script>

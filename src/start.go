@@ -1,7 +1,6 @@
 package main
 
 import (
-	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -322,6 +323,9 @@ func startupSequence() {
 			ZoraxyUUID:       nodeUUID,
 			DevelopmentBuild: DEVELOPMENT_BUILD,
 		},
+		PluginStoreURLs: []string{
+			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",
+		},
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
@@ -330,9 +334,19 @@ func startupSequence() {
 		},
 	})
 
+	//Sync latest plugin list from the plugin store
+	go func() {
+		err = pluginManager.UpdateDownloadablePluginList()
+		if err != nil {
+			SystemWideLogger.PrintAndLog("plugin-manager", "Failed to sync plugin list from plugin store", err)
+		} else {
+			SystemWideLogger.PrintAndLog("plugin-manager", "Plugin list synced from plugin store", nil)
+		}
+	}()
+
 	err = pluginManager.LoadPluginsFromDisk()
 	if err != nil {
-		SystemWideLogger.PrintAndLog("Plugin Manager", "Failed to load plugins", err)
+		SystemWideLogger.PrintAndLog("plugin-manager", "Failed to load plugins", err)
 	}
 
 	/* Docker UX Optimizer */
