@@ -20,6 +20,14 @@ type AuthRouterOptions struct {
 	// the request.
 	ResponseHeaders []string
 
+	// ResponseClientHeaders is a list of headers to be copied from the response if provided by the forward auth
+	// endpoint to the response to the client.
+	ResponseClientHeaders []string
+
+	// RequestHeaders is a list of headers to be copied from the request to the authorization server. If empty all
+	// headers are copied.
+	RequestHeaders []string
+
 	// RequestExcludedCookies is a list of cookie keys that should be removed from every request sent to the upstream.
 	RequestExcludedCookies []string
 
@@ -39,12 +47,16 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	//Read settings from database if available.
 	options.Database.Read(DatabaseTable, DatabaseKeyAddress, &options.Address)
 
-	responseHeaders, requestExcludedCookies := "", ""
+	responseHeaders, responseClientHeaders, requestHeaders, requestExcludedCookies := "", "", "", ""
 
-	options.Database.Read(DatabaseTable, DatabaseKeyResponseHeaders, responseHeaders)
-	options.Database.Read(DatabaseTable, DatabaseKeyRequestExcludedCookies, requestExcludedCookies)
+	options.Database.Read(DatabaseTable, DatabaseKeyResponseHeaders, &responseHeaders)
+	options.Database.Read(DatabaseTable, DatabaseKeyResponseClientHeaders, &responseClientHeaders)
+	options.Database.Read(DatabaseTable, DatabaseKeyRequestHeaders, &requestHeaders)
+	options.Database.Read(DatabaseTable, DatabaseKeyRequestExcludedCookies, &requestExcludedCookies)
 
 	options.ResponseHeaders = strings.Split(responseHeaders, ",")
+	options.ResponseClientHeaders = strings.Split(responseHeaders, ",")
+	options.RequestHeaders = strings.Split(requestHeaders, ",")
 	options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
 
 	return &AuthRouter{
@@ -73,6 +85,8 @@ func (ar *AuthRouter) handleOptionsGET(w http.ResponseWriter, r *http.Request) {
 	js, _ := json.Marshal(map[string]interface{}{
 		DatabaseKeyAddress:                ar.options.Address,
 		DatabaseKeyResponseHeaders:        ar.options.ResponseHeaders,
+		DatabaseKeyResponseClientHeaders:  ar.options.ResponseClientHeaders,
+		DatabaseKeyRequestHeaders:         ar.options.RequestHeaders,
 		DatabaseKeyRequestExcludedCookies: ar.options.RequestExcludedCookies,
 	})
 
@@ -90,18 +104,23 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// These are optional fields.
+	// These are optional fields and can be empty strings.
 	responseHeaders, _ := utils.PostPara(r, DatabaseKeyResponseHeaders)
+	responseClientHeaders, _ := utils.PostPara(r, DatabaseKeyResponseHeaders)
+	requestHeaders, _ := utils.PostPara(r, DatabaseKeyRequestHeaders)
 	requestExcludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestExcludedCookies)
 
 	// Write changes to runtime
 	ar.options.Address = address
 	ar.options.ResponseHeaders = strings.Split(responseHeaders, ",")
+	ar.options.RequestHeaders = strings.Split(requestHeaders, ",")
 	ar.options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
 
 	// Write changes to database
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyAddress, address)
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyResponseHeaders, responseHeaders)
+	ar.options.Database.Write(DatabaseTable, DatabaseKeyResponseClientHeaders, responseClientHeaders)
+	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestHeaders, requestHeaders)
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestExcludedCookies, requestExcludedCookies)
 
 	utils.SendOK(w)
@@ -134,8 +153,7 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 	}
 
 	// TODO: Add opt-in support for copying the request body to the forward auth request.
-	// TODO: Add support for customizing which headers are copied from the request to the forward auth request.
-	headerCopyExcluded(r.Header, req.Header, nil)
+	headerCopyIncluded(r.Header, req.Header, ar.options.RequestHeaders, true)
 
 	// TODO: Add support for upstream headers.
 	rSetForwardedHeaders(r, req)
@@ -163,16 +181,20 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 
 	// Responses within the 200-299 range are considered successful and allow the proxy to handle the request.
 	if respForwarded.StatusCode >= http.StatusOK && respForwarded.StatusCode < http.StatusMultipleChoices {
-		// TODO: Add support for copying response headers to the response (in the user agent), not just the request.
+		if len(ar.options.ResponseClientHeaders) != 0 {
+			headerCopyIncluded(respForwarded.Header, w.Header(), ar.options.ResponseClientHeaders, false)
+		}
 
-		if len(ar.options.ResponseHeaders) != 0 {
+		if len(ar.options.RequestExcludedCookies) != 0 {
 			// If the user has specified a list of cookies to be removed from the request, deterministically remove them.
 			headerCookieRedact(r, ar.options.RequestExcludedCookies)
 		}
 
-		// Copy specific user-specified headers from the response of the forward auth request to the request sent to the
-		// upstream server/next hop.
-		headerCopyIncluded(respForwarded.Header, w.Header(), ar.options.ResponseHeaders)
+		if len(ar.options.ResponseHeaders) != 0 {
+			// Copy specific user-specified headers from the response of the forward auth request to the request sent to the
+			// upstream server/next hop.
+			headerCopyIncluded(respForwarded.Header, w.Header(), ar.options.ResponseHeaders, false)
+		}
 
 		return nil
 	}
@@ -235,18 +257,35 @@ func headerCopyExcluded(original, destination http.Header, excludedHeaders []str
 	}
 }
 
-func headerCopyIncluded(original, destination http.Header, includedHeaders []string) {
+func headerCopyIncluded(original, destination http.Header, includedHeaders []string, allIfEmpty bool) {
+	if allIfEmpty && len(includedHeaders) == 0 {
+		headerCopyAll(original, destination)
+	} else {
+		headerCopyIncludedExact(original, destination, includedHeaders)
+	}
+}
+
+func headerCopyAll(original, destination http.Header) {
 	for key, values := range original {
 		// We should never copy the headers in the below list, even if they're in the list provided by a user.
 		if stringInSliceFold(key, doNotCopyHeaders) {
 			continue
 		}
 
-		if !stringInSliceFold(key, includedHeaders) {
+		destination[key] = append(destination[key], values...)
+	}
+}
+
+func headerCopyIncludedExact(original, destination http.Header, keys []string) {
+	for _, key := range keys {
+		// We should never copy the headers in the below list, even if they're in the list provided by a user.
+		if stringInSliceFold(key, doNotCopyHeaders) {
 			continue
 		}
 
-		destination[key] = append(destination[key], values...)
+		if values, ok := original[key]; ok {
+			destination[key] = append(destination[key], values...)
+		}
 	}
 }
 
