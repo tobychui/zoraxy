@@ -237,6 +237,8 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 
 	authRouter.HandleFunc("/api/plugins/store/list", pluginManager.HandleListDownloadablePlugins)
 	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
+	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
+	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)
 }
 
 // Register the APIs for Auth functions, due to scoping issue some functions are defined here
