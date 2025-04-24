@@ -23,6 +23,12 @@
         </div>
         <div class="field">
           <div class="ui checkbox">
+            <input type="checkbox" id="showOnlyRunning" class="hidden" />
+            <label for="showOnlyRunning">Show running Containers only</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="ui checkbox">
             <input type="checkbox" id="showUnexposed" class="hidden" />
             <label for="showUnexposed"
               >Show Containers with unexposed ports
@@ -101,6 +107,7 @@
         const $existingList = $("#existingList");
 
         const $searchbar = $("#searchbar");
+        const $showOnlyRunning = $("#showOnlyRunning");
         const $showUnexposed = $("#showUnexposed");
 
         // objects to store container entries
@@ -120,6 +127,22 @@
         // save showUnexposed checkbox state to local storage
         function saveShowUnexposedState() {
           localStorage.setItem("showUnexposed", $showUnexposed.prop("checked"));
+        }
+
+        // load showOnlyRunning checkbox state from local storage
+        function loadShowOnlyRunningState() {
+          const storedState = localStorage.getItem("showOnlyRunning");
+          if (storedState !== null) {
+            $showOnlyRunning.prop("checked", storedState === "true");
+          }
+        }
+
+        // save showOnlyRunning checkbox state to local storage
+        function saveShowOnlyRunningState() {
+          localStorage.setItem(
+            "showOnlyRunning",
+            $showOnlyRunning.prop("checked")
+          );
         }
 
         // fetch docker containers
@@ -182,6 +205,14 @@
 
           // process each container
           containers.forEach((container) => {
+            // skip containers that are not running, if the checkbox is checked
+            if (
+              $showOnlyRunning.is(":checked") &&
+              container.State !== "running"
+            ) {
+              return;
+            }
+
             // skip containers in network mode "none"
             if (container.HostConfig.NetworkMode === "none") {
               return;
@@ -227,8 +258,9 @@
             // add the container to the networked list, using it's name as address
             container.Ports.forEach((portObject) => {
               // skip unexposed ports if the checkbox is not checked
-              if (!portObject.PublicPort && !$showUnexposed.is(":checked"))
+              if (!portObject.PublicPort && !$showUnexposed.is(":checked")) {
                 return;
+              }
 
               const port = portObject.PublicPort || portObject.PrivatePort;
 
@@ -386,6 +418,11 @@
 
         $showUnexposed.on("change", () => {
           saveShowUnexposedState(); // save the new state to local storage
+          getDockerContainers();
+        });
+
+        $showOnlyRunning.on("change", () => {
+          saveShowOnlyRunningState(); // save the new state to local storage
           getDockerContainers();
         });
 
