@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <!-- Notes: This should be open in its original path-->
+    <!-- Notes: This should be open in its original path -->
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../script/semantic/semantic.min.css" />
     <script src="../script/jquery-3.6.0.min.js"></script>
     <script src="../script/semantic/semantic.min.js"></script>
   </head>
   <body>
-    <link rel="stylesheet" href="../darktheme.css">
+    <link rel="stylesheet" href="../darktheme.css" />
     <script src="../script/darktheme.js"></script>
     <br />
     <div class="ui container">
@@ -26,35 +26,54 @@
             <input type="checkbox" id="showUnexposed" class="hidden" />
             <label for="showUnexposed"
               >Show Containers with unexposed ports
-              <br />
-              <small
-                >Please make sure Zoraxy and the target container share a
-                network</small
-              >
             </label>
           </div>
         </div>
       </div>
+      <!--  Networked Containers Lists -->
       <div class="ui header">
         <div class="content">
-          List of Docker Containers
+          Networked Containers
           <div class="sub header">
-            Below is a list of all detected Docker containers currently running
-            on the system.
+            Containers sharing a network with Zoraxy.<br />
+            Docker DNS based name resolution has to be supported by your
+            network.
           </div>
         </div>
       </div>
-      <div id="containersList" class="ui middle aligned divided list active">
-        <div class="ui loader active"></div>
+      <div id="networkedList" class="ui middle aligned divided list">
+        <div class="ui active loader"></div>
       </div>
+      <!-- Host Mode Containers List -->
+      <div id="hostmodeListHeader" class="ui header" hidden>
+        <div class="content">
+          Host Mode Containers
+          <div class="sub header">
+            Containers using the host network.<br />Ports need to be added
+            manually.
+          </div>
+        </div>
+      </div>
+      <div id="hostmodeList" class="ui middle aligned divided list"></div>
       <div class="ui horizontal divider"></div>
-      <div id="containersAddedListHeader" class="ui header" hidden>
-        Already added containers:
+      <!-- Other Containers List -->
+      <div id="othersListHeader" class="ui header" hidden>
+        <div class="content">
+          Other Containers
+          <div class="sub header">
+            Containers that do not share a network with Zoraxy.<br />
+            Manual addition is required.
+          </div>
+        </div>
       </div>
-      <div
-        id="containersAddedList"
-        class="ui middle aligned divided list"
-      ></div>
+      <div id="othersList" class="ui middle aligned divided list"></div>
+      <div class="ui horizontal divider"></div>
+      <!-- Existing List -->
+      <div id="existingListHeader" class="ui header" hidden>
+        Existing Rules
+        <div class="sub header">Containers already in proxy rules.</div>
+      </div>
+      <div id="existingList" class="ui middle aligned divided list"></div>
     </div>
 
     <script>
@@ -69,14 +88,26 @@
 
       // wait until DOM is fully loaded before executing script
       $(document).ready(() => {
-        const $containersList = $("#containersList");
-        const $containersAddedList = $("#containersAddedList");
-        const $containersAddedListHeader = $("#containersAddedListHeader");
+        // jQuery objects for UI elements
+        const $networkedList = $("#networkedList");
+
+        const $hostmodeListHeader = $("#hostmodeListHeader");
+        const $hostmodeList = $("#hostmodeList");
+
+        const $othersListHeader = $("#othersListHeader");
+        const $othersList = $("#othersList");
+
+        const $existingListHeader = $("#existingListHeader");
+        const $existingList = $("#existingList");
+
         const $searchbar = $("#searchbar");
         const $showUnexposed = $("#showUnexposed");
 
-        let lines = {};
-        let linesAdded = {};
+        // objects to store container entries
+        let networkedEntries = {}; // { name, ip, port }
+        let hostmodeEntries = {}; // { name, ip }
+        let othersEntries = {}; // { name, ips, ports }
+        let existingEntries = {}; // { name, ip, port }
 
         // load showUnexposed checkbox state from local storage
         function loadShowUnexposedState() {
@@ -93,12 +124,21 @@
 
         // fetch docker containers
         function getDockerContainers() {
-          $containersList.html('<div class="ui loader active"></div>');
-          $containersAddedList.empty();
-          $containersAddedListHeader.attr("hidden", true);
+          $networkedList.html('<div class="ui active loader"></div>');
 
-          lines = {};
-          linesAdded = {};
+          $hostmodeListHeader.attr("hidden", true);
+          $hostmodeList.empty();
+
+          $othersListHeader.attr("hidden", true);
+          $othersList.empty();
+
+          $existingListHeader.attr("hidden", true);
+          $existingList.empty();
+
+          networkedEntries = {};
+          hostmodeEntries = {};
+          othersEntries = {};
+          existingEntries = {};
 
           const hostRequest = $.get("/api/proxy/list?type=host");
           const dockerRequest = $.get("/api/docker/containers");
@@ -126,73 +166,215 @@
             )
           );
 
+          // identify the Zoraxy container to determine shared networks
+          const zoraxyContainer = containers.find(
+            (container) =>
+              container.Labels &&
+              container.Labels["com.imuslab.zoraxy.container-identifier"] ===
+                "Zoraxy"
+          );
+
+          const zoraxyNetworkIDs = zoraxyContainer
+            ? Object.values(zoraxyContainer.NetworkSettings.Networks).map(
+                (network) => network.NetworkID
+              )
+            : [];
+
+          // process each container
           containers.forEach((container) => {
+            // skip containers in network mode "none"
+            if (container.HostConfig.NetworkMode === "none") {
+              return;
+            }
+
             const name = container.Names[0].replace(/^\//, "");
+
+            // host mode containers resolve to host.docker.internal
+            if (
+              container.HostConfig.NetworkMode === "host" &&
+              !hostmodeEntries[name]
+            ) {
+              hostmodeEntries[name] = {
+                name,
+                ip: "host.docker.internal",
+              };
+              return;
+            }
+
+            // check if the container shares a network with Zoraxy
+            const sharedNetworks = Object.values(
+              container.NetworkSettings.Networks
+            ).filter((network) => zoraxyNetworkIDs.includes(network.NetworkID));
+
+            // if the container does not share a network with Zoraxy, add it to the others list
+            if (!sharedNetworks.length) {
+              const ips = Object.values(container.NetworkSettings.Networks).map(
+                (network) => network.IPAddress
+              );
+
+              const ports = container.Ports.map((portObject) => {
+                return portObject.PublicPort || portObject.PrivatePort;
+              });
+
+              othersEntries[name] = {
+                name,
+                ips,
+                ports,
+              };
+              return;
+            }
+
+            // add the container to the networked list, using it's name as address
             container.Ports.forEach((portObject) => {
-              let port = portObject.PublicPort || portObject.PrivatePort;
+              // skip unexposed ports if the checkbox is not checked
               if (!portObject.PublicPort && !$showUnexposed.is(":checked"))
                 return;
 
-              // if port is not exposed, use container's name and let docker handle the routing
-              // BUT this will only work if the container is on the same network as Zoraxy
-              const targetAddress = portObject.IP || name;
-              const key = `${name}-${port}`;
+              const port = portObject.PublicPort || portObject.PrivatePort;
 
+              const key = `${name}:${port}`;
               if (
-                existingTargets.has(`${targetAddress}:${port}`) &&
-                !linesAdded[key]
+                existingTargets.has(`${name}:${port}`) &&
+                !existingEntries[key]
               ) {
-                linesAdded[key] = { name, ip: targetAddress, port };
-              } else if (!lines[key]) {
-                lines[key] = { name, ip: targetAddress, port };
+                existingEntries[key] = {
+                  name,
+                  ip: name,
+                  port,
+                };
+              } else if (!networkedEntries[key]) {
+                networkedEntries[key] = {
+                  name,
+                  ip: name,
+                  port,
+                };
               }
             });
           });
 
-          // update ui
-          updateContainersList();
-          updateAddedContainersList();
+          // update UI lists
+          updateNetworkedList();
+          updateHostmodeList();
+          updateOthersList();
+          updateExistingList();
         }
 
-        // update containers list
-        function updateContainersList() {
-          $containersList.empty();
-          Object.entries(lines).forEach(([key, line]) => {
-            $containersList.append(`
-              <div class="item">
-                <div class="right floated content">
-                  <div class="ui button add-button" data-key="${key}">Add</div>
+        // update networked list
+        function updateNetworkedList() {
+          $networkedList.empty();
+          let html = "";
+          Object.entries(networkedEntries)
+            .sort()
+            .forEach(([key, entry]) => {
+              html += `
+                <div class="item">
+                  <div class="content" style="display: flex; justify-content: space-between;">
+                    <div>
+                      <div class="header">${entry.name}</div>
+                      <div class="description">
+                        <p>${entry.ip}:${entry.port}</p>
+                      </div>
+                    </div>
+                    <button class="ui button add-button" data-key="${key}">
+                      Add
+                    </button>
+                  </div>
                 </div>
-                <div class="content">
-                  <div class="header">${line.name}</div>
-                  <div class="description">${line.ip}:${line.port}</div>
-                </div>
-              </div>
-            `);
-          });
-          $containersList.find(".loader").removeClass("active");
+              `;
+            });
+          $networkedList.append(html);
         }
 
-        // update the added containers list
-        function updateAddedContainersList() {
-          Object.entries(linesAdded).forEach(([key, line]) => {
-            $containersAddedList.append(`
-              <div class="item">
-                <div class="content">
-                  <div class="header">${line.name}</div>
-                  <div class="description">${line.ip}:${line.port}</div>
+        // update hostmode list
+        function updateHostmodeList() {
+          $hostmodeList.empty();
+          let html = "";
+          Object.entries(hostmodeEntries)
+            .sort()
+            .forEach(([key, entry]) => {
+              html += `
+                <div class="item">
+                  <div class="content" style="display: flex; justify-content: space-between;">
+                    <div>
+                      <div class="header">${entry.name}</div>
+                      <div class="description">
+                        <p>${entry.ip}</p>
+                      </div>
+                    </div>
+                    <button class="ui right floated button add-button" data-key="${key}">
+                      Add
+                    </button>
+                  </div>
                 </div>
-              </div>
-            `);
-          });
-          if (Object.keys(linesAdded).length) {
-            $containersAddedListHeader.removeAttr("hidden");
+              `;
+            });
+          $hostmodeList.append(html);
+          if (Object.keys(hostmodeEntries).length) {
+            $hostmodeListHeader.removeAttr("hidden");
+          }
+        }
+
+        // update others list
+        function updateOthersList() {
+          $othersList.empty();
+          let html = "";
+          Object.entries(othersEntries)
+            .sort()
+            .forEach(([key, entry]) => {
+              html += `
+                <div class="item">
+                  <div class="header">${entry.name}</div>
+                  ${
+                    entry.ips.length === 0 ||
+                    entry.ips.every((ip) => ip === "") ||
+                    entry.ports.length === 0 ||
+                    entry.ports.every((port) => port === "")
+                      ? `<div class="description">
+                          <p>No IPs or Ports</p>
+                        </div>`
+                      : `<div class="description">
+                        <p>
+                          IPs: ${entry.ips.join(", ")}<br />
+                          Ports: ${entry.ports.join(", ")}
+                        </p>
+                      </div>`
+                  }
+                </div>
+              `;
+            });
+          $othersList.append(html);
+          if (Object.keys(othersEntries).length) {
+            $othersListHeader.removeAttr("hidden");
+          }
+        }
+
+        // update existing list
+        function updateExistingList() {
+          $existingList.empty();
+          let html = "";
+          Object.entries(existingEntries)
+            .sort()
+            .forEach(([key, entry]) => {
+              html += `
+                <div class="item">
+                  <div class="content">
+                    <div class="header">${entry.name}</div>
+                    <div class="description">
+                      <p>${entry.ip}:${entry.port}</p>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+          $existingList.append(html);
+          if (Object.keys(existingEntries).length) {
+            $existingListHeader.removeAttr("hidden");
           }
         }
 
         // show error message
         function showError(error) {
-          $containersList.html(
+          $networkedList.html(
             `<div class="ui basic segment"><i class="ui red times icon"></i> ${error}</div>`
           );
           parent.msgbox(`Error loading data: ${error}`, false);
@@ -207,23 +389,46 @@
           getDockerContainers();
         });
 
+        // debounce searchbar input with 300ms delay, then filter list
+        // this prevents excessive calls to the filter function
         $searchbar.on(
           "input",
           debounce(() => {
-            // debounce searchbar input with 300ms delay, then filter list
-            // this prevents excessive calls to the filter function
             const search = $searchbar.val().toLowerCase();
-            $("#containersList .item").each((index, item) => {
+
+            $("#networkedList .item").each((index, item) => {
+              const content = $(item).text().toLowerCase();
+              $(item).toggle(content.includes(search));
+            });
+
+            $("#hostmodeList .item").each((index, item) => {
+              const content = $(item).text().toLowerCase();
+              $(item).toggle(content.includes(search));
+            });
+
+            $("#othersList .item").each((index, item) => {
+              const content = $(item).text().toLowerCase();
+              $(item).toggle(content.includes(search));
+            });
+
+            $("#existingList .item").each((index, item) => {
               const content = $(item).text().toLowerCase();
               $(item).toggle(content.includes(search));
             });
           }, 300)
         );
 
-        $containersList.on("click", ".add-button", (event) => {
+        $networkedList.on("click", ".add-button", (event) => {
           const key = $(event.currentTarget).data("key");
-          if (lines[key]) {
-            parent.addContainerItem(lines[key]);
+          if (networkedEntries[key]) {
+            parent.addContainerItem(networkedEntries[key]);
+          }
+        });
+
+        $hostmodeList.on("click", ".add-button", (event) => {
+          const key = $(event.currentTarget).data("key");
+          if (hostmodeEntries[key]) {
+            parent.addContainerItem(hostmodeEntries[key]);
           }
         });
 
