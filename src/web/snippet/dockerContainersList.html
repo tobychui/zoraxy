@@ -17,21 +17,21 @@
           <input
             id="searchbar"
             type="text"
-            placeholder="Search..."
+            placeholder="Search Containers ..."
             autocomplete="off"
           />
         </div>
         <div class="field">
           <div class="ui checkbox">
             <input type="checkbox" id="showOnlyRunning" class="hidden" />
-            <label for="showOnlyRunning">Show running Containers only</label>
+            <label for="showOnlyRunning">Show Only Running Containers</label>
           </div>
         </div>
         <div class="field">
           <div class="ui checkbox">
             <input type="checkbox" id="showUnexposed" class="hidden" />
             <label for="showUnexposed"
-              >Show Containers with unexposed ports</label
+              >Show Containers with Unexposed Ports</label
             >
           </div>
         </div>
@@ -39,11 +39,10 @@
       <!--  Networked Containers Lists -->
       <div class="ui header">
         <div class="content">
-          Networked Containers
+          Containers on Zoraxy's Networks
           <div class="sub header">
-            Containers sharing a network with Zoraxy.<br />
-            Docker DNS based name resolution has to be supported by your
-            network.
+            These containers share a network with Zoraxy.<br />
+            Your networks must support Docker DNS-based name resolution.
           </div>
         </div>
       </div>
@@ -54,10 +53,10 @@
       <!-- Host Mode Containers List -->
       <div id="hostmodeListHeader" class="ui header" hidden>
         <div class="content">
-          Host Mode Containers
+          Containers using Host Network
           <div class="sub header">
-            Containers using the host network.<br />Ports need to be added
-            manually.
+            These containers use the host network configuration.<br />
+            Ports must be manually configured.
           </div>
         </div>
       </div>
@@ -66,10 +65,10 @@
       <!-- Other Containers List -->
       <div id="othersListHeader" class="ui header" hidden>
         <div class="content">
-          Other Containers
+          Containers on different Networks
           <div class="sub header">
-            Containers that do not share a network with Zoraxy.<br />
-            Manual addition is required.
+            These containers are not connected to Zoraxy's networks.<br />
+            Manual configuration is required.
           </div>
         </div>
       </div>
@@ -77,8 +76,10 @@
       <div class="ui horizontal divider"></div>
       <!-- Existing List -->
       <div id="existingListHeader" class="ui header" hidden>
-        Existing Rules
-        <div class="sub header">Containers already in proxy rules.</div>
+        Containers with existing Proxy Rules
+        <div class="sub header">
+          These containers are already configured in the proxy rules.
+        </div>
       </div>
       <div id="existingList" class="ui middle aligned divided list"></div>
     </div>
@@ -430,7 +431,7 @@
           $elem.prop("checked", state === "true");
         }
       }
-      
+
       function saveCheckboxState(id, $elem) {
         localStorage.setItem(id, $elem.prop("checked"));
       }
