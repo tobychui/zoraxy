@@ -268,26 +268,28 @@
 
           // add the container to the networked list, using it's name as address
           container.Ports.forEach((portObject) => {
-            // skip unexposed ports if the checkbox is not checked
-            if (!portObject.PublicPort && !$showUnexposed.is(":checked")) {
-              return;
-            }
-
             const port = portObject.PublicPort || portObject.PrivatePort;
             const key = `${containerName}:${port}`;
 
-            if (existingTargets.has(key) && !existingEntries[key]) {
-              existingEntries[key] = {
-                name: containerName,
-                ip: containerName,
-                port,
-              };
-            } else if (!networkedEntries[key]) {
-              networkedEntries[key] = {
-                name: containerName,
-                ip: containerName,
-                port,
-              };
+            // always include existing proxy-rule targets
+            if (existingTargets.has(key)) {
+              if (!existingEntries[key]) {
+                existingEntries[key] = {
+                  name: containerName,
+                  ip: containerName,
+                  port,
+                };
+              }
+            }
+            // otherwise, include only if exposed or checkbox is checked
+            else if (portObject.PublicPort || $showUnexposed.is(":checked")) {
+              if (!networkedEntries[key]) {
+                networkedEntries[key] = {
+                  name: containerName,
+                  ip: containerName,
+                  port,
+                };
+              }
             }
           });
         });
