@@ -23,7 +23,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 
 	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.Option.WebDirectory, w, r)
 	if isBlocked {
-		h.Parent.logRequest(r, false, 403, blockedReason, "")
+		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "")
 	}
 	return isBlocked
 }

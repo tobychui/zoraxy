@@ -155,7 +155,7 @@ func (router *Router) StartProxyService() error {
 						if err != nil {
 							http.ServeFile(w, r, "./web/hosterror.html")
 							router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
-							router.logRequest(r, false, 404, "vdir-http", r.Host)
+							router.logRequest(r, false, 404, "vdir-http", r.Host, "")
 						}
 
 						endpointProxyRewriteRules := GetDefaultHeaderRewriteRules()

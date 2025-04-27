@@ -24,12 +24,14 @@ type DailySummary struct {
 	ErrorRequest int64 //Invalid request of the day, including error or not found
 	ValidRequest int64 //Valid request of the day
 	//Type counters
-	ForwardTypes    *sync.Map //Map that hold the forward types
-	RequestOrigin   *sync.Map //Map that hold [country ISO code]: visitor counter
-	RequestClientIp *sync.Map //Map that hold all unique request IPs
-	Referer         *sync.Map //Map that store where the user was refered from
-	UserAgent       *sync.Map //Map that store the useragent of the request
-	RequestURL      *sync.Map //Request URL of the request object
+	ForwardTypes        *sync.Map //Map that hold the forward types
+	RequestOrigin       *sync.Map //Map that hold [country ISO code]: visitor counter
+	RequestClientIp     *sync.Map //Map that hold all unique request IPs
+	Referer             *sync.Map //Map that store where the user was refered from
+	UserAgent           *sync.Map //Map that store the useragent of the request
+	RequestURL          *sync.Map //Request URL of the request object
+	DownstreamHostnames *sync.Map //Request count of downstream hostname
+	UpstreamHostnames   *sync.Map //Forwarded request count of upstream hostname
 }
 
 type RequestInfo struct {
@@ -42,6 +44,7 @@ type RequestInfo struct {
 	UserAgent                     string //UserAgent of the downstream request
 	RequestURL                    string //Request URL
 	Target                        string //Target domain or hostname
+	Upstream                      string ////Upstream domain or hostname, if the request is forwarded to upstream
 }
 
 type CollectorOption struct {
@@ -233,6 +236,24 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 		} else {
 			c.DailySummary.RequestURL.Store(ri.RequestURL, ru.(int)+1)
 		}
+
+		//Record the downstream hostname
+		//This is the hostname that the user visited, not the target domain
+		ds, ok := c.DailySummary.DownstreamHostnames.Load(ri.Target)
+		if !ok {
+			c.DailySummary.DownstreamHostnames.Store(ri.Target, 1)
+		} else {
+			c.DailySummary.DownstreamHostnames.Store(ri.Target, ds.(int)+1)
+		}
+
+		//Record the upstream hostname
+		//This is the selected load balancer upstream hostname or ip
+		us, ok := c.DailySummary.UpstreamHostnames.Load(ri.Upstream)
+		if !ok {
+			c.DailySummary.UpstreamHostnames.Store(ri.Upstream, 1)
+		} else {
+			c.DailySummary.UpstreamHostnames.Store(ri.Upstream, us.(int)+1)
+		}
 	}()
 
 	//ADD MORE HERE IF NEEDED
@@ -271,15 +292,17 @@ func (c *Collector) ScheduleResetRealtimeStats() chan bool {
 
 func NewDailySummary() *DailySummary {
 	return &DailySummary{
-		TotalRequest:    0,
-		ErrorRequest:    0,
-		ValidRequest:    0,
-		ForwardTypes:    &sync.Map{},
-		RequestOrigin:   &sync.Map{},
-		RequestClientIp: &sync.Map{},
-		Referer:         &sync.Map{},
-		UserAgent:       &sync.Map{},
-		RequestURL:      &sync.Map{},
+		TotalRequest:        0,
+		ErrorRequest:        0,
+		ValidRequest:        0,
+		ForwardTypes:        &sync.Map{},
+		RequestOrigin:       &sync.Map{},
+		RequestClientIp:     &sync.Map{},
+		Referer:             &sync.Map{},
+		UserAgent:           &sync.Map{},
+		RequestURL:          &sync.Map{},
+		DownstreamHostnames: &sync.Map{},
+		UpstreamHostnames:   &sync.Map{},
 	}
 }
 

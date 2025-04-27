@@ -185,6 +185,8 @@
           
         </tbody>
       </table>
+      <br>
+      <button class="ui basic violet button" onclick="openPluginStore();"><i class="download icon"></i>Plugin Store (Experimental)</button>
 </div>
 
 <script>
@@ -480,7 +482,10 @@ function initiatePluginList(){
           <a href="${plugin.Spec.url}" target="_blank">${plugin.Spec.url}</a></td>
           <td data-label="Category">${plugin.Spec.type==0?"Router":"Utilities"}</td>
           <td data-label="Action">
-            <button onclick="getPluginInfo('${plugin.Spec.id}', this);" class="ui basic icon button" pluginid="${plugin.Spec.id}">
+            <button onclick="uninstallPlugin('${plugin.Spec.id}', '${plugin.Spec.name}', this);" class="ui basic red icon button">
+              <i class="trash icon"></i>
+            </button>
+             <button onclick="getPluginInfo('${plugin.Spec.id}', this);" class="ui basic icon button" pluginid="${plugin.Spec.id}">
               <i class="info circle icon"></i>
             </button>
             <button onclick="stopPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginEnableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? '' : 'style="display:none;"'}>
@@ -508,9 +513,6 @@ function initiatePluginList(){
 }
 
 initiatePluginList();
-
-/* Tag Assignment */
-
 
 
 
@@ -562,6 +564,33 @@ function getPluginInfo(pluginId, btn){
   let payload = encodeURIComponent(JSON.stringify({plugin_id: pluginId}));
   showSideWrapper("snippet/pluginInfo.html?t=" + Date.now() + "#" + payload);
 }
+
+function openPluginStore(){
+  //Open plugin store in extended mode
+  showSideWrapper("snippet/pluginstore.html?t=" + Date.now(), true);
+}
+
+function uninstallPlugin(pluginId, pluginName, btn=undefined) {
+      if (confirm("Are you sure you want to remove " + pluginName + " plugin?")) {
+          if (btn) {
+              $(btn).html('<i class="spinner loading icon"></i>');
+              $(btn).addClass('disabled');
+          }
+          $.cjax({
+              url: '/api/plugins/store/uninstall',
+              type: 'POST',
+              data: { "pluginID": pluginId },
+              success: function(data) {
+                  if (data.error != undefined) {
+                      msgbox(data.error, false);
+                  } else {
+                      msgbox(pluginName + " uninstalled successfully", true);
+                      initiatePluginList();
+                  }
+              }
+          });
+      }
+  }
 
 </script>
 

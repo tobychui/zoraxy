@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
+
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
@@ -41,9 +43,8 @@ import (
 
 const (
 	/* Build Constants */
-	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.0"
-	DEVELOPMENT_BUILD = false /* Development: Set to false to use embedded web fs */
+	SYSTEM_NAME    = "Zoraxy"
+	SYSTEM_VERSION = "3.2.1"
 
 	/* System Constants */
 	TMP_FOLDER                   = "./tmp"
@@ -99,8 +100,9 @@ var (
 	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
 	path_plugin    = flag.String("plugin", "./plugins", "Plugin folder path")
 
-	/* Maintaince Function Flags */
-	geoDbUpdate = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
+	/* Maintaince & Development Function Flags */
+	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
+	development_build = flag.Bool("dev", false, "Use external web folder for UI development")
 )
 
 /* Global Variables and Handlers */
@@ -142,7 +144,8 @@ var (
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins
 
 	//Authentication Provider
-	autheliaRouter *authelia.AutheliaRouter //Authelia router for Authelia authentication
+	autheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
+	authentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

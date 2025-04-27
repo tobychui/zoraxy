@@ -2,6 +2,7 @@ package rewrite
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -14,6 +15,11 @@ func GetHeaderVariableValuesFromRequest(r *http.Request) map[string]string {
 	// Request-specific variables
 	vars["$host"] = r.Host
 	vars["$remote_addr"] = r.RemoteAddr
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		remoteIP = r.RemoteAddr // Fallback to the full RemoteAddr if parsing fails
+	}
+	vars["$remote_ip"] = remoteIP
 	vars["$request_uri"] = r.RequestURI
 	vars["$request_method"] = r.Method
 	vars["$content_length"] = fmt.Sprintf("%d", r.ContentLength)

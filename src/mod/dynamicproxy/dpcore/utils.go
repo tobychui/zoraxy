@@ -36,6 +36,24 @@ func replaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS b
 		//Do not modify location header
 		return urlString, nil
 	}
+
+	//Issue #626: Check if the location header is another subdomain with port
+	//E.g. Proxy config: blog.example.com -> 127.0.0.1:80
+	//Check if it is actually redirecting to (*.)blog.example.com:8080 instead of current domain
+	//like Location: http://x.blog.example.com:1234/
+	_, newLocationPort, err := net.SplitHostPort(u.Host)
+	if (newLocationPort == "80" || newLocationPort == "443") && err == nil {
+		//Port 80 or 443, some web server use this to switch between http and https
+		//E.g. http://example.com:80 -> https://example.com:443
+		//E.g. http://example.com:443 -> https://example.com:80
+		//That usually means the user have invalidly configured the web server to use port 80 or 443
+		//for http or https. We should not modify the location header in this case.
+
+	} else if strings.Contains(u.Host, ":") && err == nil {
+		//Other port numbers. Do not modify location header
+		return urlString, nil
+	}
+
 	u.Host = rrr.OriginalHost
 
 	if strings.Contains(rrr.ProxyDomain, "/") {

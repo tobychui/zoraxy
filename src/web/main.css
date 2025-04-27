@@ -197,6 +197,12 @@ body.darkTheme .menubar{
     max-width: calc(80% - 1em);
 }
 
+@media screen and (max-width: 478px) {
+    .sideWrapper.extendedMode {
+        max-width: calc(100% - 1em);
+    }
+}
+
 .sideWrapper .content{
     height: 100%;
     width: 100%;

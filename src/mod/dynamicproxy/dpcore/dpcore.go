@@ -105,7 +105,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	thisTransporter := http.DefaultTransport
 
 	//Hack the default transporter to handle more connections
-
 	optimalConcurrentConnection := 256
 	if dpcOptions.MaxConcurrentConnection > 0 {
 		optimalConcurrentConnection = dpcOptions.MaxConcurrentConnection
@@ -135,18 +134,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		Verbal:        false,
 		Transport:     thisTransporter,
 	}
-}
-
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
 }
 
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
@@ -352,7 +339,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			}
 		} else if strings.HasPrefix(originLocation, "/") && rrr.PathPrefix != "" {
 			//Back to the root of this proxy object
-			//fmt.Println(rrr.ProxyDomain, rrr.OriginalHost)
 			locationRewrite = strings.TrimSuffix(rrr.PathPrefix, "/") + originLocation
 		} else {
 			//Relative path. Do not modifiy location header

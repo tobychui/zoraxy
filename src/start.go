@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/auth/sso/authentik"
+
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
@@ -98,7 +100,7 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, DEVELOPMENT_BUILD, SystemWideLogger)
+	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, *development_build, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -146,6 +148,13 @@ func startupSequence() {
 		AutheliaURL: "",    // Automatic populate in router initiation
 		Logger:      SystemWideLogger,
 		Database:    sysdb,
+	})
+
+	authentikRouter = authentik.NewAuthentikRouter(&authentik.AuthentikRouterOptions{
+		UseHTTPS:     false, // Automatic populate in router initiation
+		AuthentikURL: "",    // Automatic populate in router initiation
+		Logger:       SystemWideLogger,
+		Database:     sysdb,
 	})
 
 	//Create a statistic collector
@@ -312,7 +321,10 @@ func startupSequence() {
 		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
 			ZoraxyVersion:    SYSTEM_VERSION,
 			ZoraxyUUID:       nodeUUID,
-			DevelopmentBuild: DEVELOPMENT_BUILD,
+			DevelopmentBuild: *development_build,
+		},
+		PluginStoreURLs: []string{
+			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",
 		},
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
@@ -322,9 +334,19 @@ func startupSequence() {
 		},
 	})
 
+	//Sync latest plugin list from the plugin store
+	go func() {
+		err = pluginManager.UpdateDownloadablePluginList()
+		if err != nil {
+			SystemWideLogger.PrintAndLog("plugin-manager", "Failed to sync plugin list from plugin store", err)
+		} else {
+			SystemWideLogger.PrintAndLog("plugin-manager", "Plugin list synced from plugin store", nil)
+		}
+	}()
+
 	err = pluginManager.LoadPluginsFromDisk()
 	if err != nil {
-		SystemWideLogger.PrintAndLog("Plugin Manager", "Failed to load plugins", err)
+		SystemWideLogger.PrintAndLog("plugin-manager", "Failed to load plugins", err)
 	}
 
 	/* Docker UX Optimizer */

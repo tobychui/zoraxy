@@ -31,16 +31,23 @@ and return a boolean indicate if the request is written to http.ResponseWriter
 - false: the request is not handled (usually means auth ok), continue to the next handler
 */
 func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *http.Request, h *ProxyHandler) bool {
+	requestHostname := r.Host
 	if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
 		err := h.handleBasicAuthRouting(w, r, sep)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
 	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodAuthelia {
 		err := h.handleAutheliaAuth(w, r)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host", 401)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			return true
+		}
+	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodAuthentik {
+		err := h.handleAuthentikAuth(w, r)
+		if err != nil {
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
 	}
@@ -51,11 +58,8 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 
 /* Basic Auth */
 func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
-	err := handleBasicAuth(w, r, pe)
-	if err != nil {
-		h.Parent.logRequest(r, false, 401, "host", r.URL.Hostname())
-	}
-	return err
+	//Wrapper for oop style
+	return handleBasicAuth(w, r, pe)
 }
 
 // Handle basic auth logic
@@ -75,6 +79,7 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 	if !ok {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 		w.WriteHeader(401)
+		w.Write([]byte("401 - Unauthorized"))
 		return errors.New("unauthorized")
 	}
 
@@ -94,6 +99,7 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 	if !matchingFound {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 		w.WriteHeader(401)
+		w.Write([]byte("401 - Unauthorized"))
 		return errors.New("unauthorized")
 	}
 
@@ -105,4 +111,8 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 // Handle authelia auth routing
 func (h *ProxyHandler) handleAutheliaAuth(w http.ResponseWriter, r *http.Request) error {
 	return h.Parent.Option.AutheliaRouter.HandleAutheliaAuth(w, r)
+}
+
+func (h *ProxyHandler) handleAuthentikAuth(w http.ResponseWriter, r *http.Request) error {
+	return h.Parent.Option.AuthentikRouter.HandleAuthentikAuth(w, r)
 }

@@ -47,8 +47,10 @@
                 </div>
             </div>
         </div>
-        <div class="ui small input" style="width: 300px; height: 38px;">
-            <input type="text" id="searchInput" placeholder="Quick Search" onkeydown="handleSearchInput(event);" onchange="handleSearchInput(event);" onblur="handleSearchInput(event);">
+        <div class="ui small input"  style="width: 300px; height: 38px;">
+            <!-- Prevent the browser from filling the saved Zoraxy login account into the  input searchInput below -->
+            <input type="password"  autocomplete="off" hidden/>
+            <input type="text" id="searchInput"  placeholder="Quick Search" onkeydown="handleSearchInput(event);" onchange="handleSearchInput(event);" onblur="handleSearchInput(event);">
         </div>
     </div>
     
@@ -142,12 +144,23 @@
                     if (subd.Disabled){
                         enableChecked = "";
                     }
-
+                    let httpProto = "http://";
+                    if ($("#tls").checkbox("is checked")) {
+                        httpProto = "https://";
+                    } else {
+                        httpProto = "http://";
+                    }
+                    let hostnameRedirectPort = currentListeningPort;
+                    if (hostnameRedirectPort == 80 || hostnameRedirectPort == 443){
+                        hostnameRedirectPort = "";
+                    }else{
+                        hostnameRedirectPort = ":" + hostnameRedirectPort;
+                    }
                     let aliasDomains = ``;
                     if (subd.MatchingDomainAlias != undefined && subd.MatchingDomainAlias.length > 0){
                         aliasDomains = `<small class="aliasDomains" eptuuid="${subd.RootOrMatchingDomain}" style="color: #636363;">Alias: `;
                         subd.MatchingDomainAlias.forEach(alias => {
-                            aliasDomains += `<a href="//${alias}" target="_blank">${alias}</a>, `;
+                            aliasDomains += `<a href="${httpProto}${alias}${hostnameRedirectPort}" target="_blank">${alias}</a>, `;
                         });
                         aliasDomains = aliasDomains.substr(0, aliasDomains.length - 2); //Remove the last tailing seperator
                         aliasDomains += `</small><br>`;
@@ -155,7 +168,7 @@
 
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td data-label="" editable="true" datatype="inbound">
-                            <a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}<br>
+                            <a href="${httpProto}${subd.RootOrMatchingDomain}${hostnameRedirectPort}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}<br>
                             ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
@@ -174,6 +187,7 @@
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> Oauth2`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x4?`<i class="ui blue key icon"></i> Authentik`:``}
                             ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
                             ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
@@ -380,6 +394,12 @@
                             <div class="ui radio checkbox">
                                 <input type="radio" value="2" name="authProviderType" ${authProvider==0x2?"checked":""}>
                                 <label>Authelia</label>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" value="4" name="authProviderType" ${authProvider==0x4?"checked":""}>
+                                <label>Authentik</label>
                             </div>
                         </div>
                     </div>

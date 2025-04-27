@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be open in its original path-->
+        <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+        <title>Plugin Store</title>
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
+        <style>
+            #pluginList{
+                padding: 1em;
+                border: 1px solid #ccc;
+                height: 500px;
+                overflow-y: scroll;
+            }
+
+            body.darkTheme #pluginList .header{
+                color: #fff;
+            }
+
+            .installablePlugin{
+                position: relative;
+            }
+            .installablePlugin .action{
+                position: absolute;
+                top: 0.4em;
+                right: 0.4em;
+            }
+
+
+            @media screen and (max-width: 768px) {
+                #pluginList .item .image {
+                    display: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
+        <br>
+        <div class="ui container">
+            <div class="ui warning message">
+                <div class="header">Experimental Feature</div>
+                <p>The Plugin Store is an experimental feature. Use it at your own risk.</p>
+            </div>
+            <div class="ui fluid search">
+                <div class="ui fluid icon input">
+                    <input id="searchInput" class="prompt" type="text" placeholder="Search plugins">
+                    <i class="search icon"></i>
+                </div>
+            </div>
+            <div class="ui divided items" id="pluginList">
+               
+            </div>
+            <button class="ui basic button" onclick="forceResyncPlugins();"><i class="ui green refresh icon"></i> Update Plugin List</button>
+            <!-- <div class="ui divider"></div>
+            <div class="ui basic segment advanceoptions">
+                <div class="ui accordion advanceSettings">
+                    <div class="title">
+                      <i class="dropdown icon"></i>
+                        Advance Settings
+                    </div>
+                    <div class="content">
+                        <p>Plugin Store URLs</p>
+                        <div class="ui form">
+                          <div class="field">
+                            <textarea id="pluginStoreURLs" rows="5"></textarea>
+                            <label>Enter plugin store URLs, separating each URL with a new line</label>
+                          </div>
+                          <button class="ui basic button" onclick="savePluginStoreURLs()">
+                            <i class="ui green save icon"></i>Save
+                          </button>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        -->
+            <div class="ui divider"></div>
+            <div class="field" >
+                <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
+            </div>
+            <br><br><br><br>
+        </div>
+        <script>
+            let availablePlugins = [];
+            let installedPlugins = [];
+            $(".accordion").accordion();
+
+            function initStoreList(){
+                $.get("/api/plugins/list", function(data) {
+                    if (data.error != undefined) {
+                        parent.msgbox(data.error, false);
+                        return;
+                    }else{
+                        installedPlugins = data || [];
+                        console.log(installedPlugins);
+                    }
+
+                    $.cjax({
+                        url: '/api/plugins/store/list',
+                        type: 'GET',
+                        success: function(data) {
+                            if (data.error != undefined) {
+                                parent.msgbox(data.error, false);
+                            }else{
+                                availablePlugins = data || [];
+                                populatePluginList(availablePlugins);
+                            }
+                        }
+                    });
+                });
+            }
+            initStoreList();
+
+            /* Plugin Search */
+            function searchPlugins() {
+                const query = document.getElementById('searchInput').value.toLowerCase();
+                const items = document.querySelectorAll('#pluginList .item');
+                if (query.trim() === '') {
+                    items.forEach(item => {
+                        item.style.display = '';
+                    });
+                    return;
+                }
+                items.forEach(item => {
+                    const name = item.querySelector('.header').textContent.toLowerCase();
+                    const description = item.querySelector('.description p').textContent.toLowerCase();
+                    const authorElement = item.querySelector('.plugin_author');
+                    const author = authorElement ? authorElement.textContent.toLowerCase() : '';
+                    const id = item.getAttribute('plugin_id').toLowerCase();
+
+                    if (name.includes(query) || description.includes(query) || author.includes(query) || id.includes(query)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            }
+
+            //Bind search function to input field and Enter key
+            document.getElementById('searchInput').addEventListener('input', searchPlugins);
+            document.getElementById('searchInput').addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    searchPlugins();
+                }
+            });
+
+            function forceResyncPlugins() {
+                parent.msgbox("Updating plugin list...", true);
+                document.getElementById('searchInput').value = '';
+                $.cjax({
+                    url: '/api/plugins/store/resync',
+                    type: 'POST',
+                    success: function(data) {
+                        if (data.error != undefined) {
+                            parent.msgbox(data.error, false);
+                        } else {
+                            parent.msgbox("Plugin list updated successfully", true);
+                            initStoreList();
+                        }
+                    }
+                });
+            }
+
+            /* Plugin Store */
+            function populatePluginList(plugins) {
+                const pluginList = document.getElementById('pluginList');
+                pluginList.innerHTML = ''; // Clear existing items
+                plugins.forEach(plugin => {
+                    console.log(plugin);
+                    let thisPluginIsInstalled = false;
+                    installedPlugins.forEach(installedPlugin => {
+                        if (installedPlugin.Spec.id == plugin.PluginIntroSpect.id) {
+                            thisPluginIsInstalled = true;
+                        }
+                    });
+                    const item = `
+                        <div class="item installablePlugin" plugin_id="${plugin.PluginIntroSpect.id}">
+                            <div class="ui tiny image">
+                                <img src="${plugin.IconPath}" alt="${plugin.PluginIntroSpect.name}">
+                            </div>
+                            <div class="content">
+                                <div class="header">${plugin.PluginIntroSpect.name} </div> <a class="section" href="${plugin.PluginIntroSpect.url}" target="_blank"><i class="ui linkify icon"></i></a>
+                                <div class="meta">
+                                    <p>v${plugin.PluginIntroSpect.version_major}.${plugin.PluginIntroSpect.version_minor}.${plugin.PluginIntroSpect.version_patch} by <span class="plugin_author">${plugin.PluginIntroSpect.author}</span></p>
+                                </div>
+                                <div class="description">
+                                    <p>${plugin.PluginIntroSpect.description}</p>
+                                </div>
+                                <div class="action">
+                                    ${thisPluginIsInstalled 
+                                        ? `<button class="ui basic circular disabled button">Installed</button>` 
+                                        : `<button class="ui basic circular button" onclick="installPlugin('${plugin.PluginIntroSpect.id}', this);",><i class="ui download icon"></i> Install</button>`}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#pluginList').append(item);
+                });
+
+                // Reapply search filter if there's a query in the search bar
+                const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+                if (searchQuery.trim() !== '') {
+                    searchPlugins();
+                }
+                
+            }
+
+            /* Plugin Actions */
+            function installPlugin(pluginId, btn=undefined) {
+                if (btn !== undefined) {
+                    $(btn).addClass('loading').prop('disabled', true);
+                }
+                $.cjax({
+                    url: '/api/plugins/store/install',
+                    type: 'POST',
+                    data: { "pluginID": pluginId },
+                    success: function(data) {
+                        if (btn !== undefined) {
+                            $(btn).removeClass('loading').prop('disabled', false);
+                        }
+                        if (data.error != undefined) {
+                            parent.msgbox(data.error, false);
+                        } else {
+                            parent.msgbox("Plugin installed successfully", true);
+                            initStoreList();
+
+                            //Also reload the parent plugin list
+                            parent.initiatePluginList();
+                        }
+                    },
+                    error: function() {
+                        if (btn !== undefined) {
+                            $(btn).removeClass('loading').prop('disabled', false);
+                        }
+                        parent.msgbox("An error occurred while installing the plugin", false);
+                    }
+                });
+            }
+
+            function closeThisWrapper(){
+                parent.hideSideWrapper(true);
+            }
+
+            /* Advanced Options */                                
+            function savePluginManagerURLs() {
+                const urls = document.getElementById('pluginStoreURLs').value.split('\n').map(url => url.trim()).filter(url => url !== '');
+                console.log('Saving URLs:', urls);
+                // Add your logic to save the URLs here, e.g., send them to the server
+                $.cjax({
+                    url: '/api/plugins/store/saveURLs',
+                    type: 'POST',
+                    data: { urls },
+                    success: function(data) {
+                        if (data.error != undefined) {
+                            parent.msgbox(data.error, false);
+                        } else {
+                            parent.msgbox("URLs saved successfully", true);
+                        }
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

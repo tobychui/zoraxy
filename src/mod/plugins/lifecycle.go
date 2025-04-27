@@ -274,13 +274,10 @@ func (m *Manager) StopPlugin(pluginID string) error {
 }
 
 // Check if the plugin is still running
-func (m *Manager) PluginStillRunning(pluginID string) bool {
+func (m *Manager) PluginIsRunning(pluginID string) bool {
 	plugin, err := m.GetPluginByID(pluginID)
 	if err != nil {
 		return false
 	}
-	if plugin.process == nil {
-		return false
-	}
-	return plugin.process.ProcessState == nil
+	return plugin.IsRunning()
 }

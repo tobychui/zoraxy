@@ -29,9 +29,15 @@ type Plugin struct {
 }
 
 type ManagerOptions struct {
+	/* Plugins */
 	PluginDir          string              //The directory where the plugins are stored
 	PluginGroups       map[string][]string //The plugin groups,key is the tag name and the value is an array of plugin IDs
 	PluginGroupsConfig string              //The group / tag configuration file, if set the plugin groups will be loaded from this file
+
+	/* Plugin Downloader */
+	PluginStoreURLs         []string              //The plugin store URLs, used to download the plugins
+	DownloadablePluginCache []*DownloadablePlugin //The cache for the downloadable plugins, key is the plugin ID and value is the DownloadablePlugin struct
+	LastSuccPluginSyncTime  int64                 //The last sync time for the plugin store URLs, used to check if the plugin store URLs need to be synced again
 
 	/* Runtime */
 	SystemConst  *zoraxyPlugin.RuntimeConstantValue //The system constant value

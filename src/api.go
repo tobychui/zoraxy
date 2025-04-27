@@ -83,6 +83,7 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 // Register the APIs for Authentication handlers like Authelia and OAUTH2
 func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/Authelia", autheliaRouter.HandleSetAutheliaURLAndHTTPS)
+	authRouter.HandleFunc("/api/sso/Authentik", authentikRouter.HandleSetAuthentikURLAndHTTPS)
 }
 
 // Register the APIs for redirection rules management functions
@@ -233,6 +234,11 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/groups/add", pluginManager.HandleAddPluginToGroup)
 	authRouter.HandleFunc("/api/plugins/groups/remove", pluginManager.HandleRemovePluginFromGroup)
 	authRouter.HandleFunc("/api/plugins/groups/deleteTag", pluginManager.HandleRemovePluginGroup)
+
+	authRouter.HandleFunc("/api/plugins/store/list", pluginManager.HandleListDownloadablePlugins)
+	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
+	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
+	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)
 }
 
 // Register the APIs for Auth functions, due to scoping issue some functions are defined here
@@ -318,7 +324,7 @@ func initAPIs(targetMux *http.ServeMux) {
 
 	// Register the standard web services URLs
 	var staticWebRes http.Handler
-	if DEVELOPMENT_BUILD {
+	if *development_build {
 		staticWebRes = http.FileServer(http.Dir("web/"))
 	} else {
 		subFS, err := fs.Sub(webres, "web")

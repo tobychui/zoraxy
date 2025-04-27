@@ -101,7 +101,7 @@ func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath s
 	if len(relativeFilepath) > 0 && relativeFilepath[len(relativeFilepath)-1:] == "/" {
 		relativeFilepath = relativeFilepath + "index.html"
 	}
-	if DEVELOPMENT_BUILD {
+	if *development_build {
 		//Load from disk
 		targetFilePath := strings.ReplaceAll(filepath.Join("web/", relativeFilepath), "\\", "/")
 		content, err = os.ReadFile(targetFilePath)

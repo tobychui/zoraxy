@@ -87,6 +87,11 @@ func MatchIpWildcard(ipAddress, wildcard string) bool {
 
 // Match ip address with CIDR
 func MatchIpCIDR(ip string, cidr string) bool {
+	// Trim away scope ID if present in IP (e.g. fe80::1%eth0)
+	if i := strings.Index(ip, "%"); i != -1 {
+		ip = ip[:i]
+	}
+
 	// parse the CIDR string
 	_, cidrnet, err := net.ParseCIDR(cidr)
 	if err != nil {

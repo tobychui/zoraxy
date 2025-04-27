@@ -249,3 +249,5 @@ func (m *Manager) HandleDisablePlugin(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendOK(w)
 }
+
+/* Plugin Store */

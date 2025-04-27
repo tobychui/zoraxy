@@ -58,6 +58,59 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 	}
 }
 
+// Reload all plugins from disk
+func (m *Manager) ReloadPluginFromDisk() {
+	//Check each of the current plugins if the directory exists
+	//If not, remove the plugin from the loaded plugins list
+	m.loadedPluginsMutex.Lock()
+	for pluginID, plugin := range m.LoadedPlugins {
+		if !utils.FileExists(plugin.RootDir) {
+			m.Log("Plugin directory not found, removing plugin from runtime: "+pluginID, nil)
+			delete(m.LoadedPlugins, pluginID)
+			//Remove the plugin enable state from the database
+			m.Options.Database.Delete("plugins", pluginID)
+		}
+	}
+
+	m.loadedPluginsMutex.Unlock()
+
+	//Scan the plugin directory for new plugins
+	foldersInPluginDir, err := os.ReadDir(m.Options.PluginDir)
+	if err != nil {
+		m.Log("Failed to read plugin directory", err)
+		return
+	}
+
+	for _, folder := range foldersInPluginDir {
+		if folder.IsDir() {
+			pluginPath := filepath.Join(m.Options.PluginDir, folder.Name())
+			thisPlugin, err := m.LoadPluginSpec(pluginPath)
+			if err != nil {
+				m.Log("Failed to load plugin: "+filepath.Base(pluginPath), err)
+				continue
+			}
+
+			//Check if the plugin id is already loaded into the runtime
+			m.loadedPluginsMutex.RLock()
+			_, ok := m.LoadedPlugins[thisPlugin.Spec.ID]
+			m.loadedPluginsMutex.RUnlock()
+			if ok {
+				//Plugin already loaded, skip it
+				continue
+			}
+
+			thisPlugin.RootDir = filepath.ToSlash(pluginPath)
+			thisPlugin.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
+			m.loadedPluginsMutex.Lock()
+			m.LoadedPlugins[thisPlugin.Spec.ID] = thisPlugin
+			m.loadedPluginsMutex.Unlock()
+			m.Log("Added new plugin: "+thisPlugin.Spec.Name, nil)
+
+			// The default state of the plugin is disabled, so no need to start it
+		}
+	}
+}
+
 // LoadPluginsFromDisk loads all plugins from the plugin directory
 func (m *Manager) LoadPluginsFromDisk() error {
 	// Load all plugins from the plugin directory
@@ -82,7 +135,7 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			m.Log("Loaded plugin: "+thisPlugin.Spec.Name, nil)
 
 			// If the plugin was enabled, start it now
-			fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
+			//fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
 			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
 				err = m.StartPlugin(thisPlugin.Spec.ID)
 				if err != nil {
@@ -257,4 +310,9 @@ func (p *Plugin) HandleStaticRoute(w http.ResponseWriter, r *http.Request, longe
 		},
 	})
 
+}
+
+// IsRunning checks if the plugin is currently running
+func (p *Plugin) IsRunning() bool {
+	return p.process != nil && p.process.Process != nil
 }
