@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"imuslab.com/zoraxy/mod/auth/sso/authentik"
-
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
