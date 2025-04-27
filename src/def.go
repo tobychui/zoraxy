@@ -43,9 +43,8 @@ import (
 
 const (
 	/* Build Constants */
-	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.1"
-	DEVELOPMENT_BUILD = true /* Development: Set to false to use embedded web fs */
+	SYSTEM_NAME    = "Zoraxy"
+	SYSTEM_VERSION = "3.2.1"
 
 	/* System Constants */
 	TMP_FOLDER                   = "./tmp"
@@ -101,8 +100,9 @@ var (
 	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
 	path_plugin    = flag.String("plugin", "./plugins", "Plugin folder path")
 
-	/* Maintaince Function Flags */
-	geoDbUpdate = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
+	/* Maintaince & Development Function Flags */
+	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
+	development_build = flag.Bool("dev", false, "Use external web folder for UI development")
 )
 
 /* Global Variables and Handlers */

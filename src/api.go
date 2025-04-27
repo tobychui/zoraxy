@@ -324,7 +324,7 @@ func initAPIs(targetMux *http.ServeMux) {
 
 	// Register the standard web services URLs
 	var staticWebRes http.Handler
-	if DEVELOPMENT_BUILD {
+	if *development_build {
 		staticWebRes = http.FileServer(http.Dir("web/"))
 	} else {
 		subFS, err := fs.Sub(webres, "web")

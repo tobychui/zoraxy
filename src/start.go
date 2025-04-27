@@ -100,7 +100,7 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, DEVELOPMENT_BUILD, SystemWideLogger)
+	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, *development_build, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -321,7 +321,7 @@ func startupSequence() {
 		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
 			ZoraxyVersion:    SYSTEM_VERSION,
 			ZoraxyUUID:       nodeUUID,
-			DevelopmentBuild: DEVELOPMENT_BUILD,
+			DevelopmentBuild: *development_build,
 		},
 		PluginStoreURLs: []string{
 			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",

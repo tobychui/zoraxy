@@ -130,7 +130,8 @@
                 items.forEach(item => {
                     const name = item.querySelector('.header').textContent.toLowerCase();
                     const description = item.querySelector('.description p').textContent.toLowerCase();
-                    const author = item.querySelector('.meta span:nth-child(2)').textContent.toLowerCase();
+                    const authorElement = item.querySelector('.plugin_author');
+                    const author = authorElement ? authorElement.textContent.toLowerCase() : '';
                     const id = item.getAttribute('plugin_id').toLowerCase();
 
                     if (name.includes(query) || description.includes(query) || author.includes(query) || id.includes(query)) {
@@ -184,11 +185,9 @@
                                 <img src="${plugin.IconPath}" alt="${plugin.PluginIntroSpect.name}">
                             </div>
                             <div class="content">
-                                <div class="header">${plugin.PluginIntroSpect.name}</div>
+                                <div class="header">${plugin.PluginIntroSpect.name} </div> <a class="section" href="${plugin.PluginIntroSpect.url}" target="_blank"><i class="ui linkify icon"></i></a>
                                 <div class="meta">
-                                    <span>Version: ${plugin.PluginIntroSpect.version_major}.${plugin.PluginIntroSpect.version_minor}.${plugin.PluginIntroSpect.version_patch}</span>
-                                    <span>${plugin.PluginIntroSpect.author}</span>
-                                    <span><a href="${plugin.PluginIntroSpect.url}" target="_blank">Website</a></span>
+                                    <p>v${plugin.PluginIntroSpect.version_major}.${plugin.PluginIntroSpect.version_minor}.${plugin.PluginIntroSpect.version_patch} by <span class="plugin_author">${plugin.PluginIntroSpect.author}</span></p>
                                 </div>
                                 <div class="description">
                                     <p>${plugin.PluginIntroSpect.description}</p>
