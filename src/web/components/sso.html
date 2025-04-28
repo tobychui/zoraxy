@@ -17,10 +17,10 @@
         <h3>Authelia</h3>
         <p>Configuration settings for Authelia authentication provider.</p>
 
-        <form class="ui form">
+        <form class="ui form" action="#" id="autheliaSettings">
             <div class="field">
-                <label for="autheliaServerUrl">Authelia Server URL</label>
-                <input type="text" id="autheliaServerUrl" name="autheliaServerUrl" placeholder="Enter Authelia Server URL">
+                <label for="autheliaURL">Authelia Server URL</label>
+                <input type="text" id="autheliaURL" name="autheliaURL" placeholder="Enter Authelia Server URL">
                 <small>Example: auth.example.com</small>
             </div>
             <div class="field">
@@ -30,7 +30,61 @@
                     <small>Check this if your authelia server uses HTTPS</small>
                 </div>
             </div>
-            <button class="ui basic button" onclick="event.preventDefault(); updateAutheliaSettings();"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button"><i class="green check icon"></i> Apply Change</button>
+        </form>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment">
+        <h3>OAuth 2.0</h3>
+        <p>Configuration settings for OAuth 2.0 authentication provider.</p>
+
+        <form class="ui form" action="#" id="oauth2Settings">
+            <div class="field">
+                <label for="oauth2ClientId">Client ID</label>
+                <input type="text" id="oauth2ClientId" name="oauth2ClientId" placeholder="Enter Client ID">
+                <small>Public identifier of the OAuth2 application</small>
+            </div>
+            <div class="field">
+                <label for="oauth2ClientId">Client Secret</label>
+                <input type="password" id="oauth2ClientSecret" name="oauth2ClientSecret" placeholder="Enter Client Secret">
+                <small>Secret key of the OAuth2 application</small>
+            </div>
+            <div class="field">
+                <label for="oauth2WellKnownUrl">OIDC well-known URL</label>
+                <input type="text" id="oauth2WellKnownUrl" name="oauth2WellKnownUrl" placeholder="Enter Well-Known URL">
+                <small>URL to the OIDC discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2ServerUrl">Authorization URL</label>
+                <input type="text" id="oauth2ServerUrl" name="oauth2ServerUrl" placeholder="Enter Authorization URL">
+                <small>URL used to authenticate against the OAuth2 provider. Will redirect the user to the OAuth2 provider login view. Optional if Well-Known url is configured.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2TokenUrl">Token URL</label>
+                <input type="text" id="oauth2TokenUrl" name="oauth2TokenUrl" placeholder="Enter Token URL">
+                <small>URL used by Zoraxy to exchange a valid OAuth2 authentication code for an access token. Optional if Well-Known url is configured.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2RedirectUrl">Redirect URL</label>
+                <input type="text" id="oauth2RedirectUrl" name="oauth2RedirectUrl" placeholder="Enter Token URL">
+                <small>URL used by the OAuth2 provider to redirect the user after successful authentication. Should be set to your Zoraxy instance URL</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2UserInfoURL">Redirect URL</label>
+                <input type="text" id="oauth2UserInfoURL" name="oauth2UserInfoURL" placeholder="Enter User Info URL">
+                <small>URL used by the OAuth2 provider to validate generated token. Optional if Well-Known url is configured.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2Scopes">Scopes</label>
+                <input type="text" id="oauth2Scopes" name="oauth2Scopes" placeholder="Enter Scopes">
+                <small>Scopes required by the OAuth2 provider to retrieve information about the authenticated user. Refer to your OAuth2 provider documentation for more information about this. Optional if Well-Known url is configured.</small>
+            </div>
+            <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
         </form>
     </div>
     <div class="ui divider"></div>
@@ -38,10 +92,10 @@
         <h3>Authentik</h3>
         <p>Configuration settings for Authentik authentication provider.</p>
 
-        <form class="ui form">
+        <form class="ui form" action="#" id="authentikSettings">
             <div class="field">
-                <label for="authentikServerUrl">Authentik Server URL</label>
-                <input type="text" id="authentikServerUrl" name="authentikServerUrl" placeholder="Enter Authentik Server URL">
+                <label for="authentikURL">Authentik Server URL</label>
+                <input type="text" id="authentikURL" name="authentikURL" placeholder="Enter Authentik Server URL">
                 <small>Example: auth.example.com</small>
             </div>
             <div class="field">
@@ -51,7 +105,7 @@
                     <small>Check this if your Authentik server uses HTTPS</small>
                 </div>
             </div>
-            <button class="ui basic button" onclick="event.preventDefault(); updateAuthentikSettings();"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
         </form>
     </div>
     <div class="ui divider"></div>
@@ -83,22 +137,35 @@
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
             }
         });
+        $.cjax({
+            url: '/api/sso/OAuth2',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl);
+                $('#oauth2ServerUrl').val(data.oauth2ServerUrl);
+                $('#oauth2TokenUrl').val(data.oauth2TokenUrl);
+                $('#oauth2RedirectUrl').val(data.oauth2RedirectUrl);
+                $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl);
+                $('#oauth2ClientId').val(data.oauth2ClientId);
+                $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
+                $('#oauth2Scopes').val(data.oauth2Scopes);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching SSO settings:', textStatus, errorThrown);
+            }
+        });
     });
 
-    function updateAutheliaSettings(){
-        var autheliaServerUrl = $('#autheliaServerUrl').val();
-        var useHttps = $('#useHttps').prop('checked');
-
+    $( "#autheliaSettings" ).on( "submit", function( event ) {
+        event.preventDefault();
         $.cjax({
             url: '/api/sso/Authelia',
             method: 'POST',
-            data: {
-                autheliaURL: autheliaServerUrl,
-                useHTTPS: useHttps
-            },
+            data: $( this ).serialize(),
             success: function(data) {
                 if (data.error != undefined) {
-                    $.msgbox(data.error, false);
+                    msgbox(data.error, false);
                     return;
                 }
                 msgbox('Authelia settings updated', true);
@@ -106,23 +173,20 @@
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error updating Authelia settings:', textStatus, errorThrown);
+                msgbox('Error updating Authelia settings, check console', false);
             }
         });
-    }
-    function updateAuthentikSettings(){
-        var authentikServerUrl = $('#authentikServerUrl').val();
-        var useHttps = $('#authentikUseHttps').prop('checked');
+    });
 
+    $( "#authentikSettings" ).on( "submit", function( event ) {
+        event.preventDefault();
         $.cjax({
             url: '/api/sso/Authentik',
             method: 'POST',
-            data: {
-                authentikURL: authentikServerUrl,
-                useHTTPS: useHttps
-            },
+            data: $( this ).serialize(),
             success: function(data) {
                 if (data.error != undefined) {
-                    $.msgbox(data.error, false);
+                    msgbox(data.error, false);
                     return;
                 }
                 msgbox('Authentik settings updated', true);
@@ -130,7 +194,29 @@
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error updating Authentik settings:', textStatus, errorThrown);
+                msgbox('Error updating Authentik settings, check console', false);
             }
         });
-    }
+    });
+
+    $( "#oauth2Settings" ).on( "submit", function( event ) {
+        event.preventDefault();
+        $.cjax({
+            url: '/api/sso/OAuth2',
+            method: 'POST',
+            data: $( this ).serialize(),
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('OAuth2 settings updated', true);
+                console.log('OAuth2 settings updated:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating OAuth2 settings:', textStatus, errorThrown);
+                msgbox('Error updating OAuth2 settings, check console', false);
+            }
+        });
+    });
 </script>

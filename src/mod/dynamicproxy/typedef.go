@@ -10,6 +10,7 @@ package dynamicproxy
 import (
 	_ "embed"
 	"imuslab.com/zoraxy/mod/auth/sso/authentik"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"net"
 	"net/http"
 	"sync"
@@ -66,6 +67,7 @@ type RouterOption struct {
 	/* Authentication Providers */
 	AutheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
 	AuthentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
+	OAuth2Router    *oauth2.OAuth2Router       //OAuth2Router router for OAuth2Router authentication
 
 	/* Utilities */
 	Logger *logger.Logger //Logger for reverse proxy requets
@@ -144,7 +146,7 @@ const (
 	AuthMethodNone     AuthMethod = iota //No authentication required
 	AuthMethodBasic                      //Basic Auth
 	AuthMethodAuthelia                   //Authelia
-	AuthMethodOauth2                     //Oauth2
+	AuthMethodOAuth2                     //Oauth2
 	AuthMethodAuthentik
 )
 
