@@ -20,7 +20,7 @@ func (d *UXOptimizer) HandleDockerAvailable(w http.ResponseWriter, r *http.Reque
 }
 
 func (d *UXOptimizer) HandleDockerContainersList(w http.ResponseWriter, r *http.Request) {
-	apiClient, err := client.NewClientWithOpts(client.WithVersion("1.43"))
+	apiClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		d.SystemWideLogger.PrintAndLog("Docker", "Unable to create new docker client", err)
 		utils.SendErrorResponse(w, "Docker client initiation failed")
