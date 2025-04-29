@@ -68,13 +68,7 @@
             </div>
 
             <div class="field">
-                <label for="oauth2RedirectUrl">Redirect URL</label>
-                <input type="text" id="oauth2RedirectUrl" name="oauth2RedirectUrl" placeholder="Enter Token URL">
-                <small>URL used by the OAuth2 provider to redirect the user after successful authentication. Should be set to your Zoraxy instance URL</small>
-            </div>
-
-            <div class="field">
-                <label for="oauth2UserInfoURL">Redirect URL</label>
+                <label for="oauth2UserInfoURL">User Info URL</label>
                 <input type="text" id="oauth2UserInfoURL" name="oauth2UserInfoURL" placeholder="Enter User Info URL">
                 <small>URL used by the OAuth2 provider to validate generated token. Optional if Well-Known url is configured.</small>
             </div>
@@ -145,7 +139,6 @@
                 $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl);
                 $('#oauth2ServerUrl').val(data.oauth2ServerUrl);
                 $('#oauth2TokenUrl').val(data.oauth2TokenUrl);
-                $('#oauth2RedirectUrl').val(data.oauth2RedirectUrl);
                 $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl);
                 $('#oauth2ClientId').val(data.oauth2ClientId);
                 $('#oauth2ClientSecret').val(data.oauth2ClientSecret);

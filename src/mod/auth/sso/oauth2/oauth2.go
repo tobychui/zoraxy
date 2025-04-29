@@ -16,7 +16,6 @@ import (
 type OAuth2RouterOptions struct {
 	OAuth2ServerURL    string //The URL of the OAuth 2.0 server server
 	OAuth2TokenURL     string //The URL of the OAuth 2.0 token server
-	OAuth2RedirectUrl  string //The redirect URL of the OAuth 2.0 token server
 	OAuth2ClientId     string //The client id for OAuth 2.0 Application
 	OAuth2ClientSecret string //The client secret for OAuth 2.0 Application
 	OAuth2WellKnownUrl string //The well-known url for OAuth 2.0 server
@@ -56,7 +55,6 @@ func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 	options.Database.Read("oauth2", "oauth2TokenUrl", &options.OAuth2TokenURL)
 	options.Database.Read("oauth2", "oauth2ClientId", &options.OAuth2ClientId)
 	options.Database.Read("oauth2", "oauth2ClientSecret", &options.OAuth2ClientSecret)
-	options.Database.Read("oauth2", "oauth2RedirectURL", &options.OAuth2RedirectUrl)
 	options.Database.Read("oauth2", "oauth2UserInfoUrl", &options.OAuth2UserInfoUrl)
 	options.Database.Read("oauth2", "oauth2Scopes", &options.OAuth2Scopes)
 
@@ -73,10 +71,9 @@ func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.R
 			"oauth2WellKnownUrl": ar.options.OAuth2WellKnownUrl,
 			"oauth2ServerUrl":    ar.options.OAuth2ServerURL,
 			"oauth2TokenUrl":     ar.options.OAuth2TokenURL,
+			"oauth2UserInfoUrl":  ar.options.OAuth2UserInfoUrl,
 			"oauth2Scopes":       ar.options.OAuth2Scopes,
 			"oauth2ClientSecret": ar.options.OAuth2ClientSecret,
-			"oauth2RedirectURL":  ar.options.OAuth2RedirectUrl,
-			"oauth2UserInfoURL":  ar.options.OAuth2UserInfoUrl,
 			"oauth2ClientId":     ar.options.OAuth2ClientId,
 		})
 
@@ -112,12 +109,6 @@ func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.R
 			}
 		}
 
-		oauth2RedirectUrl, err := utils.PostPara(r, "oauth2RedirectUrl")
-		if err != nil {
-			utils.SendErrorResponse(w, "oauth2RedirectUrl not found")
-			return
-		}
-
 		oauth2ClientId, err := utils.PostPara(r, "oauth2ClientId")
 		if err != nil {
 			utils.SendErrorResponse(w, "oauth2ClientId not found")
@@ -134,7 +125,6 @@ func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.R
 		ar.options.OAuth2WellKnownUrl = oauth2WellKnownUrl
 		ar.options.OAuth2ServerURL = oauth2ServerUrl
 		ar.options.OAuth2TokenURL = oauth2TokenURL
-		ar.options.OAuth2RedirectUrl = oauth2RedirectUrl
 		ar.options.OAuth2UserInfoUrl = oauth2UserInfoUrl
 		ar.options.OAuth2ClientId = oauth2ClientId
 		ar.options.OAuth2ClientSecret = oauth2ClientSecret
@@ -144,7 +134,6 @@ func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.R
 		ar.options.Database.Write("oauth2", "oauth2WellKnownUrl", oauth2WellKnownUrl)
 		ar.options.Database.Write("oauth2", "oauth2ServerUrl", oauth2ServerUrl)
 		ar.options.Database.Write("oauth2", "oauth2TokenUrl", oauth2TokenURL)
-		ar.options.Database.Write("oauth2", "oauth2RedirectUrl", oauth2RedirectUrl)
 		ar.options.Database.Write("oauth2", "oauth2UserInfoUrl", oauth2UserInfoUrl)
 		ar.options.Database.Write("oauth2", "oauth2ClientId", oauth2ClientId)
 		ar.options.Database.Write("oauth2", "oauth2ClientSecret", oauth2ClientSecret)
