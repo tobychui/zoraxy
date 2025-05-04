@@ -1,6 +1,7 @@
 package main
 
 import (
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"log"
 	"net/http"
 	"os"
@@ -155,6 +156,11 @@ func startupSequence() {
 		AuthentikURL: "",    // Automatic populate in router initiation
 		Logger:       SystemWideLogger,
 		Database:     sysdb,
+	})
+
+	oauth2Router = oauth2.NewOAuth2Router(&oauth2.OAuth2RouterOptions{
+		Logger:   SystemWideLogger,
+		Database: sysdb,
 	})
 
 	//Create a statistic collector

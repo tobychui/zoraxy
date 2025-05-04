@@ -16,6 +16,7 @@ require (
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/likexian/whois v1.15.1
 	github.com/microcosm-cc/bluemonday v1.0.26
+	github.com/monperrus/crawler-user-agents v1.1.0
 	github.com/shirou/gopsutil/v4 v4.25.1
 	github.com/syndtr/goleveldb v1.0.0
 	golang.org/x/net v0.33.0
@@ -32,7 +33,6 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.128 // indirect
-	github.com/monperrus/crawler-user-agents v1.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/peterhellberg/link v1.2.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect

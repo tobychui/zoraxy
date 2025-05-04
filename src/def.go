@@ -10,6 +10,7 @@ package main
 import (
 	"embed"
 	"flag"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"net/http"
 	"time"
 
@@ -146,6 +147,7 @@ var (
 	//Authentication Provider
 	autheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
 	authentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
+	oauth2Router    *oauth2.OAuth2Router       //OAuth2Router router for OAuth2Router authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

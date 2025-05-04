@@ -186,7 +186,7 @@
                         <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Authelia`:``}
-                            ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> Oauth2`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> OAuth2`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x4?`<i class="ui blue key icon"></i> Authentik`:``}
                             ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
                             ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
@@ -394,6 +394,12 @@
                             <div class="ui radio checkbox">
                                 <input type="radio" value="2" name="authProviderType" ${authProvider==0x2?"checked":""}>
                                 <label>Authelia</label>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" value="3" name="authProviderType" ${authProvider==0x3?"checked":""}>
+                                <label>OAuth2</label>
                             </div>
                         </div>
                         <div class="field">
