@@ -32,34 +32,40 @@
                 <input type="text" id="forwardAuthAddress" name="forwardAuthAddress" placeholder="Enter Forward Auth Address">
                 <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> https://auth.example.com/authz/forward-auth</small>
             </div>
-            <div class="ui advancedSSOForwardAuthOptions accordion" style="margin-top:0.6em;">
-                <div class="title">
-                    <i class="dropdown icon"></i>
-                    Advanced Options
+            <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
+                <div class="ui advancedSSOForwardAuthOptions accordion">
+                    <div class="title">
+                        <i class="dropdown icon"></i>
+                        Advanced Options
+                    </div>
+                    <div class="content">
+                        <div class="field">
+                            <label for="forwardAuthResponseHeaders">Response Headers</label>
+                            <input type="text" id="forwardAuthResponseHeaders" name="forwardAuthResponseHeaders" placeholder="Enter Forward Auth Response Headers">
+                            <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the request sent to the backend. If not set no headers are copied. <br>
+                                <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code></small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthResponseClientHeaders">Response Client Headers</label>
+                            <input type="text" id="forwardAuthResponseClientHeaders" name="forwardAuthResponseClientHeaders" placeholder="Enter Forward Auth Response Client Headers">
+                            <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the response sent to the client. If not set no headers are copied. <br>
+                                <strong>Example:</strong> <code>Set-Cookie,WWW-Authenticate</code></small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthRequestHeaders">Request Headers</label>
+                            <input type="text" id="forwardAuthRequestHeaders" name="forwardAuthRequestHeaders" placeholder="Enter Forward Auth Request Headers">
+                            <small>Comma separated list of case-insensitive headers to copy from the original request to the request made to the authorization server. If not set all headers are copied. <br>
+                                <strong>Example:</strong> <code>Cookie,Authorization</code></small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthRequestExcludedCookies">Request Excluded Cookies</label>
+                            <input type="text" id="forwardAuthRequestExcludedCookies" name="forwardAuthRequestExcludedCookies" placeholder="Enter Forward Auth Request Excluded Cookies">
+                            <small>Comma separated list of case-sensitive cookie names to exclude from the request to the backend. If not set no cookies are excluded. <br>
+                                <strong>Example:</strong> <code>authelia_session,another_session</code></small>
+                        </div>
+                    </div>
                 </div>
-                <div class="content">
-                    <div class="field">
-                        <label for="forwardAuthResponseHeaders">Response Headers</label>
-                        <input type="text" id="forwardAuthResponseHeaders" name="forwardAuthResponseHeaders" placeholder="Enter Forward Auth Response Headers">
-                        <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the request sent to the backend. If not set no headers are copied. <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code></small>
-                    </div>
-                    <div class="field">
-                        <label for="forwardAuthResponseClientHeaders">Response Client Headers</label>
-                        <input type="text" id="forwardAuthResponseClientHeaders" name="forwardAuthResponseClientHeaders" placeholder="Enter Forward Auth Response Client Headers">
-                        <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the response sent to the client. If not set no headers are copied. <strong>Example:</strong> <code>Set-Cookie,WWW-Authenticate</code></small>
-                    </div>
-                    <div class="field">
-                        <label for="forwardAuthRequestHeaders">Request Headers</label>
-                        <input type="text" id="forwardAuthRequestHeaders" name="forwardAuthRequestHeaders" placeholder="Enter Forward Auth Request Headers">
-                        <small>Comma separated list of case-insensitive headers to copy from the original request to the request made to the authorization server. If not set all headers are copied. <strong>Example:</strong> <code>Cookie,Authorization</code></small>
-                    </div>
-                    <div class="field">
-                        <label for="forwardAuthRequestExcludedCookies">Request Excluded Cookies</label>
-                        <input type="text" id="forwardAuthRequestExcludedCookies" name="forwardAuthRequestExcludedCookies" placeholder="Enter Forward Auth Request Excluded Cookies">
-                        <small>Comma separated list of case-sensitive cookie names to exclude from the request to the backend. If not set no cookies are excluded. <strong>Example:</strong> <code>authelia_session,another_session</code></small>
-                    </div>
-                </div>
-            </div><br />
+            </div>
             <button class="ui basic button" onclick="event.preventDefault(); updateForwardAuthSettings();"><i class="green check icon"></i> Apply Change</button>
         </form>
     </div>
