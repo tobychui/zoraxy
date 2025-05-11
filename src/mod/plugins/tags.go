@@ -17,8 +17,8 @@ import (
 // This will only load the plugin tags to option.PluginGroups map
 // to push the changes to runtime, call UpdateTagsToPluginMaps()
 func (m *Manager) LoadPluginGroupsFromConfig() error {
-	m.Options.pluginGroupsMutex.RLock()
-	defer m.Options.pluginGroupsMutex.RUnlock()
+	m.pluginGroupsMutex.RLock()
+	defer m.pluginGroupsMutex.RUnlock()
 
 	//Read the config file
 	rawConfig, err := os.ReadFile(m.Options.PluginGroupsConfig)
@@ -39,8 +39,8 @@ func (m *Manager) LoadPluginGroupsFromConfig() error {
 
 // AddPluginToTag adds a plugin to a tag
 func (m *Manager) AddPluginToTag(tag string, pluginID string) error {
-	m.Options.pluginGroupsMutex.RLock()
-	defer m.Options.pluginGroupsMutex.RUnlock()
+	m.pluginGroupsMutex.RLock()
+	defer m.pluginGroupsMutex.RUnlock()
 
 	//Check if the plugin exists
 	_, err := m.GetPluginByID(pluginID)
@@ -66,8 +66,8 @@ func (m *Manager) AddPluginToTag(tag string, pluginID string) error {
 // RemovePluginFromTag removes a plugin from a tag
 func (m *Manager) RemovePluginFromTag(tag string, pluginID string) error {
 	// Check if the plugin exists in Options.PluginGroups
-	m.Options.pluginGroupsMutex.RLock()
-	defer m.Options.pluginGroupsMutex.RUnlock()
+	m.pluginGroupsMutex.RLock()
+	defer m.pluginGroupsMutex.RUnlock()
 	pluginList, ok := m.Options.PluginGroups[tag]
 	if !ok {
 		return nil
@@ -91,8 +91,8 @@ func (m *Manager) RemovePluginFromTag(tag string, pluginID string) error {
 
 // savePluginTagMap saves the plugin tag map to the config file
 func (m *Manager) savePluginTagMap() error {
-	m.Options.pluginGroupsMutex.RLock()
-	defer m.Options.pluginGroupsMutex.RUnlock()
+	m.pluginGroupsMutex.RLock()
+	defer m.pluginGroupsMutex.RUnlock()
 
 	js, _ := json.Marshal(m.Options.PluginGroups)
 	return os.WriteFile(m.Options.PluginGroupsConfig, js, 0644)

@@ -47,15 +47,26 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 	//Create database table
 	options.Database.NewTable("plugins")
 
-	return &Manager{
+	thisManager := &Manager{
 		LoadedPlugins:      make(map[string]*Plugin),
 		tagPluginMap:       sync.Map{},
 		tagPluginListMutex: sync.RWMutex{},
 		tagPluginList:      make(map[string][]*Plugin),
 		Options:            options,
+		PluginHash:         make(map[string]string),
 		/* Internal */
 		loadedPluginsMutex: sync.RWMutex{},
 	}
+
+	//Check if hot reload is enabled
+	if options.EnableHotReload {
+		err := thisManager.StartHotReloadTicker()
+		if err != nil {
+			options.Logger.PrintAndLog("plugin-manager", "Failed to start hot reload ticker", err)
+		}
+	}
+
+	return thisManager
 }
 
 // Reload all plugins from disk
@@ -104,11 +115,16 @@ func (m *Manager) ReloadPluginFromDisk() {
 			m.loadedPluginsMutex.Lock()
 			m.LoadedPlugins[thisPlugin.Spec.ID] = thisPlugin
 			m.loadedPluginsMutex.Unlock()
-			m.Log("Added new plugin: "+thisPlugin.Spec.Name, nil)
+			versionNumber := strconv.Itoa(thisPlugin.Spec.VersionMajor) + "." + strconv.Itoa(thisPlugin.Spec.VersionMinor) + "." + strconv.Itoa(thisPlugin.Spec.VersionPatch)
+			//Check if the plugin is enabled
+			m.Log("Found plugin: "+thisPlugin.Spec.Name+" (v"+versionNumber+")", nil)
 
 			// The default state of the plugin is disabled, so no need to start it
 		}
 	}
+
+	//Generate a hash list for plugins
+	m.InitPluginHashList()
 }
 
 // LoadPluginsFromDisk loads all plugins from the plugin directory
@@ -156,6 +172,8 @@ func (m *Manager) LoadPluginsFromDisk() error {
 	//Generate the static forwarder radix tree
 	m.UpdateTagsToPluginMaps()
 
+	//Generate a hash list for plugins
+	m.InitPluginHashList()
 	return nil
 }
 

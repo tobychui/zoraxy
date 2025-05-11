@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os/exec"
 	"sync"
+	"time"
 
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
@@ -45,8 +46,9 @@ type ManagerOptions struct {
 	Database     *database.Database                 `json:"-"`
 	Logger       *logger.Logger                     `json:"-"`
 
-	/* Internal */
-	pluginGroupsMutex sync.RWMutex //Mutex for the pluginGroups
+	/* Development */
+	EnableHotReload   bool //Check if the plugin file is changed and reload the plugin automatically
+	HotReloadInterval int  //The interval for checking the plugin file change, in seconds
 }
 
 type Manager struct {
@@ -56,6 +58,12 @@ type Manager struct {
 	tagPluginList      map[string][]*Plugin //Storing the plugin list for each tag, only concurrent READ is allowed
 	Options            *ManagerOptions
 
+	PluginHash map[string]string //The hash of the plugin file, used to check if the plugin file is changed
+
 	/* Internal */
 	loadedPluginsMutex sync.RWMutex //Mutex for the loadedPlugins
+	pluginGroupsMutex  sync.RWMutex //Mutex for the pluginGroups
+	pluginCheckMutex   sync.RWMutex //Mutex for the plugin hash
+	pluginReloadTicker *time.Ticker //Ticker for the plugin reload
+	pluginReloadStop   chan bool    //Channel to stop the plugin reload ticker
 }

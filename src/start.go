@@ -307,21 +307,26 @@ func startupSequence() {
 	pluginFolder := *path_plugin
 	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
-		PluginDir: pluginFolder,
-		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
-			ZoraxyVersion:    SYSTEM_VERSION,
-			ZoraxyUUID:       nodeUUID,
-			DevelopmentBuild: *development_build,
-		},
-		PluginStoreURLs: []string{
-			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",
-		},
+		PluginDir:          pluginFolder,
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},
+		SystemConst: &zoraxy_plugin.RuntimeConstantValue{
+			ZoraxyVersion:    SYSTEM_VERSION,
+			ZoraxyUUID:       nodeUUID,
+			DevelopmentBuild: *development_build,
+		},
+		/* Plugin Store URLs */
+		PluginStoreURLs: []string{
+			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",
+			//TO BE ADDED
+		},
+		/* Developer Options */
+		EnableHotReload:   *development_build, //Default to true if development build
+		HotReloadInterval: 5,                  //seconds
 	})
 
 	//Sync latest plugin list from the plugin store

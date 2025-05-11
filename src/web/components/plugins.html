@@ -185,6 +185,33 @@
           
         </tbody>
       </table>
+      <div class="ui basic segment advanceoptions">
+          <div class="ui accordion advanceSettings">
+              <div class="title">
+                <i class="dropdown icon"></i>
+                  Developer Settings
+              </div>
+              <div class="content ui form">
+                <div class="ui inverted message" style="margin-top: 0.6em;">
+                  <div class="header">Developer Only</div>
+                  <p>These functions are intended for developers only. Enabling them may add latency to plugin loading & routing. Proceed with caution.<br>
+                  <b>Tips: You can start zoraxy with -dev=true to enable auto-reload when start</b></p>
+                </div>
+                  <div id="enablePluginAutoReload" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
+                      <input id="enable_plugin_auto_reload" type="checkbox">
+                      <label>Enable Plugin Auto Reload<br>
+                      <small>Automatic reload plugin when the plugin binary changed</small></label>
+                  </div>
+                  <br><br>
+                  <div class="field" style="max-width: 50%;margin-bottom: 0px;">
+                    <label>Check Interval</label>
+                    <input type="number" id="autoreload-interval" placeholder="Check Interval" min="1" max="60" step="1" value="1">
+                  </div>
+                  <small>Specify the interval (in seconds) for checking plugin changes. <br>Minimum is 1 second, maximum is 60 seconds.</small>
+              </div>
+          </div>
+      </div>
+
       <br>
       <button class="ui basic violet button" onclick="openPluginStore();"><i class="download icon"></i>Plugin Store (Experimental)</button>
 </div>
@@ -592,6 +619,95 @@ function uninstallPlugin(pluginId, pluginName, btn=undefined) {
       }
   }
 
+
+  /* Developer Settings */
+
+  function initDeveloperSettings() {
+    // Fetch the auto reload status
+    $.get('/api/plugins/developer/enableAutoReload', function(data) {
+      if (data.error != undefined) {
+        msgbox(data.error, false);
+        return;
+      }
+
+      // Set the checkbox for Plugin Auto Reload
+      if (data == true) {
+        $("#enablePluginAutoReload").checkbox('set checked');
+      } else {
+        $("#enablePluginAutoReload").checkbox('set unchecked');
+      }
+
+      // Fetch the auto reload interval
+      $.get('/api/plugins/developer/setAutoReloadInterval', function(data) {
+        if (data.error != undefined) {
+          msgbox(data.error, false);
+          return;
+        }
+
+        // Set the input value for Auto Reload Interval
+        if (data) {
+          $("#autoreload-interval").val(data);
+        }
+
+        bindEventsToDeveloperSettings();
+      });
+    });
+  }
+  
+  function bindEventsToDeveloperSettings(){
+    $("#enablePluginAutoReload").checkbox({
+      onChecked: function() {
+        $.cjax({
+          url: '/api/plugins/developer/enableAutoReload',
+          type: 'POST',
+          data: { "enabled": true },
+          success: function(data) {
+            if (data.error != undefined) {
+              msgbox(data.error, false);
+            } else {
+              msgbox("Plugin Auto Reload enabled", true);
+            }
+          }
+        });
+      },
+      onUnchecked: function() {
+        $.cjax({
+          url: '/api/plugins/developer/enableAutoReload',
+          type: 'POST',
+          data: { "enabled": false },
+          success: function(data) {
+            if (data.error != undefined) {
+              msgbox(data.error, false);
+            } else {
+              msgbox("Plugin Auto Reload disabled", true);
+            }
+          }
+        });
+      }
+    });
+
+    $("#autoreload-interval").on("change", function() {
+      const interval = $(this).val();
+      if (interval < 1 || interval > 60) {
+        msgbox("Interval must be between 1 and 60 seconds", false);
+        return;
+      }
+      $.cjax({
+        url: '/api/plugins/developer/setAutoReloadInterval',
+        type: 'POST',
+        data: { "interval": interval },
+        success: function(data) {
+          if (data.error != undefined) {
+            msgbox(data.error, false);
+          } else {
+            msgbox("Auto Reload Interval updated to " + interval + " seconds", true);
+          }
+        }
+      });
+    });
+  }
+
+  initDeveloperSettings();
 </script>
 
 
