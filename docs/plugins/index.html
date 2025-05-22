@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title i18n>
+        Plugin Doc | Zoraxy
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Locales -->
+    <script src="./js/dom-i18n.min.js"></script>
+    <script src="./js/theme.js"></script>
+    <style>
+        #msgbox{
+            position: fixed;
+            bottom: 1em;
+            right: 1em;
+            z-index: 9999;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        dialog[open] {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+    </style>
+    <script>
+       /* Things to do before body loads */
+        function restoreDarkMode(){
+            if (localStorage.getItem("darkMode") === "enabled") {
+                $("html").addClass("is-dark");
+                $("html").removeClass("is-white");
+            } else {
+                $("html").removeClass("is-dark");
+                $("html").addClass("is-white");
+            }
+        }
+        restoreDarkMode();
+
+        function updateElementToTheme(isDarkTheme=false){
+            if (!isDarkTheme){
+                $("#sysicon").attr("src", "./img/logo.png");
+                $("#darkModeToggle").html(`<span class="ts-icon is-sun-icon"></span>`);
+
+                // Update the rendering text color in the garphs
+                if (typeof(changeScaleTextColor) != "undefined"){
+                    changeScaleTextColor("black");
+                }
+            
+            }else{
+                $("#sysicon").attr("src", "./img/logo_white.png");
+                $("#darkModeToggle").html(`<span class="ts-icon is-moon-icon"></span>`);
+                
+                // Update the rendering text color in the garphs
+                if (typeof(changeScaleTextColor) != "undefined"){
+                    changeScaleTextColor("white");
+                }
+            }
+        }
+
+        /* Things to do after body loads */
+        $(document).ready(function(){
+            $("#darkModeToggle").on("click", function() {
+                $("html").toggleClass("is-dark");
+                $("html").toggleClass("is-white");
+                if ($("html").hasClass("is-dark")) {
+                    localStorage.setItem("darkMode", "enabled");
+                    updateElementToTheme(true);
+                } else {
+                    localStorage.setItem("darkMode", "disabled");
+                    updateElementToTheme(false);
+                }
+            });
+
+            updateElementToTheme(localStorage.getItem("darkMode") === "enabled");
+        });
+    </script>
+</head>
+<body>
+    <div class="ts-content">
+        <div class="ts-container">
+            <div style="float: right;">
+                <button class="ts-button is-icon" id="darkModeToggle">
+                    <span class="ts-icon is-moon-icon"></span>
+                </button>
+            </div>
+            <div class="ts-tab is-pilled">
+                <a href="" class="item" style="user-select: none;">
+                    <img id="sysicon" class="ts-image" style="height: 30px" src="img/logo.svg"></img>
+                </a>
+                <button href="#!" class="is-active item" data-tab="tab-intro">
+                    Introduction
+                </button>
+                <button href="#!" class="item" data-tab="tab-documents">
+                    Dev Guide
+                </button>
+                <button href="#!" class="item" data-tab="tab-examples">
+                    Examples
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+        <div class="panel-component" id="tab-intro" component="intro.html"></div>
+        <div class="panel-component" id="tab-documents" component="documents.html"></div>
+        <div class="panel-component" id="tab-examples" component="examples.html"></div>
+    </div>
+    <div class="ts-container">
+        <div class="ts-divider"></div>
+        <div class="ts-content">
+            <div class="ts-text">
+                Zoraxy © tobychui <span class="thisyear">2025</span>
+            </div>
+        </div>
+    </div>
+    <div id="msgbox" class="ts-snackbar has-start-padded-large has-end-padded-large">
+        <div class="content"></div>
+        <button class="close"></button>
+    </div>
+    <script>
+        $(".thisyear").text(new Date().getFullYear());
+
+        function msgbox(msg, delay=3000){
+            $("#msgbox .content").text(msg);
+            $("#msgbox").stop().finish().fadeIn(200).delay(delay).fadeOut(200);
+        }
+
+        $("#msgbox .close").click(function(){
+            $("#msgbox").stop().finish().fadeOut(200);
+        });
+        $("#msgbox").hide();
+        
+        //Load the content of the panel-component
+        $(".panel-component").each(function() {
+            var component = $(this);
+            var url = component.attr("component");
+            $(this).load(url, function(response, status, xhr) {
+                if (status == "error") {
+                    var msg = "Error loading component: " + xhr.status + " " + xhr.statusText;
+                    console.log(msg);
+                    msgbox(msg);
+                } else {
+                    // Optionally, you can add a success message here
+                    // msgbox("Component loaded successfully");
+                }
+            });
+        });
+
+        function switchTabTo(tabid){
+            $(".ts-tab .item").removeClass("is-active");
+            $(".panel-component").addClass("has-hidden");
+            $("#" + tabid).removeClass("has-hidden").addClass("is-active");
+            $("button[data-tab='" + tabid + "']").addClass("is-active");
+        }
+    </script>
+</body>
+</html>

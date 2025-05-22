@@ -1,0 +1,430 @@
+<div class="ts-content">
+    <!-- Language Selector -->
+    <div class="ts-container is-narrow">
+        <button class="ts-button is-start-icon" data-dropdown="language-dropdown">
+            <span class="ts-icon is-globe-icon"></span>
+            Select Language
+        </button>
+        <div class="ts-dropdown" id="language-dropdown">
+            <button class="item" onclick="changeLanguage('en')">English</button>
+            <button class="item" onclick="changeLanguage('zh')">中文</button>
+            <button class="item" onclick="changeLanguage('de')">Deutsch</button>
+        </div>
+    </div>
+    <script>
+        function changeLanguage(lang) {
+            // Hide all language sections
+            document.querySelectorAll('.intropage').forEach(function(section) {
+                section.style.display = 'none';
+            });
+
+            // Show the selected language section
+            var selectedSection = document.querySelector('.intropage[lang="' + lang + '"]');
+            if (selectedSection) {
+                selectedSection.style.display = 'block';
+            }
+        }
+
+        $(document).ready(function() {
+            // Show the default language section (English)
+            var userLang = navigator.language || navigator.userLanguage;
+            userLang = userLang.split('-')[0]; // Get the base language code
+            if (document.querySelector('.intropage[lang="' + userLang + '"]')) {
+                changeLanguage(userLang);
+            } else {
+                changeLanguage('en');
+            }
+
+            // Set up the dropdown toggle
+            $('#language-dropdown').on('click', function(event) {
+                event.stopPropagation();
+                $(this).toggleClass('is-active');
+            });
+
+            // Hide the dropdown when clicking outside
+            $(document).on('click', function() {
+                $('#language-dropdown').removeClass('is-active');
+            });
+        });
+
+        function switchToDocumentTab(){
+            switchTabTo("tab-documents");
+        }
+    </script>
+</div>
+
+<!-- English version -->
+<div class="ts-content intropage" lang="en">
+    <div class="ts-container is-narrow">
+        <div class="ts-image is-rounded">
+            <img src="img/banner.png" width="100%">
+        </div>
+        <h1>Introduction</h1>
+        <h2>What is Zoraxy Plugin?</h2>
+        <p>
+            Zoraxy Plugin is a powerful extension feature designed to enhance the functionality of the Zoraxy system.
+            It provides additional features and capabilities that are not part of the core system, allowing users to customize their experience and optimize performance.
+            The plugin is built to be modular and flexible, enabling users to tailor their Zoraxy environment to meet specific needs.
+        </p>
+        <p>
+            Zoraxy plugins are distributed as binaries, and developers have the flexibility to choose whether to open source them or not  
+            <span class="ts-text is-heavy">as the plugin library and interface are open source under the LGPL license</span>. 
+            <br><br>
+            There are two primary types of plugins: router and utilities. Router-type plugins are involved with connections from HTTP proxy rules, 
+            while utility plugins provide user interfaces for various network features that operate independently of the Zoraxy core.
+        </p>
+
+        <div class="ts-divider"></div>
+        <h2>How plugins are distributed & installed</h2>
+        <p>
+            Zoraxy plugins are distributed as platform-dependent binaries, making them tailored to specific operating systems and CPU architectures. 
+            These binaries are named following a convention that includes the operating system, CPU architecture, and plugin name, such as <span class="ts-text is-code">linux_amd64_foobar</span>, <span class="ts-text is-code">windows_amd64_foobar.exe</span>, or <span class="ts-text is-code">linux_arm64_foobar</span>. 
+            <br><br>
+            To manually install a plugins for testing, simply place the binary file into the <span class="ts-text is-code">/plugins/{plugin_name}/</span> folder within your Zoraxy installation directory.
+        </p>
+
+        <div class="ts-box is-warning is-start-indicated">
+            <div class="ts-content">
+                <p>
+                    <strong>Warning:</strong> The binary name inside the folder must match the plugin folder name. 
+                    For example, the binary should be named <span class="ts-text is-code">foobar</span> (or <span class="ts-text is-code">foobar.exe</span> on Windows) 
+                    if placed in the <span class="ts-text is-code">/plugins/foobar/</span> folder. 
+                    Avoid using names like <span class="ts-text is-code">foobar_plugin.exe</span>.
+                </p>
+            </div>
+        </div>
+        
+        <p>
+            For distribution, a plugin store system is used. The plugin store architecture is similar to the one built into the Arduino IDE, 
+            with a manager URL (a JSON file) where all the plugins supported by that store will be listed. 
+            See the documentation section for more details on how to implement your own plugin store.
+        </p>
+
+        <div class="ts-divider"></div>
+        <h2>Plugin vs Pull Request</h2>
+        <p>
+            The Zoraxy plugin was introduced to address specific use cases that enhance its functionality.
+            It serves as an extension to the core Zoraxy system, providing additional features and capabilities while maintaining the integrity of the core system.
+        </p>
+        <ul>
+            <li>
+                It is designed to handle features that are challenging to integrate directly into the Zoraxy core.
+            </li>
+            <li>
+                It caters to scenarios where certain features are only applicable in limited situations, avoiding unnecessary resource consumption for other users.
+            </li>
+            <li>
+                The plugin allows for frequent updates to specific code components without impacting the core's stability or causing downtime.
+            </li>
+        </ul>
+
+        <h3>When should you add a core PR or a plugin?</h3>
+        <p>
+        In certain situations, implementing a feature as a plugin is more reasonable than directly integrating it into the Zoraxy core:
+        </p>
+        <ul>
+            <li>
+                <strong>Core PR:</strong> If the feature is relevant to most users and enhances Zoraxy's core functionality, consider submitting a core Pull Request (PR).
+            </li>
+            <li>
+                <strong>Plugin:</strong> If the feature is targeted at a smaller user base or requires additional dependencies that not all users need, it should be developed as a plugin.
+            </li>
+        </ul>
+        <p>
+        The decision depends on the feature's general relevance and its impact on core stability. Plugins offer flexibility without burdening the core.
+        </p>
+     
+        <br>
+        <div class="ts-divider"></div>
+        <h2>FAQ</h2>
+        <div class="ts-container">
+            <h3>What skills do I need for developing a plugin?</h3>
+            <p>
+            Basic HTML, JavaScript, and CSS skills are required, with Go (Golang) being the preferred backend language. However, any programming language that can be compiled into a binary and provide a web server interface will work.
+            </p>
+        </div>
+        
+        <div class="ts-container has-top-padded-large">
+            <h3>Will a plugin crash the whole Zoraxy?</h3>
+            <p>
+            No. Plugins operate in a separate process from Zoraxy. If a plugin crashes, Zoraxy will terminate and disable that plugin without affecting the core operations. This is by design to ensure stability.
+            </p>
+        </div>
+
+        <div class="ts-container has-top-padded-large">
+            <h3>Can I sell my plugin?</h3>
+            <p>
+            Yes, the plugin library and interface design are open source under the LGPL license. You are not required to disclose the source code of your plugin as long as you do not modify the plugin library and use it as-is. For more details on how to comply with the license, refer to the licensing documentation.
+            </p>
+        </div>
+
+        <div class="ts-container has-top-padded-large">
+            <h3>How can I add my plugin to the official plugin store?</h3>
+            <p>
+            To add your plugin to the official plugin store, open a pull request (PR) in the plugin repository.
+            </p>
+        </div>
+        <br><br>
+        <div class="ts-divider "></div>
+        <div class="ts-container has-top-padded-large">
+            <h2>Ready to start developing your own plugin?</h2>
+            <p>
+                Begin your journey by exploring the plugin development documentation and setting up your development environment.
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="ts-button is-primary" onclick="switchToDocumentTab()">Get Started</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chinese version -->
+<div class="ts-content intropage" lang="zh">
+    <div class="ts-container is-narrow">
+        <div class="ts-image is-rounded">
+            <img src="img/banner.png" width="100%">
+        </div>
+        <h1>介紹</h1>
+        <h2>Zoraxy 插件是什麼？</h2>
+        <p>
+            Zoraxy 插件是一個強大的擴展功能，旨在增強 Zoraxy 系統的功能。
+            它提供了核心系統中沒有的額外功能和能力，允許用戶自定義體驗並優化性能。
+            該插件被設計為模組化且靈活的，使用戶能夠根據特定需求調整 Zoraxy 環境。
+        </p>
+        <p>
+            Zoraxy 插件以二進制文件的形式分發，開發者可以選擇是否開源
+            <span class="ts-text is-heavy">因為插件庫和接口是基於 LGPL 授權的開源項目</span>。
+            <br><br>
+            插件主要分為兩種類型：路由器和工具。路由器類型的插件與 HTTP 代理規則的連接有關，
+            而工具插件則為各種獨立於 Zoraxy 核心運行的網絡功能提供用戶界面。
+        </p>
+
+        <div class="ts-divider"></div>
+        <h2>插件如何分發與安裝</h2>
+        <p>
+            Zoraxy 插件以平台相關的二進制文件形式分發，這使得它們針對特定的操作系統和 CPU 架構進行了優化。
+            這些二進制文件的命名遵循一個約定，包括操作系統、CPU 架構和插件名稱，例如 <span class="ts-text is-code">linux_amd64_foobar</span>、<span class="ts-text is-code">windows_amd64_foobar.exe</span> 或 <span class="ts-text is-code">linux_arm64_foobar</span>。
+            <br><br>
+            要手動安裝插件進行測試，只需將二進制文件放置在 Zoraxy 安裝目錄中的 <span class="ts-text is-code">/plugins/{plugin_name}/</span> 文件夾內。
+        </p>
+
+        <div class="ts-box is-warning is-start-indicated">
+            <div class="ts-content">
+                <p>
+                    <strong>警告：</strong> 文件夾內的二進制文件名稱必須與插件文件夾名稱匹配。
+                    例如，二進制文件應命名為 <span class="ts-text is-code">foobar</span>（或在 Windows 上為 <span class="ts-text is-code">foobar.exe</span>），
+                    如果放置在 <span class="ts-text is-code">/plugins/foobar/</span> 文件夾中。
+                    請避免使用類似 <span class="ts-text is-code">foobar_plugin.exe</span> 的名稱。
+                </p>
+            </div>
+        </div>
+        
+        <p>
+            在分發方面，使用了一個插件商店系統。該插件商店的架構類似於 Arduino IDE 中內置的系統，
+            包括一個管理器 URL（JSON 文件），其中列出了該商店支持的所有插件。
+            有關如何實現自己的插件商店的更多詳細信息，請參閱文檔部分。
+        </p>
+
+        <div class="ts-divider"></div>
+        <h2>插件與開 Pull Request 的區別</h2>
+        <p>
+            Zoraxy 插件的引入是為了解決特定的使用案例，從而增強其功能。
+            它作為 Zoraxy 核心系統的擴展，提供了額外的功能和能力，同時保持核心系統的完整性。
+        </p>
+        <ul>
+            <li>
+                它旨在處理難以直接集成到 Zoraxy 核心中的功能。
+            </li>
+            <li>
+                它適用於某些功能僅在有限情況下適用的場景，避免了對其他用戶造成不必要的資源消耗。
+            </li>
+            <li>
+                插件允許對特定代碼組件進行頻繁更新，而不影響核心的穩定性或導致停機。
+            </li>
+        </ul>
+
+        <h3>何時應該新增核心 PR 或插件？</h3>
+        <p>
+        在某些情況下，將功能實作為插件比直接整合到 Zoraxy 核心更為合理：
+        </p>
+        <ul>
+        <li>
+            <strong>核心 PR：</strong> 如果功能對大多數用戶都有相關性，並且能提升 Zoraxy 的核心功能，則應考慮提交核心的 Pull Request (PR)。
+        </li>
+        <li>
+            <strong>插件：</strong> 如果功能僅針對少數用戶群體，或需要額外的依賴項而非所有用戶都需要，則應開發為插件。
+        </li>
+        </ul>
+        <p>
+        決策取決於功能的普遍相關性及對核心穩定性的影響。插件提供了靈活性，且不會對核心造成負擔。
+        </p>
+
+        <br>
+        <div class="ts-divider"></div>
+        <h2>常見問題</h2>
+        <div class="ts-container">
+            <h3>開發插件需要什麼技能？</h3>
+            <p>
+            需要基本的 HTML、JavaScript 和 CSS 技能，後端語言首選 Go（Golang）。然而，任何可以編譯成二進制文件並提供 Web 服務器接口的編程語言都可以使用。
+            </p>
+        </div>
+        
+        <div class="ts-container has-top-padded-large">
+            <h3>插件會導致整個 Zoraxy 崩潰嗎？</h3>
+            <p>
+            不會。插件在與 Zoraxy 分離的進程中運行。如果插件崩潰，Zoraxy 會終止並禁用該插件，而不會影響核心操作。這是為了確保穩定性而設計的。
+            </p>
+        </div>
+
+        <div class="ts-container has-top-padded-large">
+            <h3>我可以出售我的插件嗎？</h3>
+            <p>
+            可以，插件庫和接口設計是基於 LGPL 授權的開源項目。只要您不修改插件庫並按原樣使用它，就不需要公開插件的源代碼。關於如何遵守許可證的更多詳細信息，請參閱許可證文檔。
+            </p>
+        </div>
+
+        <div class="ts-container has-top-padded-large">
+            <h3>如何將我的插件添加到官方插件商店？</h3>
+            <p>
+            要將您的插件添加到官方插件商店，請在插件存儲庫中提交一個拉取請求（PR）。
+            </p>
+        </div>
+        <br><br>
+        <div class="ts-divider "></div>
+        <div class="ts-container has-top-padded-large">
+            <h2>準備好開始開發自己的插件了嗎？</h2>
+            <p>
+                通過探索插件開發文檔並設置您的開發環境，開始您的旅程。
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="ts-button is-primary" onclick="switchToDocumentTab()">開始使用</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- German version -->
+<div class="ts-content intropage" lang="de">
+    <div class="ts-container is-narrow">
+        <div class="ts-image is-rounded">
+            <img src="img/banner.png" width="100%">
+        </div>
+        <h1>Einführung</h1>
+        <h2>Was ist das Zoraxy Plugin?</h2>
+        <p>
+            Das Zoraxy Plugin ist eine leistungsstarke Erweiterungsfunktion, die entwickelt wurde, um die Funktionalität des Zoraxy-Systems zu verbessern.
+            Es bietet zusätzliche Funktionen und Fähigkeiten, die nicht Teil des Kernsystems sind, und ermöglicht es den Benutzern, ihre Erfahrung anzupassen und die Leistung zu optimieren.
+            Das Plugin ist modular und flexibel aufgebaut, sodass Benutzer ihre Zoraxy-Umgebung an spezifische Anforderungen anpassen können.
+        </p>
+        <p>
+            Zoraxy-Plugins werden als Binärdateien verteilt, und Entwickler können wählen, ob sie diese als Open Source veröffentlichen möchten oder nicht,
+            <span class="ts-text is-heavy">da die Plugin-Bibliothek und die Schnittstelle unter der LGPL-Lizenz Open Source sind</span>.
+            <br><br>
+            Es gibt zwei Haupttypen von Plugins: Router und Utilities. Router-Plugins sind an Verbindungen von HTTP-Proxy-Regeln beteiligt,
+            während Utility-Plugins Benutzeroberflächen für verschiedene Netzwerkfunktionen bereitstellen, die unabhängig vom Zoraxy-Kern arbeiten.
+        </p>
+
+        <div class="ts-divider"></div>
+        <h2>Wie Plugins verteilt und installiert werden</h2>
+        <p>
+            Zoraxy-Plugins werden als plattformabhängige Binärdateien verteilt, die speziell für bestimmte Betriebssysteme und CPU-Architekturen optimiert sind.
+            Diese Binärdateien werden nach einem Konventionsschema benannt, das das Betriebssystem, die CPU-Architektur und den Plugin-Namen umfasst, wie z. B. <span class="ts-text is-code">linux_amd64_foobar</span>, <span class="ts-text is-code">windows_amd64_foobar.exe</span> oder <span class="ts-text is-code">linux_arm64_foobar</span>.
+            <br><br>
+            Um ein Plugin manuell zu installieren und zu testen, legen Sie die Binärdatei einfach im Ordner <span class="ts-text is-code">/plugins/{plugin_name}/</span> im Zoraxy-Installationsverzeichnis ab.
+        </p>
+
+        <div class="ts-box is-warning is-start-indicated">
+            <div class="ts-content">
+                <p>
+                    <strong>Warnung:</strong> Der Name der Binärdatei im Ordner muss mit dem Plugin-Ordnernamen übereinstimmen.
+                    Beispielsweise sollte die Binärdatei <span class="ts-text is-code">foobar</span> (oder <span class="ts-text is-code">foobar.exe</span> unter Windows) heißen,
+                    wenn sie im Ordner <span class="ts-text is-code">/plugins/foobar/</span> abgelegt wird.
+                    Vermeiden Sie Namen wie <span class="ts-text is-code">foobar_plugin.exe</span>.
+                </p>
+            </div>
+        </div>
+        
+        <p>
+            Für die Verteilung wird ein Plugin-Store-System verwendet. Die Architektur des Plugin-Stores ähnelt der des Arduino IDE, 
+            mit einer Manager-URL (einer JSON-Datei), in der alle von diesem Store unterstützten Plugins aufgelistet sind.
+            Weitere Details zur Implementierung eines eigenen Plugin-Stores finden Sie im Dokumentationsabschnitt.
+        </p>
+
+        <div class="ts-divider"></div>
+        <h2>Plugin vs Pull Request</h2>
+        <p>
+            Das Zoraxy-Plugin wurde eingeführt, um spezifische Anwendungsfälle zu adressieren, die seine Funktionalität erweitern.
+            Es dient als Erweiterung des Zoraxy-Kernsystems und bietet zusätzliche Funktionen und Fähigkeiten, während die Integrität des Kernsystems erhalten bleibt.
+        </p>
+        <ul>
+            <li>
+                Es ist darauf ausgelegt, Funktionen zu behandeln, die schwer direkt in den Zoraxy-Kern zu integrieren sind.
+            </li>
+            <li>
+                Es richtet sich an Szenarien, in denen bestimmte Funktionen nur in begrenzten Situationen anwendbar sind, um unnötigen Ressourcenverbrauch für andere Benutzer zu vermeiden.
+            </li>
+            <li>
+                Das Plugin ermöglicht häufige Updates spezifischer Codekomponenten, ohne die Stabilität des Kerns zu beeinträchtigen oder Ausfallzeiten zu verursachen.
+            </li>
+        </ul>
+        
+        <h3>Wann sollte ein Core-PR oder ein Plugin hinzugefügt werden?</h3>
+        <p>
+        In bestimmten Situationen ist es sinnvoller, eine Funktion als Plugin zu implementieren, anstatt sie direkt in den Zoraxy-Kern zu integrieren:
+        </p>
+        <ul>
+            <li>
+                <strong>Core-PR:</strong> Wenn die Funktion für die meisten Benutzer relevant ist und die Kernfunktionalität von Zoraxy verbessert, sollten Sie einen Core-Pull-Request (PR) in Betracht ziehen.
+            </li>
+            <li>
+                <strong>Plugin:</strong> Wenn die Funktion auf eine kleinere Benutzerbasis abzielt oder zusätzliche Abhängigkeiten erfordert, die nicht alle Benutzer benötigen, sollte sie als Plugin entwickelt werden.
+            </li>
+        </ul>
+        <p>
+        Die Entscheidung hängt von der allgemeinen Relevanz der Funktion und ihrer Auswirkung auf die Stabilität des Kerns ab. Plugins bieten Flexibilität, ohne den Kern zu belasten.
+        </p>
+
+        <br>
+        <div class="ts-divider"></div>
+        <h2>FAQ</h2>
+        <div class="ts-container">
+            <h3>Welche Fähigkeiten benötige ich, um ein Plugin zu entwickeln?</h3>
+            <p>
+            Grundlegende Kenntnisse in HTML, JavaScript und CSS sind erforderlich, wobei Go (Golang) die bevorzugte Backend-Sprache ist. 
+            Allerdings kann jede Programmiersprache verwendet werden, die in eine Binärdatei kompiliert werden kann und eine Webserver-Schnittstelle bereitstellt.
+            </p>
+        </div>
+        
+        <div class="ts-container has-top-padded-large">
+            <h3>Wird ein Plugin das gesamte Zoraxy zum Absturz bringen?</h3>
+            <p>
+            Nein. Plugins laufen in einem separaten Prozess von Zoraxy. Wenn ein Plugin abstürzt, beendet und deaktiviert Zoraxy dieses Plugin, ohne die Kernoperationen zu beeinträchtigen. Dies ist so konzipiert, um Stabilität zu gewährleisten.
+            </p>
+        </div>
+
+        <div class="ts-container has-top-padded-large">
+            <h3>Kann ich mein Plugin verkaufen?</h3>
+            <p>
+            Ja, die Plugin-Bibliothek und das Schnittstellendesign sind unter der LGPL-Lizenz Open Source. Sie sind nicht verpflichtet, den Quellcode Ihres Plugins offenzulegen, solange Sie die Plugin-Bibliothek nicht ändern und sie wie vorgesehen verwenden. Weitere Details zur Einhaltung der Lizenz finden Sie in der Lizenzdokumentation.
+            </p>
+        </div>
+
+        <div class="ts-container has-top-padded-large">
+            <h3>Wie kann ich mein Plugin zum offiziellen Plugin-Store hinzufügen?</h3>
+            <p>
+            Um Ihr Plugin zum offiziellen Plugin-Store hinzuzufügen, öffnen Sie eine Pull-Request (PR) im Plugin-Repository.
+            </p>
+        </div>
+        <br><br>
+        <div class="ts-divider "></div>
+        <div class="ts-container has-top-padded-large">
+            <h2>Bereit, Ihr eigenes Plugin zu entwickeln?</h2>
+            <p>
+                Beginnen Sie Ihre Reise, indem Sie die Plugin-Entwicklungsdokumentation erkunden und Ihre Entwicklungsumgebung einrichten.
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="ts-button is-primary" onclick="switchToDocumentTab()">Loslegen</a>
+            </div>
+        </div>
+    </div>
+</div>
