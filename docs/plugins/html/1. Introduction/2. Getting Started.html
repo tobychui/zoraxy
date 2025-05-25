@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      Getting Started | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <script>
+      hljs.highlightAll();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/tomorrow-night-bright.css">
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/html/assets/logo.png" dark_src="/html/assets/logo_white.png" src="/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="#!" class="item">
+            Examples
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item is-active" href="/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item" href="/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item" href="/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                </div>
+                <a class="item">
+                  Getting Started
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <a class="item" href="/html/index.html">
+                  index
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="getting-started">
+                  Getting Started
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    To start developing plugins, you will need the following installed on your computer
+                  </p>
+                </p>
+                <ol>
+                  <li>
+                    The source code of Zoraxy
+                  </li>
+                  <li>
+                    Go compiler
+                  </li>
+                  <li>
+                    VSCode (recommended, or any editor of your choice)
+                  </li>
+                </ol>
+                <div class="ts-divider"></div>
+                <h2 id="step-1-start-zoraxy-at-least-once">
+                  <div class="ts-header is-large">
+                    Step 1: Start Zoraxy at least once
+                  </div>
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    If you have just cloned Zoraxy from the Github repo, use the following to build and run it once.
+                  </p>
+                </p>
+                <pre><code class="language-bash">cd src/
+go mod tidy
+go build
+sudo ./zoraxy
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    This would allow Zoraxy to generate all the required folder structure on startup.
+                  </p>
+                </p>
+                <p>
+                  After the startup process completes, you would see a folder named &ldquo;plugins&rdquo; in the working directory of Zoraxy.
+                </p>
+                <div class="ts-divider"></div>
+                <h2 id="steps-2-prepare-the-development-environment-for-zoraxy-plugin">
+                  <div class="ts-header is-large">
+                    Steps 2: Prepare the development environment for Zoraxy Plugin
+                  </div>
+                </h2>
+                <p>
+                  Next, you will need to think of a name for your plugin. Lets name our new plugin &ldquo;Lapwing&rdquo;.
+                </p>
+                <p>
+                  <p class="ts-text">
+                    <strong>
+                      Notes: Plugin name described in Introspect (will discuss this in later sessions) can contains space, but the folder and compiled binary filename must not contains space and special characters for platform compatibilities reasons.
+                    </strong>
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Follow the steps below to create the folder structure
+                  </p>
+                </p>
+                <h3 id="2-1-create-plugin-folder">
+                  <div class="ts-header">
+                    2.1 Create Plugin Folder
+                  </div>
+                </h3>
+                <p>
+                  <p class="ts-text">
+                    Create a folder with your plugin name in the
+                    <code>
+                      plugins
+                    </code>
+                    folder. After creating the folder, you would have something like
+                    <code>
+                      plugins/Lapwing/
+                    </code>
+                    .
+                  </p>
+                </p>
+                <h3 id="2-2-locate-and-copy-zoraxy-plugin-library">
+                  <div class="ts-header">
+                    2.2 Locate and copy Zoraxy Plugin library
+                  </div>
+                </h3>
+                <p>
+                  <p class="ts-text">
+                    Locate the Zoraxy plugin library from the Zoraxy source code. You can find the
+                    <code>
+                      zoraxy_plugin
+                    </code>
+                    Go module under
+                    <code>
+                      src/mod/plugins/zoraxy_plugin
+                    </code>
+                    .
+                  </p>
+                </p>
+                <p>
+                  Copy the
+                  <code>
+                    zoraxy_plugin
+                  </code>
+                  folder from the Zoraxy source code mod folder into the your plugin&rsquo;s mod folder. Let assume you use the same mod folder name as Zoraxy as
+                  <code>
+                    mod
+                  </code>
+                  , then your copied library path should be
+                  <code>
+                    plugins/Lapwing/mod/zoraxy_plugin
+                  </code>
+                  .
+                </p>
+                <h3 id="2-3-prepare-go-project-structure">
+                  <div class="ts-header">
+                    2.3 Prepare Go Project structure
+                  </div>
+                </h3>
+                <p>
+                  <p class="ts-text">
+                    Create the
+                    <code>
+                      main.go
+                    </code>
+                    file for your plugin. In the example above, it would be located at
+                    <code>
+                      plugins/Lapwing/main.go
+                    </code>
+                    .
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Use
+                    <code>
+                      go mod init yourdomain.com/foo/plugin_name
+                    </code>
+                    to initiate your plugin. By default the
+                    <code>
+                      go.mod
+                    </code>
+                    file will be automatically generated by the go compiler. Assuming you are developing Lapwing with its source located on Github, this command would be
+                    <code>
+                      go mod init github.com/your_user_name/Lapwing
+                    </code>
+                    .
+                  </p>
+                </p>
+                <div class="ts-divider"></div>
+                <h2 id="steps-3-open-plugin-folder-in-ide">
+                  <div class="ts-header is-large">
+                    Steps 3: Open plugin folder in IDE
+                  </div>
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Now open your preferred IDE or text editor and use your plugin folder as the project folder
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Now, you are ready to start developing Zoraxy plugin!
+                  </p>
+                </p>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+  </body>
+</html>

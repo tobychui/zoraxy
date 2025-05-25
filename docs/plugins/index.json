@@ -1,0 +1,56 @@
+{
+  "title": "",
+  "path": ".",
+  "type": "folder",
+  "files": [
+    {
+      "title": "Introduction",
+      "path": "1. Introduction",
+      "type": "folder",
+      "files": [
+        {
+          "filename": "1. Introduction/1. What is Zoraxy Plugin.md",
+          "title": "What is Zoraxy Plugin",
+          "type": "file"
+        },
+        {
+          "filename": "1. Introduction/2. Getting Started.md",
+          "title": "Getting Started",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Architecture",
+      "path": "2. Architecture",
+      "type": "folder",
+      "files": [
+        {
+          "filename": "2. Architecture/1. Plugin Architecture.md",
+          "title": "Plugin Architecture",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/2. Introspect.md",
+          "title": "Introspect",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/3. Configure.md",
+          "title": "Configure",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "path": "3. Getting Started",
+      "type": "folder"
+    },
+    {
+      "filename": "index.md",
+      "title": "index",
+      "type": "file"
+    }
+  ]
+}
