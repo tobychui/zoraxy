@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      Capture Modes | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <script>
+      hljs.highlightAll();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/tomorrow-night-bright.css">
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/html/assets/logo.png" dark_src="/html/assets/logo_white.png" src="/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="#!" class="item">
+            Examples
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item" href="/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item" href="/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item" href="/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                  <a class="item is-active" href="/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
+                </div>
+                <a class="item">
+                  Getting Started
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <a class="item" href="/html/index.html">
+                  index
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="capture-modes">
+                  Capture Modes
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    As you can see in the Introspect section, there are two types of capture mode in Zoraxy plugin API.
+                  </p>
+                </p>
+                <div class="ts-list is-unordered">
+                  <div class="item">
+                    Static Capture Mode
+                  </div>
+                  <div class="item">
+                    Dynamic Capture Mode
+                  </div>
+                </div>
+                <p>
+                  <span class="ts-text is-heavy">
+                    Notes: When this document mention the term &ldquo;endpoint&rdquo;, it means a particular sub-path on the plugin side. For example
+                    <span class="ts-text is-code">
+                      /capture
+                    </span>
+                    or
+                    <span class="ts-text is-code">
+                      /sniff
+                    </span>
+                    . In actual implementation, this can be a
+                    <span class="ts-text is-code">
+                      http.HandleFunc
+                    </span>
+                    or
+                    <span class="ts-text is-code">
+                      http.Handle
+                    </span>
+                    depends on the plugin implementation.
+                  </span>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="static-capture-mode">
+                  Static Capture Mode
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Static Capture Mode register a static path to Zoraxy, when the plugin is enabled on a certain HTTP proxy rule, all request that matches the static capture registered paths are forwarded to the plugin without asking first. The overall process is shown in the diagram below.
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/4. Capture Modes/static_capture.png" alt="static_capture" />
+                  </div>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    The main benefit of static capture mode is that the capture paths are stored in radix tree. That means it takes O(logn) time to  resolve the path and forward the request. Hence,
+                    <span class="ts-text is-heavy">
+                      this mode is generally faster
+                    </span>
+                    if your plugin always listens to a few certain paths for extended functionalities.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="dynamic-capture-mode">
+                  Dynamic Capture Mode
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Dynamic Capture Mode register two endpoints to Zoraxy.
+                  </p>
+                </p>
+                <div class="ts-list is-ordered">
+                  <div class="item">
+                    DynamicCaptureSniff - The sniffing endpoint where Zoraxy will first ask if the plugin want to handle this request
+                  </div>
+                  <div class="item">
+                    DynamicCaptureIngress - The handling endpoint, where if the plugin reply the sniffing with &ldquo;YES&rdquo;, Zoraxy forward the incoming request to this plugin at this defined endpoint.
+                  </div>
+                </div>
+                <p>
+                  <p class="ts-text">
+                    The whole process will takes a few request exchange between plugin and Zoraxy core. Since both of them are communicating via the loopback interface, speed should not be too big of a concern here.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    The request handling flow is shown in the diagram below.
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/4. Capture Modes/dynamic_capture.png" alt="dynamic_capture" />
+                  </div>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Once Zoraxy receive a request from a client that matches one of the HTTP Proxy Rule, Zoraxy will forward the request header to all the plugins that matches the following criteria
+                  </p>
+                </p>
+                <div class="ts-list is-ordered">
+                  <div class="item">
+                    The plugin is assigned to a tag that is currently attached to the given HTTP Proxy that the request is coming through
+                  </div>
+                  <div class="item">
+                    The plugin is enabled and running
+                  </div>
+                  <div class="item">
+                    The plugin has registered its dynamic capture sniffing endpoint in Introspect
+                  </div>
+                </div>
+                <p>
+                  <p class="ts-text">
+                    Then the plugin
+                    <span class="ts-text is-code">
+                      /sniff
+                    </span>
+                    endpoint will receive some basic header information about the request, and response with
+                    <span class="ts-text is-code">
+                      SniffResultAccpet
+                    </span>
+                    or
+                    <span class="ts-text is-code">
+                      SniffResultSkip
+                    </span>
+                    to accept or reject handling such request. The response are defined in
+                    <span class="ts-text is-code">
+                      zoraxy_plugin
+                    </span>
+                    as a public type where you can access with
+                    <span class="ts-text is-code">
+                      zoraxy_plugin.SniffresultAccept
+                    </span>
+                    and
+                    <span class="ts-text is-code">
+                      zoraxy_plugin.SniffResultSkip
+                    </span>
+                    respectively.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Note that this shall only be used if static capture mode cannot satisfy your needs in implementation the feature you want, as
+                    <span class="ts-text is-heavy">
+                      dynamic capture is way slower than static capture mode
+                    </span>
+                    .
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="mixing-capture-modes">
+                  Mixing Capture Modes
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    It is possible for you to mix both Static and Capture modes if that is what you want. A few thing you need to know about mixing both mode in single plugin
+                  </p>
+                </p>
+                <div class="ts-list is-ordered">
+                  <div class="item">
+                    Static capture mode has higher priority than dynamic capture mode across all plugins. That means if you have a request that matches Plugin A&rsquo;s static capture path and Plugin B&rsquo;s dynamic capture, the request will be first handled by Plugin A
+                  </div>
+                  <div class="item">
+                    The same plugin can register both static and dynamic capture modes. Similar to item (1), if the request has already captured by your static capture path, Zoraxy will not proceed and forward the request header to your dynamic sniffing endpoint.
+                  </div>
+                  <div class="item">
+                    In case there is a collision in static capture paths between two plugins, the longest one will have priority. For example, if Plugin A registered
+                    <span class="ts-text is-code">
+                      /foo
+                    </span>
+                    and Plugin B registered
+                    <span class="ts-text is-code">
+                      /foo/bar
+                    </span>
+                    , when a request to
+                    <span class="ts-text is-code">
+                      /foo/bar/teacat
+                    </span>
+                    enter Zoraxy, Plugin B is used for handling such request.
+                  </div>
+                </div>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+  </body>
+</html>

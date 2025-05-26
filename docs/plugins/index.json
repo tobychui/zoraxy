@@ -39,6 +39,11 @@
           "filename": "2. Architecture/3. Configure.md",
           "title": "Configure",
           "type": "file"
+        },
+        {
+          "filename": "2. Architecture/4. Capture Modes.md",
+          "title": "Capture Modes",
+          "type": "file"
         }
       ]
     },

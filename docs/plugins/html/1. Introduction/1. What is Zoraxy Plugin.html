@@ -110,6 +110,9 @@
                   <a class="item" href="/html/2. Architecture/3. Configure.html">
                     Configure
                   </a>
+                  <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
                 </div>
                 <a class="item">
                   Getting Started
@@ -135,9 +138,9 @@
                 <p>
                   <p class="ts-text">
                     Zoraxy plugins are distributed as binaries, and developers have the flexibility to choose whether to open source them or not
-                    <strong>
+                    <span class="ts-text is-heavy">
                       as the plugin library and interface are open source under the LGPL license
-                    </strong>
+                    </span>
                     .
                   </p>
                 </p>
@@ -146,74 +149,74 @@
                     There are two primary types of plugins:
                   </p>
                 </p>
-                <ul>
-                  <li>
-                    <strong>
+                <div class="ts-list is-unordered">
+                  <div class="item">
+                    <span class="ts-text is-heavy">
                       Router plugins
-                    </strong>
+                    </span>
                     : Involved with connections from HTTP proxy rules.
                     <br>
-                  </li>
-                  <li>
-                    <strong>
+                  </div>
+                  <div class="item">
+                    <span class="ts-text is-heavy">
                       Utility plugins
-                    </strong>
+                    </span>
                     : Provide user interfaces for various network features that operate independently of the Zoraxy core.
                     <br>
-                  </li>
-                </ul>
-                <div class="ts-divider"></div>
+                  </div>
+                </div>
+                <div class="ts-divider has-top-spaced-large"></div>
                 <h2 id="how-plugins-are-distributed-installed">
                   How plugins are distributed &amp; installed
                 </h2>
                 <p>
                   <p class="ts-text">
                     Zoraxy plugins are distributed as platform-dependent binaries, tailored to specific operating systems and CPU architectures. These binaries follow a naming convention that includes the operating system, CPU architecture, and plugin name, such as
-                    <code>
+                    <span class="ts-text is-code">
                       linux_amd64_foobar
-                    </code>
+                    </span>
                     ,
-                    <code>
+                    <span class="ts-text is-code">
                       windows_amd64_foobar.exe
-                    </code>
+                    </span>
                     , or
-                    <code>
+                    <span class="ts-text is-code">
                       linux_arm64_foobar
-                    </code>
+                    </span>
                     .
                   </p>
                 </p>
                 <p>
                   <p class="ts-text">
                     To manually install a plugin for testing, place the binary file into the
-                    <code>
+                    <span class="ts-text is-code">
                       /plugins/{plugin_name}/
-                    </code>
+                    </span>
                     folder within your Zoraxy installation directory.
                   </p>
                 </p>
                 <div class="ts-quote">
                   <p>
                     <p class="ts-text">
-                      <strong>
+                      <span class="ts-text is-heavy">
                         Warning:
-                      </strong>
+                      </span>
                       The binary name inside the folder must match the plugin folder name. For example, the binary should be named
-                      <code>
+                      <span class="ts-text is-code">
                         foobar
-                      </code>
+                      </span>
                       (or
-                      <code>
+                      <span class="ts-text is-code">
                         foobar.exe
-                      </code>
+                      </span>
                       on Windows) if placed in the
-                      <code>
+                      <span class="ts-text is-code">
                         /plugins/foobar/
-                      </code>
+                      </span>
                       folder. Avoid using names like
-                      <code>
+                      <span class="ts-text is-code">
                         foobar_plugin.exe
-                      </code>
+                      </span>
                       .
                     </p>
                   </p>
@@ -223,58 +226,54 @@
                     For distribution, a plugin store system is used. The plugin store architecture is similar to the one built into the Arduino IDE, with a manager URL (a JSON file) listing all the plugins supported by that store. See the documentation section for more details on how to implement your own plugin store.
                   </p>
                 </p>
-                <div class="ts-divider"></div>
+                <div class="ts-divider has-top-spaced-large"></div>
                 <h2 id="plugin-vs-pull-request">
-                  <div class="ts-header is-large">
-                    Plugin vs Pull Request
-                  </div>
+                  Plugin vs Pull Request
                 </h2>
                 <p>
                   <p class="ts-text">
                     The Zoraxy plugin was introduced to address specific use cases that enhance its functionality. It serves as an extension to the core Zoraxy system, providing additional features and capabilities while maintaining the integrity of the core system.
                   </p>
                 </p>
-                <ul>
-                  <li>
+                <div class="ts-list is-unordered">
+                  <div class="item">
                     Designed to handle features that are challenging to integrate directly into the Zoraxy core.
                     <br>
-                  </li>
-                  <li>
+                  </div>
+                  <div class="item">
                     Caters to scenarios where certain features are only applicable in limited situations, avoiding unnecessary resource consumption for other users.
                     <br>
-                  </li>
-                  <li>
+                  </div>
+                  <div class="item">
                     Allows for frequent updates to specific code components without impacting the core&rsquo;s stability or causing downtime.
                     <br>
-                  </li>
-                </ul>
-                <div class="ts-divider"></div>
-                <h3 id="when-should-you-add-a-core-pr-or-a-plugin">
-                  <div class="ts-header">
-                    When should you add a core PR or a plugin?
                   </div>
+                </div>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h3 id="when-should-you-add-a-core-pr-or-a-plugin">
+                  When should you add a core PR or a plugin?
                 </h3>
                 <p>
                   <p class="ts-text">
                     In certain situations, implementing a feature as a plugin is more reasonable than directly integrating it into the Zoraxy core:
                   </p>
                 </p>
-                <ul>
-                  <li>
-                    <strong>
+                <div class="ts-list is-unordered">
+                  <div class="item">
+                    <span class="ts-text is-heavy">
                       Core PR
-                    </strong>
+                    </span>
                     : If the feature is relevant to most users and enhances Zoraxy&rsquo;s core functionality, consider submitting a core Pull Request (PR).
                     <br>
-                  </li>
-                  <li>
-                    <strong>
+                  </div>
+                  <div class="item">
+                    <span class="ts-text is-heavy">
                       Plugin
-                    </strong>
+                    </span>
                     : If the feature is targeted at a smaller user base or requires additional dependencies that not all users need, it should be developed as a plugin.
                     <br>
-                  </li>
-                </ul>
+                  </div>
+                </div>
                 <p>
                   The decision depends on the feature&rsquo;s general relevance and its impact on core stability. Plugins offer flexibility without burdening the core.
                 </p>

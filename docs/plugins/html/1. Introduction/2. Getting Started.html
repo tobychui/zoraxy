@@ -110,6 +110,9 @@
                   <a class="item" href="/html/2. Architecture/3. Configure.html">
                     Configure
                   </a>
+                  <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
                 </div>
                 <a class="item">
                   Getting Started
@@ -132,22 +135,20 @@
                     To start developing plugins, you will need the following installed on your computer
                   </p>
                 </p>
-                <ol>
-                  <li>
+                <div class="ts-list is-ordered">
+                  <div class="item">
                     The source code of Zoraxy
-                  </li>
-                  <li>
-                    Go compiler
-                  </li>
-                  <li>
-                    VSCode (recommended, or any editor of your choice)
-                  </li>
-                </ol>
-                <div class="ts-divider"></div>
-                <h2 id="step-1-start-zoraxy-at-least-once">
-                  <div class="ts-header is-large">
-                    Step 1: Start Zoraxy at least once
                   </div>
+                  <div class="item">
+                    Go compiler
+                  </div>
+                  <div class="item">
+                    VSCode (recommended, or any editor of your choice)
+                  </div>
+                </div>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="step-1-start-zoraxy-at-least-once">
+                  Step 1: Start Zoraxy at least once
                 </h2>
                 <p>
                   <p class="ts-text">
@@ -167,20 +168,18 @@ sudo ./zoraxy
                 <p>
                   After the startup process completes, you would see a folder named &ldquo;plugins&rdquo; in the working directory of Zoraxy.
                 </p>
-                <div class="ts-divider"></div>
+                <div class="ts-divider has-top-spaced-large"></div>
                 <h2 id="steps-2-prepare-the-development-environment-for-zoraxy-plugin">
-                  <div class="ts-header is-large">
-                    Steps 2: Prepare the development environment for Zoraxy Plugin
-                  </div>
+                  Steps 2: Prepare the development environment for Zoraxy Plugin
                 </h2>
                 <p>
                   Next, you will need to think of a name for your plugin. Lets name our new plugin &ldquo;Lapwing&rdquo;.
                 </p>
                 <p>
                   <p class="ts-text">
-                    <strong>
+                    <span class="ts-text is-heavy">
                       Notes: Plugin name described in Introspect (will discuss this in later sessions) can contains space, but the folder and compiled binary filename must not contains space and special characters for platform compatibilities reasons.
-                    </strong>
+                    </span>
                   </p>
                 </p>
                 <p>
@@ -189,96 +188,88 @@ sudo ./zoraxy
                   </p>
                 </p>
                 <h3 id="2-1-create-plugin-folder">
-                  <div class="ts-header">
-                    2.1 Create Plugin Folder
-                  </div>
+                  2.1 Create Plugin Folder
                 </h3>
                 <p>
                   <p class="ts-text">
                     Create a folder with your plugin name in the
-                    <code>
+                    <span class="ts-text is-code">
                       plugins
-                    </code>
+                    </span>
                     folder. After creating the folder, you would have something like
-                    <code>
+                    <span class="ts-text is-code">
                       plugins/Lapwing/
-                    </code>
+                    </span>
                     .
                   </p>
                 </p>
                 <h3 id="2-2-locate-and-copy-zoraxy-plugin-library">
-                  <div class="ts-header">
-                    2.2 Locate and copy Zoraxy Plugin library
-                  </div>
+                  2.2 Locate and copy Zoraxy Plugin library
                 </h3>
                 <p>
                   <p class="ts-text">
                     Locate the Zoraxy plugin library from the Zoraxy source code. You can find the
-                    <code>
+                    <span class="ts-text is-code">
                       zoraxy_plugin
-                    </code>
+                    </span>
                     Go module under
-                    <code>
+                    <span class="ts-text is-code">
                       src/mod/plugins/zoraxy_plugin
-                    </code>
+                    </span>
                     .
                   </p>
                 </p>
                 <p>
                   Copy the
-                  <code>
+                  <span class="ts-text is-code">
                     zoraxy_plugin
-                  </code>
+                  </span>
                   folder from the Zoraxy source code mod folder into the your plugin&rsquo;s mod folder. Let assume you use the same mod folder name as Zoraxy as
-                  <code>
+                  <span class="ts-text is-code">
                     mod
-                  </code>
+                  </span>
                   , then your copied library path should be
-                  <code>
+                  <span class="ts-text is-code">
                     plugins/Lapwing/mod/zoraxy_plugin
-                  </code>
+                  </span>
                   .
                 </p>
                 <h3 id="2-3-prepare-go-project-structure">
-                  <div class="ts-header">
-                    2.3 Prepare Go Project structure
-                  </div>
+                  2.3 Prepare Go Project structure
                 </h3>
                 <p>
                   <p class="ts-text">
                     Create the
-                    <code>
+                    <span class="ts-text is-code">
                       main.go
-                    </code>
+                    </span>
                     file for your plugin. In the example above, it would be located at
-                    <code>
+                    <span class="ts-text is-code">
                       plugins/Lapwing/main.go
-                    </code>
+                    </span>
                     .
                   </p>
                 </p>
                 <p>
                   <p class="ts-text">
                     Use
-                    <code>
+                    <span class="ts-text is-code">
                       go mod init yourdomain.com/foo/plugin_name
-                    </code>
+                    </span>
                     to initiate your plugin. By default the
-                    <code>
+                    <span class="ts-text is-code">
                       go.mod
-                    </code>
+                    </span>
                     file will be automatically generated by the go compiler. Assuming you are developing Lapwing with its source located on Github, this command would be
-                    <code>
+                    <span class="ts-text is-code">
                       go mod init github.com/your_user_name/Lapwing
-                    </code>
+                    </span>
                     .
                   </p>
                 </p>
-                <div class="ts-divider"></div>
+                <div class="ts-divider has-top-spaced-large"></div>
                 <h2 id="steps-3-open-plugin-folder-in-ide">
-                  <div class="ts-header is-large">
-                    Steps 3: Open plugin folder in IDE
-                  </div>
+                  Steps 3: Open plugin folder in IDE
                 </h2>
                 <p>
                   <p class="ts-text">

@@ -110,6 +110,9 @@
                   <a class="item is-active" href="/html/2. Architecture/3. Configure.html">
                     Configure
                   </a>
+                  <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
                 </div>
                 <a class="item">
                   Getting Started
@@ -130,22 +133,22 @@
                 <p>
                   <p class="ts-text">
                     Configure or Configure Spec is the
-                    <code>
+                    <span class="ts-text is-code">
                       exec
-                    </code>
+                    </span>
                     call where Zoraxy start the plugin. The configure spec JSON structure is defined in
-                    <code>
+                    <span class="ts-text is-code">
                       zoraxy_plugin
-                    </code>
+                    </span>
                     library.
                   </p>
                 </p>
                 <p>
                   <p class="ts-text">
                     As the time of writing, the
-                    <code>
+                    <span class="ts-text is-code">
                       ConfigureSpec
-                    </code>
+                    </span>
                     only contains information on some basic info.
                   </p>
                 </p>
@@ -159,22 +162,22 @@
                 <p>
                   <p class="ts-text">
                     The
-                    <code>
+                    <span class="ts-text is-code">
                       ConfigureSpec
-                    </code>
+                    </span>
                     struct will be parsed to JSON and pass to your plugin via the
-                    <code>
+                    <span class="ts-text is-code">
                       -configure=(json payload here)
-                    </code>
+                    </span>
                     .
                   </p>
                 </p>
                 <p>
                   <p class="ts-text">
                     In your plugin, you can use the
-                    <code>
+                    <span class="ts-text is-code">
                       zoraxy_plugin
-                    </code>
+                    </span>
                     library to parse it or parse it manually (if you are developing a plugin with other languages).
                   </p>
                 </p>

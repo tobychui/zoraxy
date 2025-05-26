@@ -110,6 +110,9 @@
                   <a class="item" href="/html/2. Architecture/3. Configure.html">
                     Configure
                   </a>
+                  <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
                 </div>
                 <a class="item">
                   Getting Started
@@ -134,22 +137,22 @@
                 </p>
                 <p>
                   <p class="ts-text">
-                    <strong>
+                    <span class="ts-text is-heavy">
                       This is a pre-defined structure where the plugin must provide to Zoraxy
-                    </strong>
+                    </span>
                     when the plugin is being started with the
-                    <code>
+                    <span class="ts-text is-code">
                       -introspect
-                    </code>
+                    </span>
                     flag.
                   </p>
                 </p>
                 <p>
                   <p class="ts-text">
                     The introspect structure is defined under the
-                    <code>
+                    <span class="ts-text is-code">
                       zoraxy_plugin
-                    </code>
+                    </span>
                     library, where both Zoraxy and plugin should use. As of writing, the structure of introspect is like this.
                   </p>
                 </p>
@@ -200,17 +203,15 @@
 	SubscriptionsEvents map[string]string `json:&quot;subscriptions_events&quot;` //Subscriptions events of your plugin, see Zoraxy documentation for more details
 }
 </code></pre>
-                <h2 id="introspect-triggering">
-                  <div class="ts-header is-large">
-                    Introspect Triggering
-                  </div>
+                <h2 id="introspect-manual-triggering">
+                  Introspect Manual Triggering
                 </h2>
                 <p>
                   <p class="ts-text">
                     To manually test if the introspect return is correct, you can try using the
-                    <code>
+                    <span class="ts-text is-code">
                       -introspect
-                    </code>
+                    </span>
                     flag on any Zoraxy plugin. You should be able to see an output like so.
                   </p>
                 </p>

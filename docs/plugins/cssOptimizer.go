@@ -38,46 +38,6 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 		//Replace the img with ts-image
 		originalHTMLContent = strings.Replace(originalHTMLContent, orginalParent, "<div class=\"ts-image is-rounded\" style=\"max-width: 800px\">"+orginalParent+"</div>", 1)
 	})
-	/*
-		// Replace h* elements
-		doc.Find("h1").Each(func(i int, s *goquery.Selection) {
-			originalHeader, err := s.Html()
-			if err != nil {
-				fmt.Println("Error getting header HTML:", err)
-				return
-			}
-
-			// Patch the bug in the parser that converts " />" to "/>"
-			originalHeader = strings.ReplaceAll(originalHeader, "/>", " />")
-			wrappedHeader := fmt.Sprintf("<div class=\"ts-header is-big\">%s</div>", originalHeader)
-			originalHTMLContent = strings.ReplaceAll(originalHTMLContent, s.Text(), wrappedHeader)
-		})
-	*/
-	doc.Find("h2").Each(func(i int, s *goquery.Selection) {
-		originalHeader, err := s.Html()
-		if err != nil {
-			fmt.Println("Error getting header HTML:", err)
-			return
-		}
-
-		// Patch the bug in the parser that converts " />" to "/>"
-		originalHeader = strings.ReplaceAll(originalHeader, "/>", " />")
-		wrappedHeader := fmt.Sprintf("<div class=\"ts-header is-large\">%s</div>", originalHeader)
-		originalHTMLContent = strings.ReplaceAll(originalHTMLContent, s.Text(), wrappedHeader)
-	})
-
-	doc.Find("h3").Each(func(i int, s *goquery.Selection) {
-		originalHeader, err := s.Html()
-		if err != nil {
-			fmt.Println("Error getting header HTML:", err)
-			return
-		}
-
-		// Patch the bug in the parser that converts " />" to "/>"
-		originalHeader = strings.ReplaceAll(originalHeader, "/>", " />")
-		wrappedHeader := fmt.Sprintf("<div class=\"ts-header\">%s</div>", originalHeader)
-		originalHTMLContent = strings.ReplaceAll(originalHTMLContent, s.Text(), wrappedHeader)
-	})
 
 	// Add "ts-text" class to each p element
 	doc.Find("p").Each(func(i int, s *goquery.Selection) {
@@ -103,7 +63,7 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 		}
 
 		// Replace <hr> with <div class="ts-divider"></div>
-		originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<hr>", "<div class=\"ts-divider\"></div>")
+		originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<hr>", "<div class=\"ts-divider has-top-spaced-large\"></div>")
 	})
 
 	// Add ts-table to all table elements
@@ -119,6 +79,43 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 		originalTable, _ := s.Html()
 		originalHTMLContent = strings.ReplaceAll(originalHTMLContent, originalTable, fmt.Sprintf("<table class=\"%s\">%s</table>", newClass, originalTable))
 	})
+
+	// Replace <ul> <ol> and <li>
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<ul>", "<div class=\"ts-list is-unordered\">")
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "</ul>", "</div>")
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<ol>", "<div class=\"ts-list is-ordered\">")
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "</ol>", "</div>")
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<li>", "<div class=\"item\">")
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "</li>", "</div>")
+
+	// Replace <strong> with <span class="ts-text is-heavy"></span>
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<strong>", "<span class=\"ts-text is-heavy\">")
+	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "</strong>", "</span>")
+
+	// Replace <code> without class with <span class="ts-text is-code">
+	for {
+		startIndex := strings.Index(originalHTMLContent, "<code>")
+		if startIndex == -1 {
+			break
+		}
+
+		endIndex := strings.Index(originalHTMLContent[startIndex+6:], "</code>")
+		if endIndex == -1 {
+			break
+		}
+		endIndex += startIndex + 6
+
+		codeSegment := originalHTMLContent[startIndex : endIndex+7] // Include </code>
+		fmt.Println(">>>>", codeSegment)
+		if !strings.Contains(codeSegment, "class=") {
+			replacement := strings.Replace(codeSegment, "<code>", "<span class=\"ts-text is-code\">", 1)
+			replacement = strings.Replace(replacement, "</code>", "</span>", 1)
+			originalHTMLContent = strings.Replace(originalHTMLContent, codeSegment, replacement, 1)
+		} else {
+			// Skip if <code> already has a class
+			break
+		}
+	}
 
 	//Replace blockquote to <div class="ts-quote">
 	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<blockquote>", "<div class=\"ts-quote\">")

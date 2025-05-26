@@ -265,7 +265,9 @@ func mdToHTML(md []byte) []byte {
 
 	// create HTML renderer with extensions
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank
-	opts := html.RendererOptions{Flags: htmlFlags}
+	opts := html.RendererOptions{
+		Flags: htmlFlags,
+	}
 	renderer := html.NewRenderer(opts)
 
 	return markdown.Render(doc, renderer)
