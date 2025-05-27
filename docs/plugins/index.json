@@ -17,6 +17,16 @@
           "filename": "1. Introduction/2. Getting Started.md",
           "title": "Getting Started",
           "type": "file"
+        },
+        {
+          "filename": "1. Introduction/3. Installing Plugin.md",
+          "title": "Installing Plugin",
+          "type": "file"
+        },
+        {
+          "filename": "1. Introduction/4. Enable Plugins.md",
+          "title": "Enable Plugins",
+          "type": "file"
         }
       ]
     },
@@ -44,13 +54,25 @@
           "filename": "2. Architecture/4. Capture Modes.md",
           "title": "Capture Modes",
           "type": "file"
+        },
+        {
+          "filename": "2. Architecture/5. Plugin UI.md",
+          "title": "Plugin UI",
+          "type": "file"
         }
       ]
     },
     {
-      "title": "Getting Started",
-      "path": "3. Getting Started",
-      "type": "folder"
+      "title": "Basic Examples",
+      "path": "3. Basic Examples",
+      "type": "folder",
+      "files": [
+        {
+          "filename": "3. Basic Examples/1. Hello World.md",
+          "title": "Hello World",
+          "type": "file"
+        }
+      ]
     },
     {
       "filename": "index.md",

@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-      Configure | Zoraxy Documentation
+      Enable Plugins | Zoraxy Documentation
     </title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -98,7 +98,7 @@
                   <a class="item" href="/html/1. Introduction/3. Installing Plugin.html">
                     Installing Plugin
                   </a>
-                  <a class="item" href="/html/1. Introduction/4. Enable Plugins.html">
+                  <a class="item is-active" href="/html/1. Introduction/4. Enable Plugins.html">
                     Enable Plugins
                   </a>
                 </div>
@@ -113,7 +113,7 @@
                   <a class="item" href="/html/2. Architecture/2. Introspect.html">
                     Introspect
                   </a>
-                  <a class="item is-active" href="/html/2. Architecture/3. Configure.html">
+                  <a class="item" href="/html/2. Architecture/3. Configure.html">
                     Configure
                   </a>
                   <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
@@ -141,58 +141,70 @@
           <div class="column is-12-wide">
             <div class="ts-box">
               <div class="ts-container is-padded has-top-padded-large">
-                <h1 id="configure">
-                  Configure
+                <h1 id="enable-plugins">
+                  Enable Plugins
                 </h1>
                 <p>
                   <p class="ts-text">
-                    Configure or Configure Spec is the
-                    <span class="ts-text is-code">
-                      exec
-                    </span>
-                    call where Zoraxy start the plugin. The configure spec JSON structure is defined in
-                    <span class="ts-text is-code">
-                      zoraxy_plugin
-                    </span>
-                    library.
+                    Last Update: 25/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  <p class="ts-text">
+                    To enable and assign a plugin to a certain HTTP Proxy Rule, you will need to do the following steps
+                  </p>
+                </p>
+                <h2 id="1-create-a-tag-for-your-http-proxy-rules">
+                  1. Create a tag for your HTTP Proxy Rules
+                </h2>
+                <p>
+                  Let say you want to enable debugger on some of your HTTP Proxy Rules. You can do that by first creating a tag in the tag editor. In the example below, we will be using the tag &ldquo;debug&rdquo;. After adding the tag to the HTTP Proxy rule, you will see something like this.
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Enable Plugins/image-20250527193748456.png" alt="image-20250527193748456" />
+                  </div>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="2-enable-plugin">
+                  2. Enable Plugin
+                </h2>
+                <p>
+                  Click on the &ldquo;Enable&rdquo; button on the plugin which you want to enable
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Enable Plugins/image-20250527193601017.png" alt="image-20250527193601017" />
+                  </div>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="3-assign-plugin-to-http-proxy-rule">
+                  3. Assign Plugin to HTTP Proxy Rule
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Finally, select the tag that you just created in the dropdown menu
                   </p>
                 </p>
                 <p>
-                  <p class="ts-text">
-                    As the time of writing, the
-                    <span class="ts-text is-code">
-                      ConfigureSpec
-                    </span>
-                    only contains information on some basic info.
-                  </p>
-                </p>
-                <pre><code class="language-go">type ConfigureSpec struct {
-	Port         int                  `json:&quot;port&quot;`          //Port to listen
-	RuntimeConst RuntimeConstantValue `json:&quot;runtime_const&quot;` //Runtime constant values
-	//To be expanded
-}
-
-</code></pre>
-                <p>
-                  <p class="ts-text">
-                    The
-                    <span class="ts-text is-code">
-                      ConfigureSpec
-                    </span>
-                    struct will be parsed to JSON and pass to your plugin via the
-                    <span class="ts-text is-code">
-                      -configure=(json payload here)
-                    </span>
-                    .
-                  </p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Enable Plugins/image-20250527194052408.png" alt="image-20250527194052408" />
+                  </div>
                 </p>
                 <p>
                   <p class="ts-text">
-                    In your plugin, you can use the
-                    <span class="ts-text is-code">
-                      zoraxy_plugin
-                    </span>
-                    library to parse it or parse it manually (if you are developing a plugin with other languages).
+                    Afterward, you will see the plugin is attached to the target tag
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Enable Plugins/image-20250527195703464.png" alt="image-20250527195703464" />
+                  </div>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    It means the plugin is enabled on the HTTP proxy rule
                   </p>
                 </p>
               </div>

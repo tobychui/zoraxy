@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-      Configure | Zoraxy Documentation
+      Plugin UI | Zoraxy Documentation
     </title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -113,13 +113,13 @@
                   <a class="item" href="/html/2. Architecture/2. Introspect.html">
                     Introspect
                   </a>
-                  <a class="item is-active" href="/html/2. Architecture/3. Configure.html">
+                  <a class="item" href="/html/2. Architecture/3. Configure.html">
                     Configure
                   </a>
                   <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
                     Capture Modes
                   </a>
-                  <a class="item" href="/html/2. Architecture/5. Plugin UI.html">
+                  <a class="item is-active" href="/html/2. Architecture/5. Plugin UI.html">
                     Plugin UI
                   </a>
                 </div>
@@ -141,58 +141,68 @@
           <div class="column is-12-wide">
             <div class="ts-box">
               <div class="ts-container is-padded has-top-padded-large">
-                <h1 id="configure">
-                  Configure
+                <h1 id="plugin-ui">
+                  Plugin UI
                 </h1>
                 <p>
                   <p class="ts-text">
-                    Configure or Configure Spec is the
-                    <span class="ts-text is-code">
-                      exec
-                    </span>
-                    call where Zoraxy start the plugin. The configure spec JSON structure is defined in
-                    <span class="ts-text is-code">
-                      zoraxy_plugin
-                    </span>
-                    library.
+                    Last Update: 25/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  <p class="ts-text">
+                    A plugin can optionally expose a Web UI interface for user configuration.
                   </p>
                 </p>
                 <p>
                   <p class="ts-text">
-                    As the time of writing, the
-                    <span class="ts-text is-code">
-                      ConfigureSpec
+                    <span class="ts-text is-heavy">
+                      It is generally recommended that a plugin have such UI exposed for easy configurations.
                     </span>
-                    only contains information on some basic info.
+                    As plugin installed via plugin store provides limited ways for a user to configure the plugin, the plugin web UI will be the best way for user to setup your plugin.
                   </p>
                 </p>
-                <pre><code class="language-go">type ConfigureSpec struct {
-	Port         int                  `json:&quot;port&quot;`          //Port to listen
-	RuntimeConst RuntimeConstantValue `json:&quot;runtime_const&quot;` //Runtime constant values
-	//To be expanded
-}
-
-</code></pre>
+                <h2 id="plugin-web-ui-access">
+                  Plugin Web UI Access
+                </h2>
                 <p>
                   <p class="ts-text">
-                    The
+                    If a plugin provide a Web UI endpoint for Zoraxy during the introspect process, a new item will be shown in the Plugins section on Zoraxy side menu. Below is an example of the Web UI of UPnP Port Forwarder plugin.
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/5. Plugin UI/image-20250527201750613.png" alt="image-20250527201750613" />
+                  </div>
+                </p>
+                <h2 id="front-end-developer-notes">
+                  Front-end Developer Notes
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    The Web UI is implemented as a reverse proxy and embed in an iframe. So you do not need to handle CORS issues with the web UI (as it will be proxy internally by Zoraxy as exposed as something like a virtual directory mounted website).
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    However, the plugin web UI is exposed via the path
                     <span class="ts-text is-code">
-                      ConfigureSpec
+                      /plugin.ui/{{plugin_uuid}}/
                     </span>
-                    struct will be parsed to JSON and pass to your plugin via the
+                    , for example,
                     <span class="ts-text is-code">
-                      -configure=(json payload here)
+                      /plugin.ui/org.aroz.zoraxy.plugins.upnp/
                     </span>
                     .
-                  </p>
-                </p>
-                <p>
-                  <p class="ts-text">
-                    In your plugin, you can use the
-                    <span class="ts-text is-code">
-                      zoraxy_plugin
+                    <span class="ts-text is-heavy">
+                      When developing the plugin web UI, do not use absolute path for any resources used in the HTML file
                     </span>
-                    library to parse it or parse it manually (if you are developing a plugin with other languages).
+                    , unless you are trying to re-use Zoraxy components like css or image elements stored in Zoraxy embedded web file system (e.g.
+                    <span class="ts-text is-code">
+                      /img/logo.svg
+                    </span>
+                    ).
                   </p>
                 </p>
               </div>

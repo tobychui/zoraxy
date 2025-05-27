@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      Hello World | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <script>
+      hljs.highlightAll();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/tomorrow-night-bright.css">
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/html/assets/logo.png" dark_src="/html/assets/logo_white.png" src="/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="#!" class="item">
+            Examples
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item" href="/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                  <a class="item" href="/html/1. Introduction/3. Installing Plugin.html">
+                    Installing Plugin
+                  </a>
+                  <a class="item" href="/html/1. Introduction/4. Enable Plugins.html">
+                    Enable Plugins
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item" href="/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item" href="/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                  <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
+                  <a class="item" href="/html/2. Architecture/5. Plugin UI.html">
+                    Plugin UI
+                  </a>
+                </div>
+                <a class="item">
+                  Basic Examples
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item is-active" href="/html/3. Basic Examples/1. Hello World.html">
+                    Hello World
+                  </a>
+                </div>
+                <a class="item" href="/html/index.html">
+                  index
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="hello-world">
+                  Hello World!
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    Last Update: 25/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  Let start with a really simple Hello World plugin. This only function of this plugin is to print &ldquo;Hello World&rdquo; in the plugin web UI.
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="1-name-your-plugin">
+                  1. Name your plugin
+                </h2>
+                <p>
+                  First things first, give your plugin a name. In this example, we are using the name &ldquo;helloworld&rdquo;.
+                </p>
+                <p>
+                  <p class="ts-text">
+                    <span class="ts-text is-heavy">
+                      Plugin name cannot contain space or special characters
+                    </span>
+                    , so you must use a file name that satisfy the requirement. No worry, the plugin file name is not the same as the plugin display name in the introspect.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="2-create-the-plugin-folder">
+                  2. Create the plugin folder
+                </h2>
+                <p>
+                  If your zoraxy root folder do not contains a folder named &ldquo;plugins&rdquo;, it might implies that your Zoraxy is freshly clone from Github.
+                  <span class="ts-text is-heavy">
+                    You will need to build and run it once to start working on your plugin
+                  </span>
+                  , so if you have a newly cloned source code of Zoraxy, do the followings.
+                </p>
+                <pre><code class="language-bash">git clone https://github.com/tobychui/zoraxy
+cd src
+go mod tidy
+go build
+sudo ./zoraxy
+</code></pre>
+                <p>
+                  Afterward, create a plugin folder under your Zoraxy development environment that is exactly matching your plugin name. In the above example, the folder name should be &ldquo;helloworld&rdquo;.
+                </p>
+                <pre><code class="language-bash"># Assume you are already inside the src/ folder
+mkdir helloworld
+cd ./helloworld
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="3-create-a-go-project">
+                  3. Create a go project
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Similar to any Go project, you can start by creating a
+                    <span class="ts-text is-code">
+                      main.go
+                    </span>
+                    file. Next, you would want to let the go compiler knows your plugin name so when generating a binary file, it knows what to name it. This can be done via using the
+                    <span class="ts-text is-code">
+                      go mod init
+                    </span>
+                    command.
+                  </p>
+                </p>
+                <pre><code class="language-bash">touch main.go
+go mod init example.com/zoraxy/helloworld
+ls
+# After you are done, you should see the followings
+# go.mod  main.go
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="4-copy-the-zoraxy-plugin-lib-from-zoraxy-source-code">
+                  4. Copy the Zoraxy plugin lib from Zoraxy source code
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Locate the Zoraxy plugin library from the Zoraxy source code. You can find the
+                    <span class="ts-text is-code">
+                      zoraxy_plugin
+                    </span>
+                    Go module under
+                    <span class="ts-text is-code">
+                      src/mod/plugins/zoraxy_plugin
+                    </span>
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Copy the
+                    <span class="ts-text is-code">
+                      zoraxy_plugin
+                    </span>
+                    folder from the Zoraxy source code mod folder into the your plugin’s mod folder. Let assume you use the same mod folder name  as Zoraxy as
+                    <span class="ts-text is-code">
+                      mod
+                    </span>
+                    , then your copied library path should be
+                    <span class="ts-text is-code">
+                      plugins/helloword/mod/zoraxy_plugin
+                    </span>
+                  </p>
+                </p>
+                <pre><code class="language-bash">mkdir ./mod
+cp -r &quot;mod/plugins/zoraxy_plugin&quot; ./mod/
+ls ./mod/zoraxy_plugin/
+# You should see something like this (might be different in future versions)
+# dev_webserver.go  dynamic_router.go  embed_webserver.go  README.txt  static_router.go  zoraxy_plugin.go
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="5-create-a-web-resources-folder">
+                  5. Create a web resources folder
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Lets create a www folder and put all our web resources, we need to create an
+                    <span class="ts-text is-code">
+                      index.html
+                    </span>
+                    file as our plugin web ui homepage. This can be done by creating a HTML file in the www folder.
+                  </p>
+                </p>
+                <pre><code class="language-bash"># Assuming you are currently in the src/plugins/helloworld/ folder
+mkdir www
+cd www
+touch index.html
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    And here is an example
+                    <span class="ts-text is-code">
+                      index.html
+                    </span>
+                    file that uses the Zoraxy internal resources like css and dark theme toggle mechanism. That csrf token template is not straightly needed in this example as helloworld plugin do not make any POST request to Zoraxy webmin interface, but it might come in handy later.
+                  </p>
+                </p>
+                <pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;UTF-8&quot;&gt;
+    &lt;!-- CSRF token, if your plugin need to make POST request to backend --&gt;
+    &lt;meta name=&quot;zoraxy.csrf.Token&quot; content=&quot;{{.csrfToken}}&quot;&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/script/semantic/semantic.min.css&quot;&gt;
+    &lt;script src=&quot;/script/jquery-3.6.0.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;/script/semantic/semantic.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;/script/utils.js&quot;&gt;&lt;/script&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/main.css&quot;&gt;
+    &lt;title&gt;Hello World&lt;/title&gt;
+    &lt;style&gt;
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background:none;
+        }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- Dark theme script must be included after body tag--&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/darktheme.css&quot;&gt;
+    &lt;script src=&quot;/script/darktheme.js&quot;&gt;&lt;/script&gt;
+    &lt;div style=&quot;text-align: center;&quot;&gt;
+        &lt;h1&gt;Hello World&lt;/h1&gt;
+        &lt;p&gt;Welcome to your first Zoraxy plugin&lt;/p&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="6-creating-a-handler-for-introspect">
+                  6. Creating a handler for Introspect
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    To create a handler for introspect, you can first start your plugin with a few constants.
+                  </p>
+                </p>
+                <div class="ts-list is-ordered">
+                  <div class="item">
+                    Plugin ID, this must be unique.  You can use a domain you own like
+                    <span class="ts-text is-code">
+                      com.example.helloworld
+                    </span>
+                  </div>
+                  <div class="item">
+                    UI Path, for now we uses &ldquo;/&rdquo; as this plugin do not have any other endpoints, so we can use the whole root just for web UI
+                  </div>
+                  <div class="item">
+                    Web root, for trimming off from the embedded web folder so when user can visit your
+                    <span class="ts-text is-code">
+                      index.html
+                    </span>
+                    by accessing
+                    <span class="ts-text is-code">
+                      /
+                    </span>
+                    instead of needing to navigate to
+                    <span class="ts-text is-code">
+                      /www
+                    </span>
+                  </div>
+                </div>
+                <p>
+                  <p class="ts-text">
+                    After you have defined these constant, we can use
+                    <span class="ts-text is-code">
+                      plugin.ServeAndRecvSpec
+                    </span>
+                    function to handle the handshake between Zoraxy and your plugin.
+                  </p>
+                </p>
+                <pre><code class="language-go">const (
+	PLUGIN_ID = &quot;com.example.helloworld&quot;
+	UI_PATH   = &quot;/&quot;
+	WEB_ROOT  = &quot;/www&quot;
+)
+
+func main(){
+    runtimeCfg, err := plugin.ServeAndRecvSpec(&amp;plugin.IntroSpect{
+		ID:            &quot;com.example.helloworld&quot;,
+		Name:          &quot;Hello World Plugin&quot;,
+		Author:        &quot;foobar&quot;,
+		AuthorContact: &quot;admin@example.com&quot;,
+		Description:   &quot;A simple hello world plugin&quot;,
+		URL:           &quot;https://example.com&quot;,
+		Type:          plugin.PluginType_Utilities,
+		VersionMajor:  1,
+		VersionMinor:  0,
+		VersionPatch:  0,
+
+		// As this is a utility plugin, we don't need to capture any traffic
+		// but only serve the UI, so we set the UI (relative to the plugin path) to &quot;/&quot;
+		UIPath: UI_PATH,
+	})
+	if err != nil {
+		//Terminate or enter standalone mode here
+		panic(err)
+	}
+}
+</code></pre>
+                <p>
+                  <span class="ts-text is-heavy">
+                    Notes: If some post processing is needed between Introspect and Configure, you can use two seperate function to handle the first start and the second starting of your plugin. The &ldquo;seperated version&rdquo; of
+                    <span class="ts-text is-code">
+                      ServeAndRecvSpec
+                    </span>
+                    is defined as
+                    <span class="ts-text is-code">
+                      ServeIntroSpect(pluginSpect *IntroSpect)
+                    </span>
+                    and
+                    <span class="ts-text is-code">
+                      RecvConfigureSpec() (*ConfigureSpec, error)
+                    </span>
+                    . See
+                    <span class="ts-text is-code">
+                      zoraxy_plugin.go
+                    </span>
+                    for more information.
+                  </span>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="7-creating-a-web-server-from-embedded-web-fs">
+                  7. Creating a web server from embedded web fs
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    After that, we need to create a web server to serve our plugin UI to Zoraxy via HTTP. This can be done via the
+                    <span class="ts-text is-code">
+                      http.FileServer
+                    </span>
+                    but for simplicity and ease of upgrade, the Zoraxy plugin library provided an easy to use embedded web FS server API for plugin developers.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    To use the Zoraxy plugin embedded web server, you first need to embed your web fs into Zoraxy as such.
+                  </p>
+                </p>
+                <pre><code class="language-go">import (
+	_ &quot;embed&quot;
+	&quot;fmt&quot;
+
+	plugin &quot;example.com/zoraxy/helloworld/mod/zoraxy_plugin&quot;
+)
+
+//go:embed www/*
+var content embed.FS
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    Then call to the
+                    <span class="ts-text is-code">
+                      NewPluginEmbedUIRouter
+                    </span>
+                    to create a new UI router from the embedded Fs.
+                  </p>
+                </p>
+                <pre><code class="language-go">// Create a new PluginEmbedUIRouter that will serve the UI from web folder
+// The router will also help to handle the termination of the plugin when
+// a user wants to stop the plugin via Zoraxy Web UI
+embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &amp;content, WEB_ROOT, UI_PATH)
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    Here is the tricky part. since not all platform support cross process signaling, Zoraxy plugin uses HTTP request to request a plugin to shutdown. The
+                    <span class="ts-text is-code">
+                      embedWebRouter
+                    </span>
+                    object has a function named
+                    <span class="ts-text is-code">
+                      RegisterTerminateHandler
+                    </span>
+                    where you can easily use this function to register actions that needed to be done before shutdown.
+                  </p>
+                </p>
+                <pre><code class="language-go">embedWebRouter.RegisterTerminateHandler(func() {
+	// Do cleanup here if needed
+	fmt.Println(&quot;Hello World Plugin Exited&quot;)
+}, nil)
+</code></pre>
+                <p>
+                  <span class="ts-text is-heavy">
+                    Notes: This is a blocking function. That is why Zoraxy has a build-in timeout context where if the terminate request takes more than 3 seconds, the plugin process will be treated as &ldquo;freezed&rdquo; and forcefully terminated. So please make sure the terminate handler complete its shutdown procedures within 3 seconds.
+                  </span>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="8-register-serve-the-web-ui">
+                  8. Register &amp; Serve the Web UI
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    After you have created a embedded web router, you can register it to the UI PATH as follows.
+                  </p>
+                </p>
+                <pre><code class="language-go">// Serve the hello world page in the www folder
+http.Handle(UI_PATH, embedWebRouter.Handler())
+fmt.Println(&quot;Hello World started at http://127.0.0.1:&quot; + strconv.Itoa(runtimeCfg.Port))
+err = http.ListenAndServe(&quot;127.0.0.1:&quot;+strconv.Itoa(runtimeCfg.Port), nil)
+if err != nil {
+	panic(err)
+}
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    As this is just the standard golang net/http package, you can of course add more Function Handlers to it based on your needs. There are something that you need to know about adding API endpoints, we will discuss this in the later sections.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="9-build-and-test">
+                  9. Build and Test
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    After saving the
+                    <span class="ts-text is-code">
+                      main.go
+                    </span>
+                    file, you can now build your plugin with
+                    <span class="ts-text is-code">
+                      go build
+                    </span>
+                    . It should generate the plugin in your platform architecture and OS. If you are on Linux, it will be
+                    <span class="ts-text is-code">
+                      helloworld
+                    </span>
+                    and if you are on Windows, it will be
+                    <span class="ts-text is-code">
+                      helloworld.exe
+                    </span>
+                    .
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    After you are done, restart Zoraxy and enable your plugin in the Plugin List. Now you can test and debug  your plugin with your HTTP Proxy Rules. All the STDOUT and STDERR of your plugin will be forwarded to the STDOUT of Zoraxy as well as the log file.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    <span class="ts-text is-heavy">
+                      Tips
+                    </span>
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    You can also enable the Developer Option - Plugin Auto Reload function if you are too lazy to restart Zoraxy everytime the plugin binary changed.
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/1. Hello World/image-20250527210849767.png" alt="image-20250527210849767" />
+                  </div>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="10-full-code">
+                  10. Full Code
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    This is the full code of the helloworld plugin main.go file.
+                  </p>
+                </p>
+                <pre><code class="language-go">package main
+
+import (
+	&quot;embed&quot;
+	_ &quot;embed&quot;
+	&quot;fmt&quot;
+	&quot;net/http&quot;
+	&quot;strconv&quot;
+
+	plugin &quot;example.com/zoraxy/helloworld/mod/zoraxy_plugin&quot;
+)
+
+const (
+	PLUGIN_ID = &quot;com.example.helloworld&quot;
+	UI_PATH   = &quot;/&quot;
+	WEB_ROOT  = &quot;/www&quot;
+)
+
+//go:embed www/*
+var content embed.FS
+
+func main() {
+	// Serve the plugin intro spect
+	// This will print the plugin intro spect and exit if the -introspect flag is provided
+	runtimeCfg, err := plugin.ServeAndRecvSpec(&amp;plugin.IntroSpect{
+		ID:            &quot;com.example.helloworld&quot;,
+		Name:          &quot;Hello World Plugin&quot;,
+		Author:        &quot;foobar&quot;,
+		AuthorContact: &quot;admin@example.com&quot;,
+		Description:   &quot;A simple hello world plugin&quot;,
+		URL:           &quot;https://example.com&quot;,
+		Type:          plugin.PluginType_Utilities,
+		VersionMajor:  1,
+		VersionMinor:  0,
+		VersionPatch:  0,
+
+		// As this is a utility plugin, we don't need to capture any traffic
+		// but only serve the UI, so we set the UI (relative to the plugin path) to &quot;/&quot;
+		UIPath: UI_PATH,
+	})
+	if err != nil {
+		//Terminate or enter standalone mode here
+		panic(err)
+	}
+
+	// Create a new PluginEmbedUIRouter that will serve the UI from web folder
+	// The router will also help to handle the termination of the plugin when
+	// a user wants to stop the plugin via Zoraxy Web UI
+	embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &amp;content, WEB_ROOT, UI_PATH)
+	embedWebRouter.RegisterTerminateHandler(func() {
+		// Do cleanup here if needed
+		fmt.Println(&quot;Hello World Plugin Exited&quot;)
+	}, nil)
+
+	// Serve the hello world page in the www folder
+	http.Handle(UI_PATH, embedWebRouter.Handler())
+	fmt.Println(&quot;Hello World started at http://127.0.0.1:&quot; + strconv.Itoa(runtimeCfg.Port))
+	err = http.ListenAndServe(&quot;127.0.0.1:&quot;+strconv.Itoa(runtimeCfg.Port), nil)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+</code></pre>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+  </body>
+</html>

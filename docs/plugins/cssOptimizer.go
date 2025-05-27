@@ -106,7 +106,6 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 		endIndex += startIndex + 6
 
 		codeSegment := originalHTMLContent[startIndex : endIndex+7] // Include </code>
-		fmt.Println(">>>>", codeSegment)
 		if !strings.Contains(codeSegment, "class=") {
 			replacement := strings.Replace(codeSegment, "<code>", "<span class=\"ts-text is-code\">", 1)
 			replacement = strings.Replace(replacement, "</code>", "</span>", 1)

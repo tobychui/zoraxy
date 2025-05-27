@@ -95,6 +95,12 @@
                   <a class="item" href="/html/1. Introduction/2. Getting Started.html">
                     Getting Started
                   </a>
+                  <a class="item" href="/html/1. Introduction/3. Installing Plugin.html">
+                    Installing Plugin
+                  </a>
+                  <a class="item" href="/html/1. Introduction/4. Enable Plugins.html">
+                    Enable Plugins
+                  </a>
                 </div>
                 <a class="item">
                   Architecture
@@ -113,11 +119,19 @@
                   <a class="item" href="/html/2. Architecture/4. Capture Modes.html">
                     Capture Modes
                   </a>
+                  <a class="item" href="/html/2. Architecture/5. Plugin UI.html">
+                    Plugin UI
+                  </a>
                 </div>
                 <a class="item">
-                  Getting Started
+                  Basic Examples
                   <span class="ts-icon is-caret-down-icon"></span>
                 </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/html/3. Basic Examples/1. Hello World.html">
+                    Hello World
+                  </a>
+                </div>
                 <a class="item" href="/html/index.html">
                   index
                 </a>
@@ -130,6 +144,12 @@
                 <h1 id="plugin-architecture">
                   Plugin Architecture
                 </h1>
+                <p>
+                  <p class="ts-text">
+                    Last Update: 25/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
                 <p>
                   <p class="ts-text">
                     The Zoraxy Plugin uses a 3 steps approach to get information from plugin, setup the plugin and forward request to plugin. The name of the steps are partially referred from dbus designs as followings.
@@ -155,6 +175,11 @@
                   <div class="ts-image is-rounded" style="max-width: 800px">
                     <img src="img/1. Plugin Architecture/plugin_workflow.png" alt="" />
                   </div>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    This design make sure that the Zoraxy plugins do not depends on platform dependent implementations that uses, for example, unix socket. This also avoided protocol that require complex conversion to and from HTTP request (data structure) like gRPC, while making sure the plugin can be cross compile into different CPU architecture or OS environment with little to no effect on its performance.
+                  </p>
                 </p>
               </div>
               <br>
