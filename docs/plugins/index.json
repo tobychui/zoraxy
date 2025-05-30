@@ -76,6 +76,11 @@
           "filename": "3. Basic Examples/2. RESTful Example.md",
           "title": "RESTful Example",
           "type": "file"
+        },
+        {
+          "filename": "3. Basic Examples/3. Static Capture Example.md",
+          "title": "Static Capture Example",
+          "type": "file"
         }
       ]
     },

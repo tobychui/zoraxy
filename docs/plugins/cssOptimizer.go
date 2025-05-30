@@ -120,5 +120,11 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "<blockquote>", "<div class=\"ts-quote\">")
 	originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "</blockquote>", "</div>")
 
+	/*
+		originalHTMLContent = strings.ReplaceAll(originalHTMLContent, "language-xml", "")
+		// Remove class attribute from <code> inside <pre>
+		re := regexp.MustCompile(`<pre><code class="[^"]*">`)
+		originalHTMLContent = re.ReplaceAllString(originalHTMLContent, "<pre><code>")
+	*/
 	return []byte(originalHTMLContent), err
 }
