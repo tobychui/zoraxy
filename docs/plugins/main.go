@@ -41,8 +41,8 @@ func main() {
 
 func startWebServerInBackground() {
 	go func() {
-		server := &http.Server{Addr: ":8080", Handler: http.DefaultServeMux}
 		http.DefaultServeMux = http.NewServeMux()
+		server := &http.Server{Addr: ":8080", Handler: http.DefaultServeMux}
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			http.FileServer(http.Dir("./")).ServeHTTP(w, r)
 		})

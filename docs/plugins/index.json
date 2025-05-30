@@ -71,6 +71,11 @@
           "filename": "3. Basic Examples/1. Hello World.md",
           "title": "Hello World",
           "type": "file"
+        },
+        {
+          "filename": "3. Basic Examples/2. RESTful Example.md",
+          "title": "RESTful Example",
+          "type": "file"
         }
       ]
     },
