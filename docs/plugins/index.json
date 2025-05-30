@@ -27,6 +27,11 @@
           "filename": "1. Introduction/4. Enable Plugins.md",
           "title": "Enable Plugins",
           "type": "file"
+        },
+        {
+          "filename": "1. Introduction/5. Viewing Plugin Info.md",
+          "title": "Viewing Plugin Info",
+          "type": "file"
         }
       ]
     },
