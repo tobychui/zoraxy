@@ -64,6 +64,11 @@
           "filename": "2. Architecture/5. Plugin UI.md",
           "title": "Plugin UI",
           "type": "file"
+        },
+        {
+          "filename": "2. Architecture/6. Compile a Plugin.md",
+          "title": "Compile a Plugin",
+          "type": "file"
         }
       ]
     },
@@ -85,6 +90,11 @@
         {
           "filename": "3. Basic Examples/3. Static Capture Example.md",
           "title": "Static Capture Example",
+          "type": "file"
+        },
+        {
+          "filename": "3. Basic Examples/4. Dynamic Capture Example.md",
+          "title": "Dynamic Capture Example",
           "type": "file"
         }
       ]
