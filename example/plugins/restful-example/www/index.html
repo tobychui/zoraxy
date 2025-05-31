@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- CSRF token, if your plugin need to make POST request to backend -->
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <link rel="stylesheet" href="/script/semantic/semantic.min.css">
+    <script src="/script/jquery-3.6.0.min.js"></script>
+    <script src="/script/semantic/semantic.min.js"></script>
+    <script src="/script/utils.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/main.css">
+    <title>RESTful Example</title>
+    <style>
+        body {
+            background-color: var(--theme_bg_primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Dark theme script must be included after body tag-->
+    <link rel="stylesheet" href="/darktheme.css">
+    <script src="/script/darktheme.js"></script>
+    <br>
+    <div class="standardContainer">
+        <div class="ui container">
+            <h1>RESTFul API Example</h1>
+            <!-- The example below show how HTTP GET is used with Zoraxy plugin -->
+            <h3>Echo Test (HTTP GET)</h3>
+            <div class="ui form">
+                <div class="field">
+                    <label for="nameInput">Enter your name:</label>
+                    <input type="text" id="nameInput" placeholder="Your name">
+                </div>
+                <button class="ui button primary" id="sendRequestButton">Send Request</button>
+                <div class="ui message" id="responseMessage" style="display: none;"></div>
+            </div>
+
+            <script>
+                document.getElementById('sendRequestButton').addEventListener('click', function() {
+                    const name = document.getElementById('nameInput').value;
+                    if (name.trim() === "") {
+                        alert("Please enter a name.");
+                        return;
+                    }
+                    // Note the relative path is used here!
+                    // GET do not require CSRF token, so you can use $.ajax directly
+                    // or $.cjax (defined in /script/utils.js) to make GET request
+                    $.ajax({
+                        url: `./api/echo`,
+                        type: 'GET',
+                        data: { name: name },
+                        success: function(data) {
+                            console.log('Response:', data.message);
+                            $('#responseMessage').text(data.message).show();
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error:', error);
+                            $('#responseMessage').text('An error occurred while processing your request.').show();
+                        }
+                    });
+                });
+            </script>
+            <!-- The example below shows how form post can be used in plugin -->
+            <h3>Form Post Test (HTTP POST)</h3>
+            <div class="ui form">
+                <div class="field">
+                    <label for="postNameInput">Name:</label>
+                    <input type="text" id="postNameInput" placeholder="Your name">
+                </div>
+                <div class="field">
+                    <label for="postAgeInput">Age:</label>
+                    <input type="number" id="postAgeInput" placeholder="Your age">
+                </div>
+                <div class="field">
+                    <label>Gender:</label>
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="genderMale" name="gender" value="Male">
+                        <label for="genderMale">Male</label>
+                    </div>
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="genderFemale" name="gender" value="Female">
+                        <label for="genderFemale">Female</label>
+                    </div>
+                </div>
+                <button class="ui button primary" id="postRequestButton">Send</button>
+                <div class="ui message" id="postResponseMessage" style="display: none;"></div>
+            </div>
+
+            <script>
+                document.getElementById('postRequestButton').addEventListener('click', function() {
+                    const name = document.getElementById('postNameInput').value;
+                    const age = document.getElementById('postAgeInput').value;
+                    const genderMale = document.getElementById('genderMale').checked;
+                    const genderFemale = document.getElementById('genderFemale').checked;
+
+                    if (name.trim() === "" || age.trim() === "" || (!genderMale && !genderFemale)) {
+                        alert("Please fill out all fields.");
+                        return;
+                    }
+
+                    const gender = genderMale ? "Male" : "Female";
+                    
+                    // .cjax (defined in /script/utils.js) is used to make POST request with CSRF token support
+                    // alternatively you can use $.ajax with CSRF token in headers
+                    // the header is named "X-CSRF-Token" and the value is taken from the head
+                    // meta tag content (i.e. <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">)
+                    $.cjax({
+                        url: './api/post',
+                        type: 'POST',
+                        data: { name: name, age: age, gender: gender },
+                        success: function(data) {
+                            console.log('Response:', data);
+                            $('#postResponseMessage').html(data).show();
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error:', error);
+                            $('#postResponseMessage').text('An error occurred while processing your request.').show();
+                        }
+                    });
+                });
+            </script>
+        </div>
+    </div>
+</body>
+</html>
