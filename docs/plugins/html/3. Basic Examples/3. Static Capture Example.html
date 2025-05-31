@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      Static Capture Example | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/plugins/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/plugins/html/assets/logo.png" dark_src="/plugins/html/assets/logo_white.png" src="/plugins/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="https://github.com/tobychui/zoraxy/tree/main/example/plugins" target="_blank" class="item">
+            Examples
+            <span class="ts-icon is-arrow-up-right-from-square-icon"></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/3. Installing Plugin.html">
+                    Installing Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/4. Enable Plugins.html">
+                    Enable Plugins
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/5. Viewing Plugin Info.html">
+                    Viewing Plugin Info
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/5. Plugin UI.html">
+                    Plugin UI
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/6. Compile a Plugin.html">
+                    Compile a Plugin
+                  </a>
+                </div>
+                <a class="item">
+                  Basic Examples
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/3. Basic Examples/1. Hello World.html">
+                    Hello World
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/2. RESTful Example.html">
+                    RESTful Example
+                  </a>
+                  <a class="item is-active" href="/plugins/html/3. Basic Examples/3. Static Capture Example.html">
+                    Static Capture Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/4. Dynamic Capture Example.html">
+                    Dynamic Capture Example
+                  </a>
+                </div>
+                <a class="item" href="/plugins/html/index.html">
+                  index
+                </a>
+                <a class="item" href="/plugins/html/zoraxy_plugin API.html">
+                  zoraxy_plugin API
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="static-capture-example">
+                  Static Capture Example
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    Last Update: 29/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  <p class="ts-text">
+                    This example demonstrates how to use static capture in Zoraxy plugins. Static capture allows you to define specific paths that will be intercepted by your plugin, enabling custom handling of requests to those paths.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    <span class="ts-text is-heavy">
+                      Notes: This example assumes you have already read Hello World example.
+                    </span>
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="1-create-the-plugin-folder-structure">
+                  1. Create the plugin folder structure
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Follow the same steps as the Hello World example to set up the plugin folder structure. Refer to the Hello World example sections 1 to 5 for details.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="2-define-introspect">
+                  2. Define Introspect
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    The introspect configuration specifies the static capture paths and ingress for your plugin.
+                  </p>
+                </p>
+                <pre><code class="language-go">runtimeCfg, err := plugin.ServeAndRecvSpec(&amp;plugin.IntroSpect{  
+    ID:            &quot;org.aroz.zoraxy.static-capture-example&quot;,  
+    Name:          &quot;Static Capture Example&quot;,  
+    Author:        &quot;aroz.org&quot;,  
+    AuthorContact: &quot;https://aroz.org&quot;,  
+    Description:   &quot;An example for showing how static capture works in Zoraxy.&quot;,  
+    URL:           &quot;https://zoraxy.aroz.org&quot;,  
+    Type:          plugin.PluginType_Router,  
+    VersionMajor:  1,  
+    VersionMinor:  0,  
+    VersionPatch:  0,  
+
+    StaticCapturePaths: []plugin.StaticCaptureRule{  
+        { CapturePath: &quot;/test_a&quot; },  
+        { CapturePath: &quot;/test_b&quot; },  
+    },  
+    StaticCaptureIngress: &quot;/s_capture&quot;,  
+    UIPath: UI_PATH,  
+})  
+if err != nil {  
+    panic(err)  
+}  
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    Note the
+                    <span class="ts-text is-code">
+                      StaticCapturePaths
+                    </span>
+                    . These are the paths that you want to capture in your plugin. These paths will be registered to Zoraxy and when a user have request that matches these paths (including subpaths), the request will get forwarded to your plugin. In this example, we are intercepting the
+                    <span class="ts-text is-code">
+                      /test_a
+                    </span>
+                    and
+                    <span class="ts-text is-code">
+                      test_b
+                    </span>
+                    sub-path.
+                  </p>
+                </p>
+                <p>
+                  We also defined a new value named
+                  <span class="ts-text is-code">
+                    StaticCaptureIngress
+                  </span>
+                  . This is to tell Zoraxy that &ldquo;if you receive requests that matches the above Static capture paths, please forward the request to this endpoint&rdquo;. In this example, this plugin asked Zoraxy to forward th HTTP traffic to
+                  <span class="ts-text is-code">
+                    /s_capture
+                  </span>
+                  if anything is matched.
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="3-register-static-capture-handlers">
+                  3. Register Static Capture Handlers
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Static capture handlers are used to process requests to the defined paths.  Similar to ordinary http.HandleFunc, you can register
+                    <span class="ts-text is-code">
+                      http.HandleFunc
+                    </span>
+                    as follows.
+                  </p>
+                </p>
+                <pre><code class="language-go">pathRouter := plugin.NewPathRouter()  
+
+pathRouter.RegisterPathHandler(&quot;/test_a&quot;, http.HandlerFunc(HandleCaptureA))  
+pathRouter.RegisterPathHandler(&quot;/test_b&quot;, http.HandlerFunc(HandleCaptureB))  
+
+pathRouter.SetDefaultHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+    w.Write([]byte(&quot;This request is captured by the default handler!&lt;br&gt;Request URI: &quot; + r.URL.String()))  
+}))  
+
+pathRouter.RegisterStaticCaptureHandle(STATIC_CAPTURE_INGRESS, http.DefaultServeMux)  
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    The
+                    <span class="ts-text is-code">
+                      SetDefaultHandler
+                    </span>
+                    is used to handle exceptions where a request is forwarded to your plugin but it cannot be handled by any of your registered path handlers. This is usually an implementation bug on the plugin side and you can add some help message or debug log to this function if needed.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    The
+                    <span class="ts-text is-code">
+                      RegisterStaticCaptureHandle
+                    </span>
+                    is used to register the static capture ingress endpoint, so Zoraxy knows where to forward the HTTP request when it thinks your plugin shall be the one handling the request. In this example,
+                    <span class="ts-text is-code">
+                      /s_capture
+                    </span>
+                    is used for static capture endpoint.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="4-implement-handlers">
+                  4. Implement Handlers
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Here are examples of handlers for the captured paths:
+                  </p>
+                </p>
+                <h3 id="handler-for-test-a">
+                  Handler for
+                  <span class="ts-text is-code">
+                    /test_a
+                  </span>
+                </h3>
+                <pre><code class="language-go">func HandleCaptureA(w http.ResponseWriter, r *http.Request) {  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+    w.Write([]byte(&quot;This request is captured by A handler!&lt;br&gt;Request URI: &quot; + r.URL.String()))  
+}  
+</code></pre>
+                <h3 id="handler-for-test-b">
+                  Handler for
+                  <span class="ts-text is-code">
+                    /test_b
+                  </span>
+                </h3>
+                <pre><code class="language-go">func HandleCaptureB(w http.ResponseWriter, r *http.Request) {  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+    w.Write([]byte(&quot;This request is captured by the B handler!&lt;br&gt;Request URI: &quot; + r.URL.String()))  
+}  
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    When the user request any HTTP Proxy Rule with the matching path, these two handlers will response to the request and return the hardcoded string above. Again, this is just for demonstration purpose and you should implement your functions here.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="5-render-debug-ui">
+                  5. Render Debug UI
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    The debug UI provides a simple interface for testing and inspecting requests.
+                  </p>
+                </p>
+                <pre><code class="language-go">func RenderDebugUI(w http.ResponseWriter, r *http.Request) {  
+    fmt.Fprint(w, &quot;**Plugin UI Debug Interface**\n\n[Recv Headers] \n&quot;)  
+
+    headerKeys := make([]string, 0, len(r.Header))  
+    for name := range r.Header {  
+        headerKeys = append(headerKeys, name)  
+    }  
+    sort.Strings(headerKeys)  
+    for _, name := range headerKeys {  
+        values := r.Header[name]  
+        for _, value := range values {  
+            fmt.Fprintf(w, &quot;%s: %s\n&quot;, name, value)  
+        }  
+    }  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+}  
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    This is technically not related to static capturing, but it is really helpful to have a UI to help with printing debug information. You can access the page rendered by this function in the Zoraxy plugin menu.  This should be replaced with the embedded web fs used in the Hello world example after the development is completed.
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Static Capture Example/image-20250530164549527.png" alt="image-20250530164549527" />
+                  </div>
+                </p>
+                <h2 id="6-full-code">
+                  6. Full Code
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Here is the complete code for the static capture example:
+                  </p>
+                </p>
+                <pre><code class="language-go">package main  
+
+import (  
+    &quot;fmt&quot;  
+    &quot;net/http&quot;  
+    &quot;sort&quot;  
+    &quot;strconv&quot;  
+
+    plugin &quot;example.com/zoraxy/static-capture-example/mod/zoraxy_plugin&quot;  
+)  
+
+const (  
+    PLUGIN_ID              = &quot;org.aroz.zoraxy.static-capture-example&quot;  
+    UI_PATH                = &quot;/ui&quot;  
+    STATIC_CAPTURE_INGRESS = &quot;/s_capture&quot;  
+)  
+
+func main() {  
+    runtimeCfg, err := plugin.ServeAndRecvSpec(&amp;plugin.IntroSpect{  
+        ID:            PLUGIN_ID,  
+        Name:          &quot;Static Capture Example&quot;,  
+        Author:        &quot;aroz.org&quot;,  
+        AuthorContact: &quot;https://aroz.org&quot;,  
+        Description:   &quot;An example for showing how static capture works in Zoraxy.&quot;,  
+        URL:           &quot;https://zoraxy.aroz.org&quot;,  
+        Type:          plugin.PluginType_Router,  
+        VersionMajor:  1,  
+        VersionMinor:  0,  
+        VersionPatch:  0,  
+        StaticCapturePaths: []plugin.StaticCaptureRule{  
+            { CapturePath: &quot;/test_a&quot; },  
+            { CapturePath: &quot;/test_b&quot; },  
+        },  
+        StaticCaptureIngress: STATIC_CAPTURE_INGRESS,  
+        UIPath: UI_PATH,  
+    })  
+    if err != nil {  
+        panic(err)  
+    }  
+
+    pathRouter := plugin.NewPathRouter()  
+    pathRouter.RegisterPathHandler(&quot;/test_a&quot;, http.HandlerFunc(HandleCaptureA))  
+    pathRouter.RegisterPathHandler(&quot;/test_b&quot;, http.HandlerFunc(HandleCaptureB))  
+    pathRouter.SetDefaultHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {  
+        w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+        w.Write([]byte(&quot;This request is captured by the default handler!&lt;br&gt;Request URI: &quot; + r.URL.String()))  
+    }))  
+    pathRouter.RegisterStaticCaptureHandle(STATIC_CAPTURE_INGRESS, http.DefaultServeMux)  
+
+    http.HandleFunc(UI_PATH+&quot;/&quot;, RenderDebugUI)  
+    fmt.Println(&quot;Static path capture example started at http://127.0.0.1:&quot; + strconv.Itoa(runtimeCfg.Port))  
+    http.ListenAndServe(&quot;127.0.0.1:&quot;+strconv.Itoa(runtimeCfg.Port), nil)  
+}  
+
+func HandleCaptureA(w http.ResponseWriter, r *http.Request) {  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+    w.Write([]byte(&quot;This request is captured by A handler!&lt;br&gt;Request URI: &quot; + r.URL.String()))  
+}  
+
+func HandleCaptureB(w http.ResponseWriter, r *http.Request) {  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+    w.Write([]byte(&quot;This request is captured by the B handler!&lt;br&gt;Request URI: &quot; + r.URL.String()))  
+}  
+
+func RenderDebugUI(w http.ResponseWriter, r *http.Request) {  
+    fmt.Fprint(w, &quot;**Plugin UI Debug Interface**\n\n[Recv Headers] \n&quot;)  
+
+    headerKeys := make([]string, 0, len(r.Header))  
+    for name := range r.Header {  
+        headerKeys = append(headerKeys, name)  
+    }  
+    sort.Strings(headerKeys)  
+    for _, name := range headerKeys {  
+        values := r.Header[name]  
+        for _, value := range values {  
+            fmt.Fprintf(w, &quot;%s: %s\n&quot;, name, value)  
+        }  
+    }  
+    w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)  
+}  
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="7-expected-output">
+                  7. Expected Output
+                </h2>
+                <p>
+                  To enable the plugin, add the plugin to one of the tags and assign the tag to your HTTP Proxy Rule. Here is an example of assigning the plugin to the &ldquo;debug&rdquo; tag and assign it to a localhost loopback HTTP proxy rule.
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Static Capture Example/image-20250530164903842.png" alt="image-20250530164903842" />
+                  </div>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Static Capture Example/image-20250530164916476.png" alt="image-20250530164916476" />
+                  </div>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    When the plugin is running, requests to
+                    <span class="ts-text is-code">
+                      /test_a
+                    </span>
+                    and
+                    <span class="ts-text is-code">
+                      /test_b
+                    </span>
+                    will be intercepted by their respective handlers.
+                    <span class="ts-text is-heavy">
+                      Requests to other paths will not pass through your plugin and will be handled by the default upstream server set by the HTTP proxy Rule.
+                    </span>
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/3. Static Capture Example/image-20250530165014188.png" alt="image-20250530165014188" />
+                  </div>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Example terminal output for requesting
+                    <span class="ts-text is-code">
+                      /test_a
+                    </span>
+                    :
+                  </p>
+                </p>
+                <pre><span class="ts-text is-code">This request is captured by A handler!  
+Request URI: /test_a  
+</span></pre>
+                <p>
+                  <p class="ts-text">
+                    Example output for requesting
+                    <span class="ts-text is-code">
+                      /test_b
+                    </span>
+                    :
+                  </p>
+                </p>
+                <pre><span class="ts-text is-code">This request is captured by the B handler!  
+Request URI: /test_b  
+</span></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  <p class="ts-text">
+                    Enjoy exploring static capture in Zoraxy!
+                  </p>
+                </p>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+    <script>
+      hljs.highlightAll();
+    </script>
+  </body>
+</html>

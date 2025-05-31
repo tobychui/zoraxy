@@ -50,3 +50,5 @@ src/log/
 example/plugins/ztnc/ztnc.db
 example/plugins/ztnc/authtoken.secret
 example/plugins/ztnc/ztnc.db.lock
+docs/plugins/docs.exe
+*.exe
