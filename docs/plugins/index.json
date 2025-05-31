@@ -103,6 +103,11 @@
       "filename": "index.md",
       "title": "index",
       "type": "file"
+    },
+    {
+      "filename": "zoraxy_plugin API.md",
+      "title": "zoraxy_plugin API",
+      "type": "file"
     }
   ]
 }
