@@ -28,6 +28,10 @@ func main() {
 
 	flag.Parse()
 
+	if (*root_url)[0] != '/' {
+		*root_url = "/" + *root_url
+	}
+
 	switch *mode {
 	case "build":
 		build()
