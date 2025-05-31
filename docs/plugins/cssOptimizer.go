@@ -19,7 +19,7 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 
 	doc.Find("img").Each(func(i int, s *goquery.Selection) {
 		//For each of the image element, replace the parent from p to div
-		orginalParent, err := s.Parent().Html()
+		originalParent, err := s.Parent().Html()
 		if err != nil {
 			fmt.Println("Error getting parent HTML:", err)
 			return
@@ -33,10 +33,10 @@ func optimizeCss(htmlContent []byte) ([]byte, error) {
 		encodedSrc := (&url.URL{Path: src}).String()
 
 		//Patch the bug in the parser that converts " />" to "/>"
-		orginalParent = strings.ReplaceAll(orginalParent, "/>", " />")
+		originalParent = strings.ReplaceAll(originalParent, "/>", " />")
 		fmt.Println("<div class=\"ts-image is-rounded\"><img src=\"./" + encodedSrc + "\"></div>")
 		//Replace the img with ts-image
-		originalHTMLContent = strings.Replace(originalHTMLContent, orginalParent, "<div class=\"ts-image is-rounded\" style=\"max-width: 800px\">"+orginalParent+"</div>", 1)
+		originalHTMLContent = strings.Replace(originalHTMLContent, originalParent, "<div class=\"ts-image is-rounded\" style=\"max-width: 800px\">"+originalParent+"</div>", 1)
 	})
 
 	// Add "ts-text" class to each p element

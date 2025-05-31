@@ -10,12 +10,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type FileInfo struct {
-	Filename string `json:"filename"`
-	Title    string `json:"title"`
-	Type     string `json:"type"`
-}
-
 /* Change this before deploying */
 var (
 	mode     = flag.String("m", "web", "Mode to run the application: 'web' or 'build'")

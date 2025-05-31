@@ -14,6 +14,12 @@ import (
 	"github.com/yosssi/gohtml"
 )
 
+type FileInfo struct {
+	Filename string `json:"filename"`
+	Title    string `json:"title"`
+	Type     string `json:"type"`
+}
+
 func build() {
 	rootDir := "./docs"
 	outputFile := "./index.json"
