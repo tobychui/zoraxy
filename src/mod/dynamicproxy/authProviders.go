@@ -46,6 +46,12 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
+	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodOAuth2 {
+		err := h.handleOAuth2Auth(w, r)
+		if err != nil {
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			return true
+		}
 	}
 
 	//No authentication provider, do not need to handle
@@ -107,4 +113,8 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 // Handle forward auth routing
 func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request) error {
 	return h.Parent.Option.ForwardAuthRouter.HandleAuthProviderRouting(w, r)
+}
+
+func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
+	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r)
 }

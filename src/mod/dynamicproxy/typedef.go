@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
+
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
@@ -64,6 +66,7 @@ type RouterOption struct {
 
 	/* Authentication Providers */
 	ForwardAuthRouter *forward.AuthRouter
+	OAuth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
 
 	/* Utilities */
 	Logger *logger.Logger //Logger for reverse proxy requets

@@ -56,7 +56,7 @@ func (ar *AuthentikRouter) HandleSetAuthentikURLAndHTTPS(w http.ResponseWriter, 
 			return
 		}
 
-		useHTTPS, err := utils.PostBool(r, "useHTTPS")
+		useHTTPS, err := utils.PostBool(r, "authentikUseHttps")
 		if err != nil {
 			useHTTPS = false
 		}

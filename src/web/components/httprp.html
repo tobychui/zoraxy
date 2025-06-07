@@ -395,6 +395,12 @@
                                 <label>Forward Auth</label>
                             </div>
                         </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" value="3" name="authProviderType" ${authProvider==0x3?"checked":""}>
+                                <label>OAuth2</label>
+                            </div>
+                        </div>
                     </div>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
                     <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>

@@ -83,6 +83,7 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 // Register the APIs for Authentication handlers like Forward Auth and OAUTH2
 func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/forward-auth", forwardAuthRouter.HandleAPIOptions)
+	authRouter.HandleFunc("/api/sso/OAuth2", oauth2Router.HandleSetOAuth2Settings)
 }
 
 // Register the APIs for redirection rules management functions
