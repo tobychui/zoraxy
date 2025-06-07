@@ -587,7 +587,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	} else if authProviderType == 2 {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
 	} else if authProviderType == 3 {
-		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOAuth2
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
 	} else {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}

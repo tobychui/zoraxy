@@ -46,7 +46,7 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
-	} else if sep.AuthenticationProvider.AuthMethod == AuthMethodOAuth2 {
+	case AuthMethodOauth2:
 		err := h.handleOAuth2Auth(w, r)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")

@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.2"
+	SYSTEM_VERSION    = "3.2.3"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
