@@ -9,7 +9,7 @@
         }
 
         .subdEntry td:not(.ignoremw){
-            min-width: 100px;
+            min-width: 200px;
         }
 
         .httpProxyListTools{
@@ -20,85 +20,9 @@
             cursor: pointer;
         }
 
-        th.no-sort{
-            cursor: default !important;
-        }
-
         .tag-select:hover{
             text-decoration: underline;
             opacity: 0.8;
-        }
-
-        .inlineEditActionBtn{
-            border: 0px solid transparent !important;
-            box-shadow: none !important;
-            background-color: transparent !important;
-        }
-
-        body.darkTheme .ui.basic.small.icon.circular.button.inlineEditActionBtn{
-            border: 0px solid transparent !important;
-        }
-
-        /* Custom, non overlaying modal for proxy rule editing */
-        #httprpEditModal{
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 68vw;
-            height: 50vh;
-            background-color: var(--theme_bg_primary);
-            padding: 1.4em;
-            border-radius: .6em;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2), 0px 8px 16px rgba(0, 0, 0, 0.2);
-            z-index: 9;
-            max-width: 840px;
-        }
-
-        @media screen and (max-width: 1024px) {
-            #httprpEditModal {
-                width: 85vw;
-            }
-        }
-
-        @media screen and (max-width: 768px) {
-            #httprpEditModal {
-                width: 95vw;
-                height: 80vh;
-                border-radius: 0;
-            }
-
-            .httpProxyEditClosePC{
-                display:none !important;
-            }
-            .httpProxyEditCloseMobile{
-                display:block !important;
-            }
-        }
-
-        @media screen and (min-width: 769px) {
-            .httpProxyEditClosePC{
-                display:block !important;
-            }
-            .httpProxyEditCloseMobile{
-                display:none !important;
-            }
-        }
-
-
-
-        #httprpEditDarkenLayer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 8;
-        }
-
-        #httprpEditModalWrapper {
-            display: none; /* Hidden by default */
         }
     </style>
     <div class="httpProxyListTools" style="margin-bottom: 1em;">
@@ -131,15 +55,15 @@
     </div>
     
     <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
-        <table class="ui unstackable sortable compact celled definition table">
+        <table class="ui celled sortable unstackable compact table">
             <thead>
                 <tr>
-                    <th></th>
                     <th>Host</th>
                     <th>Destination</th>
                     <th>Virtual Directory</th>
-                    <th class="no-sort">Tags</th>
-                    <th class="no-sort" style="width:50px; cursor: default !important;"></th>
+                    <th>Tags</th>
+                    <th style="max-width: 300px;">Advanced Settings</th>
+                    <th class="no-sort" style="min-width:150px;">Actions</th>
                 </tr>
             </thead>
             <tbody id="httpProxyList">
@@ -152,219 +76,7 @@
     <br><br>
 </div>
 
-<!-- Modal for editing a HTTP Proxy Rule -->
-<div id="httprpEditModalWrapper">
-    <div id="httprpEditModal" editing-host="">
-        <div class="ui stackable grid">
-            <div class="four wide column">
-                <div class="ui secondary fluid vertical menu">
-                    <a class="active item hrpedit_menu_item" cfgpage="downstream">
-                        <i class="angle double white right icon"></i> Downstream
-                    </a>
-                    <a class="item hrpedit_menu_item" cfgpage="upstream">
-                        <i class="angle double left icon"></i> Upstream
-                    </a>
-                    <a class="item hrpedit_menu_item" cfgpage="vdirs">
-                        <i class="angle folder icon"></i> Virtual Directory
-                    </a>
-                    <a class="item hrpedit_menu_item" cfgpage="ssl">
-                        <i class="lock icon"></i> TLS / SSL
-                    </a>
-                    <a class="item hrpedit_menu_item" cfgpage="headers">
-                        <i class="heading icon"></i> Headers
-                    </a>
-                    <a class="item hrpedit_menu_item" cfgpage="security">
-                        <i class="key icon"></i> Security
-                    </a>
-                    <a class="item hrpedit_menu_item" cfgpage="tags">
-                        <i class="tags icon"></i> Tags
-                    </a>
-                </div>
-
-                <button class="ui basic fluid button httpProxyEditClosePC" onclick="closeHttpRuleEditor();">Close</button>
-            </div>
-            <div class="twelve wide column">
-                <div class="ui segment">
-                    <!-- Downstream -->
-                    <div class="rpconfig_content" rpcfg="downstream">
-                        <h3 class="downstream_primary_hostname">
-                            
-                        </h3>
-                        <div class="downstream_alias_hostname">
-
-                        </div>
-                        <div class="ui divider"></div>
-                        <div class="downstream_action_list">
-                            <div class="ui checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" class="BypassGlobalTLS" ${subd.BypassGlobalTLS?"checked":""}>
-                                <label>Allow plain HTTP access<br>
-                                    <small>Allow inbound connections without TLS/SSL</small></label>
-                            </div>
-                            <br>
-                            <button class="ui basic compact tiny button editAliasHostnameBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="blue at icon"></i> Alias Hostnames</button>
-                            <button class="ui basic compact tiny button editAccessRuleBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui filter icon"></i> Access Rule</button>
-                        </div>
-                    </div>
-                    <!-- Upstream -->
-                    <div class="rpconfig_content" rpcfg="upstream">
-                        <div class="upstream_list">
-
-                        </div>
-                        <button class="ui basic compact button editUpstreamButton" style="margin-left: 0.4em; margin-top: 1em;"><i class="grey server icon"></i> Edit Upstreams</button>
-                        <div class="ui divider"></div>
-                        <div class="ui checkbox" style="margin-top: 0.4em;">
-                            <input type="checkbox" class="EnableUptimeMonitor">
-                            <label>Monitor Uptime<br>
-                                <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
-                        </div>
-                        <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
-                            <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
-                                <div class="title">
-                                    <i class="dropdown icon"></i>
-                                    Advanced Settings
-                                </div>
-                                <div class="content">
-                                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="UseStickySession">
-                                        <label>Use Sticky Session<br>
-                                            <small>Enable stick session on load balancing</small></label>
-                                    </div>
-                                    <br>
-                                    <div class="ui disabled checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="DisableChunkedTransferEncoding">
-                                        <label>Disable Chunked Transfer Encoding<br>
-                                            <small>Enable this option if your upstream uses a legacy HTTP server implementation</small></label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Virtual Directories-->
-                    <div class="rpconfig_content" rpcfg="vdirs">
-                        <div class="vdir_list">
-
-                        </div>
-                        <div class="ui divider"></div>
-                        <button class="ui basic tiny button editVdirBtn" style="margin-left: 0.4em; margin-top: 0.4em;">
-                            <i class="ui yellow folder icon"></i> Edit Virtual Directories
-                        </button>
-                    </div>
-                    <div class="rpconfig_content" rpcfg="headers">
-                        Headers
-                        <button class="ui basic compact tiny button editHeaderBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="heading icon"></i> Custom Headers</button>
-                    </div>
-                    <!-- Security -->
-                    <div class="rpconfig_content" rpcfg="security">
-                        <div class="grouped fields authProviderPicker">
-                            <!-- Auth Providers -->
-                            <label><b>Authentication Provider</b></label>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="0" name="authProviderType">
-                                    <label>None (Anyone can access)</label>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="1" name="authProviderType">
-                                    <label>Basic Auth</label>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="2" name="authProviderType">
-                                    <label>Forward Auth</label>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="3" name="authProviderType">
-                                    <label>OAuth2</label>
-                                </div>
-                            </div>
-                        </div>
-                        <br>
-                        <button class="ui basic compact tiny button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
-                        
-                        <div class="ui divider"></div>
-                        <!-- Rate Limits-->
-                        <div class="ui checkbox" style="margin-top: 0.4em;">
-                            <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
-                            <label>Require Rate Limit<br>
-                            <small>Check this to enable rate limit on this inbound hostname</small></label>
-                        </div><br>
-                        <div class="ui small right labeled fluid input" style="margin-top: 0.4em;">
-                            <input type="number" class="RateLimit" value="0" min="1" >
-                            <label class="ui basic label">
-                                req / sec / IP
-                            </label>
-                        </div>
-                    </div>
-                    <!-- TLS / SSL -->
-                    <div class="rpconfig_content" rpcfg="ssl">
-                        SSL
-                        <button class="ui basic compact small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
-                    </div>
-                    <!-- Tags -->
-                    <div class="rpconfig_content" rpcfg="tags">
-                        Tags
-                        <button class="ui basic compact small button editTagsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui purple tag icon"></i> Edit tags</button>
-                    </div>
-                </div>
-                <p><em>Note: All changes will be automatically saved.</em></p>
-                <br><br>
-                <button class="ui basic fluid button httpProxyEditCloseMobile" onclick="closeHttpRuleEditor();">Close</button>
-            </div>
-        </div>
-    </div>
-    <div id="httprpEditDarkenLayer"></div>
-</div>
-
-
 <script>
-    var httpProxyList = []; //Proxy list of the current node
-
-    $('#httprpEditModal .tabular.menu .item').tab();
-
-    /* Renderers */
-    function renderUpstreamList(subd){
-        //Build the upstream list
-        let upstreams = "";
-        if (subd.ActiveOrigins.length == 0){
-            //Invalid config
-            upstreams = `<i class="ui yellow exclamation triangle icon"></i> No Active Upstream Origin<br>`;
-        }else{
-            subd.ActiveOrigins.forEach(upstream => {
-                //console.log(upstream);
-                //Check if the upstreams require TLS connections
-                let tlsIcon = "";
-                if (upstream.RequireTLS){
-                    tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
-                    if (upstream.SkipCertValidations){
-                        tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
-                    }
-                }
-
-                let upstreamLink = `${upstream.RequireTLS?"https://":"http://"}${upstream.OriginIpOrDomain}`;
-
-                upstreams += `<a href="${upstreamLink}" target="_blank">${upstream.OriginIpOrDomain} ${tlsIcon}</a><br>`;
-            })
-        }
-        return upstreams;
-    }
-
-    function renderVirtualDirectoryList(subd){
-        let vdList = `<div class="ui list">`;
-        subd.VirtualDirectories.forEach(vdir => {
-            vdList += `<div class="item">${vdir.MatchingPath} <i class="green angle double right icon"></i> ${vdir.Domain}</div>`;
-        });
-        vdList += `</div>`
-        if (subd.VirtualDirectories.length == 0){
-            vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Virtual Directory</small>`;
-        }
-
-        return vdList;
-    }
 
     /* List all proxy endpoints */
     function listProxyEndpoints(){
@@ -381,12 +93,31 @@
             }else{
                 //Sort by RootOrMatchingDomain field
                 data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0))
-                httpProxyList = data;
                 data.forEach(subd => {
                     let subdData = encodeURIComponent(JSON.stringify(subd));
                     
                     //Build the upstream list
-                    let upstreams = renderUpstreamList(subd);
+                    let upstreams = "";
+                    if (subd.ActiveOrigins.length == 0){
+                        //Invalid config
+                        upstreams = `<i class="ui yellow exclamation triangle icon"></i> No Active Upstream Origin<br>`;
+                    }else{
+                        subd.ActiveOrigins.forEach(upstream => {
+                            console.log(upstream);
+                            //Check if the upstreams require TLS connections
+                            let tlsIcon = "";
+                            if (upstream.RequireTLS){
+                                tlsIcon = `<i class="green lock icon" title="TLS Mode"></i>`;
+                                if (upstream.SkipCertValidations){
+                                    tlsIcon = `<i class="yellow lock icon" title="TLS/SSL mode without verification"></i>`
+                                }
+                            }
+
+                            let upstreamLink = `${upstream.RequireTLS?"https://":"http://"}${upstream.OriginIpOrDomain}`;
+
+                            upstreams += `<a href="${upstreamLink}" target="_blank">${upstream.OriginIpOrDomain} ${tlsIcon}</a><br>`;
+                        })
+                    }
 
                     let inboundTlsIcon = "";
                     if ($("#tls").checkbox("is checked")){
@@ -399,16 +130,20 @@
                     }
                     
                     //Build the virtual directory list
-                    let vdList = renderVirtualDirectoryList(subd);
-                    let vdIsEmpty = (subd.VirtualDirectories.length == 0);
+                    var vdList = `<div class="ui list">`;
+                    subd.VirtualDirectories.forEach(vdir => {
+                        vdList += `<div class="item">${vdir.MatchingPath} <i class="green angle double right icon"></i> ${vdir.Domain}</div>`;
+                    });
+                    vdList += `</div>`;
 
-                    //Build the Subdomain enable checkbox
+                    if (subd.VirtualDirectories.length == 0){
+                        vdList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Virtual Directory</small>`;
+                    }
+
                     let enableChecked = "checked";
                     if (subd.Disabled){
                         enableChecked = "";
                     }
-
-                    //Generate a  the TLS lock icons
                     let httpProto = "http://";
                     if ($("#tls").checkbox("is checked")) {
                         httpProto = "https://";
@@ -421,8 +156,6 @@
                     }else{
                         hostnameRedirectPort = ":" + hostnameRedirectPort;
                     }
-
-                    //Generate alias domain list
                     let aliasDomains = ``;
                     if (subd.MatchingDomainAlias != undefined && subd.MatchingDomainAlias.length > 0){
                         aliasDomains = `<small class="aliasDomains" eptuuid="${subd.RootOrMatchingDomain}" style="color: #636363;">Alias: `;
@@ -433,23 +166,7 @@
                         aliasDomains += `</small><br>`;
                     }
 
-                    //Build tag list
-                    let tagList = "";
-                    let tagListEmpty = false;
-                    if (subd.Tags.length > 0){
-                        tagList = subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join("");
-                    }else{
-                        tagList = "<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>";
-                        tagListEmpty = true;
-                    }
-                    
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
-                        <td class="collapsing ignoremw" datatype="enable">
-                            <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
-                                <input type="checkbox" class="enableToggle" name="active" ${enableChecked} eptuuid="${subd.RootOrMatchingDomain}" onchange="handleProxyRuleToggle(this);">
-                                <label></label>
-                            </div>
-                        </td>
                         <td data-label="" editable="true" datatype="inbound">
                             <a href="${httpProto}${subd.RootOrMatchingDomain}${hostnameRedirectPort}" target="_blank">${subd.RootOrMatchingDomain}</a> ${inboundTlsIcon}<br>
                             ${aliasDomains}
@@ -460,23 +177,27 @@
                                 ${upstreams}        
                             </div>
                         </td>
-                        <td data-label="" editable="true" datatype="vdir" style="${vdIsEmpty?"text-align: center;":""}">${vdList}</td>
-                        <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags" style="${tagListEmpty?"text-align: center;":""}">
+                        <td data-label="" editable="true" datatype="vdir">${vdList}</td>
+                        <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags">
                             <div class="tags-list">
-                            ${tagList}
+                            ${subd.Tags.length >0 ? subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join(""):"<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>"}
                             </div>
                         </td>
-                        <!-- <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
+                        <td data-label="" editable="true" datatype="advanced" style="width: 350px;">
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Forward Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> OAuth2`:``}
                             ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
                             ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
-                        </td> -->
+                        </td>
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
-                            <button title="Edit Proxy Rule" class="ui circular small basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="ellipsis vertical icon"></i></button>
-                            <!-- <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button> -->
+                            <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
+                                <input type="checkbox" class="enableToggle" name="active" ${enableChecked} eptuuid="${subd.RootOrMatchingDomain}" onchange="handleProxyRuleToggle(this);">
+                                <label></label>
+                            </div>
+                            <button title="Edit Proxy Rule" class="ui circular mini basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="edit icon"></i></button>
+                            <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
                         </td>
                     </tr>`);
                 });
@@ -576,12 +297,9 @@
     function editEndpoint(uuid) {
         uuid = uuid.hexDecode();
         var row = $('tr[eptuuid="' + uuid + '"]');
+        var columns = row.find('td[data-label]');
         var payload = $(row).attr("payload");
         payload = JSON.parse(decodeURIComponent(payload));
-        initHttpProxyRuleEditorModal(payload);
-        return;
-        /*
-        var columns = row.find('td[data-label]');
         console.log(payload);
         columns.each(function(index) {
             var column = $(this);
@@ -777,7 +495,6 @@
 
         $(".endpointAdvanceConfig").accordion();
         $("#httpProxyList").find(".editBtn").addClass("disabled");
-    */
     }
 
     //handleToggleRateLimitInput will get trigger if the "require rate limit" checkbox
@@ -797,35 +514,25 @@
     }
 
     function saveProxyInlineEdit(uuid){
-        let editor = $("#httprpEditModal");
+        uuid = uuid.hexDecode();
+        var row = $('tr[eptuuid="' + uuid + '"]');
+        if (row.length == 0){
+            return;
+        }
         
-        let epttype = "host";
-        let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
-        let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
-        let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
-        let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
-        let rateLimit = $(editor).find(".RateLimit").val();
-        let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
+        var epttype = "host";
+        let useStickySession =  $(row).find(".UseStickySession")[0].checked;
+        let DisableUptimeMonitor = !$(row).find(".EnableUptimeMonitor")[0].checked;
+        let authProviderType = $(row).find(".authProviderPicker input[type='radio']:checked").val();
+        let requireRateLimit = $(row).find(".RequireRateLimit")[0].checked;
+        let rateLimit = $(row).find(".RateLimit").val();
+        let bypassGlobalTLS = $(row).find(".BypassGlobalTLS")[0].checked;
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
         }else{
             tags = "";
         }
-
-        console.log({
-                "type": epttype,
-                "rootname": uuid,
-                "ss":useStickySession,
-                "dutm": DisableUptimeMonitor,
-                "bpgtls": bypassGlobalTLS,
-                "authprovider" :authProviderType,
-                "rate" :requireRateLimit,
-                "ratenum" :rateLimit,
-                "tags": tags,
-        });
-        alert("save function wip, see console.log");
-        return;
         $.cjax({
             url: "/api/proxy/edit",
             method: "POST",
@@ -974,6 +681,14 @@
         renewCertificate(renewDomainKey, false, btn);
     }
 
+    //Bind on tab switch events
+    tabSwitchEventBind["httprp"] = function(){
+        listProxyEndpoints();
+
+        //Reset the tag filter
+        $("#tagFilterDropdown").dropdown('set selected', "");
+    }
+
     /* Tags & Search */
     function handleSearchInput(event){
         if (event.key == "Escape"){
@@ -1063,217 +778,10 @@
     }
 
     function getTagsArrayFromEndpoint(endpoint){
-        console.log("wip");
-        return [];
         let targetProxyRuleEle = $(".subdEntry[eptuuid='" + endpoint + "'] td[data-label='tags']");
         let tags = $(targetProxyRuleEle).attr("payload");
         return JSON.parse(decodeURIComponent(tags));
     }
-    
-    /* Modal Events */
-    $("#httprpEditDarkenLayer").on("click", function() {
-        closeHttpRuleEditor();
-    });
-
-    function closeHttpRuleEditor(){
-        $("#httprpEditModalWrapper").hide();
-        exitProxyInlineEdit();
-    }
-
-    //Get the current editing http hostname, return null if errors
-    function getEditingHttpProxyHostname(){
-        let hostname = $("#httprpEditModal").attr("editing-host");
-        if (hostname == ""){
-            return null;
-        }
-
-        return decodeURIComponent(hostname);
-    }
-
-    //Initialize the http proxy rule editor
-    function initHttpProxyRuleEditorModal(rulepayload){
-        let subd = JSON.parse(JSON.stringify(rulepayload));
-
-        //Populate all the information in the proxy editor
-        populateAndBindEventsToHTTPProxyEditor(subd);
-
-        //Show the first rpconfig
-        $("#httprpEditModal .rpconfig_content").hide();
-        $("#httprpEditModal .rpconfig_content[rpcfg='downstream']").show();
-        $("#httprpEditModal .hrpedit_menu_item.active").removeClass("active");
-        $("#httprpEditModal .hrpedit_menu_item[cfgpage='downstream']").addClass("active");
-        $("#httprpEditModalWrapper").show();
-    }
-
-    // This function populate the bind all the events required for the proxy editor
-    // pass a copy of the data structure of subd to prevent modification to the original one
-    function populateAndBindEventsToHTTPProxyEditor(subd){
-        //Assign the editing host to DOM element
-        let uuid = subd.RootOrMatchingDomain; //Each matching hostname as uuid
-        $("#httprpEditModal").attr("editing-host", encodeURIComponent(uuid));
-
-        /* ------------ Downstream ------------ */
-        let editor = $("#httprpEditModalWrapper");
-        
-        //Check if the domain is wildcard domain, if yes do not render as a link
-        if (subd.RootOrMatchingDomain.indexOf("*") > -1){
-            editor.find(".downstream_primary_hostname").html(subd.RootOrMatchingDomain);
-        }else{
-            editor.find(".downstream_primary_hostname").html(`<a href="//${subd.RootOrMatchingDomain}" target="_blank">${subd.RootOrMatchingDomain}</a>`);
-        }
-        editor.find(".BypassGlobalTLS").off('change');
-        editor.find(".BypassGlobalTLS").prop("checked", subd.BypassGlobalTLS);
-        editor.find(".BypassGlobalTLS").on("change", function() {
-            saveProxyInlineEdit(uuid);
-        });
-        
-        
-        //Build the alias hostname list
-        let aliasHTML = "";
-        subd.MatchingDomainAlias.forEach(alias => {
-            if (alias.indexOf("*") > -1){
-                //Wildcard alias
-                aliasHTML += `<span class="ui tiny label">${alias}</span> `;
-            }else{
-                //Normal alias
-                aliasHTML += `<span class="ui tiny label"><a href="//${alias}" target="_blank">${alias}</a></span> `;
-            }
-            
-        });
-        editor.find(".downstream_alias_hostname").html(aliasHTML);
-        
-       
-        let enableQuickRequestButton = true;
-        let domains = [subd.RootOrMatchingDomain]; //Domain for getting certificate if needed
-        for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
-            let thisAliasName = subd.MatchingDomainAlias[i];
-            domains.push(thisAliasName);
-        }
-
-        //Check if the domain or alias contains wildcard, if yes, disabled the get certificate button
-        if (subd.RootOrMatchingDomain.indexOf("*") > -1){
-            enableQuickRequestButton = false;
-        }
-        
-        if (subd.MatchingDomainAlias != undefined){
-            for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
-                if (subd.MatchingDomainAlias[i].indexOf("*") > -1){
-                    enableQuickRequestButton = false;
-                    break;
-                }
-            }
-        }
-
-        let certificateDomains = encodeURIComponent(JSON.stringify(domains));
-        if (enableQuickRequestButton){
-            editor.find(".getCertificateBtn").removeClass("disabled");
-        }else{
-            editor.find(".getCertificateBtn").addClass("disabled");
-        }
-
-        //Bind events for action buttons
-        editor.find(".editAliasHostnameBtn").off("click").on("click", function(){
-            editAliasHostnames(uuid);
-        });
-        editor.find(".editAccessRuleBtn").off("click").on("click", function(){
-            editAccessRule(uuid);
-        });
-        editor.find(".getCertificateBtn").off("click").on("click", function(){
-            requestCertificateForExistingHost(uuid, certificateDomains, this);
-        });
-
-        /* ------------ Upstreams ------------ */
-        editor.find(".upstream_list").html(renderUpstreamList(subd));
-        editor.find(".editUpstreamButton").off("click").on("click", function(){
-            editUpstreams(uuid);
-        })
-
-        /* ------------ Vdirs ------------ */
-        editor.find(".vdir_list").html(renderVirtualDirectoryList(subd));
-        editor.find(".editVdirBtn").off("click").on("click", function(){
-            quickEditVdir(uuid);
-        });
-
-        /* Headers */ 
-        editor.find(".editHeaderBtn").off("click").on("click", function(){
-            editCustomHeaders(uuid);
-        });
-
-        /* ------------ Security ------------ */
-    
-        let authMethodContent = "";
-        switch (subd.AuthenticationProvider.AuthMethod) {
-        case 0x1:
-            editor.find(".authProviderPicker input[value='1']").prop("checked", true);
-            break;
-        case 0x2:
-            editor.find(".authProviderPicker input[value='2']").prop("checked", true);
-            break;
-        case 0x3:
-            editor.find(".authProviderPicker input[value='3']").prop("checked", true);
-            break;
-        default:
-            editor.find(".authProviderPicker input[value='0']").prop("checked", true);
-            break;
-        }
-
-        editor.find(".editBasicAuthCredentialsBtn").off("click").on("click", function(){
-            editBasicAuthCredentials(uuid);
-        });
-
-        //Rate limit
-        if (subd.RequireRateLimit) {
-            editor.find(".RequireRateLimit").prop("checked", true);
-            editor.find(".RateLimit").parent().removeClass("disabled");
-        } else {
-            editor.find(".RequireRateLimit").prop("checked", false);
-            editor.find(".RateLimit").parent().addClass("disabled");
-        }
-
-        editor.find(".RequireRateLimit").off("change").on("change", function() {
-            if ($(this).is(":checked")) {
-                editor.find(".RateLimit").parent().removeClass("disabled");
-            } else {
-                editor.find(".RateLimit").parent().addClass("disabled");
-            }
-        });
-        editor.find(".RateLimit").attr("value", subd.RateLimit);
-
-        /* ------------ TLS ------------ */
-
-        /* ------------ Tags ------------ */
-        editor.find(".editTagsBtn").off("click").on("click", function(){
-            editTags(uuid);
-        });
-
-        console.log(subd);
-    }
-
-    function updateVdirInProxyEditor(){
-        // When page switch from Vdir and back to this page
-        // there is a chance where the user has modified the Vdir
-        // we need to get the latest setting from server side and 
-        // render it again
-        let currentEditingHostname = getEditingHttpProxyHostname();
-        $.get("/api/proxy/list?type=host", function(data){
-            data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0));
-            let editingHost = data.find(subd => subd.RootOrMatchingDomain === currentEditingHostname);
-            if (editingHost) {
-                populateAndBindEventsToHTTPProxyEditor(editingHost);
-            } else {
-                closeHttpRuleEditor();
-            }
-        });
-    }
-
-    //bind events to hrpedit_menu_item
-    $(".hrpedit_menu_item").on("click", function() {
-        $(".hrpedit_menu_item.active").removeClass("active");
-        $(this).addClass("active");
-        let cfgPageId = $(this).attr("cfgpage");
-        $("#httprpEditModal .rpconfig_content").hide();
-        $(`#httprpEditModal .rpconfig_content[rpcfg='${cfgPageId}']`).show();
-    });
 
     // Initialize the proxy list on page load
     $(document).ready(function() {
@@ -1286,18 +794,4 @@
             filterProxyList();
         });
     });
-
-    //Bind on tab switch events
-    tabSwitchEventBind["httprp"] = function(){
-        //Check if the proxy editor is opened
-        if ($("#httprpEditModalWrapper").is(":visible")) {
-            //Update the information in the modal
-            updateVdirInProxyEditor();
-        } else {
-            listProxyEndpoints();
-            //Reset the tag filter
-            $("#tagFilterDropdown").dropdown('set selected', "");
-        }
-    }
-        
 </script>
