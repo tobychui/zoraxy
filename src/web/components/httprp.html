@@ -46,13 +46,51 @@
             left: 50%;
             transform: translate(-50%, -50%);
             width: 68vw;
-            height: 50vh;
+            height: 70vh;
             background-color: var(--theme_bg_primary);
             padding: 1.4em;
             border-radius: .6em;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2), 0px 8px 16px rgba(0, 0, 0, 0.2);
             z-index: 9;
             max-width: 840px;
+        }
+
+        #httprpEditModal .rpconfig_content{
+            height: 100%;
+        }
+
+        #httprpEditModal .editor_side_wrapper{
+            position: absolute;
+            top: 0;
+            right: 0;
+            height:100%;
+            width: 100%;
+            background-color: var(--theme_bg_primary);
+        }
+
+        #httprpEditModal .wrapper_frame{
+            width: 100%;
+            border: 1px solid var(--divider_color);
+            border-radius: 0.5em;
+            height: calc(100%);
+        }
+
+        #httprpEditModal .editor_side_wrapper .wrapper_frame{
+            height: calc(100% - 30px);
+        }
+
+        #httprpEditModal .editor_back_button {
+            border: none;
+            background-color: transparent;
+            box-shadow: none;
+            color: var(--text_color);
+            font-size: 2.2em;
+            cursor: pointer;
+            padding-top: 20px;
+        }
+
+        #httprpEditModal .editor_back_button:hover{
+            opacity: 0.5;
         }
 
         @media screen and (max-width: 1024px) {
@@ -63,9 +101,9 @@
 
         @media screen and (max-width: 768px) {
             #httprpEditModal {
-                width: 95vw;
                 height: 80vh;
                 border-radius: 0;
+                overflow-y: scroll;
             }
 
             .httpProxyEditClosePC{
@@ -85,8 +123,6 @@
             }
         }
 
-
-
         #httprpEditDarkenLayer {
             position: fixed;
             top: 0;
@@ -95,6 +131,7 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 8;
+            backdrop-filter: blur(3px);
         }
 
         #httprpEditModalWrapper {
@@ -155,7 +192,7 @@
 <!-- Modal for editing a HTTP Proxy Rule -->
 <div id="httprpEditModalWrapper">
     <div id="httprpEditModal" editing-host="">
-        <div class="ui stackable grid">
+        <div class="ui stackable grid" style="height:100%;">
             <div class="four wide column">
                 <div class="ui secondary fluid vertical menu">
                     <a class="active item hrpedit_menu_item" cfgpage="downstream">
@@ -184,56 +221,60 @@
                 <button class="ui basic fluid button httpProxyEditClosePC" onclick="closeHttpRuleEditor();">Close</button>
             </div>
             <div class="twelve wide column">
-                <div class="ui segment">
+                <div style="height:100%;">
                     <!-- Downstream -->
                     <div class="rpconfig_content" rpcfg="downstream">
-                        <h3 class="downstream_primary_hostname">
-                            
-                        </h3>
-                        <div class="downstream_alias_hostname">
+                        <div class="ui segment">
+                            <h3 class="downstream_primary_hostname">
+                                
+                            </h3>
+                            <div class="downstream_alias_hostname">
 
-                        </div>
-                        <div class="ui divider"></div>
-                        <div class="downstream_action_list">
-                            <div class="ui checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" class="BypassGlobalTLS" ${subd.BypassGlobalTLS?"checked":""}>
-                                <label>Allow plain HTTP access<br>
-                                    <small>Allow inbound connections without TLS/SSL</small></label>
                             </div>
-                            <br>
-                            <button class="ui basic compact tiny button editAliasHostnameBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="blue at icon"></i> Alias Hostnames</button>
-                            <button class="ui basic compact tiny button editAccessRuleBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui filter icon"></i> Access Rule</button>
+                            <div class="ui divider"></div>
+                            <div class="downstream_action_list">
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="BypassGlobalTLS" ${subd.BypassGlobalTLS?"checked":""}>
+                                    <label>Allow plain HTTP access<br>
+                                        <small>Allow inbound connections without TLS/SSL</small></label>
+                                </div>
+                                <br>
+                                <button class="ui basic compact tiny button editAliasHostnameBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="blue at icon"></i> Alias Hostnames</button>
+                                <button class="ui basic compact tiny button editAccessRuleBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui filter icon"></i> Access Rule</button>
+                            </div>
                         </div>
                     </div>
                     <!-- Upstream -->
                     <div class="rpconfig_content" rpcfg="upstream">
-                        <div class="upstream_list">
+                        <div class="ui segment">
+                            <div class="upstream_list">
 
-                        </div>
-                        <button class="ui basic compact button editUpstreamButton" style="margin-left: 0.4em; margin-top: 1em;"><i class="grey server icon"></i> Edit Upstreams</button>
-                        <div class="ui divider"></div>
-                        <div class="ui checkbox" style="margin-top: 0.4em;">
-                            <input type="checkbox" class="EnableUptimeMonitor">
-                            <label>Monitor Uptime<br>
-                                <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
-                        </div>
-                        <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
-                            <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
-                                <div class="title">
-                                    <i class="dropdown icon"></i>
-                                    Advanced Settings
-                                </div>
-                                <div class="content">
-                                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="UseStickySession">
-                                        <label>Use Sticky Session<br>
-                                            <small>Enable stick session on load balancing</small></label>
+                            </div>
+                            <button class="ui basic compact button editUpstreamButton" style="margin-left: 0.4em; margin-top: 1em;"><i class="grey server icon"></i> Edit Upstreams</button>
+                            <div class="ui divider"></div>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="EnableUptimeMonitor">
+                                <label>Monitor Uptime<br>
+                                    <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
+                            </div>
+                            <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
+                                <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
+                                    <div class="title">
+                                        <i class="dropdown icon"></i>
+                                        Advanced Settings
                                     </div>
-                                    <br>
-                                    <div class="ui disabled checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="DisableChunkedTransferEncoding">
-                                        <label>Disable Chunked Transfer Encoding<br>
-                                            <small>Enable this option if your upstream uses a legacy HTTP server implementation</small></label>
+                                    <div class="content">
+                                        <div class="ui checkbox" style="margin-top: 0.4em;">
+                                            <input type="checkbox" class="UseStickySession">
+                                            <label>Use Sticky Session<br>
+                                                <small>Enable stick session on load balancing</small></label>
+                                        </div>
+                                        <br>
+                                        <div class="ui disabled checkbox" style="margin-top: 0.4em;">
+                                            <input type="checkbox" class="DisableChunkedTransferEncoding">
+                                            <label>Disable Chunked Transfer Encoding<br>
+                                                <small>Enable this option if your upstream uses a legacy HTTP server implementation</small></label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -241,17 +282,21 @@
                     </div>
                     <!-- Virtual Directories-->
                     <div class="rpconfig_content" rpcfg="vdirs">
-                        <div class="vdir_list">
+                        <div class="ui segment">
+                            <div class="vdir_list">
 
+                            </div>
+                            <div class="ui divider"></div>
+                            <button class="ui basic tiny button editVdirBtn" style="margin-left: 0.4em; margin-top: 0.4em;">
+                                <i class="ui yellow folder icon"></i> Edit Virtual Directories
+                            </button>
                         </div>
-                        <div class="ui divider"></div>
-                        <button class="ui basic tiny button editVdirBtn" style="margin-left: 0.4em; margin-top: 0.4em;">
-                            <i class="ui yellow folder icon"></i> Edit Virtual Directories
-                        </button>
                     </div>
+                    <!-- Custom Headers -->
                     <div class="rpconfig_content" rpcfg="headers">
-                        Headers
-                        <button class="ui basic compact tiny button editHeaderBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="heading icon"></i> Custom Headers</button>
+                        <iframe src="" class="wrapper_frame">
+
+                        </iframe>
                     </div>
                     <!-- Security -->
                     <div class="rpconfig_content" rpcfg="security">
@@ -303,17 +348,25 @@
                     <!-- TLS / SSL -->
                     <div class="rpconfig_content" rpcfg="ssl">
                         SSL
-                        <button class="ui basic compact small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
+                        <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
                     </div>
                     <!-- Tags -->
                     <div class="rpconfig_content" rpcfg="tags">
-                        Tags
-                        <button class="ui basic compact small button editTagsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui purple tag icon"></i> Edit tags</button>
+                        <iframe src="" class="wrapper_frame">
+
+                        </iframe>
                     </div>
                 </div>
-                <p><em>Note: All changes will be automatically saved.</em></p>
-                <br><br>
                 <button class="ui basic fluid button httpProxyEditCloseMobile" onclick="closeHttpRuleEditor();">Close</button>
+                <!-- Editor Side Wrapper -->
+                <div class="editor_side_wrapper" style="display:none;">
+                    <a class="editor_back_button">
+                        <i class="chevron circle left icon" style="margin-top: 22px;"></i>
+                    </a>
+                    <iframe src="snippet/placeholder.html" class="wrapper_frame">
+
+                    </iframe>
+                </div>
             </div>
         </div>
     </div>
@@ -364,6 +417,17 @@
         }
 
         return vdList;
+    }
+
+    function renderTagList(subd){
+        let tagList = "";
+        if (subd.Tags.length > 0){
+            tagList = subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join("");
+        }else{
+            tagList = "<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>";
+            tagListEmpty = true;
+        }
+        return tagList;
     }
 
     /* List all proxy endpoints */
@@ -434,14 +498,8 @@
                     }
 
                     //Build tag list
-                    let tagList = "";
-                    let tagListEmpty = false;
-                    if (subd.Tags.length > 0){
-                        tagList = subd.Tags.map(tag => `<span class="ui tiny label tag-select" style="background-color: ${getTagColorByName(tag)}; color: ${getTagTextColor(tag)}">${tag}</span>`).join("");
-                    }else{
-                        tagList = "<small style='opacity: 0.3; pointer-events: none; user-select: none;'>No Tags</small>";
-                        tagListEmpty = true;
-                    }
+                    let tagList = renderTagList(subd);
+                    let tagListEmpty = (subd.Tags.length == 0);
                     
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td class="collapsing ignoremw" datatype="enable">
@@ -879,7 +937,7 @@
             ept: "host",
             ep: uuid
         }));
-        showSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
     }
 
     function editAccessRule(uuid){
@@ -887,7 +945,7 @@
             ept: "host",
             ep: uuid
         }));
-        showSideWrapper("snippet/hostAccessEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/hostAccessEditor.html?t=" + Date.now() + "#" + payload);
     }
 
     function editAliasHostnames(uuid){
@@ -895,21 +953,12 @@
             ept: "host",
             ep: uuid
         }));
-        showSideWrapper("snippet/aliasEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/aliasEditor.html?t=" + Date.now() + "#" + payload);
     }
 
     function quickEditVdir(uuid){
         openTabById("vdir");
         $("#vdirBaseRoutingRule").parent().dropdown("set selected", uuid);
-    }
-
-    //Open the custom header editor
-    function editCustomHeaders(uuid){
-        let payload = encodeURIComponent(JSON.stringify({
-            ept: "host",
-            ep: uuid
-        }));
-        showSideWrapper("snippet/customHeaders.html?t=" + Date.now() + "#" + payload);
     }
 
     //Open the load balance option
@@ -918,7 +967,7 @@
             ept: "host",
             ep: uuid
         }));
-        showSideWrapper("snippet/upstreams.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/upstreams.html?t=" + Date.now() + "#" + payload);
     }
 
     function handleProxyRuleToggle(object){
@@ -1048,10 +1097,10 @@
             ept: "host",
             ep: uuid
         }));
-        showSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
     }
 
-    // Render the tags preview from tag editing snippet
+    // Render the tags preview from tag editing snippet, callback from tags editor
     function renderTagsPreview(endpoint, tags){
         let targetProxyRuleEle = $(".subdEntry[eptuuid='" + endpoint + "'] td[data-label='tags']");
         //Update the tag DOM
@@ -1062,9 +1111,8 @@
         $(targetProxyRuleEle).attr("payload", encodeURIComponent(JSON.stringify(tags)));
     }
 
+
     function getTagsArrayFromEndpoint(endpoint){
-        console.log("wip");
-        return [];
         let targetProxyRuleEle = $(".subdEntry[eptuuid='" + endpoint + "'] td[data-label='tags']");
         let tags = $(targetProxyRuleEle).attr("payload");
         return JSON.parse(decodeURIComponent(tags));
@@ -1076,8 +1124,12 @@
     });
 
     function closeHttpRuleEditor(){
-        $("#httprpEditModalWrapper").hide();
-        exitProxyInlineEdit();
+        $(".ui.toggle.tiny.fitted.checkbox").css("z-index", 0);
+        $("#httprpEditModalWrapper").fadeOut("fast", function(){
+            $(".ui.toggle.tiny.fitted.checkbox").css("z-index", "auto");
+            $("body").css("overflow", "auto");
+            exitProxyInlineEdit();
+        }); 
     }
 
     //Get the current editing http hostname, return null if errors
@@ -1093,7 +1145,7 @@
     //Initialize the http proxy rule editor
     function initHttpProxyRuleEditorModal(rulepayload){
         let subd = JSON.parse(JSON.stringify(rulepayload));
-
+    
         //Populate all the information in the proxy editor
         populateAndBindEventsToHTTPProxyEditor(subd);
 
@@ -1102,7 +1154,13 @@
         $("#httprpEditModal .rpconfig_content[rpcfg='downstream']").show();
         $("#httprpEditModal .hrpedit_menu_item.active").removeClass("active");
         $("#httprpEditModal .hrpedit_menu_item[cfgpage='downstream']").addClass("active");
-        $("#httprpEditModalWrapper").show();
+        $("body").css("overflow", "hidden");
+        // Fixing a bug in semantic ui that when an element fade in/out on top of checkbox
+        // the checkbox suddently flash on top of the fading element
+        $(".ui.toggle.tiny.fitted.checkbox").css("z-index", 0);
+        $("#httprpEditModalWrapper").fadeIn("fast", function(){
+            $(".ui.toggle.tiny.fitted.checkbox").css("z-index", "auto");
+        });
     }
 
     // This function populate the bind all the events required for the proxy editor
@@ -1195,9 +1253,14 @@
         });
 
         /* Headers */ 
-        editor.find(".editHeaderBtn").off("click").on("click", function(){
-            editCustomHeaders(uuid);
-        });
+        (() => {
+            let payload = encodeURIComponent(JSON.stringify({
+                ept: "host",
+                ep: uuid
+            }));
+            let frameURL = "snippet/customHeaders.html?t=" + Date.now() + "#" + payload;
+            editor.find(".rpconfig_content[rpcfg='headers'] .wrapper_frame").attr('src', frameURL);
+        })();
 
         /* ------------ Security ------------ */
     
@@ -1242,9 +1305,14 @@
         /* ------------ TLS ------------ */
 
         /* ------------ Tags ------------ */
-        editor.find(".editTagsBtn").off("click").on("click", function(){
-            editTags(uuid);
-        });
+        (()=>{
+            let payload = encodeURIComponent(JSON.stringify({
+                ept: "host",
+                ep: uuid
+            }));
+            let frameURL = "snippet/tagEditor.html?t=" + Date.now() + "#" + payload;
+            editor.find(".rpconfig_content[rpcfg='tags'] .wrapper_frame").attr('src', frameURL);
+        })();
 
         console.log(subd);
     }
@@ -1273,7 +1341,29 @@
         let cfgPageId = $(this).attr("cfgpage");
         $("#httprpEditModal .rpconfig_content").hide();
         $(`#httprpEditModal .rpconfig_content[rpcfg='${cfgPageId}']`).show();
+        hideEditorSideWrapper(); //Always close the side wrapper on tab change
     });
+
+    $("#httprpEditModal .editor_back_button").on("click", function(event) {
+        // Prevent click event from propagating to the modal background
+        event.stopPropagation();
+        hideEditorSideWrapper();
+    });
+
+    function showEditorSideWrapper(url){
+        $("#httprpEditModal .editor_side_wrapper .wrapper_frame").attr('src', url);
+        $("#httprpEditModal .editor_side_wrapper").fadeIn("fast");
+    }
+
+    function hideEditorSideWrapper(){
+        $("#httprpEditModal .editor_side_wrapper").fadeOut("fast");
+        $("#httprpEditModal .editor_side_wrapper .wrapper_frame").attr('src', "snippet/placeholder.html");
+    }
+
+
+    /*
+        Page Initialization Functions 
+    */
 
     // Initialize the proxy list on page load
     $(document).ready(function() {

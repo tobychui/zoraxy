@@ -334,11 +334,16 @@
             }
 
             function toggleTheme(){
+                let editorSideWrapper = $("#httprpEditModal .wrapper_frame");
                 if ($("body").hasClass("darkTheme")){
                     setDarkTheme(false);
                     //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
                     if ($(".sideWrapper").is(":visible")){
                         $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(false);
+                    }
+
+                    if (editorSideWrapper.is(":visible")){
+                        editorSideWrapper[0].contentWindow.setDarkTheme(false);
                     }
 
                     if ($("#pluginContextLoader").is(":visible")){
@@ -349,6 +354,9 @@
                     //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
                     if ($(".sideWrapper").is(":visible")){
                         $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(true);
+                    }
+                    if (editorSideWrapper.is(":visible")){
+                        editorSideWrapper[0].contentWindow.setDarkTheme(true);
                     }
                     if ($("#pluginContextLoader").is(":visible")){
                         $("#pluginContextLoader")[0].contentWindow.setDarkTheme(true);
@@ -515,6 +523,12 @@
             }
 
             function hideSideWrapper(discardFrameContent = false){
+                if ($("#httprpEditModal").length && $("#httprpEditModal").is(":visible")) {
+                    //HTTP Proxy Rule editor side wrapper implementation
+                    $("#httprpEditModal .editor_side_wrapper").hide();
+                } 
+
+                //Original side wrapper implementation
                 if (discardFrameContent){
                     $(".sideWrapper iframe").attr("src", "snippet/placeholder.html");
                 }

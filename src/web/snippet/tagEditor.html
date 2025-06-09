@@ -21,13 +21,6 @@
         <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
-            <div class="ui header">
-                <div class="content">
-                    Edit Tags
-                    <div class="sub header" id="epname"></div>
-                </div>
-            </div>
-            <div class="ui divider"></div>
             <p>Tags currently applied to this host name / proxy rule</p>
             <div style="max-height: 300px; overflow-y: scroll;">
                 <table class="ui compact basic unstackable celled table">
@@ -68,9 +61,7 @@
                 </div>
                 <button class="ui basic button" onclick="joinSelectedTagGroups();"><i class="ui blue plus icon"></i> Join tag group(s)</button>
             </div>
-            <div class="ui divider"></div>
-            <!-- <button class="ui basic button" onclick="saveTags();"><i class="ui green save icon"></i> Save Changes</button> -->
-            <button class="ui basic button" style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
+            <br><br>
         </div>
         <script>
             let editingEndpoint = {};
