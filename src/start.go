@@ -1,6 +1,7 @@
 package main
 
 import (
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"log"
 	"net/http"
 	"os"
@@ -143,6 +144,11 @@ func startupSequence() {
 	//Create authentication providers
 	forwardAuthRouter = forward.NewAuthRouter(&forward.AuthRouterOptions{
 		Address:  "",
+		Logger:   SystemWideLogger,
+		Database: sysdb,
+	})
+
+	oauth2Router = oauth2.NewOAuth2Router(&oauth2.OAuth2RouterOptions{
 		Logger:   SystemWideLogger,
 		Database: sysdb,
 	})
