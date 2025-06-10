@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      RESTful Example | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/plugins/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/plugins/html/assets/logo.png" dark_src="/plugins/html/assets/logo_white.png" src="/plugins/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="https://github.com/tobychui/zoraxy/tree/main/example/plugins" target="_blank" class="item">
+            Examples
+            <span class="ts-icon is-arrow-up-right-from-square-icon"></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/3. Installing Plugin.html">
+                    Installing Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/4. Enable Plugins.html">
+                    Enable Plugins
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/5. Viewing Plugin Info.html">
+                    Viewing Plugin Info
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/5. Plugin UI.html">
+                    Plugin UI
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/6. Compile a Plugin.html">
+                    Compile a Plugin
+                  </a>
+                </div>
+                <a class="item">
+                  Basic Examples
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/3. Basic Examples/1. Hello World.html">
+                    Hello World
+                  </a>
+                  <a class="item is-active" href="/plugins/html/3. Basic Examples/2. RESTful Example.html">
+                    RESTful Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/3. Static Capture Example.html">
+                    Static Capture Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/4. Dynamic Capture Example.html">
+                    Dynamic Capture Example
+                  </a>
+                </div>
+                <a class="item" href="/plugins/html/index.html">
+                  index
+                </a>
+                <a class="item" href="/plugins/html/zoraxy_plugin API.html">
+                  zoraxy_plugin API
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="restful-api-call-in-web-ui">
+                  RESTful API Call in Web UI
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    Last Update: 29/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  <p class="ts-text">
+                    When developing a UI for your plugin, sometime you might need to make RESTFUL API calls to your plugin backend for setting up something or getting latest information from your plugin. In this example, I will show you how to create a plugin with RESTful api call capabilities with the embedded web server and the custom
+                    <span class="ts-text is-code">
+                      cjax
+                    </span>
+                    function.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    <span class="ts-text is-heavy">
+                      Notes: This example assumes you have basic understanding on how to use jQuery
+                      <span class="ts-text is-code">
+                        ajax
+                      </span>
+                      request.
+                    </span>
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Lets get started!
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="1-create-the-plugin-folder-structures">
+                  1. Create the plugin folder structures
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    This step is identical to the Hello World example, where you create a plugin folder with the required go project structure in the folder. Please refer to the Hello World example section 1 to 5 for details.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="2-create-introspect">
+                  2. Create Introspect
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    This is quite similar to the Hello World example as well, but we are changing some of the IDs to match what we want to do in this plugin.
+                  </p>
+                </p>
+                <pre><code class="language-go">runtimeCfg, err := plugin.ServeAndRecvSpec(&amp;plugin.IntroSpect{
+		ID:            &quot;com.example.restful-example&quot;,
+		Name:          &quot;Restful Example&quot;,
+		Author:        &quot;foobar&quot;,
+		AuthorContact: &quot;admin@example.com&quot;,
+		Description:   &quot;A simple demo for making RESTful API calls in plugin&quot;,
+		URL:           &quot;https://example.com&quot;,
+		Type:          plugin.PluginType_Utilities,
+		VersionMajor:  1,
+		VersionMinor:  0,
+		VersionPatch:  0,
+
+		// As this is a utility plugin, we don't need to capture any traffic
+		// but only serve the UI, so we set the UI (relative to the plugin path) to &quot;/&quot;
+		UIPath: UI_PATH,
+	})
+	if err != nil {
+		//Terminate or enter standalone mode here
+		panic(err)
+	}
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="3-create-an-embedded-web-server-with-handlers">
+                  3. Create an embedded web server with handlers
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    In this step, we create a basic embedded web file handler similar to the Hello World example, however, we will need to add a
+                    <span class="ts-text is-code">
+                      http.HandleFunc
+                    </span>
+                    to the plugin so our front-end can request and communicate with the backend.
+                  </p>
+                </p>
+                <pre><code class="language-go">embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &amp;content, WEB_ROOT, UI_PATH)
+embedWebRouter.RegisterTerminateHandler(func() {
+    fmt.Println(&quot;Restful-example Exited&quot;)
+}, nil)
+
+//Register a simple API endpoint that will echo the request body
+// Since we are using the default http.ServeMux, we can register the handler directly with the last
+// parameter as nil
+embedWebRouter.HandleFunc(&quot;/api/echo&quot;, func(w http.ResponseWriter, r *http.Request) {
+    //Some handler code here
+}, nil)
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    The
+                    <span class="ts-text is-code">
+                      embedWebRouter.HandleFunc
+                    </span>
+                    last parameter is the
+                    <span class="ts-text is-code">
+                      http.Mux
+                    </span>
+                    , where if you have multiple web server listening interface, you can fill in different Mux based on your implementation. On of the examples is that, when you are developing a static web server plugin, where you need a dedicated HTTP listening endpoint that is not the one Zoraxy assigned to your plugin, you need to create two http.Mux and assign one of them for Zoraxy plugin UI purpose.
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="4-modify-the-front-end-html-file-to-make-request-to-backend">
+                  4. Modify the front-end HTML file to make request to backend
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    To make a RESTFUL API to your plugin,
+                    <span class="ts-text is-heavy">
+                      you must use relative path in your request URL
+                    </span>
+                    .
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Absolute path that start with
+                    <span class="ts-text is-code">
+                      /
+                    </span>
+                    is only use for accessing Zoraxy resouces. For example, when you access
+                    <span class="ts-text is-code">
+                      /img/logo.svg
+                    </span>
+                    , Zoraxy webmin HTTP router will return the logo of Zoraxy for you instead of
+                    <span class="ts-text is-code">
+                      /plugins/your_plugin_name/{your_web_root}/img/logo.svg
+                    </span>
+                    .
+                  </p>
+                </p>
+                <h3 id="making-get-request">
+                  Making GET request
+                </h3>
+                <p>
+                  Making GET request is similar to what you would do in ordinary web development, but only limited to relative paths like
+                  <span class="ts-text is-code">
+                    ./api/foo/bar
+                  </span>
+                  instead. Here is an example on a front-end and back-end implementation of a simple &ldquo;echo&rdquo; API.
+                </p>
+                <p>
+                  <p class="ts-text">
+                    The API logic is simple: when you make a GET request to the API with
+                    <span class="ts-text is-code">
+                      ?name=foobar
+                    </span>
+                    , it returns
+                    <span class="ts-text is-code">
+                      Hello foobar
+                    </span>
+                    . Here is the backend implementation in your plugin code.
+                  </p>
+                </p>
+                <pre><code class="language-go">embedWebRouter.HandleFunc(&quot;/api/echo&quot;, func(w http.ResponseWriter, r *http.Request) {
+		// This is a simple echo API that will return the request body as response
+		name := r.URL.Query().Get(&quot;name&quot;)
+		if name == &quot;&quot; {
+			http.Error(w, &quot;Missing 'name' query parameter&quot;, http.StatusBadRequest)
+			return
+		}
+		w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)
+		response := map[string]string{&quot;message&quot;: fmt.Sprintf(&quot;Hello %s&quot;, name)}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, &quot;Failed to encode response&quot;, http.StatusInternalServerError)
+		}
+	}, nil)
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    And here is the front-end code in your HTML file
+                  </p>
+                </p>
+                <pre><code class="language-html">&lt;!-- The example below show how HTTP GET is used with Zoraxy plugin --&gt;
+&lt;h3&gt;Echo Test (HTTP GET)&lt;/h3&gt;
+&lt;div class=&quot;ui form&quot;&gt;
+    &lt;div class=&quot;field&quot;&gt;
+        &lt;label for=&quot;nameInput&quot;&gt;Enter your name:&lt;/label&gt;
+        &lt;input type=&quot;text&quot; id=&quot;nameInput&quot; placeholder=&quot;Your name&quot;&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;ui button primary&quot; id=&quot;sendRequestButton&quot;&gt;Send Request&lt;/button&gt;
+    &lt;div class=&quot;ui message&quot; id=&quot;responseMessage&quot; style=&quot;display: none;&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+    document.getElementById('sendRequestButton').addEventListener('click', function() {
+        const name = document.getElementById('nameInput').value;
+        if (name.trim() === &quot;&quot;) {
+            alert(&quot;Please enter a name.&quot;);
+            return;
+        }
+        // Note the relative path is used here!
+        // GET do not require CSRF token, so you can use $.ajax directly
+        // or $.cjax (defined in /script/utils.js) to make GET request
+        $.ajax({
+            url: `./api/echo`,
+            type: 'GET',
+            data: { name: name },
+            success: function(data) {
+                console.log('Response:', data.message);
+                $('#responseMessage').text(data.message).show();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                $('#responseMessage').text('An error occurred while processing your request.').show();
+            }
+        });
+    });
+&lt;/script&gt;
+</code></pre>
+                <h3 id="making-post-request">
+                  Making POST request
+                </h3>
+                <p>
+                  <p class="ts-text">
+                    Making POST request is also similar to GET request, except when making the request, you will need pass the CSRF-Token with the payload. This is required due to security reasons (See
+                    <a href="https://github.com/tobychui/zoraxy/issues/267" target="_blank">
+                      #267
+                    </a>
+                    for more details).
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Since the CSRF validation is done by Zoraxy, your plugin backend code can be implemented just like an ordinary handler. Here is an example POST handling function that receive a FORM POST and print it in an HTML response.
+                  </p>
+                </p>
+                <pre><code class="language-go">embedWebRouter.HandleFunc(&quot;/api/post&quot;, func(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, &quot;Invalid request method&quot;, http.StatusMethodNotAllowed)
+        return
+    }
+
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, &quot;Failed to parse form data&quot;, http.StatusBadRequest)
+        return
+    }
+
+    for key, values := range r.PostForm {
+        for _, value := range values {
+            // Generate a simple HTML response
+            w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)
+            fmt.Fprintf(w, &quot;%s: %s&lt;br&gt;&quot;, key, value)
+        }
+    }
+}, nil)
+	
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    For the front-end, you will need to use the
+                    <span class="ts-text is-code">
+                      $.cjax
+                    </span>
+                    function implemented in Zoraxy
+                    <span class="ts-text is-code">
+                      utils.js
+                    </span>
+                    file. You can include this file by adding these two lines to your HTML file.
+                  </p>
+                </p>
+                <pre><code class="language-html">&lt;script src=&quot;/script/jquery-3.6.0.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;/script/utils.js&quot;&gt;&lt;/script&gt;
+&lt;!- More lines here --&gt;
+&lt;!-- The example below shows how form post can be used in plugin --&gt;
+&lt;h3&gt;Form Post Test (HTTP POST)&lt;/h3&gt;
+&lt;div class=&quot;ui form&quot;&gt;
+    &lt;div class=&quot;field&quot;&gt;
+        &lt;label for=&quot;postNameInput&quot;&gt;Name:&lt;/label&gt;
+        &lt;input type=&quot;text&quot; id=&quot;postNameInput&quot; placeholder=&quot;Your name&quot;&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;field&quot;&gt;
+        &lt;label for=&quot;postAgeInput&quot;&gt;Age:&lt;/label&gt;
+        &lt;input type=&quot;number&quot; id=&quot;postAgeInput&quot; placeholder=&quot;Your age&quot;&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;field&quot;&gt;
+        &lt;label&gt;Gender:&lt;/label&gt;
+        &lt;div class=&quot;ui checkbox&quot;&gt;
+            &lt;input type=&quot;checkbox&quot; id=&quot;genderMale&quot; name=&quot;gender&quot; value=&quot;Male&quot;&gt;
+            &lt;label for=&quot;genderMale&quot;&gt;Male&lt;/label&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;ui checkbox&quot;&gt;
+            &lt;input type=&quot;checkbox&quot; id=&quot;genderFemale&quot; name=&quot;gender&quot; value=&quot;Female&quot;&gt;
+            &lt;label for=&quot;genderFemale&quot;&gt;Female&lt;/label&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;button class=&quot;ui button primary&quot; id=&quot;postRequestButton&quot;&gt;Send&lt;/button&gt;
+    &lt;div class=&quot;ui message&quot; id=&quot;postResponseMessage&quot; style=&quot;display: none;&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    After that, you can call to the
+                    <span class="ts-text is-code">
+                      $.cjax
+                    </span>
+                    function just like what you would usually do with the
+                    <span class="ts-text is-code">
+                      $ajax
+                    </span>
+                    function.
+                  </p>
+                </p>
+                <pre><code class="language-javascript">// .cjax (defined in /script/utils.js) is used to make POST request with CSRF token support
+// alternatively you can use $.ajax with CSRF token in headers
+// the header is named &quot;X-CSRF-Token&quot; and the value is taken from the head
+// meta tag content (i.e. &lt;meta name=&quot;zoraxy.csrf.Token&quot; content=&quot;{{.csrfToken}}&quot;&gt;)
+$.cjax({
+    url: './api/post',
+    type: 'POST',
+    data: { name: name, age: age, gender: gender },
+    success: function(data) {
+    console.log('Response:', data);
+    	$('#postResponseMessage').html(data).show();
+    },
+    error: function(xhr, status, error) {
+        console.error('Error:', error);
+        $('#postResponseMessage').text('An error occurred while processing your request.').show();
+    }
+});
+</code></pre>
+                <h3 id="post-request-with-vanilla-js">
+                  POST Request with Vanilla JS
+                </h3>
+                <p>
+                  <p class="ts-text">
+                    It is possible to make POST request with Vanilla JS. Note that you will need to populate the csrf-token field yourself to make the request pass through the plugin UI request router in Zoraxy. Here is a basic example on how it could be done.
+                  </p>
+                </p>
+                <pre><code class="language-javascript">fetch('./api/post', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken // Include the CSRF token in the headers
+    },
+    body: JSON.stringify({{your_data_here}})
+})
+</code></pre>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="5-full-code">
+                  5. Full Code
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    Here is the full code of the RESTFUL example for reference.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    Front-end (
+                    <span class="ts-text is-code">
+                      plugins/restful-example/www/index.html
+                    </span>
+                    )
+                  </p>
+                </p>
+                <pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;UTF-8&quot;&gt;
+    &lt;!-- CSRF token, if your plugin need to make POST request to backend --&gt;
+    &lt;meta name=&quot;zoraxy.csrf.Token&quot; content=&quot;{{.csrfToken}}&quot;&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/script/semantic/semantic.min.css&quot;&gt;
+    &lt;script src=&quot;/script/jquery-3.6.0.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;/script/semantic/semantic.min.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;/script/utils.js&quot;&gt;&lt;/script&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/main.css&quot;&gt;
+    &lt;title&gt;RESTful Example&lt;/title&gt;
+    &lt;style&gt;
+        body {
+            background-color: var(--theme_bg_primary);
+        }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- Dark theme script must be included after body tag--&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/darktheme.css&quot;&gt;
+    &lt;script src=&quot;/script/darktheme.js&quot;&gt;&lt;/script&gt;
+    &lt;br&gt;
+    &lt;div class=&quot;standardContainer&quot;&gt;
+        &lt;div class=&quot;ui container&quot;&gt;
+            &lt;h1&gt;RESTFul API Example&lt;/h1&gt;
+            &lt;!-- The example below show how HTTP GET is used with Zoraxy plugin --&gt;
+            &lt;h3&gt;Echo Test (HTTP GET)&lt;/h3&gt;
+            &lt;div class=&quot;ui form&quot;&gt;
+                &lt;div class=&quot;field&quot;&gt;
+                    &lt;label for=&quot;nameInput&quot;&gt;Enter your name:&lt;/label&gt;
+                    &lt;input type=&quot;text&quot; id=&quot;nameInput&quot; placeholder=&quot;Your name&quot;&gt;
+                &lt;/div&gt;
+                &lt;button class=&quot;ui button primary&quot; id=&quot;sendRequestButton&quot;&gt;Send Request&lt;/button&gt;
+                &lt;div class=&quot;ui message&quot; id=&quot;responseMessage&quot; style=&quot;display: none;&quot;&gt;&lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;script&gt;
+                document.getElementById('sendRequestButton').addEventListener('click', function() {
+                    const name = document.getElementById('nameInput').value;
+                    if (name.trim() === &quot;&quot;) {
+                        alert(&quot;Please enter a name.&quot;);
+                        return;
+                    }
+                    // Note the relative path is used here!
+                    // GET do not require CSRF token, so you can use $.ajax directly
+                    // or $.cjax (defined in /script/utils.js) to make GET request
+                    $.ajax({
+                        url: `./api/echo`,
+                        type: 'GET',
+                        data: { name: name },
+                        success: function(data) {
+                            console.log('Response:', data.message);
+                            $('#responseMessage').text(data.message).show();
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error:', error);
+                            $('#responseMessage').text('An error occurred while processing your request.').show();
+                        }
+                    });
+                });
+            &lt;/script&gt;
+            &lt;!-- The example below shows how form post can be used in plugin --&gt;
+            &lt;h3&gt;Form Post Test (HTTP POST)&lt;/h3&gt;
+            &lt;div class=&quot;ui form&quot;&gt;
+                &lt;div class=&quot;field&quot;&gt;
+                    &lt;label for=&quot;postNameInput&quot;&gt;Name:&lt;/label&gt;
+                    &lt;input type=&quot;text&quot; id=&quot;postNameInput&quot; placeholder=&quot;Your name&quot;&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;field&quot;&gt;
+                    &lt;label for=&quot;postAgeInput&quot;&gt;Age:&lt;/label&gt;
+                    &lt;input type=&quot;number&quot; id=&quot;postAgeInput&quot; placeholder=&quot;Your age&quot;&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;field&quot;&gt;
+                    &lt;label&gt;Gender:&lt;/label&gt;
+                    &lt;div class=&quot;ui checkbox&quot;&gt;
+                        &lt;input type=&quot;checkbox&quot; id=&quot;genderMale&quot; name=&quot;gender&quot; value=&quot;Male&quot;&gt;
+                        &lt;label for=&quot;genderMale&quot;&gt;Male&lt;/label&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;ui checkbox&quot;&gt;
+                        &lt;input type=&quot;checkbox&quot; id=&quot;genderFemale&quot; name=&quot;gender&quot; value=&quot;Female&quot;&gt;
+                        &lt;label for=&quot;genderFemale&quot;&gt;Female&lt;/label&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+                &lt;button class=&quot;ui button primary&quot; id=&quot;postRequestButton&quot;&gt;Send&lt;/button&gt;
+                &lt;div class=&quot;ui message&quot; id=&quot;postResponseMessage&quot; style=&quot;display: none;&quot;&gt;&lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;script&gt;
+                document.getElementById('postRequestButton').addEventListener('click', function() {
+                    const name = document.getElementById('postNameInput').value;
+                    const age = document.getElementById('postAgeInput').value;
+                    const genderMale = document.getElementById('genderMale').checked;
+                    const genderFemale = document.getElementById('genderFemale').checked;
+
+                    if (name.trim() === &quot;&quot; || age.trim() === &quot;&quot; || (!genderMale &amp;&amp; !genderFemale)) {
+                        alert(&quot;Please fill out all fields.&quot;);
+                        return;
+                    }
+
+                    const gender = genderMale ? &quot;Male&quot; : &quot;Female&quot;;
+                    
+                    // .cjax (defined in /script/utils.js) is used to make POST request with CSRF token support
+                    // alternatively you can use $.ajax with CSRF token in headers
+                    // the header is named &quot;X-CSRF-Token&quot; and the value is taken from the head
+                    // meta tag content (i.e. &lt;meta name=&quot;zoraxy.csrf.Token&quot; content=&quot;{{.csrfToken}}&quot;&gt;)
+                    $.cjax({
+                        url: './api/post',
+                        type: 'POST',
+                        data: { name: name, age: age, gender: gender },
+                        success: function(data) {
+                            console.log('Response:', data);
+                            $('#postResponseMessage').html(data).show();
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error:', error);
+                            $('#postResponseMessage').text('An error occurred while processing your request.').show();
+                        }
+                    });
+                });
+            &lt;/script&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    Backend (
+                    <span class="ts-text is-code">
+                      plugins/restful-example/main.go
+                    </span>
+                    )
+                  </p>
+                </p>
+                <pre><code class="language-go">package main
+
+import (
+	&quot;embed&quot;
+	_ &quot;embed&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;net/http&quot;
+	&quot;strconv&quot;
+
+	plugin &quot;example.com/zoraxy/restful-example/mod/zoraxy_plugin&quot;
+)
+
+const (
+	PLUGIN_ID = &quot;com.example.restful-example&quot;
+	UI_PATH   = &quot;/&quot;
+	WEB_ROOT  = &quot;/www&quot;
+)
+
+//go:embed www/*
+var content embed.FS
+
+func main() {
+	// Serve the plugin intro spect
+	// This will print the plugin intro spect and exit if the -introspect flag is provided
+	runtimeCfg, err := plugin.ServeAndRecvSpec(&amp;plugin.IntroSpect{
+		ID:            &quot;com.example.restful-example&quot;,
+		Name:          &quot;Restful Example&quot;,
+		Author:        &quot;foobar&quot;,
+		AuthorContact: &quot;admin@example.com&quot;,
+		Description:   &quot;A simple demo for making RESTful API calls in plugin&quot;,
+		URL:           &quot;https://example.com&quot;,
+		Type:          plugin.PluginType_Utilities,
+		VersionMajor:  1,
+		VersionMinor:  0,
+		VersionPatch:  0,
+
+		// As this is a utility plugin, we don't need to capture any traffic
+		// but only serve the UI, so we set the UI (relative to the plugin path) to &quot;/&quot;
+		UIPath: UI_PATH,
+	})
+	if err != nil {
+		//Terminate or enter standalone mode here
+		panic(err)
+	}
+
+	// Create a new PluginEmbedUIRouter that will serve the UI from web folder
+	// The router will also help to handle the termination of the plugin when
+	// a user wants to stop the plugin via Zoraxy Web UI
+	embedWebRouter := plugin.NewPluginEmbedUIRouter(PLUGIN_ID, &amp;content, WEB_ROOT, UI_PATH)
+	embedWebRouter.RegisterTerminateHandler(func() {
+		// Do cleanup here if needed
+		fmt.Println(&quot;Restful-example Exited&quot;)
+	}, nil)
+
+	//Register a simple API endpoint that will echo the request body
+	// Since we are using the default http.ServeMux, we can register the handler directly with the last
+	// parameter as nil
+	embedWebRouter.HandleFunc(&quot;/api/echo&quot;, func(w http.ResponseWriter, r *http.Request) {
+		// This is a simple echo API that will return the request body as response
+		name := r.URL.Query().Get(&quot;name&quot;)
+		if name == &quot;&quot; {
+			http.Error(w, &quot;Missing 'name' query parameter&quot;, http.StatusBadRequest)
+			return
+		}
+		w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)
+		response := map[string]string{&quot;message&quot;: fmt.Sprintf(&quot;Hello %s&quot;, name)}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, &quot;Failed to encode response&quot;, http.StatusInternalServerError)
+		}
+	}, nil)
+
+	// Here is another example of a POST API endpoint that will echo the form data
+	// This will handle POST requests to /api/post and return the form data as response
+	embedWebRouter.HandleFunc(&quot;/api/post&quot;, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, &quot;Invalid request method&quot;, http.StatusMethodNotAllowed)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, &quot;Failed to parse form data&quot;, http.StatusBadRequest)
+			return
+		}
+
+		for key, values := range r.PostForm {
+			for _, value := range values {
+				// Generate a simple HTML response
+				w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)
+				fmt.Fprintf(w, &quot;%s: %s&lt;br&gt;&quot;, key, value)
+			}
+		}
+	}, nil)
+
+	// Serve the restful-example page in the www folder
+	http.Handle(UI_PATH, embedWebRouter.Handler())
+	fmt.Println(&quot;Restful-example started at http://127.0.0.1:&quot; + strconv.Itoa(runtimeCfg.Port))
+	err = http.ListenAndServe(&quot;127.0.0.1:&quot;+strconv.Itoa(runtimeCfg.Port), nil)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    What you should expect to see if everything is correctly loaded and working in Zoray
+                  </p>
+                </p>
+                <p>
+                  <div class="ts-image is-rounded" style="max-width: 800px">
+                    <img src="img/2. RESTful Example/image-20250530153148506.png" alt="image-20250530153148506" />
+                  </div>
+                </p>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+    <script>
+      hljs.highlightAll();
+    </script>
+  </body>
+</html>

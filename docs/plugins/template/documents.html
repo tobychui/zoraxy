@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {{title}}
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Code highlight -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    
+    <style>
+        #msgbox{
+            position: fixed;
+            bottom: 1em;
+            right: 1em;
+            z-index: 9999;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        dialog[open] {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        code{
+            border-radius: 0.5rem;
+        }
+    </style>
+    <script src="{{root_url}}assets/theme.js"></script>
+</head>
+<body>
+    <div class="ts-content">
+        <div class="ts-container">
+            <div style="float: right;">
+                <button class="ts-button is-icon" id="darkModeToggle">
+                    <span class="ts-icon is-moon-icon"></span>
+                </button>
+            </div>
+            <div class="ts-tab is-pilled">
+                <a href="" class="item" style="user-select: none;">
+                    <img id="sysicon" class="ts-image" style="height: 30px" white_src="{{root_url}}assets/logo.png" dark_src="{{root_url}}assets/logo_white.png" src="{{root_url}}assets/logo.png"></img>
+                </a>
+                <a href="#!" class="is-active item">
+                    Documents
+                </a>
+                <a href="https://github.com/tobychui/zoraxy/tree/main/example/plugins" target="_blank" class="item">
+                    Examples <span class="ts-icon is-arrow-up-right-from-square-icon"></span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+        <div class="has-padded">
+            <div class="ts-grid mobile:is-stacked">
+                <div class="column is-4-wide">
+                    {{sideMenu}}
+                </div>
+                <div class="column is-12-wide">
+                    <div class="ts-box">
+                        <div class="ts-container is-padded has-top-padded-large">
+                            {{content}}
+                        </div>
+                        <br><br>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ts-container">
+        <div class="ts-divider"></div>
+        <div class="ts-content">
+            <div class="ts-text">
+                Zoraxy © tobychui <span class="thisyear">2025</span>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(".thisyear").text(new Date().getFullYear());
+    </script>
+    <script>
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

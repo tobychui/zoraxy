@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      Configure | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/plugins/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/plugins/html/assets/logo.png" dark_src="/plugins/html/assets/logo_white.png" src="/plugins/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="https://github.com/tobychui/zoraxy/tree/main/example/plugins" target="_blank" class="item">
+            Examples
+            <span class="ts-icon is-arrow-up-right-from-square-icon"></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/3. Installing Plugin.html">
+                    Installing Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/4. Enable Plugins.html">
+                    Enable Plugins
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/5. Viewing Plugin Info.html">
+                    Viewing Plugin Info
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item is-active" href="/plugins/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/5. Plugin UI.html">
+                    Plugin UI
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/6. Compile a Plugin.html">
+                    Compile a Plugin
+                  </a>
+                </div>
+                <a class="item">
+                  Basic Examples
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/3. Basic Examples/1. Hello World.html">
+                    Hello World
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/2. RESTful Example.html">
+                    RESTful Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/3. Static Capture Example.html">
+                    Static Capture Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/4. Dynamic Capture Example.html">
+                    Dynamic Capture Example
+                  </a>
+                </div>
+                <a class="item" href="/plugins/html/index.html">
+                  index
+                </a>
+                <a class="item" href="/plugins/html/zoraxy_plugin API.html">
+                  zoraxy_plugin API
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="configure">
+                  Configure
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    Configure or Configure Spec is the
+                    <span class="ts-text is-code">
+                      exec
+                    </span>
+                    call where Zoraxy start the plugin. The configure spec JSON structure is defined in
+                    <span class="ts-text is-code">
+                      zoraxy_plugin
+                    </span>
+                    library.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    As the time of writing, the
+                    <span class="ts-text is-code">
+                      ConfigureSpec
+                    </span>
+                    only contains information on some basic info.
+                  </p>
+                </p>
+                <pre><code class="language-go">type ConfigureSpec struct {
+	Port         int                  `json:&quot;port&quot;`          //Port to listen
+	RuntimeConst RuntimeConstantValue `json:&quot;runtime_const&quot;` //Runtime constant values
+	//To be expanded
+}
+
+</code></pre>
+                <p>
+                  <p class="ts-text">
+                    The
+                    <span class="ts-text is-code">
+                      ConfigureSpec
+                    </span>
+                    struct will be parsed to JSON and pass to your plugin via the
+                    <span class="ts-text is-code">
+                      -configure=(json payload here)
+                    </span>
+                    .
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    In your plugin, you can use the
+                    <span class="ts-text is-code">
+                      zoraxy_plugin
+                    </span>
+                    library to parse it or parse it manually (if you are developing a plugin with other languages).
+                  </p>
+                </p>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+    <script>
+      hljs.highlightAll();
+    </script>
+  </body>
+</html>

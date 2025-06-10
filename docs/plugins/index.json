@@ -1,0 +1,113 @@
+{
+  "title": "",
+  "path": ".",
+  "type": "folder",
+  "files": [
+    {
+      "title": "Introduction",
+      "path": "1. Introduction",
+      "type": "folder",
+      "files": [
+        {
+          "filename": "1. Introduction/1. What is Zoraxy Plugin.md",
+          "title": "What is Zoraxy Plugin",
+          "type": "file"
+        },
+        {
+          "filename": "1. Introduction/2. Getting Started.md",
+          "title": "Getting Started",
+          "type": "file"
+        },
+        {
+          "filename": "1. Introduction/3. Installing Plugin.md",
+          "title": "Installing Plugin",
+          "type": "file"
+        },
+        {
+          "filename": "1. Introduction/4. Enable Plugins.md",
+          "title": "Enable Plugins",
+          "type": "file"
+        },
+        {
+          "filename": "1. Introduction/5. Viewing Plugin Info.md",
+          "title": "Viewing Plugin Info",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Architecture",
+      "path": "2. Architecture",
+      "type": "folder",
+      "files": [
+        {
+          "filename": "2. Architecture/1. Plugin Architecture.md",
+          "title": "Plugin Architecture",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/2. Introspect.md",
+          "title": "Introspect",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/3. Configure.md",
+          "title": "Configure",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/4. Capture Modes.md",
+          "title": "Capture Modes",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/5. Plugin UI.md",
+          "title": "Plugin UI",
+          "type": "file"
+        },
+        {
+          "filename": "2. Architecture/6. Compile a Plugin.md",
+          "title": "Compile a Plugin",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "title": "Basic Examples",
+      "path": "3. Basic Examples",
+      "type": "folder",
+      "files": [
+        {
+          "filename": "3. Basic Examples/1. Hello World.md",
+          "title": "Hello World",
+          "type": "file"
+        },
+        {
+          "filename": "3. Basic Examples/2. RESTful Example.md",
+          "title": "RESTful Example",
+          "type": "file"
+        },
+        {
+          "filename": "3. Basic Examples/3. Static Capture Example.md",
+          "title": "Static Capture Example",
+          "type": "file"
+        },
+        {
+          "filename": "3. Basic Examples/4. Dynamic Capture Example.md",
+          "title": "Dynamic Capture Example",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "filename": "index.md",
+      "title": "index",
+      "type": "file"
+    },
+    {
+      "filename": "zoraxy_plugin API.md",
+      "title": "zoraxy_plugin API",
+      "type": "file"
+    }
+  ]
+}

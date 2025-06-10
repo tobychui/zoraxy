@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      Introspect | Zoraxy Documentation
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Code highlight -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/vs2015.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/xml.min.js"></script>
+    <style>
+      #msgbox{
+      position: fixed;
+      bottom: 1em;
+      right: 1em;
+      z-index: 9999;
+      }
+
+      @keyframes fadeIn {
+      from {
+      opacity: 0;
+      }
+      to {
+      opacity: 1;
+      }
+      }
+
+      dialog[open] {
+      animation: fadeIn 0.3s ease-in-out;
+      }
+
+      code{
+      border-radius: 0.5rem;
+      }
+    </style>
+    <script src="/plugins/html/assets/theme.js"></script>
+  </head>
+  <body>
+    <div class="ts-content">
+      <div class="ts-container">
+        <div style="float: right;">
+          <button class="ts-button is-icon" id="darkModeToggle">
+            <span class="ts-icon is-moon-icon"></span>
+          </button>
+        </div>
+        <div class="ts-tab is-pilled">
+          <a href="" class="item" style="user-select: none;">
+            <img id="sysicon" class="ts-image" style="height: 30px" white_src="/plugins/html/assets/logo.png" dark_src="/plugins/html/assets/logo_white.png" src="/plugins/html/assets/logo.png"></img>
+          </a>
+          <a href="#!" class="is-active item">
+            Documents
+          </a>
+          <a href="https://github.com/tobychui/zoraxy/tree/main/example/plugins" target="_blank" class="item">
+            Examples
+            <span class="ts-icon is-arrow-up-right-from-square-icon"></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div>
+      <div class="has-padded">
+        <div class="ts-grid mobile:is-stacked">
+          <div class="column is-4-wide">
+            <div class="ts-box">
+              <div class="ts-menu is-end-icon">
+                <a class="item">
+                  Introduction
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/1. Introduction/1. What is Zoraxy Plugin.html">
+                    What is Zoraxy Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/2. Getting Started.html">
+                    Getting Started
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/3. Installing Plugin.html">
+                    Installing Plugin
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/4. Enable Plugins.html">
+                    Enable Plugins
+                  </a>
+                  <a class="item" href="/plugins/html/1. Introduction/5. Viewing Plugin Info.html">
+                    Viewing Plugin Info
+                  </a>
+                </div>
+                <a class="item">
+                  Architecture
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/2. Architecture/1. Plugin Architecture.html">
+                    Plugin Architecture
+                  </a>
+                  <a class="item is-active" href="/plugins/html/2. Architecture/2. Introspect.html">
+                    Introspect
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/3. Configure.html">
+                    Configure
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/4. Capture Modes.html">
+                    Capture Modes
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/5. Plugin UI.html">
+                    Plugin UI
+                  </a>
+                  <a class="item" href="/plugins/html/2. Architecture/6. Compile a Plugin.html">
+                    Compile a Plugin
+                  </a>
+                </div>
+                <a class="item">
+                  Basic Examples
+                  <span class="ts-icon is-caret-down-icon"></span>
+                </a>
+                <div class="ts-menu is-dense is-small is-horizontally-padded">
+                  <a class="item" href="/plugins/html/3. Basic Examples/1. Hello World.html">
+                    Hello World
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/2. RESTful Example.html">
+                    RESTful Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/3. Static Capture Example.html">
+                    Static Capture Example
+                  </a>
+                  <a class="item" href="/plugins/html/3. Basic Examples/4. Dynamic Capture Example.html">
+                    Dynamic Capture Example
+                  </a>
+                </div>
+                <a class="item" href="/plugins/html/index.html">
+                  index
+                </a>
+                <a class="item" href="/plugins/html/zoraxy_plugin API.html">
+                  zoraxy_plugin API
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="column is-12-wide">
+            <div class="ts-box">
+              <div class="ts-container is-padded has-top-padded-large">
+                <h1 id="introspect">
+                  Introspect
+                </h1>
+                <p>
+                  <p class="ts-text">
+                    Last Update: 25/05/2025
+                  </p>
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <p>
+                  <p class="ts-text">
+                    Introspect, similar to the one in dbus design, is used to get the information from plugin when Zoraxy starts (or manually triggered in development mode or force reload plugin list).
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    <span class="ts-text is-heavy">
+                      This is a pre-defined structure where the plugin must provide to Zoraxy
+                    </span>
+                    when the plugin is being started with the
+                    <span class="ts-text is-code">
+                      -introspect
+                    </span>
+                    flag.
+                  </p>
+                </p>
+                <p>
+                  <p class="ts-text">
+                    The introspect structure is defined under the
+                    <span class="ts-text is-code">
+                      zoraxy_plugin
+                    </span>
+                    library, where both Zoraxy and plugin should use. As of writing, the structure of introspect is like this.
+                  </p>
+                </p>
+                <pre><code class="language-go">type IntroSpect struct {
+	/* Plugin metadata */
+	ID            string     `json:&quot;id&quot;`             //Unique ID of your plugin, recommended using your own domain in reverse like com.yourdomain.pluginname
+	Name          string     `json:&quot;name&quot;`           //Name of your plugin
+	Author        string     `json:&quot;author&quot;`         //Author name of your plugin
+	AuthorContact string     `json:&quot;author_contact&quot;` //Author contact of your plugin, like email
+	Description   string     `json:&quot;description&quot;`    //Description of your plugin
+	URL           string     `json:&quot;url&quot;`            //URL of your plugin
+	Type          PluginType `json:&quot;type&quot;`           //Type of your plugin, Router(0) or Utilities(1)
+	VersionMajor  int        `json:&quot;version_major&quot;`  //Major version of your plugin
+	VersionMinor  int        `json:&quot;version_minor&quot;`  //Minor version of your plugin
+	VersionPatch  int        `json:&quot;version_patch&quot;`  //Patch version of your plugin
+
+	/*
+
+		Endpoint Settings
+
+	*/
+
+	/*
+		Static Capture Settings
+
+		Once plugin is enabled these rules always applies to the enabled HTTP Proxy rule
+		This is faster than dynamic capture, but less flexible
+	*/
+	StaticCapturePaths   []StaticCaptureRule `json:&quot;static_capture_paths&quot;`   //Static capture paths of your plugin, see Zoraxy documentation for more details
+	StaticCaptureIngress string              `json:&quot;static_capture_ingress&quot;` //Static capture ingress path of your plugin (e.g. /s_handler)
+
+	/*
+		Dynamic Capture Settings
+
+		Once plugin is enabled, these rules will be captured and forward to plugin sniff
+		if the plugin sniff returns 280, the traffic will be captured
+		otherwise, the traffic will be forwarded to the next plugin
+		This is slower than static capture, but more flexible
+	*/
+	DynamicCaptureSniff   string `json:&quot;dynamic_capture_sniff&quot;`   //Dynamic capture sniff path of your plugin (e.g. /d_sniff)
+	DynamicCaptureIngress string `json:&quot;dynamic_capture_ingress&quot;` //Dynamic capture ingress path of your plugin (e.g. /d_handler)
+
+	/* UI Path for your plugin */
+	UIPath string `json:&quot;ui_path&quot;` //UI path of your plugin (e.g. /ui), will proxy the whole subpath tree to Zoraxy Web UI as plugin UI
+
+	/* Subscriptions Settings */
+	SubscriptionPath    string            `json:&quot;subscription_path&quot;`    //Subscription event path of your plugin (e.g. /notifyme), a POST request with SubscriptionEvent as body will be sent to this path when the event is triggered
+	SubscriptionsEvents map[string]string `json:&quot;subscriptions_events&quot;` //Subscriptions events of your plugin, see Zoraxy documentation for more details
+}
+</code></pre>
+                <p>
+                  The introspect provide Zoraxy the required information to start the plugin and how to interact with it.  For more details on what those capture settings are for, see &ldquo;Capture Mode&rdquo; section.
+                </p>
+                <div class="ts-divider has-top-spaced-large"></div>
+                <h2 id="introspect-manual-triggering">
+                  Introspect Manual Triggering
+                </h2>
+                <p>
+                  <p class="ts-text">
+                    To manually test if the introspect return is correct, you can try using the
+                    <span class="ts-text is-code">
+                      -introspect
+                    </span>
+                    flag on any Zoraxy plugin. You should be able to see an output like so.
+                  </p>
+                </p>
+                <pre><code class="language-json">$ ./debugger -introspect
+{
+ &quot;id&quot;: &quot;org.aroz.zoraxy.debugger&quot;,
+ &quot;name&quot;: &quot;Plugin Debugger&quot;,
+ &quot;author&quot;: &quot;aroz.org&quot;,
+ &quot;author_contact&quot;: &quot;https://aroz.org&quot;,
+ &quot;description&quot;: &quot;A debugger for Zoraxy \u003c-\u003e plugin communication pipeline&quot;,
+ &quot;url&quot;: &quot;https://zoraxy.aroz.org&quot;,
+ &quot;type&quot;: 0,
+ &quot;version_major&quot;: 1,
+ &quot;version_minor&quot;: 0,
+ &quot;version_patch&quot;: 0,
+ &quot;static_capture_paths&quot;: [
+  {
+   &quot;capture_path&quot;: &quot;/test_a&quot;
+  },
+  {
+   &quot;capture_path&quot;: &quot;/test_b&quot;
+  }
+ ],
+ &quot;static_capture_ingress&quot;: &quot;/s_capture&quot;,
+ &quot;dynamic_capture_sniff&quot;: &quot;/d_sniff&quot;,
+ &quot;dynamic_capture_ingress&quot;: &quot;/d_capture&quot;,
+ &quot;ui_path&quot;: &quot;/debug&quot;,
+ &quot;subscription_path&quot;: &quot;&quot;,
+ &quot;subscriptions_events&quot;: null
+}
+</code></pre>
+              </div>
+              <br>
+              <br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ts-container">
+      <div class="ts-divider"></div>
+      <div class="ts-content">
+        <div class="ts-text">
+          Zoraxy © tobychui
+          <span class="thisyear">
+            2025
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(".thisyear").text(new Date().getFullYear());
+    </script>
+    <script>
+      hljs.highlightAll();
+    </script>
+  </body>
+</html>
