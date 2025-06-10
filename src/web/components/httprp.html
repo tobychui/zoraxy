@@ -46,7 +46,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             width: 68vw;
-            height: 70vh;
+            height: 75vh;
             background-color: var(--theme_bg_primary);
             padding: 1.4em;
             border-radius: .6em;
@@ -204,11 +204,17 @@
                     <a class="item hrpedit_menu_item" cfgpage="vdirs">
                         <i class="angle folder icon"></i> Virtual Directory
                     </a>
+                    <a class="item hrpedit_menu_item" cfgpage="alias">
+                        <i class="at icon"></i> Alias
+                    </a>
                     <a class="item hrpedit_menu_item" cfgpage="ssl">
                         <i class="lock icon"></i> TLS / SSL
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="headers">
                         <i class="heading icon"></i> Headers
+                    </a>
+                    <a class="item hrpedit_menu_item" cfgpage="accessrule">
+                        <i class="star icon"></i> Access Rules
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="security">
                         <i class="key icon"></i> Security
@@ -238,9 +244,6 @@
                                     <label>Allow plain HTTP access<br>
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
-                                <br>
-                                <button class="ui basic compact tiny button editAliasHostnameBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="blue at icon"></i> Alias Hostnames</button>
-                                <button class="ui basic compact tiny button editAccessRuleBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui filter icon"></i> Access Rule</button>
                             </div>
                         </div>
                     </div>
@@ -292,63 +295,80 @@
                             </button>
                         </div>
                     </div>
+                    <!-- Alias -->
+                    <div class="rpconfig_content" rpcfg="alias">
+                        <iframe src="" class="wrapper_frame">
+
+                        </iframe>
+                    </div>
+                    <!-- TLS / SSL -->
+                    <div class="rpconfig_content" rpcfg="ssl">
+                        <div class="ui segment">
+                            <p>Work In Progress </p>
+                            <br>
+                            <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
+                        </div>
+                    </div>
                     <!-- Custom Headers -->
                     <div class="rpconfig_content" rpcfg="headers">
                         <iframe src="" class="wrapper_frame">
 
                         </iframe>
                     </div>
+                    <!-- Access Rule -->
+                    <div class="rpconfig_content" rpcfg="accessrule">
+                        <iframe src="" class="wrapper_frame">
+
+                        </iframe>
+                    </div>
                     <!-- Security -->
                     <div class="rpconfig_content" rpcfg="security">
-                        <div class="grouped fields authProviderPicker">
-                            <!-- Auth Providers -->
-                            <label><b>Authentication Provider</b></label>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="0" name="authProviderType">
-                                    <label>None (Anyone can access)</label>
+                        <div class="ui segment">
+                            <div class="grouped fields authProviderPicker">
+                                <!-- Auth Providers -->
+                                <label><b>Authentication Provider</b></label>
+                                <div class="field">
+                                    <div class="ui radio checkbox">
+                                        <input type="radio" value="0" name="authProviderType">
+                                        <label>None (Anyone can access)</label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui radio checkbox">
+                                        <input type="radio" value="1" name="authProviderType">
+                                        <label>Basic Auth</label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui radio checkbox">
+                                        <input type="radio" value="2" name="authProviderType">
+                                        <label>Forward Auth</label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui radio checkbox">
+                                        <input type="radio" value="3" name="authProviderType">
+                                        <label>OAuth2</label>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="1" name="authProviderType">
-                                    <label>Basic Auth</label>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="2" name="authProviderType">
-                                    <label>Forward Auth</label>
-                                </div>
-                            </div>
-                            <div class="field">
-                                <div class="ui radio checkbox">
-                                    <input type="radio" value="3" name="authProviderType">
-                                    <label>OAuth2</label>
-                                </div>
+                            <br>
+                            <button class="ui basic compact tiny button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            
+                            <div class="ui divider"></div>
+                            <!-- Rate Limits-->
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
+                                <label>Require Rate Limit<br>
+                                <small>Check this to enable rate limit on this inbound hostname</small></label>
+                            </div><br>
+                            <div class="ui small right labeled fluid input" style="margin-top: 0.4em;">
+                                <input type="number" class="RateLimit" value="0" min="1" >
+                                <label class="ui basic label">
+                                    req / sec / IP
+                                </label>
                             </div>
                         </div>
-                        <br>
-                        <button class="ui basic compact tiny button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
-                        
-                        <div class="ui divider"></div>
-                        <!-- Rate Limits-->
-                        <div class="ui checkbox" style="margin-top: 0.4em;">
-                            <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
-                            <label>Require Rate Limit<br>
-                            <small>Check this to enable rate limit on this inbound hostname</small></label>
-                        </div><br>
-                        <div class="ui small right labeled fluid input" style="margin-top: 0.4em;">
-                            <input type="number" class="RateLimit" value="0" min="1" >
-                            <label class="ui basic label">
-                                req / sec / IP
-                            </label>
-                        </div>
-                    </div>
-                    <!-- TLS / SSL -->
-                    <div class="rpconfig_content" rpcfg="ssl">
-                        SSL
-                        <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
                     </div>
                     <!-- Tags -->
                     <div class="rpconfig_content" rpcfg="tags">
@@ -882,8 +902,7 @@
                 "ratenum" :rateLimit,
                 "tags": tags,
         });
-        alert("save function wip, see console.log");
-        return;
+
         $.cjax({
             url: "/api/proxy/edit",
             method: "POST",
@@ -940,21 +959,6 @@
         showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
     }
 
-    function editAccessRule(uuid){
-        let payload = encodeURIComponent(JSON.stringify({
-            ept: "host",
-            ep: uuid
-        }));
-        showEditorSideWrapper("snippet/hostAccessEditor.html?t=" + Date.now() + "#" + payload);
-    }
-
-    function editAliasHostnames(uuid){
-        let payload = encodeURIComponent(JSON.stringify({
-            ept: "host",
-            ep: uuid
-        }));
-        showEditorSideWrapper("snippet/aliasEditor.html?t=" + Date.now() + "#" + payload);
-    }
 
     function quickEditVdir(uuid){
         openTabById("vdir");
@@ -1113,9 +1117,8 @@
 
 
     function getTagsArrayFromEndpoint(endpoint){
-        let targetProxyRuleEle = $(".subdEntry[eptuuid='" + endpoint + "'] td[data-label='tags']");
-        let tags = $(targetProxyRuleEle).attr("payload");
-        return JSON.parse(decodeURIComponent(tags));
+        let subd = getEditingHttpProxyCachedSubd();
+        return tags = subd.Tags || [];
     }
     
     /* Modal Events */
@@ -1138,8 +1141,16 @@
         if (hostname == ""){
             return null;
         }
-
         return decodeURIComponent(hostname);
+    }
+
+    function getEditingHttpProxyCachedSubd(){
+        let hostname = getEditingHttpProxyHostname();
+        if (hostname == null){
+            return null;
+        }
+        let subd = httpProxyList.find(subd => subd.RootOrMatchingDomain === hostname);
+        return subd;
     }
 
     //Initialize the http proxy rule editor
@@ -1200,7 +1211,7 @@
         });
         editor.find(".downstream_alias_hostname").html(aliasHTML);
         
-       
+        //TODO: Move this to SSL TLS section
         let enableQuickRequestButton = true;
         let domains = [subd.RootOrMatchingDomain]; //Domain for getting certificate if needed
         for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
@@ -1229,13 +1240,6 @@
             editor.find(".getCertificateBtn").addClass("disabled");
         }
 
-        //Bind events for action buttons
-        editor.find(".editAliasHostnameBtn").off("click").on("click", function(){
-            editAliasHostnames(uuid);
-        });
-        editor.find(".editAccessRuleBtn").off("click").on("click", function(){
-            editAccessRule(uuid);
-        });
         editor.find(".getCertificateBtn").off("click").on("click", function(){
             requestCertificateForExistingHost(uuid, certificateDomains, this);
         });
@@ -1244,7 +1248,19 @@
         editor.find(".upstream_list").html(renderUpstreamList(subd));
         editor.find(".editUpstreamButton").off("click").on("click", function(){
             editUpstreams(uuid);
-        })
+        });
+
+        editor.find(".EnableUptimeMonitor").off("change");
+        editor.find(".EnableUptimeMonitor").prop("checked", !subd.DisableUptimeMonitor);
+        editor.find(".EnableUptimeMonitor").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".UseStickySession").off("change");
+        editor.find(".UseStickySession").prop("checked", subd.UseStickySession);
+        editor.find(".UseStickySession").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
 
         /* ------------ Vdirs ------------ */
         editor.find(".vdir_list").html(renderVirtualDirectoryList(subd));
@@ -1252,7 +1268,17 @@
             quickEditVdir(uuid);
         });
 
-        /* Headers */ 
+        /* ------------ Alias ------------ */ 
+        (() => {
+            let payload = encodeURIComponent(JSON.stringify({
+                ept: "host",
+                ep: uuid
+            }));
+            let frameURL = "snippet/aliasEditor.html?t=" + Date.now() + "#" + payload;
+            editor.find(".rpconfig_content[rpcfg='alias'] .wrapper_frame").attr('src', frameURL);
+        })();
+
+        /* ------------ Headers ------------ */ 
         (() => {
             let payload = encodeURIComponent(JSON.stringify({
                 ept: "host",
@@ -1260,6 +1286,16 @@
             }));
             let frameURL = "snippet/customHeaders.html?t=" + Date.now() + "#" + payload;
             editor.find(".rpconfig_content[rpcfg='headers'] .wrapper_frame").attr('src', frameURL);
+        })();
+
+        /* ------------ Access Rule ------------ */
+        (()=>{
+            let payload = encodeURIComponent(JSON.stringify({
+                ept: "host",
+                ep: uuid
+            }));
+            let frameURL = "snippet/hostAccessEditor.html?t=" + Date.now() + "#" + payload;
+            editor.find(".rpconfig_content[rpcfg='accessrule'] .wrapper_frame").attr('src', frameURL);
         })();
 
         /* ------------ Security ------------ */
@@ -1293,14 +1329,34 @@
             editor.find(".RateLimit").parent().addClass("disabled");
         }
 
+        function rateLimitChangeEvent(){
+            let rateLimitValue = $(this).val();
+            if (rateLimitValue < 0 || isNaN(rateLimitValue)) {
+                msgbox("Rate limit must be >= 0", false);
+                $(this).val(subd.RateLimit); // Reset to previous valid value
+                return;
+            }
+            saveProxyInlineEdit(uuid);
+        }
+
         editor.find(".RequireRateLimit").off("change").on("change", function() {
             if ($(this).is(":checked")) {
                 editor.find(".RateLimit").parent().removeClass("disabled");
             } else {
                 editor.find(".RateLimit").parent().addClass("disabled");
             }
+
+            if (subd.RateLimit === 0) {
+                subd.RateLimit = 100; // Set default rate limit to 100 if uninitialized
+                $(this).val(subd.RateLimit);
+                editor.find(".RateLimit").off("change"); // Temporarily disable the change event handler
+                editor.find(".RateLimit").val(100); // Set the value to 100
+                editor.find(".RateLimit").on("change", rateLimitChangeEvent); // Re-enable the change event handler
+            }
+            saveProxyInlineEdit(uuid);
         });
         editor.find(".RateLimit").attr("value", subd.RateLimit);
+        editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
 
         /* ------------ TLS ------------ */
 
@@ -1317,11 +1373,9 @@
         console.log(subd);
     }
 
-    function updateVdirInProxyEditor(){
-        // When page switch from Vdir and back to this page
-        // there is a chance where the user has modified the Vdir
-        // we need to get the latest setting from server side and 
-        // render it again
+    // Pull the latest proxy config from server side again and populate the editor
+    // with latest settings
+    function resyncProxyEditorConfig(){
         let currentEditingHostname = getEditingHttpProxyHostname();
         $.get("/api/proxy/list?type=host", function(data){
             data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0));
@@ -1341,13 +1395,14 @@
         let cfgPageId = $(this).attr("cfgpage");
         $("#httprpEditModal .rpconfig_content").hide();
         $(`#httprpEditModal .rpconfig_content[rpcfg='${cfgPageId}']`).show();
+        $("#httprpEditModal .wrapper_frame").contents().scrollTop(0);
         hideEditorSideWrapper(); //Always close the side wrapper on tab change
     });
 
     $("#httprpEditModal .editor_back_button").on("click", function(event) {
         // Prevent click event from propagating to the modal background
         event.stopPropagation();
-        hideEditorSideWrapper();
+        hideEditorSideWrapperViaBtn();
     });
 
     function showEditorSideWrapper(url){
@@ -1355,9 +1410,13 @@
         $("#httprpEditModal .editor_side_wrapper").fadeIn("fast");
     }
 
+    function hideEditorSideWrapperViaBtn(){
+        hideEditorSideWrapper();
+        resyncProxyEditorConfig();
+    }
+
     function hideEditorSideWrapper(){
         $("#httprpEditModal .editor_side_wrapper").fadeOut("fast");
-        $("#httprpEditModal .editor_side_wrapper .wrapper_frame").attr('src', "snippet/placeholder.html");
     }
 
 
@@ -1381,7 +1440,10 @@
     tabSwitchEventBind["httprp"] = function(){
         //Check if the proxy editor is opened
         if ($("#httprpEditModalWrapper").is(":visible")) {
-            //Update the information in the modal
+            // When page switch from Vdir and back to this page
+            // there is a chance where the user has modified the Vdir
+            // we need to get the latest setting from server side and 
+            // render it again
             updateVdirInProxyEditor();
         } else {
             listProxyEndpoints();

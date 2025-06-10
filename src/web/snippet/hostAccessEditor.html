@@ -35,7 +35,7 @@
 
             #accessRuleList{
                 padding: 0.6em;
-                border: 1px solid rgb(228, 228, 228);
+                /* border: 1px solid rgb(228, 228, 228); */
                 border-radius: 0.4em !important;
                 max-height: calc(100vh - 15em);
                 min-height: 300px;
@@ -65,15 +65,6 @@
         <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
-            <div class="ui header">
-                <div class="content">
-                    <div class="content">
-                        Host Access Settings
-                        <div class="sub header" id="epname"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="ui divider"></div>
             <p>Select an access rule to apply blacklist / whitelist filtering</p>
             <div id="accessRuleList">
                 <div class="ui segment accessRule">
@@ -87,9 +78,7 @@
                 </div>
             </div>
             <br>
-            <button class="ui basic button" onclick="applyChangeAndClose()"><i class="ui green check icon"></i> Apply Change</button>
-            
-            <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
+            <!-- <button class="ui basic button" onclick="applyChange()"><i class="ui green check icon"></i> Apply Change</button> -->
             <br><br><br>
 
         </div>
@@ -176,6 +165,35 @@
                 let accessRuleID = $(accessRuleObject).attr("ruleid");
                 $(".accessRule").removeClass('active');
                 $(accessRuleObject).addClass('active');
+
+                //Updates 2025-06-10: Added auto save on change feature
+                applyChange();
+            }
+
+            
+            function applyChange(){
+                let newAccessRuleID = $(".accessRule.active").attr("ruleid");
+                let targetEndpoint = editingEndpoint.ep;
+                $.cjax({
+                    url: "/api/access/attach",
+                    method: "POST",
+                    data: {
+                        id: newAccessRuleID,
+                        host: targetEndpoint
+                    },
+                    success: function(data){
+                        if (data.error != undefined){
+                            parent.msgbox(data.error, false);
+                        }else{
+                            parent.msgbox("Access Rule Updated");
+
+                            //Modify the parent list if exists
+                            if (parent != undefined && parent.updateAccessRuleNameUnderHost){
+                                parent.updateAccessRuleNameUnderHost(targetEndpoint, newAccessRuleID);
+                            }
+                        }
+                    }
+                });
             }
 
             function applyChangeAndClose(){
