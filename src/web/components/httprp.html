@@ -51,7 +51,7 @@
             padding: 1.4em;
             border-radius: .6em;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2), 0px 8px 16px rgba(0, 0, 0, 0.2);
-            z-index: 9;
+            z-index: 8;
             max-width: 840px;
         }
 
@@ -104,13 +104,40 @@
                 height: 80vh;
                 border-radius: 0;
                 overflow-y: scroll;
+                overflow-x: hidden;
+                width: 100%;
             }
 
+            /* Override the ui grid */
+            #httprpEditModalSideMenu{
+                width: 16% !important;
+            }
+
+            #httprpEditModalContentWindow{
+                width: 84% !important;
+            }
+
+            #httprpEditModal{
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            .editorSideMenuText{
+                display:none;
+            }
+
+            .hrpedit_menu_item{
+                height: 2.4em;
+            }
+            
             .httpProxyEditClosePC{
                 display:none !important;
             }
             .httpProxyEditCloseMobile{
                 display:block !important;
+                position: absolute;
+                left: 1.25em !important;
+                bottom: 1em;
             }
         }
 
@@ -130,7 +157,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
-            z-index: 8;
+            z-index: 7;
             backdrop-filter: blur(3px);
         }
 
@@ -192,41 +219,42 @@
 <!-- Modal for editing a HTTP Proxy Rule -->
 <div id="httprpEditModalWrapper">
     <div id="httprpEditModal" editing-host="">
-        <div class="ui stackable grid" style="height:100%;">
-            <div class="four wide column">
+        <div class="ui grid" style="height:100%;">
+            <div id="httprpEditModalSideMenu" class="four wide column">
                 <div class="ui secondary fluid vertical menu">
                     <a class="active item hrpedit_menu_item" cfgpage="downstream">
-                        <i class="angle double white right icon"></i> Downstream
+                        <i class="angle double white right icon"></i> <span class="editorSideMenuText">Downstream</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="upstream">
-                        <i class="angle double left icon"></i> Upstream
+                        <i class="angle double left icon"></i> <span class="editorSideMenuText">Upstream</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="vdirs">
-                        <i class="angle folder icon"></i> Virtual Directory
+                        <i class="angle folder icon"></i> <span class="editorSideMenuText">Virtual Directory</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="alias">
-                        <i class="at icon"></i> Alias
+                        <i class="at icon"></i> <span class="editorSideMenuText">Alias</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="ssl">
-                        <i class="lock icon"></i> TLS / SSL
+                        <i class="lock icon"></i> <span class="editorSideMenuText">TLS / SSL</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="headers">
-                        <i class="heading icon"></i> Headers
+                        <i class="heading icon"></i> <span class="editorSideMenuText">Headers</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="accessrule">
-                        <i class="star icon"></i> Access Rules
+                        <i class="star icon"></i> <span class="editorSideMenuText">Access Rules</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="security">
-                        <i class="key icon"></i> Security
+                        <i class="key icon"></i> <span class="editorSideMenuText">Security</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="tags">
-                        <i class="tags icon"></i> Tags
+                        <i class="tags icon"></i> <span class="editorSideMenuText">Tags</span>
                     </a>
                 </div>
 
                 <button class="ui basic fluid button httpProxyEditClosePC" onclick="closeHttpRuleEditor();">Close</button>
+                <button class="ui basic icon circular button httpProxyEditCloseMobile"  onclick="closeHttpRuleEditor();"><i class="ui times icon"></i></button>
             </div>
-            <div class="twelve wide column">
+            <div id="httprpEditModalContentWindow" class="twelve wide column">
                 <div style="height:100%;">
                     <!-- Downstream -->
                     <div class="rpconfig_content" rpcfg="downstream">
@@ -240,11 +268,12 @@
                             <div class="ui divider"></div>
                             <div class="downstream_action_list">
                                 <div class="ui checkbox" style="margin-top: 0.4em;">
-                                    <input type="checkbox" class="BypassGlobalTLS" ${subd.BypassGlobalTLS?"checked":""}>
+                                    <input type="checkbox" class="BypassGlobalTLS">
                                     <label>Allow plain HTTP access<br>
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
                             </div>
+                           
                         </div>
                     </div>
                     <!-- Upstream -->
@@ -260,27 +289,18 @@
                                 <label>Monitor Uptime<br>
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
-                            <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
-                                <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
-                                    <div class="title">
-                                        <i class="dropdown icon"></i>
-                                        Advanced Settings
-                                    </div>
-                                    <div class="content">
-                                        <div class="ui checkbox" style="margin-top: 0.4em;">
-                                            <input type="checkbox" class="UseStickySession">
-                                            <label>Use Sticky Session<br>
-                                                <small>Enable stick session on load balancing</small></label>
-                                        </div>
-                                        <br>
-                                        <div class="ui disabled checkbox" style="margin-top: 0.4em;">
-                                            <input type="checkbox" class="DisableChunkedTransferEncoding">
-                                            <label>Disable Chunked Transfer Encoding<br>
-                                                <small>Enable this option if your upstream uses a legacy HTTP server implementation</small></label>
-                                        </div>
-                                    </div>
-                                </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="UseStickySession">
+                                <label>Use Sticky Session<br>
+                                    <small>Enable stick session on load balancing</small></label>
                             </div>
+                            <br>
+                            <div class="ui disabled checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="DisableChunkedTransferEncoding">
+                                <label>Disable Chunked Transfer Encoding<br>
+                                    <small>Enable this option if your upstream uses a legacy HTTP server implementation</small></label>
+                            </div>    
                         </div>
                     </div>
                     <!-- Virtual Directories-->
@@ -353,7 +373,7 @@
                                 </div>
                             </div>
                             <br>
-                            <button class="ui basic compact tiny button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
                             
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
@@ -377,7 +397,6 @@
                         </iframe>
                     </div>
                 </div>
-                <button class="ui basic fluid button httpProxyEditCloseMobile" onclick="closeHttpRuleEditor();">Close</button>
                 <!-- Editor Side Wrapper -->
                 <div class="editor_side_wrapper" style="display:none;">
                     <a class="editor_back_button">
@@ -656,206 +675,9 @@
         var row = $('tr[eptuuid="' + uuid + '"]');
         var payload = $(row).attr("payload");
         payload = JSON.parse(decodeURIComponent(payload));
+        //Show the HTTP Proxy Rule Editor Modal
         initHttpProxyRuleEditorModal(payload);
         return;
-        /*
-        var columns = row.find('td[data-label]');
-        console.log(payload);
-        columns.each(function(index) {
-            var column = $(this);
-            var oldValue = column.text().trim();
-
-            if ($(this).attr("editable") == "false"){
-                //This col do not allow edit. Skip
-                return;
-            }
-
-            // Create an input element based on the column content
-            var input;
-            var datatype = $(this).attr("datatype");
-            if (datatype == "domain"){
-                let useStickySessionChecked = "";
-                if (payload.UseStickySession){
-                    useStickySessionChecked = "checked";
-                }
-
-                let enableUptimeMonitor = "";
-                //Note the config file store the uptime monitor as disable, so we need to reverse the logic
-                if (!payload.DisableUptimeMonitor){
-                    enableUptimeMonitor = "checked";
-                }
-
-                input = `<button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 1em;" onclick="editUpstreams('${uuid}');"><i class="grey server icon"></i> Edit Upstreams</button>
-                <div class="ui divider"></div>
-                <div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="UseStickySession" ${useStickySessionChecked}>
-                    <label>Use Sticky Session<br>
-                        <small>Enable stick session on load balancing</small></label>
-                </div>
-                <div class="ui checkbox" style="margin-top: 0.4em;">
-                    <input type="checkbox" class="EnableUptimeMonitor" ${enableUptimeMonitor}>
-                    <label>Monitor Uptime<br>
-                        <small>Enable active uptime monitor</small></label>
-                </div>
-                `;
-                column.append(input);
-                $(column).find(".upstreamList").addClass("editing");
-            }else if (datatype == "vdir"){
-                //Append a quick access button for vdir page
-                column.append(`<button class="ui basic tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="quickEditVdir('${uuid}');">
-                    <i class="ui yellow folder icon"></i> Edit Virtual Directories
-                </button>`);
-            }else if (datatype == "tags"){
-                column.append(`
-                    <div class="ui divider"></div>
-                    <button class="ui basic compact fluid tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editTags('${uuid}');"><i class="ui purple tag icon"></i> Edit tags</button>
-                `);
-            }else if (datatype == "advanced"){
-                let authProvider = payload.AuthenticationProvider.AuthMethod;
-                
-                let skipWebSocketOriginCheck = payload.SkipWebSocketOriginCheck;
-                let wsCheckstate = "";
-                if (skipWebSocketOriginCheck){
-                    wsCheckstate = "checked";
-                }
-
-                let requireRateLimit = payload.RequireRateLimit;
-                let rateLimitCheckState = "";
-                if (requireRateLimit){
-                    rateLimitCheckState = "checked";
-                }
-                let rateLimit = payload.RateLimit;
-                if (rateLimit == 0){
-                    //This value is not set. Make it default to 100
-                    rateLimit = 100;
-                }
-                let rateLimitDisableState = "";
-                if (!payload.RequireRateLimit){
-                    rateLimitDisableState = "disabled";
-                }
-
-                column.empty().append(`
-                    <div class="grouped fields authProviderPicker">
-                        <label><b>Authentication Provider</b></label>
-                        <div class="field">
-                            <div class="ui radio checkbox">
-                                <input type="radio" value="0" name="authProviderType" ${authProvider==0x0?"checked":""}>
-                                <label>None (Anyone can access)</label>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <div class="ui radio checkbox">
-                                <input type="radio" value="1" name="authProviderType" ${authProvider==0x1?"checked":""}>
-                                <label>Basic Auth</label>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <div class="ui radio checkbox">
-                                <input type="radio" value="2" name="authProviderType" ${authProvider==0x2?"checked":""}>
-                                <label>Forward Auth</label>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <div class="ui radio checkbox">
-                                <input type="radio" value="3" name="authProviderType" ${authProvider==0x3?"checked":""}>
-                                <label>OAuth2</label>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editBasicAuthCredentials('${uuid}');"><i class="ui blue user circle icon"></i> Edit Credentials</button>
-                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editCustomHeaders('${uuid}');"><i class="heading icon"></i> Custom Headers</button>
-
-                    <div class="ui basic advance segment" style="padding: 0.4em !important; border-radius: 0.4em;">
-                        <div class="ui endpointAdvanceConfig accordion" style="padding-right: 0.6em;">
-                            <div class="title">
-                                <i class="dropdown icon"></i>
-                                Security Options
-                            </div>
-                            <div class="content">
-                                <div class="ui checkbox" style="margin-top: 0.4em;">
-                                    <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
-                                    <label>Require Rate Limit<br>
-                                    <small>Check this to enable rate limit on this inbound hostname</small></label>
-                                </div><br>
-                                <div class="ui mini right labeled fluid input ${rateLimitDisableState}" style="margin-top: 0.4em;">
-                                    <input type="number" class="RateLimit" value="${rateLimit}" min="1" >
-                                    <label class="ui basic label">
-                                        req / sec / IP
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    <div>
-                `);
-
-                $('.authProviderPicker .ui.checkbox').checkbox();
-            } else if (datatype == "ratelimit"){
-               
-                column.empty().append(`
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="RequireRateLimit" ${checkstate}>
-                        <label>Require Rate Limit</label>
-                    </div>
-                    <div class="ui mini fluid input">
-                        <input type="number" class="RateLimit" value="${rateLimit}" placeholder="100" min="1" max="1000" >
-                    </div>
-                `);
-
-            }else if (datatype == 'action'){
-                column.empty().append(`
-                <button title="Save" onclick="saveProxyInlineEdit('${uuid.hexEncode()}');" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui green save icon"></i></button>
-                <button title="Cancel" onclick="exitProxyInlineEdit();" class="ui basic small icon circular button inlineEditActionBtn"><i class="ui remove icon"></i></button>
-                
-                `);
-            }else if (datatype == "inbound"){
-                let originalContent = $(column).html();
-
-                //Check if this host is covered within one of the certificates. If not, show the icon
-                let enableQuickRequestButton = true;
-                let domains = [payload.RootOrMatchingDomain]; //Domain for getting certificate if needed
-                for (var i = 0; i < payload.MatchingDomainAlias.length; i++){
-                    let thisAliasName = payload.MatchingDomainAlias[i];
-                    domains.push(thisAliasName);
-                }
-
-                //Check if the domain or alias contains wildcard, if yes, disabled the get certificate button
-                if (payload.RootOrMatchingDomain.indexOf("*") > -1){
-                    enableQuickRequestButton = false;
-                }
-                
-                if (payload.MatchingDomainAlias != undefined){
-                    for (var i = 0; i < payload.MatchingDomainAlias.length; i++){
-                        if (payload.MatchingDomainAlias[i].indexOf("*") > -1){
-                            enableQuickRequestButton = false;
-                            break;
-                        }
-                    }
-                }
-
-                //encode the domain to DOM
-                let certificateDomains = encodeURIComponent(JSON.stringify(domains));
-                
-                column.empty().append(`${originalContent}
-                    <div class="ui divider"></div>
-                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                        <input type="checkbox" class="BypassGlobalTLS" ${payload.BypassGlobalTLS?"checked":""}>
-                        <label>Allow plain HTTP access<br>
-                            <small>Allow inbound connections without TLS/SSL</small></label>
-                    </div><br>
-                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAliasHostnames('${uuid}');"><i class=" blue at icon"></i> Alias</button>
-                    <button class="ui basic compact tiny button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="editAccessRule('${uuid}');"><i class="ui filter icon"></i> Access Rule</button>
-                    <button class="ui basic compact tiny ${enableQuickRequestButton?"":"disabled"} button" style="margin-left: 0.4em; margin-top: 0.4em;" onclick="requestCertificateForExistingHost('${uuid}', '${certificateDomains}', this);"><i class="green lock icon"></i> Get Certificate</button>
-                `);
-
-                $(".hostAccessRuleSelector").dropdown();
-            }else{
-                //Unknown field. Leave it untouched
-            }
-        });
-
-        $(".endpointAdvanceConfig").accordion();
-        $("#httpProxyList").find(".editBtn").addClass("disabled");
-    */
     }
 
     //handleToggleRateLimitInput will get trigger if the "require rate limit" checkbox
@@ -1127,6 +949,8 @@
     });
 
     function closeHttpRuleEditor(){
+        // Fixing a bug in semantic ui that when an element fade in/out on top of checkbox
+        // the checkbox suddently flash on top of the fading element
         $(".ui.toggle.tiny.fitted.checkbox").css("z-index", 0);
         $("#httprpEditModalWrapper").fadeOut("fast", function(){
             $(".ui.toggle.tiny.fitted.checkbox").css("z-index", "auto");
@@ -1316,6 +1140,10 @@
             break;
         }
 
+        editor.find(".authProviderPicker input[type='radio']").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
         editor.find(".editBasicAuthCredentialsBtn").off("click").on("click", function(){
             editBasicAuthCredentials(uuid);
         });
@@ -1416,7 +1244,10 @@
     }
 
     function hideEditorSideWrapper(){
-        $("#httprpEditModal .editor_side_wrapper").fadeOut("fast");
+        $("#httprpEditModal .editor_side_wrapper").fadeOut("fast", function(){
+            // Reset the side wrapper frame URL to prevent stale content
+            $("#httprpEditModal .editor_side_wrapper .wrapper_frame").attr('src', 'snippet/placeholder.html');
+        });
     }
 
 
