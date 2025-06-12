@@ -259,9 +259,21 @@
                     <!-- Downstream -->
                     <div class="rpconfig_content" rpcfg="downstream">
                         <div class="ui segment">
-                            <h3 class="downstream_primary_hostname">
-                                
+                            <h3>
+                                <button class="ui right floated small icon circular basic button downstream_primary_hostname_edit_btn">
+                                    <i class="ui edit icon"></i>
+                                </button>
+                                <span class="downstream_primary_hostname"></span>
                             </h3>
+                            <div class="ui action small fluid input downstream_primary_hostname_edit_input" style="margin-bottom: 0.4em;">
+                                <input type="text" placeholder="new.example.com">
+                                <button class="ui green basic icon button saveDownstreamHostnameBtn">
+                                    <i class="ui save icon"></i>
+                                </button>
+                                <button class="ui basic icon button cancelDownstreamHostnameBtn">
+                                    <i class="times icon"></i>
+                                </button>
+                            </div>
                             <div class="downstream_alias_hostname">
 
                             </div>
@@ -324,7 +336,8 @@
                     <!-- TLS / SSL -->
                     <div class="rpconfig_content" rpcfg="ssl">
                         <div class="ui segment">
-                            <p>Work In Progress </p>
+                            <p>Work In Progress <br>
+                            Please use the outer-most menu TLS / SSL tab for now. </p>
                             <br>
                             <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
                         </div>
@@ -1020,6 +1033,50 @@
             saveProxyInlineEdit(uuid);
         });
         
+        //Bind the edit button
+        editor.find(".downstream_primary_hostname_edit_btn").off("click").on("click", function(){
+            editor.find(".downstream_primary_hostname_edit_btn").parent().hide();
+            editor.find(".downstream_primary_hostname_edit_input input").val(subd.RootOrMatchingDomain)
+            editor.find(".downstream_primary_hostname_edit_input").show();
+        });
+        editor.find(".cancelDownstreamHostnameBtn").off("click").on("click", function(){
+            editor.find(".downstream_primary_hostname_edit_input").hide();
+            editor.find(".downstream_primary_hostname_edit_btn").parent().show();
+        });
+        editor.find(".saveDownstreamHostnameBtn").off("click").on("click", function(){
+            let newHostname = editor.find(".downstream_primary_hostname_edit_input input").val().trim();
+            if (newHostname.length == 0){
+                msgbox("Hostname cannot be empty", false);
+                return;
+            }
+
+            if (newHostname == subd.RootOrMatchingDomain){
+                //No need to update
+                editor.find(".downstream_primary_hostname_edit_input").hide();
+                editor.find(".downstream_primary_hostname_edit_btn").parent().show();
+                return;
+            }
+            $.cjax({
+                url: "/api/proxy/setHostname",
+                method: "POST",
+                data: {
+                    "oldHostname":subd.RootOrMatchingDomain,
+                    "newHostname":newHostname,
+                },
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false);
+                    }else{
+                        //Update the current editing hostname to DOM
+                        $("#httprpEditModal").attr("editing-host", encodeURIComponent(newHostname));
+                        //Grab the new hostname from server
+                        resyncProxyEditorConfig();
+                    }
+                }
+            });
+        });
+        editor.find(".downstream_primary_hostname_edit_input").hide();
+        editor.find(".downstream_primary_hostname_edit_btn").parent().show();
         
         //Build the alias hostname list
         let aliasHTML = "";
