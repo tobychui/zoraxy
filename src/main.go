@@ -37,6 +37,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -125,7 +126,13 @@ func main() {
 	//Start the finalize sequences
 	finalSequence()
 
-	SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://localhost" + *webUIPort)
+	if strings.HasPrefix(*webUIPort, ":") {
+		//Bind to all interfaces, issue #672
+		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://localhost" + *webUIPort)
+	} else {
+		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://" + *webUIPort)
+	}
+
 	err = http.ListenAndServe(*webUIPort, csrfMiddleware(webminPanelMux))
 
 	if err != nil {
