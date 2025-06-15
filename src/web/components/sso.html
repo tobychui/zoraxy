@@ -25,6 +25,7 @@
         <ul>
             <li><a href="https://www.authelia.com" rel=”noopener noreferrer” target="_blank">Authelia</a></li>
             <li><a href="https://goauthentik.io/" rel=”noopener noreferrer” target="_blank">Authentik</a></li>
+            <li><a href="https://oauth2-proxy.github.io/oauth2-proxy/" rel=”noopener noreferrer” target="_blank">OAuth2 Proxy</a></li>
         </ul>
         <form class="ui form" action="#" id="forwardAuthSettings">
             <div class="field">
@@ -42,26 +43,43 @@
                         <div class="field">
                             <label for="forwardAuthResponseHeaders">Response Headers</label>
                             <input type="text" id="forwardAuthResponseHeaders" name="forwardAuthResponseHeaders" placeholder="Enter Forward Auth Response Headers">
-                            <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the request sent to the backend. If not set no headers are copied. <br>
-                                <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code></small>
+                            <small>
+                                Comma separated list of case-insensitive headers to copy from the authorization servers response to the request sent to the backend. If not set no headers are copied. <br>
+                                <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code>
+                            </small>
                         </div>
                         <div class="field">
                             <label for="forwardAuthResponseClientHeaders">Response Client Headers</label>
                             <input type="text" id="forwardAuthResponseClientHeaders" name="forwardAuthResponseClientHeaders" placeholder="Enter Forward Auth Response Client Headers">
-                            <small>Comma separated list of case-insensitive headers to copy from the authorization servers response to the response sent to the client. If not set no headers are copied. <br>
-                                <strong>Example:</strong> <code>Set-Cookie,WWW-Authenticate</code></small>
+                            <small>
+                                Comma separated list of case-insensitive headers to copy from the authorization servers response to the <b><i>response sent to the client</i></b>. If not set no headers are copied. <br>
+                                <strong>Example:</strong> <code>Set-Cookie,WWW-Authenticate</code>
+                            </small>
                         </div>
                         <div class="field">
                             <label for="forwardAuthRequestHeaders">Request Headers</label>
                             <input type="text" id="forwardAuthRequestHeaders" name="forwardAuthRequestHeaders" placeholder="Enter Forward Auth Request Headers">
-                            <small>Comma separated list of case-insensitive headers to copy from the original request to the request made to the authorization server. If not set all headers are copied. <br>
-                                <strong>Example:</strong> <code>Cookie,Authorization</code></small>
+                            <small>
+                                Comma separated list of case-insensitive headers to copy from the original request to the <b><i>request made to the authorization server</i></b>. If not set all headers are copied. <br>
+                                <strong>Recommendation:</strong> Generally it's recommended to leave this blank or use the below example for predictable results. <br>
+                                <strong>Example:</strong> <code>Accept,X-Requested-With,Cookie,Authorization,Proxy-Authorization</code>
+                            </small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthRequestIncludedCookies">Request Included Cookies</label>
+                            <input type="text" id="forwardAuthRequestIncludedCookies" name="forwardAuthRequestIncludedCookies" placeholder="Enter Forward Auth Request Included Cookies">
+                            <small>
+                                Comma separated list of case-sensitive cookie names to copy from the original request to the <b><i>request made to the authorization server</i></b>. If not set all cookies are included. This allows omitting all cookies not required by the authorization server.<br>
+                                <strong>Example:</strong> <code>authelia_session,another_session</code>
+                            </small>
                         </div>
                         <div class="field">
                             <label for="forwardAuthRequestExcludedCookies">Request Excluded Cookies</label>
                             <input type="text" id="forwardAuthRequestExcludedCookies" name="forwardAuthRequestExcludedCookies" placeholder="Enter Forward Auth Request Excluded Cookies">
-                            <small>Comma separated list of case-sensitive cookie names to exclude from the request to the backend. If not set no cookies are excluded. <br>
-                                <strong>Example:</strong> <code>authelia_session,another_session</code></small>
+                            <small>
+                                Comma separated list of case-sensitive cookie names to exclude from the <b><i>request made to the backend application</i></b>. If not set no cookies are excluded. This allows omitting the cookie intended only for the authorization server.<br>
+                                <strong>Example:</strong> <code>authelia_session,another_session</code>
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -132,6 +150,7 @@
                 $('#forwardAuthResponseHeaders').val(data.responseHeaders.join(","));
                 $('#forwardAuthResponseClientHeaders').val(data.responseClientHeaders.join(","));
                 $('#forwardAuthRequestHeaders').val(data.requestHeaders.join(","));
+                $('#forwardAuthRequestIncludedCookies').val(data.requestIncludedCookies.join(","));
                 $('#forwardAuthRequestExcludedCookies').val(data.requestExcludedCookies.join(","));
             },
             error: function(jqXHR, textStatus, errorThrown) {
@@ -170,6 +189,7 @@
         const responseHeaders = $('#forwardAuthResponseHeaders').val();
         const responseClientHeaders = $('#forwardAuthResponseClientHeaders').val();
         const requestHeaders = $('#forwardAuthRequestHeaders').val();
+        const requestIncludedCookies = $('#forwardAuthRequestIncludedCookies').val();
         const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
 
         console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Excluded Cookies: ${requestExcludedCookies}.`);
