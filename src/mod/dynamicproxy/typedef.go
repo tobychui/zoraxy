@@ -194,6 +194,9 @@ type ProxyEndpoint struct {
 	//Uptime Monitor
 	DisableUptimeMonitor bool //Disable uptime monitor for this endpoint
 
+	// Chunked Transfer Encoding
+	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint
+
 	//Access Control
 	AccessFilterUUID string //Access filter ID
 

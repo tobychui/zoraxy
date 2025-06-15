@@ -70,8 +70,9 @@ type ResponseRewriteRuleSet struct {
 	DownstreamHeaders [][]string
 
 	/* Advance Usecase Options */
-	HostHeaderOverwrite string //Force overwrite of request "Host" header (advanced usecase)
-	NoRemoveHopByHop    bool   //Do not remove hop-by-hop headers (advanced usecase)
+	HostHeaderOverwrite            string //Force overwrite of request "Host" header (advanced usecase)
+	NoRemoveHopByHop               bool   //Do not remove hop-by-hop headers (advanced usecase)
+	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 
 	/* System Information Payload */
 	Version string //Version number of Zoraxy, use for X-Proxy-By
@@ -287,7 +288,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	rewriteUserAgent(outreq.Header, "Zoraxy/"+rrr.Version)
 
 	//Fix proxmox transfer encoding bug if detected Proxmox Cookie
-	if domainsniff.IsProxmox(req) {
+	if rrr.DisableChunkedTransferEncoding || domainsniff.IsProxmox(req) {
 		outreq.TransferEncoding = []string{"identity"}
 	}
 

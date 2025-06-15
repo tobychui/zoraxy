@@ -25,7 +25,7 @@
             <div class="scrolling content ui form">
                 <div id="inlineEditBasicAuthCredentials" class="field">
                     <p>Enter alias hostname or wildcard matching keywords for <code class="epname"></code></p>
-                    <table class="ui very basic compacted unstackable celled table">
+                    <table class="ui basic very compact unstackable celled table">
                         <thead>
                         <tr>
                             <th>Alias Hostname</th>
@@ -161,7 +161,7 @@
                     }
                     $("#inlineEditTable").append(`<tr>
                         <td>${domainLink}</td>
-                        <td><button class="ui basic button" onclick="removeAliasDomain('${aliasDomain}');"><i class="red remove icon"></i> Remove</button></td>
+                        <td><button class="ui basic mini circular icon button" onclick="removeAliasDomain('${aliasDomain}');"><i class="red trash icon"></i></button></td>
                     </tr>`);
                 });
 

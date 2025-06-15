@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strings"
 
-	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -186,16 +185,17 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 
 	//Handle the request reverse proxy
 	statusCode, err := selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:         selectedUpstream.OriginIpOrDomain,
-		OriginalHost:        reqHostname,
-		UseTLS:              selectedUpstream.RequireTLS,
-		NoCache:             h.Parent.Option.NoCache,
-		PathPrefix:          "",
-		UpstreamHeaders:     upstreamHeaders,
-		DownstreamHeaders:   downstreamHeaders,
-		HostHeaderOverwrite: headerRewriteOptions.RequestHostOverwrite,
-		NoRemoveHopByHop:    headerRewriteOptions.DisableHopByHopHeaderRemoval,
-		Version:             target.parent.Option.HostVersion,
+		ProxyDomain:                    selectedUpstream.OriginIpOrDomain,
+		OriginalHost:                   reqHostname,
+		UseTLS:                         selectedUpstream.RequireTLS,
+		NoCache:                        h.Parent.Option.NoCache,
+		PathPrefix:                     "",
+		UpstreamHeaders:                upstreamHeaders,
+		DownstreamHeaders:              downstreamHeaders,
+		DisableChunkedTransferEncoding: target.DisableChunkedTransferEncoding,
+		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
+		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
+		Version:                        target.parent.Option.HostVersion,
 	})
 
 	//validate the error
@@ -244,8 +244,8 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		h.Parent.logRequest(r, true, 101, "vdir-websocket", r.Host, target.Domain)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  target.SkipCertValidations,
-			SkipOriginCheck:    target.parent.EnableWebsocketCustomHeaders, //You should not use websocket via virtual directory. But keep this to true for compatibility
-			CopyAllHeaders:     domainsniff.RequireWebsocketHeaderCopy(r),  //Left this as default to prevent nginx user setting / as vdir
+			SkipOriginCheck:    true,                                       //You should not use websocket via virtual directory. But keep this to true for compatibility
+			CopyAllHeaders:     target.parent.EnableWebsocketCustomHeaders, //Left this as default to prevent nginx user setting / as vdir
 			UserDefinedHeaders: target.parent.HeaderRewriteRules.UserDefinedHeaders,
 			Logger:             h.Parent.Option.Logger,
 		})
@@ -280,14 +280,15 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 	//Handle the virtual directory reverse proxy request
 	statusCode, err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-		ProxyDomain:         target.Domain,
-		OriginalHost:        reqHostname,
-		UseTLS:              target.RequireTLS,
-		PathPrefix:          target.MatchingPath,
-		UpstreamHeaders:     upstreamHeaders,
-		DownstreamHeaders:   downstreamHeaders,
-		HostHeaderOverwrite: headerRewriteOptions.RequestHostOverwrite,
-		Version:             target.parent.parent.Option.HostVersion,
+		ProxyDomain:                    target.Domain,
+		OriginalHost:                   reqHostname,
+		UseTLS:                         target.RequireTLS,
+		PathPrefix:                     target.MatchingPath,
+		UpstreamHeaders:                upstreamHeaders,
+		DownstreamHeaders:              downstreamHeaders,
+		DisableChunkedTransferEncoding: target.parent.DisableChunkedTransferEncoding,
+		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
+		Version:                        target.parent.parent.Option.HostVersion,
 	})
 
 	var dnsError *net.DNSError

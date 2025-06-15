@@ -11,6 +11,7 @@ const (
 	DatabaseKeyResponseHeaders        = "responseHeaders"
 	DatabaseKeyResponseClientHeaders  = "responseClientHeaders"
 	DatabaseKeyRequestHeaders         = "requestHeaders"
+	DatabaseKeyRequestIncludedCookies = "requestIncludedCookies"
 	DatabaseKeyRequestExcludedCookies = "requestExcludedCookies"
 
 	HeaderXForwardedProto  = "X-Forwarded-Proto"

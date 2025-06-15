@@ -17,22 +17,24 @@ import (
 */
 
 type StaticWebServerStatus struct {
-	ListeningPort          int
-	EnableDirectoryListing bool
-	WebRoot                string
-	Running                bool
-	EnableWebDirManager    bool
+	ListeningPort               int
+	EnableDirectoryListing      bool
+	WebRoot                     string
+	Running                     bool
+	EnableWebDirManager         bool
+	DisableListenToAllInterface bool
 }
 
 // Handle getting current static web server status
 func (ws *WebServer) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 	listeningPortInt, _ := strconv.Atoi(ws.option.Port)
 	currentStatus := StaticWebServerStatus{
-		ListeningPort:          listeningPortInt,
-		EnableDirectoryListing: ws.option.EnableDirectoryListing,
-		WebRoot:                ws.option.WebRoot,
-		Running:                ws.isRunning,
-		EnableWebDirManager:    ws.option.EnableWebDirManager,
+		ListeningPort:               listeningPortInt,
+		EnableDirectoryListing:      ws.option.EnableDirectoryListing,
+		WebRoot:                     ws.option.WebRoot,
+		Running:                     ws.isRunning,
+		EnableWebDirManager:         ws.option.EnableWebDirManager,
+		DisableListenToAllInterface: ws.option.DisableListenToAllInterface,
 	}
 
 	js, _ := json.Marshal(currentStatus)
@@ -89,5 +91,21 @@ func (ws *WebServer) SetEnableDirectoryListing(w http.ResponseWriter, r *http.Re
 		return
 	}
 	ws.option.EnableDirectoryListing = enableList
+	utils.SendOK(w)
+}
+
+// Get or set disable listen to all interface settings
+func (ws *WebServer) SetDisableListenToAllInterface(w http.ResponseWriter, r *http.Request) {
+	disableListen, err := utils.PostBool(r, "disable")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid setting given")
+		return
+	}
+	err = ws.option.Sysdb.Write("webserv", "disableListenToAllInterface", disableListen)
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save setting")
+		return
+	}
+	ws.option.DisableListenToAllInterface = disableListen
 	utils.SendOK(w)
 }
