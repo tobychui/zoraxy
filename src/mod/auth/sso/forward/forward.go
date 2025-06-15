@@ -87,7 +87,7 @@ func (ar *AuthRouter) HandleAPIOptions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ar *AuthRouter) handleOptionsGET(w http.ResponseWriter, r *http.Request) {
-	js, _ := json.Marshal(map[string]interface{}{
+	js, _ := json.Marshal(map[string]any{
 		DatabaseKeyAddress:                ar.options.Address,
 		DatabaseKeyResponseHeaders:        ar.options.ResponseHeaders,
 		DatabaseKeyResponseClientHeaders:  ar.options.ResponseClientHeaders,
@@ -145,11 +145,7 @@ func (ar *AuthRouter) handleOptionsMethodNotAllowed(w http.ResponseWriter, r *ht
 // HandleAuthProviderRouting is the internal handler for Forward Auth authentication.
 func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.Request) error {
 	if ar.options.Address == "" {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-
-		ar.options.Logger.PrintAndLog(LogTitle, "Address not set", nil)
-
-		return ErrInternalServerError
+		return ar.handle500Error(w, nil, "Address not set")
 	}
 
 	// Make a request to Authz Server to verify the request
@@ -158,11 +154,7 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 	//       as I'm unaware of any specific forward auth implementation that needs it.
 	req, err := http.NewRequest(http.MethodGet, ar.options.Address, nil)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-
-		ar.options.Logger.PrintAndLog(LogTitle, "Unable to create request", err)
-
-		return ErrInternalServerError
+		return ar.handle500Error(w, err, "Unable to create request")
 	}
 
 	headerCopyIncluded(r.Header, req.Header, ar.options.RequestHeaders, true)
@@ -175,23 +167,10 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 	// Make the Authz Request.
 	respForwarded, err := ar.client.Do(req)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-
-		ar.options.Logger.PrintAndLog(LogTitle, "Unable to perform forwarded auth due to a request error", err)
-
-		return ErrInternalServerError
+		return ar.handle500Error(w, err, "Unable to perform forwarded auth due to a request error")
 	}
 
 	defer respForwarded.Body.Close()
-
-	body, err := io.ReadAll(respForwarded.Body)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-
-		ar.options.Logger.PrintAndLog(LogTitle, "Unable to read response to forward auth request", err)
-
-		return ErrInternalServerError
-	}
 
 	// Responses within the 200-299 range are considered successful and allow the proxy to handle the request.
 	if respForwarded.StatusCode >= http.StatusOK && respForwarded.StatusCode < http.StatusMultipleChoices {
@@ -215,13 +194,24 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 	headerCopyExcluded(respForwarded.Header, w.Header(), nil)
 
 	w.WriteHeader(respForwarded.StatusCode)
+
+	body, err := io.ReadAll(respForwarded.Body)
+	if err != nil {
+		return ar.handle500Error(w, err, "Unable to read response to forward auth request")
+	}
+
 	if _, err = w.Write(body); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-
-		ar.options.Logger.PrintAndLog(LogTitle, "Unable to write response", err)
-
-		return ErrInternalServerError
+		return ar.handle500Error(w, err, "Unable to write response")
 	}
 
 	return ErrUnauthorized
+}
+
+// handle500Error is func intended on factorizing a commonly repeated functional flow within this provider.
+func (ar *AuthRouter) handle500Error(w http.ResponseWriter, err error, message string) error {
+	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+	ar.options.Logger.PrintAndLog(LogTitle, message, err)
+
+	return ErrInternalServerError
 }
