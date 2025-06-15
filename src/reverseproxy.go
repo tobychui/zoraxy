@@ -556,6 +556,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		proxyRateLimit = 1000
 	}
 
+	// Disable chunked Encoding
+	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -596,6 +599,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule

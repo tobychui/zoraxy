@@ -223,10 +223,10 @@
             <div id="httprpEditModalSideMenu" class="four wide column">
                 <div class="ui secondary fluid vertical menu">
                     <a class="active item hrpedit_menu_item" cfgpage="downstream">
-                        <i class="angle double white right icon"></i> <span class="editorSideMenuText">Downstream</span>
+                        <i class="home icon"></i> <span class="editorSideMenuText">Host</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="upstream">
-                        <i class="angle double left icon"></i> <span class="editorSideMenuText">Upstream</span>
+                        <i class="server icon"></i> <span class="editorSideMenuText">Destinations</span>
                     </a>
                     <a class="item hrpedit_menu_item" cfgpage="vdirs">
                         <i class="angle folder icon"></i> <span class="editorSideMenuText">Virtual Directory</span>
@@ -256,7 +256,7 @@
             </div>
             <div id="httprpEditModalContentWindow" class="twelve wide column">
                 <div style="height:100%;">
-                    <!-- Downstream -->
+                    <!-- Host -->
                     <div class="rpconfig_content" rpcfg="downstream">
                         <div class="ui segment">
                             <h3>
@@ -288,10 +288,11 @@
                            
                         </div>
                     </div>
-                    <!-- Upstream -->
+                    <!-- Destinations -->
                     <div class="rpconfig_content" rpcfg="upstream">
                         <div class="ui segment">
-                            <div class="upstream_list">
+                            <b>Enabled Upstreams</b>
+                            <div class="upstream_list" style="margin-top: 0.4em;">
 
                             </div>
                             <button class="ui basic compact button editUpstreamButton" style="margin-left: 0.4em; margin-top: 1em;"><i class="grey server icon"></i> Edit Upstreams</button>
@@ -308,17 +309,18 @@
                                     <small>Enable stick session on load balancing</small></label>
                             </div>
                             <br>
-                            <div class="ui disabled checkbox" style="margin-top: 0.4em;">
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="DisableChunkedTransferEncoding">
                                 <label>Disable Chunked Transfer Encoding<br>
-                                    <small>Enable this option if your upstream uses a legacy HTTP server implementation</small></label>
+                                    <small>Enable this option if your upstream uses a legacy HTTP server implementation (e.g. Proxmox / opencloud)</small></label>
                             </div>    
                         </div>
                     </div>
                     <!-- Virtual Directories-->
                     <div class="rpconfig_content" rpcfg="vdirs">
                         <div class="ui segment">
-                            <div class="vdir_list">
+                            <b>List of Virtual Directories</b>
+                            <div class="vdir_list" style="margin-top:0.4em;">
 
                             </div>
                             <div class="ui divider"></div>
@@ -719,6 +721,7 @@
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
+        let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
@@ -726,7 +729,7 @@
             tags = "";
         }
 
-        console.log({
+        cfgPayload = {
                 "type": epttype,
                 "rootname": uuid,
                 "ss":useStickySession,
@@ -734,24 +737,16 @@
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
+                "dChunkedEnc": disableChunkedTransferEncoding,
                 "ratenum" :rateLimit,
                 "tags": tags,
-        });
+            };
+        console.log("updating proxy config:", cfgPayload);
 
         $.cjax({
             url: "/api/proxy/edit",
             method: "POST",
-            data: {
-                "type": epttype,
-                "rootname": uuid,
-                "ss":useStickySession,
-                "dutm": DisableUptimeMonitor,
-                "bpgtls": bypassGlobalTLS,
-                "authprovider" :authProviderType,
-                "rate" :requireRateLimit,
-                "ratenum" :rateLimit,
-                "tags": tags,
-            },
+            data: cfgPayload,
             success: function(data){
                 if (data.error !== undefined){
                     msgbox(data.error, false, 6000);
@@ -1140,6 +1135,12 @@
         editor.find(".UseStickySession").off("change");
         editor.find(".UseStickySession").prop("checked", subd.UseStickySession);
         editor.find(".UseStickySession").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".DisableChunkedTransferEncoding").off("change");
+        editor.find(".DisableChunkedTransferEncoding").prop("checked", subd.DisableChunkedTransferEncoding);
+        editor.find(".DisableChunkedTransferEncoding").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

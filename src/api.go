@@ -193,6 +193,7 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/stop", staticWebServer.HandleStopServer)
 	authRouter.HandleFunc("/api/webserv/setPort", HandleStaticWebServerPortChange)
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
+	authRouter.HandleFunc("/api/webserv/disableListenAllInterface", staticWebServer.SetDisableListenToAllInterface)
 	/* File Manager */
 	if *allowWebFileManager {
 		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)

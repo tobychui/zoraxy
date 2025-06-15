@@ -29,6 +29,13 @@
                     <small>If this folder do not contains any index files, list the directory of this folder.</small>
                 </div>
             </div>
+            <div class="inline field">
+                <div class="ui toggle checkbox">
+                    <input id="webserv_enableAllInterfaces" type="checkbox" class="hidden">
+                    <label>Listening to All Interfaces</label>
+                    <small>When disabled, the web server will only listen to localhost (127.0.0.1) and only reachable via reverse proxy rules.</small>
+                </div>
+            </div>
             <div class="field">
                 <label>Document Root Folder</label>
                 <input id="webserv_docRoot" type="text" readonly="true">
@@ -136,6 +143,13 @@
                     $("#webserv_dirManager").remove();
                 }
 
+                if (!data.DisableListenToAllInterface){
+                    //Options on UI is flipped
+                    $("#webserv_enableAllInterfaces").parent().checkbox("set checked");
+                }else{
+                    $("#webserv_enableAllInterfaces").parent().checkbox("set unchecked");
+                }
+
                 $("#webserv_listenPort").val(data.ListeningPort);
                 updateWebServLinkExample(data.ListeningPort);
 
@@ -178,6 +192,23 @@
                         }
                     })
                 });
+
+                $("#webserv_enableAllInterfaces").off("change").on("change", function(){
+                    let disable = !$(this)[0].checked;
+                    $.cjax({
+                        url: "/api/webserv/disableListenAllInterface",
+                        method: "POST",
+                        data: {"disable": disable},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Listening interface setting updated");
+                            }
+                        }
+                    })
+                });
+
                 $("#webserv_listenPort").off("change").on("change", function(){
                     let newPort = $(this).val();
 
