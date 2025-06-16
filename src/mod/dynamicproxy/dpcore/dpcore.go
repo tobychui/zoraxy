@@ -330,7 +330,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		locationRewrite := res.Header.Get("Location")
 		originLocation := res.Header.Get("Location")
 		res.Header.Set("zr-origin-location", originLocation)
-
+		decodedOriginLocation, err := url.PathUnescape(originLocation)
+		if err == nil {
+			originLocation = decodedOriginLocation
+		}
 		if strings.HasPrefix(originLocation, "http://") || strings.HasPrefix(originLocation, "https://") {
 			//Full path
 			//Replace the forwarded target with expected Host

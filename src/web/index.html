@@ -343,7 +343,9 @@
                     }
 
                     $(editorSideWrapper).each(function(){
-                        $(this)[0].contentWindow.setDarkTheme(false);
+                        if ($(this)[0].contentWindow.setDarkTheme){
+                            $(this)[0].contentWindow.setDarkTheme(false);
+                        }
                     })
 
                     if ($("#pluginContextLoader").is(":visible")){
@@ -356,7 +358,9 @@
                         $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(true);
                     }
                     $(editorSideWrapper).each(function(){
-                        $(this)[0].contentWindow.setDarkTheme(true);
+                        if ($(this)[0].contentWindow.setDarkTheme){
+                            $(this)[0].contentWindow.setDarkTheme(true);
+                        }
                     })
                     if ($("#pluginContextLoader").is(":visible")){
                         $("#pluginContextLoader")[0].contentWindow.setDarkTheme(true);

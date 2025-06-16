@@ -203,7 +203,7 @@
                     <th>Destination</th>
                     <th>Virtual Directory</th>
                     <th class="no-sort">Tags</th>
-                    <th class="no-sort" style="width:50px; cursor: default !important;"></th>
+                    <th class="no-sort" style="width:100px; cursor: default !important;"></th>
                 </tr>
             </thead>
             <tbody id="httpProxyList">
@@ -588,7 +588,7 @@
                         </td> -->
                         <td class="center aligned ignoremw" editable="true" datatype="action" data-label="">
                             <button title="Edit Proxy Rule" class="ui circular small basic icon button editBtn inlineEditActionBtn" onclick='editEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="ellipsis vertical icon"></i></button>
-                            <!-- <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button> -->
+                            <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
                         </td>
                     </tr>`);
                 });
