@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"golang.org/x/oauth2"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 type OAuth2RouterOptions struct {
@@ -250,7 +251,19 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 			cookie.SameSite = http.SameSiteLaxMode
 		}
 		w.Header().Add("Set-Cookie", cookie.String())
-		http.Redirect(w, r, state, http.StatusTemporaryRedirect)
+
+		//Fix for #695
+		location := strings.TrimPrefix(state, "/internal/")
+		//Check if the location starts with http:// or https://. if yes, this is full URL
+		decodedLocation, err := url.PathUnescape(location)
+		if err == nil && (strings.HasPrefix(decodedLocation, "http://") || strings.HasPrefix(decodedLocation, "https://")) {
+			//Redirect to the full URL
+			http.Redirect(w, r, decodedLocation, http.StatusTemporaryRedirect)
+		} else {
+			//Redirect to a relative path
+			http.Redirect(w, r, state, http.StatusTemporaryRedirect)
+		}
+
 		return errors.New("authorized")
 	}
 	unauthorized := false
