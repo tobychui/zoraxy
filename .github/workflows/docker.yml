@@ -2,7 +2,7 @@ name: Build and push Docker image
 
 on:
   release:
-    types: [ published ]
+    types: [ released, prereleased ]
 
 jobs:
   setup-build-push:
@@ -34,7 +34,8 @@ jobs:
           cp -lr $GITHUB_WORKSPACE/src/ $GITHUB_WORKSPACE/docker/
           cp -lr $GITHUB_WORKSPACE/example/ $GITHUB_WORKSPACE/docker/
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (Release)
+        if: "!github.event.release.prerelease"
         uses: docker/build-push-action@v6
         with:
           context: ./docker
@@ -42,6 +43,18 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             zoraxydocker/zoraxy:latest
+            zoraxydocker/zoraxy:${{ github.event.release.tag_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Docker image (Prerelease)
+        if: "github.event.release.prerelease"
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
             zoraxydocker/zoraxy:${{ github.event.release.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
