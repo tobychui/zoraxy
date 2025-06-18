@@ -1,5 +1,5 @@
 ## Build Zoraxy
-FROM docker.io/golang:bookworm AS build-zoraxy
+FROM docker.io/golang:alpine AS build-zoraxy
 
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /usr/local/bin/
@@ -15,39 +15,54 @@ RUN go mod tidy &&\
 
 
 ## Build ZeroTier
-FROM docker.io/golang:bookworm AS build-zerotier
+FROM docker.io/rust:1.79-alpine AS build-zerotier
 
 RUN mkdir -p /opt/zerotier/source/ &&\
     mkdir -p /usr/local/bin/
 
 WORKDIR /opt/zerotier/source/
 
-RUN apt-get update -y &&\
-    apt-get install -y curl jq build-essential pkg-config clang cargo libssl-dev
+RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano
 
 RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.10.6 &&\
     tar -xzvf ZeroTierOne.tar.gz &&\
-    cd ZeroTierOne-* &&\
-    make &&\
+    cd ZeroTierOne-*/zeroidc &&\
+    cargo update -p getrandom &&\
+    cd .. &&\
+    make -f make-linux.mk &&\
     mv ./zerotier-one /usr/local/bin/zerotier-one &&\
     chmod 755 /usr/local/bin/zerotier-one
 
 
-FROM docker.io/golang:bookworm
+## Fetch plugin
+FROM docker.io/golang:alpine AS fetch-plugin
+
+RUN mkdir -p /opt/zoraxy/zoraxy_plugin/
+
+RUN apk add --update --no-cache git
+
+WORKDIR /opt/zoraxy/
+
+RUN git clone https://github.com/aroz-online/zoraxy-official-plugins &&\
+    cp -r ./zoraxy-official-plugins/src/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
+
+
+## Main
+FROM docker.io/golang:alpine
 
 # If you build it yourself, you will need to add the example directory into the docker directory.
 
 COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
 COPY --chmod=700 ./build_plugins.sh /usr/local/bin/build_plugins
-COPY --chmod=700 ./example/plugins/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
+
+COPY --from=fetch-plugin --chmod=700 /opt/zoraxy/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
 
 COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
 
-RUN apt-get update -y &&\
-    apt-get install -y bash sudo netcat-openbsd libssl-dev ca-certificates openssh-server
-
-RUN mkdir -p /opt/zoraxy/plugin/
+RUN apk add --update --no-cache bash sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
+    mkdir -p /opt/zoraxy/plugin/ &&\
+    echo "tun" | tee -a /etc/modules
 
 WORKDIR /opt/zoraxy/config/
 

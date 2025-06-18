@@ -34,6 +34,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
 	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
+	authRouter.HandleFunc("/api/proxy/setHostname", ReverseProxyHandleSetHostname)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
 	authRouter.HandleFunc("/api/proxy/updateCredentials", UpdateProxyBasicAuthCredentials)
 	authRouter.HandleFunc("/api/proxy/tlscheck", domainsniff.HandleCheckSiteSupportTLS)
@@ -80,10 +81,10 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/cert/delete", handleCertRemove)
 }
 
-// Register the APIs for Authentication handlers like Authelia and OAUTH2
+// Register the APIs for Authentication handlers like Forward Auth and OAUTH2
 func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
-	authRouter.HandleFunc("/api/sso/Authelia", autheliaRouter.HandleSetAutheliaURLAndHTTPS)
-	authRouter.HandleFunc("/api/sso/Authentik", authentikRouter.HandleSetAuthentikURLAndHTTPS)
+	authRouter.HandleFunc("/api/sso/forward-auth", forwardAuthRouter.HandleAPIOptions)
+	authRouter.HandleFunc("/api/sso/OAuth2", oauth2Router.HandleSetOAuth2Settings)
 }
 
 // Register the APIs for redirection rules management functions
@@ -192,6 +193,7 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/stop", staticWebServer.HandleStopServer)
 	authRouter.HandleFunc("/api/webserv/setPort", HandleStaticWebServerPortChange)
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
+	authRouter.HandleFunc("/api/webserv/disableListenAllInterface", staticWebServer.SetDisableListenToAllInterface)
 	/* File Manager */
 	if *allowWebFileManager {
 		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
@@ -239,6 +241,10 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
 	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
 	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)
+
+	// Developer options
+	authRouter.HandleFunc("/api/plugins/developer/enableAutoReload", pluginManager.HandleEnableHotReload)
+	authRouter.HandleFunc("/api/plugins/developer/setAutoReloadInterval", pluginManager.HandleSetHotReloadInterval)
 }
 
 // Register the APIs for Auth functions, due to scoping issue some functions are defined here

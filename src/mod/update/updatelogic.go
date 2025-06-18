@@ -3,6 +3,7 @@ package update
 import (
 	v308 "imuslab.com/zoraxy/mod/update/v308"
 	v315 "imuslab.com/zoraxy/mod/update/v315"
+	v322 "imuslab.com/zoraxy/mod/update/v322"
 )
 
 // Updater Core logic
@@ -16,6 +17,12 @@ func runUpdateRoutineWithVersion(fromVersion int, toVersion int) {
 	} else if fromVersion == 314 && toVersion == 315 {
 		//Updating from v3.1.4 to v3.1.5
 		err := v315.UpdateFrom314To315()
+		if err != nil {
+			panic(err)
+		}
+	} else if fromVersion == 321 && toVersion == 322 {
+		//Updating from v3.2.1 to v3.2.2
+		err := v322.UpdateFrom321To322()
 		if err != nil {
 			panic(err)
 		}

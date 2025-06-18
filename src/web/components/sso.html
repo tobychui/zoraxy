@@ -1,4 +1,4 @@
-<div class="standardContainer">
+<div class="sso standardContainer">
     <div class="ui basic segment">
         <h2>SSO</h2>
         <p>Single Sign-On (SSO) and authentication providers settings </p>
@@ -14,44 +14,125 @@
     </div>
     <div class="ui divider"></div>
     <div class="ui basic segment">
-        <h3>Authelia</h3>
-        <p>Configuration settings for Authelia authentication provider.</p>
-
-        <form class="ui form">
+        <h3>Forward Auth</h3>
+        <p>Configuration settings for the Forward Auth provider.</p>
+        <p>The Forward Auth provider makes a subrequest to an authorization server that supports Forward Auth, then either:</p>
+        <ul>
+            <li>Allows the request to flow through to the backend when the authorization server responds with a 200-299 status code.</li>
+            <li>Responds with the response from the authorization server.</li>
+        </ul>
+        <p>Example authorization servers that support this:</p>
+        <ul>
+            <li><a href="https://www.authelia.com" rel=”noopener noreferrer” target="_blank">Authelia</a></li>
+            <li><a href="https://goauthentik.io/" rel=”noopener noreferrer” target="_blank">Authentik</a></li>
+            <li><a href="https://oauth2-proxy.github.io/oauth2-proxy/" rel=”noopener noreferrer” target="_blank">OAuth2 Proxy</a></li>
+        </ul>
+        <form class="ui form" action="#" id="forwardAuthSettings">
             <div class="field">
-                <label for="autheliaServerUrl">Authelia Server URL</label>
-                <input type="text" id="autheliaServerUrl" name="autheliaServerUrl" placeholder="Enter Authelia Server URL">
-                <small>Example: auth.example.com</small>
+                <label for="forwardAuthAddress">Address</label>
+                <input type="text" id="forwardAuthAddress" name="forwardAuthAddress" placeholder="Enter Forward Auth Address">
+                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> https://auth.example.com/authz/forward-auth</small>
             </div>
-            <div class="field">
-                <div class="ui checkbox">
-                    <input type="checkbox" id="useHttps" name="useHttps">
-                    <label for="useHttps">Use HTTPS</label>
-                    <small>Check this if your authelia server uses HTTPS</small>
+            <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
+                <div class="ui advancedSSOForwardAuthOptions accordion">
+                    <div class="title">
+                        <i class="dropdown icon"></i>
+                        Advanced Options
+                    </div>
+                    <div class="content">
+                        <div class="field">
+                            <label for="forwardAuthResponseHeaders">Response Headers</label>
+                            <input type="text" id="forwardAuthResponseHeaders" name="forwardAuthResponseHeaders" placeholder="Enter Forward Auth Response Headers">
+                            <small>
+                                Comma separated list of case-insensitive headers to copy from the authorization servers response to the request sent to the backend. If not set no headers are copied. <br>
+                                <strong>Example:</strong> <code>Remote-User,Remote-Groups,Remote-Email,Remote-Name</code>
+                            </small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthResponseClientHeaders">Response Client Headers</label>
+                            <input type="text" id="forwardAuthResponseClientHeaders" name="forwardAuthResponseClientHeaders" placeholder="Enter Forward Auth Response Client Headers">
+                            <small>
+                                Comma separated list of case-insensitive headers to copy from the authorization servers response to the <b><i>response sent to the client</i></b>. If not set no headers are copied. <br>
+                                <strong>Example:</strong> <code>Set-Cookie,WWW-Authenticate</code>
+                            </small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthRequestHeaders">Request Headers</label>
+                            <input type="text" id="forwardAuthRequestHeaders" name="forwardAuthRequestHeaders" placeholder="Enter Forward Auth Request Headers">
+                            <small>
+                                Comma separated list of case-insensitive headers to copy from the original request to the <b><i>request made to the authorization server</i></b>. If not set all headers are copied. <br>
+                                <strong>Recommendation:</strong> Generally it's recommended to leave this blank or use the below example for predictable results. <br>
+                                <strong>Example:</strong> <code>Accept,X-Requested-With,Cookie,Authorization,Proxy-Authorization</code>
+                            </small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthRequestIncludedCookies">Request Included Cookies</label>
+                            <input type="text" id="forwardAuthRequestIncludedCookies" name="forwardAuthRequestIncludedCookies" placeholder="Enter Forward Auth Request Included Cookies">
+                            <small>
+                                Comma separated list of case-sensitive cookie names to copy from the original request to the <b><i>request made to the authorization server</i></b>. If not set all cookies are included. This allows omitting all cookies not required by the authorization server.<br>
+                                <strong>Example:</strong> <code>authelia_session,another_session</code>
+                            </small>
+                        </div>
+                        <div class="field">
+                            <label for="forwardAuthRequestExcludedCookies">Request Excluded Cookies</label>
+                            <input type="text" id="forwardAuthRequestExcludedCookies" name="forwardAuthRequestExcludedCookies" placeholder="Enter Forward Auth Request Excluded Cookies">
+                            <small>
+                                Comma separated list of case-sensitive cookie names to exclude from the <b><i>request made to the backend application</i></b>. If not set no cookies are excluded. This allows omitting the cookie intended only for the authorization server.<br>
+                                <strong>Example:</strong> <code>authelia_session,another_session</code>
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <button class="ui basic button" onclick="event.preventDefault(); updateAutheliaSettings();"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
         </form>
     </div>
     <div class="ui divider"></div>
     <div class="ui basic segment">
-        <h3>Authentik</h3>
-        <p>Configuration settings for Authentik authentication provider.</p>
+        <h3>OAuth 2.0</h3>
+        <p>Configuration settings for OAuth 2.0 authentication provider.</p>
 
-        <form class="ui form">
+        <form class="ui form" action="#" id="oauth2Settings">
             <div class="field">
-                <label for="authentikServerUrl">Authentik Server URL</label>
-                <input type="text" id="authentikServerUrl" name="authentikServerUrl" placeholder="Enter Authentik Server URL">
-                <small>Example: auth.example.com</small>
+                <label for="oauth2ClientId">Client ID</label>
+                <input type="text" id="oauth2ClientId" name="oauth2ClientId" placeholder="Enter Client ID">
+                <small>Public identifier of the OAuth2 application</small>
             </div>
             <div class="field">
-                <div class="ui checkbox">
-                    <input type="checkbox" id="authentikUseHttps" name="useHttps">
-                    <label for="authentikUseHttps">Use HTTPS</label>
-                    <small>Check this if your Authentik server uses HTTPS</small>
-                </div>
+                <label for="oauth2ClientId">Client Secret</label>
+                <input type="password" id="oauth2ClientSecret" name="oauth2ClientSecret" placeholder="Enter Client Secret">
+                <small>Secret key of the OAuth2 application</small>
             </div>
-            <button class="ui basic button" onclick="event.preventDefault(); updateAuthentikSettings();"><i class="green check icon"></i> Apply Change</button>
+            <div class="field">
+                <label for="oauth2WellKnownUrl">OIDC well-known URL</label>
+                <input type="text" id="oauth2WellKnownUrl" name="oauth2WellKnownUrl" placeholder="Enter Well-Known URL">
+                <small>URL to the OIDC discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2ServerUrl">Authorization URL</label>
+                <input type="text" id="oauth2ServerUrl" name="oauth2ServerUrl" placeholder="Enter Authorization URL">
+                <small>URL used to authenticate against the OAuth2 provider. Will redirect the user to the OAuth2 provider login view. Optional if Well-Known url is configured.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2TokenUrl">Token URL</label>
+                <input type="text" id="oauth2TokenUrl" name="oauth2TokenUrl" placeholder="Enter Token URL">
+                <small>URL used by Zoraxy to exchange a valid OAuth2 authentication code for an access token. Optional if Well-Known url is configured.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2UserInfoURL">User Info URL</label>
+                <input type="text" id="oauth2UserInfoURL" name="oauth2UserInfoURL" placeholder="Enter User Info URL">
+                <small>URL used by the OAuth2 provider to validate generated token. Optional if Well-Known url is configured.</small>
+            </div>
+
+            <div class="field">
+                <label for="oauth2Scopes">Scopes</label>
+                <input type="text" id="oauth2Scopes" name="oauth2Scopes" placeholder="Enter Scopes">
+                <small>Scopes required by the OAuth2 provider to retrieve information about the authenticated user. Refer to your OAuth2 provider documentation for more information about this. Optional if Well-Known url is configured.</small>
+            </div>
+            <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
         </form>
     </div>
     <div class="ui divider"></div>
@@ -59,78 +140,139 @@
 
 <script>
     $(document).ready(function() {
+        /* Load forward-auth settings from backend */
         $.cjax({
-            url: '/api/sso/Authelia',
+            url: '/api/sso/forward-auth',
             method: 'GET',
             dataType: 'json',
             success: function(data) {
-                $('#autheliaServerUrl').val(data.autheliaURL);
-                $('#useHttps').prop('checked', data.useHTTPS);
+                $('#forwardAuthAddress').val(data.address);
+                $('#forwardAuthResponseHeaders').val(data.responseHeaders.join(","));
+                $('#forwardAuthResponseClientHeaders').val(data.responseClientHeaders.join(","));
+                $('#forwardAuthRequestHeaders').val(data.requestHeaders.join(","));
+                $('#forwardAuthRequestIncludedCookies').val(data.requestIncludedCookies.join(","));
+                $('#forwardAuthRequestExcludedCookies').val(data.requestExcludedCookies.join(","));
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
             }
         });
+
+        /* Load Oauth2 settings from backend */
         $.cjax({
-            url: '/api/sso/Authentik',
+            url: '/api/sso/OAuth2',
             method: 'GET',
             dataType: 'json',
             success: function(data) {
-                $('#authentikServerUrl').val(data.authentikURL);
-                $('#authentikUseHttps').prop('checked', data.useHTTPS);
+                $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl);
+                $('#oauth2ServerUrl').val(data.oauth2ServerUrl);
+                $('#oauth2TokenUrl').val(data.oauth2TokenUrl);
+                $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl);
+                $('#oauth2ClientId').val(data.oauth2ClientId);
+                $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
+                $('#oauth2Scopes').val(data.oauth2Scopes);
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
+            }
+        });
+
+        /* Add more initialization code here if needed */
+    });
+
+    /* 
+        Function to update Forward Auth settings.
+    */
+
+    function updateForwardAuthSettings() {
+        const address = $('#forwardAuthAddress').val();
+        const responseHeaders = $('#forwardAuthResponseHeaders').val();
+        const responseClientHeaders = $('#forwardAuthResponseClientHeaders').val();
+        const requestHeaders = $('#forwardAuthRequestHeaders').val();
+        const requestIncludedCookies = $('#forwardAuthRequestIncludedCookies').val();
+        const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
+
+        console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Excluded Cookies: ${requestExcludedCookies}.`);
+
+        $.cjax({
+            url: '/api/sso/forward-auth',
+            method: 'POST',
+            data: {
+                address: address,
+                responseHeaders: responseHeaders,
+                responseClientHeaders: responseClientHeaders,
+                requestHeaders: requestHeaders,
+                requestExcludedCookies: requestExcludedCookies
+            },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('Forward Auth settings updated', true);
+                console.log('Forward Auth settings updated:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Forward Auth settings:', textStatus, errorThrown);
+            }
+        });
+    }
+
+    $("#forwardAuthSettings").on("submit", function(event) {
+        event.preventDefault();
+        updateForwardAuthSettings();
+    });
+
+    /*
+        Oauth2 settings update handler.
+    */
+    $( "#authentikSettings" ).on( "submit", function( event ) {
+        event.preventDefault();
+        $.cjax({
+            url: '/api/sso/forward-auth',
+            method: 'POST',
+            data: {
+                address: address,
+                responseHeaders: responseHeaders,
+                responseClientHeaders: responseClientHeaders,
+                requestHeaders: requestHeaders,
+                requestExcludedCookies: requestExcludedCookies
+            },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('Forward Auth settings updated', true);
+                console.log('Forward Auth settings updated:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Forward Auth settings:', textStatus, errorThrown);
             }
         });
     });
 
-    function updateAutheliaSettings(){
-        var autheliaServerUrl = $('#autheliaServerUrl').val();
-        var useHttps = $('#useHttps').prop('checked');
-
+    $( "#oauth2Settings" ).on( "submit", function( event ) {
+        event.preventDefault();
         $.cjax({
-            url: '/api/sso/Authelia',
+            url: '/api/sso/OAuth2',
             method: 'POST',
-            data: {
-                autheliaURL: autheliaServerUrl,
-                useHTTPS: useHttps
-            },
+            data: $( this ).serialize(),
             success: function(data) {
                 if (data.error != undefined) {
-                    $.msgbox(data.error, false);
+                    msgbox(data.error, false);
                     return;
                 }
-                msgbox('Authelia settings updated', true);
-                console.log('Authelia settings updated:', data);
+                msgbox('OAuth2 settings updated', true);
+                console.log('OAuth2 settings updated:', data);
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error updating Authelia settings:', textStatus, errorThrown);
+                console.error('Error updating OAuth2 settings:', textStatus, errorThrown);
+                msgbox('Error updating OAuth2 settings, check console', false);
             }
         });
-    }
-    function updateAuthentikSettings(){
-        var authentikServerUrl = $('#authentikServerUrl').val();
-        var useHttps = $('#authentikUseHttps').prop('checked');
+    });
 
-        $.cjax({
-            url: '/api/sso/Authentik',
-            method: 'POST',
-            data: {
-                authentikURL: authentikServerUrl,
-                useHTTPS: useHttps
-            },
-            success: function(data) {
-                if (data.error != undefined) {
-                    $.msgbox(data.error, false);
-                    return;
-                }
-                msgbox('Authentik settings updated', true);
-                console.log('Authentik settings updated:', data);
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error updating Authentik settings:', textStatus, errorThrown);
-            }
-        });
-    }
+    /* Bind UI events */
+    $(".sso .advanceSettings").accordion();
 </script>

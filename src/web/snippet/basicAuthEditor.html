@@ -14,18 +14,11 @@
         <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
-            <div class="ui header">
-                <div class="content">
-                    Basic Auth Settings
-                    <div class="sub header" id="epname"></div>
-                </div>
-            </div>
-            <div class="ui divider"></div>
             <h3 class="ui header">Basic Auth Credential</h3>
             <div class="scrolling content ui form">
                 <div id="inlineEditBasicAuthCredentials" class="field">
                     <p>Enter the username and password for allowing them to access this proxy endpoint</p>
-                    <table class="ui very basic compacted unstackable celled table">
+                    <table class="ui basic very compacted unstackable celled table">
                         <thead>
                         <tr>
                             <th>Username</th>
@@ -56,7 +49,7 @@
             <h3 class="ui header">Authentication Exclusion Paths</h3>
             <div class="scrolling content ui form">
                 <p>Exclude specific directories / paths which contains the following subpath prefix from authentication. Useful if you are hosting services require remote API access.</p>
-                <table class="ui very basic compacted unstackable celled table">
+                <table class="ui basic very compacted unstackable celled table">
                     <thead>
                     <tr>
                         <th>Path Prefix</th>
@@ -85,10 +78,6 @@
                             <code>/public/res/photo.png</code><br>
                             <code>/public/res/far/boo/</code></p>
                     </div>
-                </div>
-                <div class="ui divider"></div>
-                <div class="field" >
-                    <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
                 </div>
             </div>
             
@@ -232,7 +221,7 @@
                             data.forEach(function(rule){
                                 $("#exclusionPaths").append(` <tr>
                                     <td>${rule.PathPrefix}</td>
-                                    <td><button class="ui red basic mini icon button" onclick="removeExceptionPath(this);" prefix="${rule.PathPrefix}"><i class="ui red times icon"></i></button></td>
+                                    <td><button class="ui red basic mini circular icon button" onclick="removeExceptionPath(this);" prefix="${rule.PathPrefix}"><i class="ui red times icon"></i></button></td>
                                 </tr>`);
                             })
                         }   
@@ -261,7 +250,7 @@
                     var row = '<tr>' +
                         '<td>' + username + '</td>' +
                         '<td>' + password + '</td>' +
-                        '<td><button class="ui basic button" onclick="removeCredentialFromEditingList(' + i + ');"><i class="red remove icon"></i> Remove</button></td>' +
+                        '<td><button class="ui basic tiny circular button" onclick="removeCredentialFromEditingList(' + i + ');"><i class="red remove icon"></i> Remove</button></td>' +
                         '</tr>';
 
                     tableBody.append(row);

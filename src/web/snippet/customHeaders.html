@@ -27,6 +27,11 @@
             body.darkTheme #permissionPolicyEditor .experimental{
                 background-color: rgb(41, 41, 41);
             }
+
+            .advanceoptions{
+               background: var(--theme_advance) !important;
+               border-radius: 0.4em !important;
+            }
         </style>
     </head>
     <body>
@@ -34,19 +39,12 @@
         <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
-            <div class="ui header">
-                <div class="content">
-                    Custom Headers
-                    <div class="sub header" id="epname"></div>
-                </div>
-            </div>
-            <div class="ui divider"></div>
             <div class="ui small pointing secondary menu">
                 <a class="item active narrowpadding" data-tab="customheaders">Custom Headers</a>
                 <a class="item narrowpadding" data-tab="security">Security Headers</a>
             </div>
             <div class="ui tab basic segment active" data-tab="customheaders">
-                <table class="ui very basic compacted unstackable celled table">
+                <table class="ui basic very compacted unstackable celled table">
                     <thead>
                     <tr>
                         <th>Key</th>
@@ -171,10 +169,6 @@
                 <br><br>
                 <button class="ui basic button" onclick="savePermissionPolicy();"><i class="green save icon"></i> Save</button>
             </div>
-           
-            <div class="field" >
-                <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
-            </div>
         </div>
         
         <br><br><br><br>
@@ -189,7 +183,7 @@
                 let payloadHash = window.location.hash.substr(1);
                 try{
                     payloadHash = JSON.parse(decodeURIComponent(payloadHash));
-                    $("#epname").text(payloadHash.ep);
+                    //$("#epname").text(payloadHash.ep);
                     editingEndpoint = payloadHash;
                 }catch(ex){
                     console.log("Unable to load endpoint data from hash")

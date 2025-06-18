@@ -184,7 +184,8 @@ body.darkTheme .ui.input input::placeholder {
 body.darkTheme .ui.label,
 body.darkTheme .ui.label .detail,
 body.darkTheme .ui.label .icon {
-    color: #ffffff !important;
+    background-color: var(--buttom_toggle_disabled);
+    color: var(--text_color) !important;
 }
 
 body.darkTheme .advanceoptions .title {

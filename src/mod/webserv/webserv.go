@@ -25,13 +25,21 @@ import (
 //go:embed templates/*
 var templates embed.FS
 
+/*
+WebServerOptions define the default option for the webserv
+might get override by user settings loaded from db
+
+Any changes in here might need to also update the StaticWebServerStatus struct
+in handler.go. See handler.go for more information.
+*/
 type WebServerOptions struct {
-	Port                   string             //Port for listening
-	EnableDirectoryListing bool               //Enable listing of directory
-	WebRoot                string             //Folder for stroing the static web folders
-	EnableWebDirManager    bool               //Enable web file manager to handle files in web directory
-	Logger                 *logger.Logger     //System logger
-	Sysdb                  *database.Database //Database for storing configs
+	Port                        string             //Port for listening
+	EnableDirectoryListing      bool               //Enable listing of directory
+	WebRoot                     string             //Folder for stroing the static web folders
+	EnableWebDirManager         bool               //Enable web file manager to handle files in web directory
+	DisableListenToAllInterface bool               // Disable listening to all interfaces, only listen to localhost
+	Logger                      *logger.Logger     //System logger
+	Sysdb                       *database.Database //Database for storing configs
 }
 
 type WebServer struct {
@@ -91,6 +99,11 @@ func (ws *WebServer) RestorePreviousState() {
 	enableDirList := ws.option.EnableDirectoryListing
 	ws.option.Sysdb.Read("webserv", "dirlist", &enableDirList)
 	ws.option.EnableDirectoryListing = enableDirList
+
+	//Set disable listen to all interface
+	disableListenToAll := ws.option.DisableListenToAllInterface
+	ws.option.Sysdb.Read("webserv", "disableListenToAllInterface", &disableListenToAll)
+	ws.option.DisableListenToAllInterface = disableListenToAll
 
 	//Check the running state
 	webservRunning := true
@@ -156,8 +169,12 @@ func (ws *WebServer) Start() error {
 	fs := http.FileServer(http.Dir(filepath.Join(ws.option.WebRoot, "html")))
 	ws.mux.Handle("/", ws.fsMiddleware(fs))
 
+	listenAddr := ":" + ws.option.Port
+	if ws.option.DisableListenToAllInterface {
+		listenAddr = "127.0.0.1:" + ws.option.Port
+	}
 	ws.server = &http.Server{
-		Addr:    ":" + ws.option.Port,
+		Addr:    listenAddr,
 		Handler: ws.mux,
 	}
 

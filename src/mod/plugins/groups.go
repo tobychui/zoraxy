@@ -11,11 +11,11 @@ import (
 // ListPluginGroups returns a map of plugin groups
 func (m *Manager) ListPluginGroups() map[string][]string {
 	pluginGroup := map[string][]string{}
-	m.Options.pluginGroupsMutex.RLock()
+	m.pluginGroupsMutex.RLock()
 	for k, v := range m.Options.PluginGroups {
 		pluginGroup[k] = append([]string{}, v...)
 	}
-	m.Options.pluginGroupsMutex.RUnlock()
+	m.pluginGroupsMutex.RUnlock()
 	return pluginGroup
 }
 
@@ -32,26 +32,26 @@ func (m *Manager) AddPluginToGroup(tag, pluginID string) error {
 		return errors.New("plugin is not a router type plugin")
 	}
 
-	m.Options.pluginGroupsMutex.Lock()
+	m.pluginGroupsMutex.Lock()
 	//Check if the tag exists
 	_, ok = m.Options.PluginGroups[tag]
 	if !ok {
 		m.Options.PluginGroups[tag] = []string{pluginID}
-		m.Options.pluginGroupsMutex.Unlock()
+		m.pluginGroupsMutex.Unlock()
 		return nil
 	}
 
 	//Add the plugin to the group
 	m.Options.PluginGroups[tag] = append(m.Options.PluginGroups[tag], pluginID)
 
-	m.Options.pluginGroupsMutex.Unlock()
+	m.pluginGroupsMutex.Unlock()
 	return nil
 }
 
 // RemovePluginFromGroup removes a plugin from a group
 func (m *Manager) RemovePluginFromGroup(tag, pluginID string) error {
-	m.Options.pluginGroupsMutex.Lock()
-	defer m.Options.pluginGroupsMutex.Unlock()
+	m.pluginGroupsMutex.Lock()
+	defer m.pluginGroupsMutex.Unlock()
 	//Check if the tag exists
 	_, ok := m.Options.PluginGroups[tag]
 	if !ok {
@@ -72,8 +72,8 @@ func (m *Manager) RemovePluginFromGroup(tag, pluginID string) error {
 
 // RemovePluginGroup removes a plugin group
 func (m *Manager) RemovePluginGroup(tag string) error {
-	m.Options.pluginGroupsMutex.Lock()
-	defer m.Options.pluginGroupsMutex.Unlock()
+	m.pluginGroupsMutex.Lock()
+	defer m.pluginGroupsMutex.Unlock()
 	_, ok := m.Options.PluginGroups[tag]
 	if !ok {
 		return errors.New("tag not found")
@@ -84,12 +84,12 @@ func (m *Manager) RemovePluginGroup(tag string) error {
 
 // SavePluginGroupsFromFile loads plugin groups from a file
 func (m *Manager) SavePluginGroupsToFile() error {
-	m.Options.pluginGroupsMutex.RLock()
+	m.pluginGroupsMutex.RLock()
 	pluginGroupsCopy := make(map[string][]string)
 	for k, v := range m.Options.PluginGroups {
 		pluginGroupsCopy[k] = append([]string{}, v...)
 	}
-	m.Options.pluginGroupsMutex.RUnlock()
+	m.pluginGroupsMutex.RUnlock()
 
 	//Write to file
 	js, _ := json.Marshal(pluginGroupsCopy)

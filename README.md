@@ -13,22 +13,24 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
   - Basic Auth
   - Alias Hostnames
   - Custom Headers
+  - Load Balancing
 - Redirection Rules
 - TLS / SSL setup and deploy
   - ACME features like auto-renew to serve your sites in http**s**
   - SNI support (and SAN certs)
   - DNS Challenge for Let's Encrypt and [these DNS providers](https://go-acme.github.io/lego/dns/)
 - Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
-- Global Area Network Controller Web UI (ZeroTier not included)
 - Stream Proxy (TCP & UDP)
 - Integrated Up-time Monitor
 - Web-SSH Terminal
+- Plugin System
 - Utilities
   - CIDR IP converters
   - mDNS Scanner
   - Wake-On-Lan
   - Debug Forward Proxy
   - IP Scanner
+  - Port Scanner
 - Others
   - Basic single-admin management mode
   - External permission management system for easy system integration
@@ -107,6 +109,8 @@ Usage of zoraxy:
         If web server is enabled by default (default true)
   -default_inbound_port int
         Default web server listening port (default 443)
+  -dev
+        Use external web folder for UI development
   -docker
         Run Zoraxy in docker compatibility mode
   -earlyrenew int
@@ -164,19 +168,7 @@ There is a wikipage with [Frequently-Asked-Questions](https://github.com/tobychu
 
 ## Global Area Network Controller
 
-This project also compatible with [ZeroTier](https://www.zerotier.com/). However, due to licensing issues, ZeroTier is not included in the binary. 
-
-To use Zoraxy with ZeroTier, assuming you already have a valid license, install ZeroTier on your host and then run Zoraxy in sudo mode (or Run As Administrator if you are on Windows). The program will automatically grab the authtoken in the correct location on your host.
-
-If you prefer not to run Zoraxy in sudo mode or you have some weird installation profile, you can also pass in the ZeroTier auth token using the following flags:
-
-```bash
-./zoraxy -ztauth="your_zerotier_authtoken" -ztport=9993
-```
-
-The ZeroTier auth token can usually be found at ```/var/lib/zerotier-one/authtoken.secret``` or ```C:\ProgramData\ZeroTier\One\authtoken.secret```. 
-
-This allows you to have an infinite number of network members in your Global Area Network controller. For more technical details, see [here](https://docs.zerotier.com/self-hosting/network-controllers/).
+Moved to official plugin repo, see [ztnc](https://github.com/aroz-online/zoraxy-official-plugins/tree/main/src/ztnc) plugin
 
 ## Web SSH
 
@@ -199,9 +191,19 @@ Loopback web SSH connections, by default, are disabled. This means that if you a
 
 Some section of Zoraxy are contributed by our amazing community and if you have any issues regarding those sections, it would be more efficient if you can tag them directly when creating an issue report.
 
-- Authelia Support added by [@7brend7](https://github.com/7brend7)
-- Authentik Support added by [@JokerQyou](https://github.com/JokerQyou)
+- Forward Auth [@james-d-elliott](https://github.com/james-d-elliott)
+
+  - (Legacy) Authelia Support added by [@7brend7](https://github.com/7brend7)
+
+  - (Legacy) Authentik Support added by [@JokerQyou](https://github.com/JokerQyou)
+
+
 - Docker Container List by [@eyerrock](https://github.com/eyerrock)
+
+### Looking for Maintainer
+
+- ACME DNS Challenge Module
+- Logging (including analysis & attack prevention) Module
 
 Thank you so much for your contributions!
 
@@ -210,7 +212,7 @@ Thank you so much for your contributions!
 If you like the project and want to support us, please consider a donation. You can use the links below
 
 - [tobychui (Primary author)](https://paypal.me/tobychui)
-- PassiveLemon (Docker compatibility maintainer)
+- [PassiveLemon (Docker compatibility maintainer)](https://github.com/PassiveLemon)
 
 ## License
 

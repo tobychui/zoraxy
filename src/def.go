@@ -13,12 +13,12 @@ import (
 	"net/http"
 	"time"
 
-	"imuslab.com/zoraxy/mod/auth/sso/authentik"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
-	"imuslab.com/zoraxy/mod/auth/sso/authelia"
+	"imuslab.com/zoraxy/mod/auth/sso/forward"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -43,8 +43,9 @@ import (
 
 const (
 	/* Build Constants */
-	SYSTEM_NAME    = "Zoraxy"
-	SYSTEM_VERSION = "3.2.1"
+	SYSTEM_NAME       = "Zoraxy"
+	SYSTEM_VERSION    = "3.2.3"
+	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
 	TMP_FOLDER                   = "./tmp"
@@ -144,8 +145,8 @@ var (
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins
 
 	//Authentication Provider
-	autheliaRouter  *authelia.AutheliaRouter   //Authelia router for Authelia authentication
-	authentikRouter *authentik.AuthentikRouter //Authentik router for Authentik authentication
+	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication
+	oauth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

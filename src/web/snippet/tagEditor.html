@@ -21,15 +21,8 @@
         <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
-            <div class="ui header">
-                <div class="content">
-                    Edit Tags
-                    <div class="sub header" id="epname"></div>
-                </div>
-            </div>
-            <div class="ui divider"></div>
             <p>Tags currently applied to this host name / proxy rule</p>
-            <div style="max-height: 300px; overflow-y: scroll;">
+            <div>
                 <table class="ui compact basic unstackable celled table">
                     <thead>
                         <tr>
@@ -68,9 +61,7 @@
                 </div>
                 <button class="ui basic button" onclick="joinSelectedTagGroups();"><i class="ui blue plus icon"></i> Join tag group(s)</button>
             </div>
-            <div class="ui divider"></div>
-            <!-- <button class="ui basic button" onclick="saveTags();"><i class="ui green save icon"></i> Save Changes</button> -->
-            <button class="ui basic button" style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
+            <br><br>
         </div>
         <script>
             let editingEndpoint = {};
@@ -164,6 +155,10 @@
 
             function addSelectedTags() {
                 let tags = $('#tagsInput').val().split(',').map(tag => tag.trim());
+                if (tags.length == 0 || (tags.length == 1 && tags[0] == "")){
+                    parent.msgbox("Please enter at least one tag", false);
+                    return;
+                }
                 tags.forEach(tag => {
                     if (tag && !tagAlreadyExistsInTable(tag)) {
                         addTagRow(tag);
@@ -210,8 +205,8 @@
                 const row = `<tr class="tagEntry" value="${tag}">
                     <td><div class="ui circular label tag-color" style="background-color: ${getTagColorByName(tag)};"></div> ${tag}</td>    
                     <td>
-                        <button title="Delete Tag" class="ui circular mini red basic icon button" onclick="removeTag('${tag}')">
-                            <i class="trash icon"></i>
+                        <button title="Delete Tag" class="ui circular mini basic button" onclick="removeTag('${tag}')">
+                            <i class="red trash icon"></i> Delete
                         </button>
                     </td>
                 </tr>`;

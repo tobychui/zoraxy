@@ -31,8 +31,7 @@ jobs:
       
       - name: Setup building file structure
         run: |
-          cp -lr $GITHUB_WORKSPACE/src/ $GITHUB_WORKSPACE/docker/
-          cp -lr $GITHUB_WORKSPACE/example/ $GITHUB_WORKSPACE/docker/
+          cp -lr $GITHUB_WORKSPACE/src/ $GITHUB_WORKSPACE/docker/src/
 
       - name: Build and push Docker image (Release)
         if: "!github.event.release.prerelease"

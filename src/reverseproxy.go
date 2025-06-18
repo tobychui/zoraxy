@@ -115,8 +115,8 @@ func ReverseProxtInit() {
 		StatisticCollector: statisticCollector,
 		WebDirectory:       *path_webserver,
 		AccessController:   accessController,
-		AutheliaRouter:     autheliaRouter,
-		AuthentikRouter:    authentikRouter,
+		ForwardAuthRouter:  forwardAuthRouter,
+		OAuth2Router:       oauth2Router,
 		LoadBalancer:       loadBalancer,
 		PluginManager:      pluginManager,
 		/* Utilities */
@@ -556,6 +556,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		proxyRateLimit = 1000
 	}
 
+	// Disable chunked Encoding
+	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -585,11 +588,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	if authProviderType == 1 {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
 	} else if authProviderType == 2 {
-		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodAuthelia
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
 	} else if authProviderType == 3 {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
-	} else if authProviderType == 4 {
-		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodAuthentik
 	} else {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}
@@ -598,6 +599,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
@@ -671,6 +673,83 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Alias update failed")
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to save alias update", err)
 	}
+
+	utils.SendOK(w)
+}
+
+func ReverseProxyHandleSetHostname(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.SendErrorResponse(w, "Method not supported")
+		return
+	}
+
+	originalRootnameOrMatchingDomain, err := utils.PostPara(r, "oldHostname")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid original hostname given")
+		return
+	}
+
+	newHostname, err := utils.PostPara(r, "newHostname")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid new hostname given")
+		return
+	}
+
+	originalRootnameOrMatchingDomain = strings.TrimSpace(originalRootnameOrMatchingDomain)
+	newHostname = strings.TrimSpace(newHostname)
+	if newHostname == "/" {
+		//Reserevd, reutrn error
+		utils.SendErrorResponse(w, "Invalid new hostname: system reserved path")
+		return
+	}
+
+	//Check if the endpoint already exists
+	_, err = dynamicProxyRouter.LoadProxy(newHostname)
+	if err == nil {
+		//Endpoint already exists, return error
+		utils.SendErrorResponse(w, "Endpoint with this hostname already exists")
+		return
+	}
+
+	//Clone, edit the endpoint and remove the original one
+	ept, err := dynamicProxyRouter.LoadProxy(originalRootnameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	newEndpoint := ept.Clone()
+	newEndpoint.RootOrMatchingDomain = newHostname
+
+	//Prepare to replace the current routing rule
+	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	//Remove the old endpoint from runtime
+	err = dynamicProxyRouter.RemoveProxyEndpointByRootname(originalRootnameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	//Remove the config from file
+	err = RemoveReverseProxyConfig(originalRootnameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	//Add the new endpoint to runtime
+	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
+
+	//Save it to file
+	SaveReverseProxyConfig(newEndpoint)
+
+	//Update uptime monitor targets
+	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
 }

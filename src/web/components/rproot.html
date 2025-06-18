@@ -1,7 +1,7 @@
 <div class="standardContainer">
     <div class="ui basic segment">
         <h2>Default Site</h2>
-        <p>Default routing options for inbound traffic (previously called Proxy Root)</p>
+        <p>Default routing options for inbound traffic</p>
         <div class="ui form">
             <div class="grouped fields">
                 <label>What to show when Zoraxy is hit with an unknown Host?</label>
@@ -209,14 +209,13 @@
        })
     }
 
-    //Set the new proxy root option
+    //Set the new proxy root (aka default site) option
     function setProxyRoot(btn=undefined){
         var newpr = $("#proxyRoot").val();
         if (newpr.trim() == "" && currentDefaultSiteOption == 0){
             //Fill in the web server info
             newpr = "127.0.0.1:" +  $("#webserv_listenPort").val();
             $("#proxyRoot").val(newpr);
-            
         }
 
         var rootReqTls = $("#rootReqTLS")[0].checked;
