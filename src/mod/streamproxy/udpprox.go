@@ -90,8 +90,8 @@ func (c *ProxyRelayConfig) ForwardUDP(address1, address2 string, stopChan chan b
 		address1 = ":" + address1
 	}
 	if strings.HasPrefix(address1, ":") {
-		//Prepend 127.0.0.1 to the address
-		address1 = "127.0.0.1" + address1
+		//Prepend 0.0.0.0 to the address
+		address1 = "0.0.0.0" + address1
 	}
 
 	lisener, targetAddr, err := initUDPConnections(address1, address2)
