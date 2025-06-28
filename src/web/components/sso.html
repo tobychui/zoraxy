@@ -3,18 +3,15 @@
         <h2>SSO</h2>
         <p>Single Sign-On (SSO) and authentication providers settings </p>
     </div>
-
-    <div class="ui basic segment">
-        <div class="ui yellow message">
-            <div class="header">
-                Experimental Feature
-            </div>
-            <p>Please note that this feature is still in development and may not work as expected.</p>
-        </div>
-    </div>
     <div class="ui divider"></div>
-    <div class="ui basic segment">
-        <h3>Forward Auth</h3>
+    <div class="ui top attached tabular menu ssoTabs">
+        <a class="item active" data-tab="forward_auth_tab">Forward Auth</a>
+        <a class="item" data-tab="oauth2_tab">Oauth2</a>
+        <!-- <a class="item" data-tab="zoraxy_sso_tab">Zoraxy SSO</a> -->
+        </div>
+        <div class="ui bottom attached tab segment active" data-tab="forward_auth_tab">
+        <!-- Forward Auth -->
+        <h2>Forward Auth</h2>
         <p>Configuration settings for the Forward Auth provider.</p>
         <p>The Forward Auth provider makes a subrequest to an authorization server that supports Forward Auth, then either:</p>
         <ul>
@@ -86,10 +83,10 @@
             </div>
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
         </form>
-    </div>
-    <div class="ui divider"></div>
-    <div class="ui basic segment">
-        <h3>OAuth 2.0</h3>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="oauth2_tab">
+        <!-- Oauth 2 -->
+        <h2>OAuth 2.0</h2>
         <p>Configuration settings for OAuth 2.0 authentication provider.</p>
 
         <form class="ui form" action="#" id="oauth2Settings">
@@ -134,11 +131,18 @@
             </div>
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
         </form>
-    </div>
-    <div class="ui divider"></div>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="zoraxy_sso_tab">
+            <!-- Zoraxy SSO -->
+            <h3>Zoraxy SSO</h3>
+            <p>Configuration settings for Zoraxy SSO provider.</p>
+            <p>Currently not implemented.</p>
+        </div>
 </div>
 
 <script>
+    $(".ssoTabs .item").tab();
+
     $(document).ready(function() {
         /* Load forward-auth settings from backend */
         $.cjax({
