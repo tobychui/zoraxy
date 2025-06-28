@@ -57,3 +57,4 @@ tmp
 sys.*
 www/html/index.html
 *.exe
+/src/dist
