@@ -1,3 +1,36 @@
+# v3.2.4 28 Jun 2025
+
+A big release since v3.1.9. Versions from 3.2.0 to 3.2.3 were prereleases.
+
+
++ Added Authentik support by [JokerQyou](https://github.com/tobychui/zoraxy/commits?author=JokerQyou)
++ Added pluginsystem and moved GAN and Zerotier to plugins
++ Add loopback detection [#573](https://github.com/tobychui/zoraxy/issues/573)
++ Fixed Dark theme not working with Advanced Option accordion [#591](https://github.com/tobychui/zoraxy/issues/591)
++ Update logger to include UserAgent by [Raithmir](https://github.com/Raithmir)
++ Fixed memory usage in UI [#600](https://github.com/tobychui/zoraxy/issues/600)
++ Added docker-compose.yml by [SamuelPalubaCZ](https://github.com/tobychui/zoraxy/commits?author=SamuelPalubaCZ)
++ Added more statistics for proxy hosts [#201](https://github.com/tobychui/zoraxy/issues/201) and [#608](https://github.com/tobychui/zoraxy/issues/608)
++ Fixed origin field in logs [#618](https://github.com/tobychui/zoraxy/issues/618)
++ Added FreeBSD support by Andreas Burri
++ Fixed HTTP proxy redirect [#626](https://github.com/tobychui/zoraxy/issues/626)
++ Fixed proxy handling #629](https://github.com/tobychui/zoraxy/issues/629)
++ Move Scope ID handling into CIDR check by [Nirostar](https://github.com/tobychui/zoraxy/commits?author=Nirostar)
++ Prevent the browser from filling the saved Zoraxy login account by [WHFo](https://github.com/tobychui/zoraxy/commits?author=WHFo)
++ Added port number and http proto to http proxy list link
++ Fixed headers for authelia by [james-d-elliott](https://github.com/tobychui/zoraxy/commits?author=james-d-elliott)
++ Refactored docker container list and UI improvements by [eyerrock](https://github.com/tobychui/zoraxy/commits?author=eyerrock)
++ Refactored Dockerfile by [PassiveLemon](https://github.com/tobychui/zoraxy/commits?author=PassiveLemon)
++ Added new HTTP proxy UI
++ Added inbound host name edit function
++ Added static web server option to disable listen to all interface
++ Merged SSO implementations (Oauth2) [#649](https://github.com/tobychui/zoraxy/pull/649)
++ Merged forward-auth optimization [#692(https://github.com/tobychui/zoraxy/pull/692)
++ Optimized SSO UI
++ Refactored docker image workflows by [PassiveLemon](https://github.com/tobychui/zoraxy/commits?author=PassiveLemon)
++ Added disable chunked transfer encoding checkbox (for upstreams that uses legacy HTTP implementations)
++ Bug fixes [#694](https://github.com/tobychui/zoraxy/issues/694), [#659](https://github.com/tobychui/zoraxy/issues/659) by [jemmy1794](https://github.com/tobychui/zoraxy/commits?author=jemmy1794), [#695](https://github.com/tobychui/zoraxy/issues/695)
+
 # v3.1.9 1 Mar 2025
 
 + Fixed netstat underflow bug
