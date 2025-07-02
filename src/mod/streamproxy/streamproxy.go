@@ -24,12 +24,13 @@ import (
 */
 
 type ProxyRelayOptions struct {
-	Name          string
-	ListeningAddr string
-	ProxyAddr     string
-	Timeout       int
-	UseTCP        bool
-	UseUDP        bool
+	Name             string
+	ListeningAddr    string
+	ProxyAddr        string
+	Timeout          int
+	UseTCP           bool
+	UseUDP           bool
+	UseProxyProtocol bool
 }
 
 type ProxyRelayConfig struct {
@@ -41,6 +42,7 @@ type ProxyRelayConfig struct {
 	ProxyTargetAddr             string       //Proxy target address
 	UseTCP                      bool         //Enable TCP proxy
 	UseUDP                      bool         //Enable UDP proxy
+	UseProxyProtocol            bool		 //Enable Proxy Protocol
 	Timeout                     int          //Timeout for connection in sec
 	tcpStopChan                 chan bool    //Stop channel for TCP listener
 	udpStopChan                 chan bool    //Stop channel for UDP listener
@@ -157,6 +159,7 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		ProxyTargetAddr:             config.ProxyAddr,
 		UseTCP:                      config.UseTCP,
 		UseUDP:                      config.UseUDP,
+		UseProxyProtocol:            config.UseProxyProtocol,
 		Timeout:                     config.Timeout,
 		tcpStopChan:                 nil,
 		udpStopChan:                 nil,

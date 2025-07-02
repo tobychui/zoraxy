@@ -47,15 +47,18 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 
 	useTCP, _ := utils.PostBool(r, "useTCP")
 	useUDP, _ := utils.PostBool(r, "useUDP")
+	// useProxyProtocol, _ := utils.PostBool(r, "useProxyProtocol")
+	useProxyProtocol := true
 
 	//Create the target config
 	newConfigUUID := m.NewConfig(&ProxyRelayOptions{
-		Name:          name,
-		ListeningAddr: strings.TrimSpace(listenAddr),
-		ProxyAddr:     strings.TrimSpace(proxyAddr),
-		Timeout:       timeout,
-		UseTCP:        useTCP,
-		UseUDP:        useUDP,
+		Name:             name,
+		ListeningAddr:    strings.TrimSpace(listenAddr),
+		ProxyAddr:        strings.TrimSpace(proxyAddr),
+		Timeout:          timeout,
+		UseTCP:           useTCP,
+		UseUDP:           useUDP,
+		UseProxyProtocol: useProxyProtocol,
 	})
 
 	js, _ := json.Marshal(newConfigUUID)
