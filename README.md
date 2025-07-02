@@ -200,6 +200,10 @@ Some section of Zoraxy are contributed by our amazing community and if you have 
 
 - Docker Container List by [@eyerrock](https://github.com/eyerrock)
 
+- Stream Proxy [@jemmy1794](https://github.com/jemmy1794)
+
+- Change Log [@Morethanevil](https://github.com/Morethanevil)
+
 ### Looking for Maintainer
 
 - ACME DNS Challenge Module
