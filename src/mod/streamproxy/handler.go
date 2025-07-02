@@ -89,8 +89,20 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Create a new ProxyRuleUpdateConfig with the extracted parameters
+	newConfig := &ProxyRuleUpdateConfig{
+		InstanceUUID:     configUUID,
+		NewName:          newName,
+		NewListeningAddr: listenAddr,
+		NewProxyAddr:     proxyAddr,
+		UseTCP:           useTCP,
+		UseUDP:           useUDP,
+		UseProxyProtocol: useProxyProtocol,
+		NewTimeout:       newTimeout,
+	}
+
 	// Call the EditConfig method to modify the configuration
-	err = m.EditConfig(configUUID, newName, listenAddr, proxyAddr, useTCP, useUDP, useProxyProtocol, newTimeout)
+	err = m.EditConfig(newConfig)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return

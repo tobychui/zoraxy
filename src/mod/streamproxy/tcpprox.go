@@ -72,7 +72,7 @@ func forward(conn1 net.Conn, conn2 net.Conn, aTob *atomic.Int64, bToa *atomic.In
 	wg.Wait()
 }
 
-func (c *ProxyRelayConfig) accept(listener net.Listener) (net.Conn, error) {
+func (c *ProxyRelayInstance) accept(listener net.Listener) (net.Conn, error) {
 	conn, err := listener.Accept()
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func startListener(address string) (net.Listener, error) {
 portA -> server
 server -> portB
 */
-func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, stopChan chan bool) error {
+func (c *ProxyRelayInstance) Port2host(allowPort string, targetAddress string, stopChan chan bool) error {
 	listenerStartingAddr := allowPort
 	if isValidPort(allowPort) {
 		//number only, e.g. 8080
