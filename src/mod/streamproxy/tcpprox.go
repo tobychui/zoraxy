@@ -145,7 +145,7 @@ func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, sto
 			//Connection error. Retry
 			continue
 		}
-		log.Println("[+]", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
 		go func(targetAddress string) {
 			log.Println("[+]", "start connect host:["+targetAddress+"]")
 			target, err := net.Dial("tcp", targetAddress)

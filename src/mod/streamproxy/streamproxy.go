@@ -42,7 +42,7 @@ type ProxyRelayConfig struct {
 	ProxyTargetAddr             string       //Proxy target address
 	UseTCP                      bool         //Enable TCP proxy
 	UseUDP                      bool         //Enable UDP proxy
-	UseProxyProtocol            bool		 //Enable Proxy Protocol
+	UseProxyProtocol            bool         //Enable Proxy Protocol
 	Timeout                     int          //Timeout for connection in sec
 	tcpStopChan                 chan bool    //Stop channel for TCP listener
 	udpStopChan                 chan bool    //Stop channel for UDP listener
@@ -184,7 +184,7 @@ func (m *Manager) GetConfigByUUID(configUUID string) (*ProxyRelayConfig, error) 
 }
 
 // Edit the config based on config UUID, leave empty for unchange fields
-func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr string, newProxyAddr string, useTCP bool, useUDP bool, newTimeout int) error {
+func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr string, newProxyAddr string, useTCP bool, useUDP bool, useProxyProtocol bool, newTimeout int) error {
 	// Find the config with the specified UUID
 	foundConfig, err := m.GetConfigByUUID(configUUID)
 	if err != nil {
@@ -204,6 +204,7 @@ func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr
 
 	foundConfig.UseTCP = useTCP
 	foundConfig.UseUDP = useUDP
+	foundConfig.UseProxyProtocol = useProxyProtocol
 
 	if newTimeout != -1 {
 		if newTimeout < 0 {
