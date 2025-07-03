@@ -48,6 +48,7 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 	useTCP, _ := utils.PostBool(r, "useTCP")
 	useUDP, _ := utils.PostBool(r, "useUDP")
 	useProxyProtocol, _ := utils.PostBool(r, "useProxyProtocol")
+	enableLogging, _ := utils.PostBool(r, "enableLogging")
 
 	//Create the target config
 	newConfigUUID := m.NewConfig(&ProxyRelayOptions{
@@ -58,6 +59,7 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 		UseTCP:           useTCP,
 		UseUDP:           useUDP,
 		UseProxyProtocol: useProxyProtocol,
+		EnableLogging:    enableLogging,
 	})
 
 	js, _ := json.Marshal(newConfigUUID)
@@ -78,6 +80,7 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 	useTCP, _ := utils.PostBool(r, "useTCP")
 	useUDP, _ := utils.PostBool(r, "useUDP")
 	useProxyProtocol, _ := utils.PostBool(r, "useProxyProtocol")
+	enableLogging, _ := utils.PostBool(r, "enableLogging")
 
 	newTimeoutStr, _ := utils.PostPara(r, "timeout")
 	newTimeout := -1
@@ -98,6 +101,7 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 		UseTCP:           useTCP,
 		UseUDP:           useUDP,
 		UseProxyProtocol: useProxyProtocol,
+		EnableLogging:    enableLogging,
 		NewTimeout:       newTimeout,
 	}
 

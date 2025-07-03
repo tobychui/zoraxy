@@ -16,6 +16,7 @@
                         <th>Target Address</th>
                         <th>Mode</th>
                         <th>Timeout (s)</th>
+                        <th>Enable Logging</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -78,6 +79,14 @@
                     <input type="checkbox" tabindex="0" name="useProxyProtocol" class="hidden">
                     <label>Enable Proxy Protocol V1<br>
                         <small>Enable TCP Proxy Protocol header V1</small>
+                    </label>
+                </div>
+            </div>
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" tabindex="0" name="enableLogging" class="hidden">
+                    <label>Enable Logging<br>
+                        <small>Enable logging of connection status and errors for this rule</small>
                     </label>
                 </div>
             </div>
@@ -219,6 +228,10 @@
                     row.append($('<td>').text(config.ProxyTargetAddr));
                     row.append($('<td>').text(modeText));
                     row.append($('<td>').text(config.Timeout));
+                    row.append($('<td>').html(config.EnableLogging ? 
+                        '<i class="green check icon" title="Logging Enabled"></i>' : 
+                        '<i class="red times icon" title="Logging Disabled"></i>'
+                    ));
                     row.append($('<td>').html(`
                         ${startButton}
                         <button onclick="editTCPProxyConfig('${config.UUID}');" class="ui circular basic mini icon button" title="Edit Config"><i class="edit icon"></i></button>
@@ -266,6 +279,14 @@
                         return;
                     }else if (key == "UseProxyProtocol"){
                         let checkboxEle = $("#streamProxyForm input[name=useProxyProtocol]").parent();
+                        if (value === true){
+                            $(checkboxEle).checkbox("set checked");
+                        }else{
+                            $(checkboxEle).checkbox("set unchecked");
+                        }
+                        return;
+                    }else if (key == "EnableLogging"){
+                        let checkboxEle = $("#streamProxyForm input[name=enableLogging]").parent();
                         if (value === true){
                             $(checkboxEle).checkbox("set checked");
                         }else{
@@ -322,6 +343,7 @@
                     useTCP: $("#streamProxyForm input[name=useTCP]")[0].checked ,
                     useUDP: $("#streamProxyForm input[name=useUDP]")[0].checked ,
                     useProxyProtocol: $("#streamProxyForm input[name=useProxyProtocol]")[0].checked ,
+                    enableLogging: $("#streamProxyForm input[name=enableLogging]")[0].checked ,
                     timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
                 },
                 success: function(response) {

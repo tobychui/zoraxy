@@ -9,8 +9,21 @@ package streamproxy
 
 import (
 	"errors"
+	"log"
 	"time"
 )
+
+func (c *ProxyRelayInstance) LogMsg(message string, originalError error) {
+	if !c.EnableLogging {
+		return
+	}
+
+	if originalError != nil {
+		log.Println(message, "error:", originalError)
+	} else {
+		log.Println(message)
+	}
+}
 
 // Start a proxy if stopped
 func (c *ProxyRelayInstance) Start() error {
