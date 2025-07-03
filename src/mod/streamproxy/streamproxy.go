@@ -30,6 +30,7 @@ type ProxyRelayOptions struct {
 	UseTCP           bool
 	UseUDP           bool
 	UseProxyProtocol bool
+	EnableLogging    bool
 }
 
 // ProxyRuleUpdateConfig is used to update the proxy rule config
@@ -41,6 +42,7 @@ type ProxyRuleUpdateConfig struct {
 	UseTCP           bool   //Enable TCP proxy, default to false
 	UseUDP           bool   //Enable UDP proxy, default to false
 	UseProxyProtocol bool   //Enable Proxy Protocol, default to false
+	EnableLogging    bool   //Enable Logging TCP/UDP Message, default to true
 	NewTimeout       int    //New timeout for the connection, leave -1 for no change
 }
 
@@ -55,6 +57,7 @@ type ProxyRelayInstance struct {
 	UseTCP           bool   //Enable TCP proxy
 	UseUDP           bool   //Enable UDP proxy
 	UseProxyProtocol bool   //Enable Proxy Protocol
+	EnableLogging    bool   //Enable logging for ProxyInstance
 	Timeout          int    //Timeout for connection in sec
 
 	/* Internal */
@@ -176,6 +179,7 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		UseTCP:                      config.UseTCP,
 		UseUDP:                      config.UseUDP,
 		UseProxyProtocol:            config.UseProxyProtocol,
+		EnableLogging:               config.EnableLogging,
 		Timeout:                     config.Timeout,
 		tcpStopChan:                 nil,
 		udpStopChan:                 nil,
@@ -221,6 +225,7 @@ func (m *Manager) EditConfig(newConfig *ProxyRuleUpdateConfig) error {
 	foundConfig.UseTCP = newConfig.UseTCP
 	foundConfig.UseUDP = newConfig.UseUDP
 	foundConfig.UseProxyProtocol = newConfig.UseProxyProtocol
+	foundConfig.EnableLogging = newConfig.EnableLogging
 
 	if newConfig.NewTimeout != -1 {
 		if newConfig.NewTimeout < 0 {

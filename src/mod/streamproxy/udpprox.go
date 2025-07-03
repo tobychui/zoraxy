@@ -138,12 +138,12 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 				continue
 			}
 			c.udpClientMap.Store(saddr, conn)
-			log.Println("[UDP] Created new connection for client " + saddr)
+			c.LogMsg("[UDP] Created new connection for client "+saddr, nil)
 			// Fire up routine to manage new connection
 			go c.RunUDPConnectionRelay(conn, lisener)
 
 		} else {
-			log.Println("[UDP] Found connection for client " + saddr)
+			c.LogMsg("[UDP] Found connection for client "+saddr, nil)
 			conn = rawConn.(*udpClientServerConn)
 		}
 
