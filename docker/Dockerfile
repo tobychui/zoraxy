@@ -34,19 +34,6 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
     chmod 755 /usr/local/bin/zerotier-one
 
 
-## Fetch plugin
-FROM docker.io/golang:alpine AS fetch-plugin
-
-RUN mkdir -p /opt/zoraxy/zoraxy_plugin/
-
-RUN apk add --update --no-cache git
-
-WORKDIR /opt/zoraxy/
-
-RUN git clone https://github.com/aroz-online/zoraxy-official-plugins &&\
-    cp -r ./zoraxy-official-plugins/src/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
-
-
 ## Main
 FROM docker.io/golang:alpine
 
@@ -55,7 +42,7 @@ FROM docker.io/golang:alpine
 COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
 COPY --chmod=700 ./build_plugins.sh /usr/local/bin/build_plugins
 
-COPY --from=fetch-plugin --chmod=700 /opt/zoraxy/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
+COPY --chmod=700 ./entrypoint.py /opt/zoraxy/
 
 COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy

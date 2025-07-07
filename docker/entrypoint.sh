@@ -13,11 +13,6 @@ trap cleanup SIGTERM SIGINT TERM INT
 update-ca-certificates && echo "CA certificates updated."
 zoraxy -update_geoip=true && echo "GeoIP data updated ."
 
-echo "Building plugins..."
-cd /opt/zoraxy/plugin/ || exit 1
-build_plugins "$PWD"
-echo "Plugins built."
-cd /opt/zoraxy/config/ || exit 1
 
 if [ "$ZEROTIER" = "true" ]; then
   if [ ! -d "/opt/zoraxy/config/zerotier/" ]; then
