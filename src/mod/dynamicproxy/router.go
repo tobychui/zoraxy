@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/utils"
 )
 
 /*
@@ -104,4 +105,50 @@ func (router *Router) RemoveProxyEndpointByRootname(rootnameOrMatchingDomain str
 	}
 
 	return targetEpt.Remove()
+}
+
+// GetProxyEndpointById retrieves a proxy endpoint by its ID from the Router's ProxyEndpoints map.
+// It returns the ProxyEndpoint if found, or an error if not found.
+func (h *Router) GetProxyEndpointById(searchingDomain string, includeAlias bool) (*ProxyEndpoint, error) {
+	var found *ProxyEndpoint
+	h.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		proxy, ok := value.(*ProxyEndpoint)
+		if ok && (proxy.RootOrMatchingDomain == searchingDomain || (includeAlias && utils.StringInArray(proxy.MatchingDomainAlias, searchingDomain))) {
+			found = proxy
+			return false // stop iteration
+		}
+		return true // continue iteration
+	})
+	if found != nil {
+		return found, nil
+	}
+	return nil, errors.New("proxy rule with given id not found")
+}
+
+func (h *Router) GetProxyEndpointByAlias(alias string) (*ProxyEndpoint, error) {
+	var found *ProxyEndpoint
+	h.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		proxy, ok := value.(*ProxyEndpoint)
+		if !ok {
+			return true
+		}
+		//Also check for wildcard aliases that matches the alias
+		for _, thisAlias := range proxy.MatchingDomainAlias {
+			if ok && thisAlias == alias {
+				found = proxy
+				return false // stop iteration
+			} else if ok && strings.HasPrefix(thisAlias, "*") {
+				//Check if the alias matches a wildcard alias
+				if strings.HasSuffix(alias, thisAlias[1:]) {
+					found = proxy
+					return false // stop iteration
+				}
+			}
+		}
+		return true // continue iteration
+	})
+	if found != nil {
+		return found, nil
+	}
+	return nil, errors.New("proxy rule with given alias not found")
 }

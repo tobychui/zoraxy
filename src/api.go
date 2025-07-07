@@ -34,6 +34,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
 	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
+	authRouter.HandleFunc("/api/proxy/setTlsConfig", ReverseProxyHandleSetTlsConfig)
 	authRouter.HandleFunc("/api/proxy/setHostname", ReverseProxyHandleSetHostname)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
 	authRouter.HandleFunc("/api/proxy/updateCredentials", UpdateProxyBasicAuthCredentials)
@@ -79,6 +80,7 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/cert/listdomains", handleListDomains)
 	authRouter.HandleFunc("/api/cert/checkDefault", handleDefaultCertCheck)
 	authRouter.HandleFunc("/api/cert/delete", handleCertRemove)
+	authRouter.HandleFunc("/api/cert/resolve", handleCertTryResolve)
 }
 
 // Register the APIs for Authentication handlers like Forward Auth and OAUTH2

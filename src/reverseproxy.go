@@ -15,6 +15,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -334,7 +335,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	tags = filteredTags
 
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
-	if eptype == "host" {
+	switch eptype {
+	case "host":
 		rootOrMatchingDomain, err := utils.PostPara(r, "rootname")
 		if err != nil {
 			utils.SendErrorResponse(w, "hostname not defined")
@@ -415,7 +417,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 		dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
 		proxyEndpointCreated = &thisProxyEndpoint
-	} else if eptype == "root" {
+	case "root":
 		//Get the default site options and target
 		dsOptString, err := utils.PostPara(r, "defaultSiteOpt")
 		if err != nil {
@@ -469,7 +471,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		proxyEndpointCreated = &rootRoutingEndpoint
-	} else {
+	default:
 		//Invalid eptype
 		utils.SendErrorResponse(w, "invalid endpoint type")
 		return
@@ -672,6 +674,65 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.SendErrorResponse(w, "Alias update failed")
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to save alias update", err)
+	}
+
+	utils.SendOK(w)
+}
+
+func ReverseProxyHandleSetTlsConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.SendErrorResponse(w, "Method not supported")
+		return
+	}
+
+	rootnameOrMatchingDomain, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	tlsConfig, err := utils.PostPara(r, "tlsConfig")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid TLS config given")
+		return
+	}
+
+	tlsConfig = strings.TrimSpace(tlsConfig)
+	if tlsConfig == "" {
+		utils.SendErrorResponse(w, "TLS config cannot be empty")
+		return
+	}
+
+	newTlsConfig := &tlscert.HostSpecificTlsBehavior{}
+	err = json.Unmarshal([]byte(tlsConfig), newTlsConfig)
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid TLS config given: "+err.Error())
+		return
+	}
+
+	//Load the target endpoint
+	ept, err := dynamicProxyRouter.LoadProxy(rootnameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	ept.TlsOptions = newTlsConfig
+
+	//Prepare to replace the current routing rule
+	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(ept)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
+
+	//Save it to file
+	err = SaveReverseProxyConfig(ept)
+	if err != nil {
+		utils.SendErrorResponse(w, "Failed to save TLS config: "+err.Error())
+		return
 	}
 
 	utils.SendOK(w)
@@ -1015,6 +1076,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
 	js, err := json.Marshal(dynamicProxyRouter)
 	if err != nil {
+		SystemWideLogger.PrintAndLog("proxy-config", "Unable to marshal status data", err)
 		utils.SendErrorResponse(w, "Unable to marshal status data")
 		return
 	}

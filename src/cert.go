@@ -360,6 +360,87 @@ func handleCertUpload(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "File upload successful!")
 }
 
+func handleCertTryResolve(w http.ResponseWriter, r *http.Request) {
+	// get the domain
+	domain, err := utils.GetPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid domain given")
+		return
+	}
+
+	// get the proxy rule, the pass in domain value must be root or matching domain
+	proxyRule, err := dynamicProxyRouter.GetProxyEndpointById(domain, false)
+	if err != nil {
+		//Try to resolve the domain via alias
+		proxyRule, err = dynamicProxyRouter.GetProxyEndpointByAlias(domain)
+		if err != nil {
+			//No matching rule found
+			utils.SendErrorResponse(w, "proxy rule not found for domain: "+domain)
+			return
+		}
+	}
+
+	// list all the alias domains for this rule
+	allDomains := []string{proxyRule.RootOrMatchingDomain}
+	aliasDomains := []string{}
+	for _, alias := range proxyRule.MatchingDomainAlias {
+		if alias != "" {
+			aliasDomains = append(aliasDomains, alias)
+			allDomains = append(allDomains, alias)
+		}
+	}
+
+	// Try to resolve the domain
+	domainKeyPairs := map[string]string{}
+	for _, thisDomain := range allDomains {
+		pubkey, prikey, err := tlsCertManager.GetCertificateByHostname(thisDomain)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Make sure pubkey and private key are not empty
+		if pubkey == "" || prikey == "" {
+			domainKeyPairs[thisDomain] = ""
+		} else {
+			//Store the key pair
+			keyname := strings.TrimSuffix(filepath.Base(pubkey), filepath.Ext(pubkey))
+			if keyname == "localhost" {
+				//Internal certs like localhost should not be used
+				//report as "fallback" key
+				keyname = "fallback certificate"
+			}
+			domainKeyPairs[thisDomain] = keyname
+		}
+
+	}
+
+	//A domain must be UseDNSValidation if it is a wildcard domain or its alias is a wildcard domain
+	useDNSValidation := strings.HasPrefix(proxyRule.RootOrMatchingDomain, "*")
+	for _, alias := range aliasDomains {
+		if strings.HasPrefix(alias, "*") || strings.HasPrefix(domain, "*") {
+			useDNSValidation = true
+		}
+	}
+
+	type CertInfo struct {
+		Domain           string            `json:"domain"`
+		AliasDomains     []string          `json:"alias_domains"`
+		DomainKeyPair    map[string]string `json:"domain_key_pair"`
+		UseDNSValidation bool              `json:"use_dns_validation"`
+	}
+
+	result := &CertInfo{
+		Domain:           proxyRule.RootOrMatchingDomain,
+		AliasDomains:     aliasDomains,
+		DomainKeyPair:    domainKeyPairs,
+		UseDNSValidation: useDNSValidation,
+	}
+
+	js, _ := json.Marshal(result)
+	utils.SendJSONResponse(w, string(js))
+}
+
 // Handle cert remove
 func handleCertRemove(w http.ResponseWriter, r *http.Request) {
 	domain, err := utils.PostPara(r, "domain")

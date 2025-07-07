@@ -338,8 +338,37 @@
                     <!-- TLS / SSL -->
                     <div class="rpconfig_content" rpcfg="ssl">
                         <div class="ui segment">
-                            <p>Work In Progress <br>
-                            Please use the outer-most menu TLS / SSL tab for now. </p>
+                            <p>The table below shows which certificate will be served by Zoraxy when a client request the following hostnames.</p>
+                            <table class="ui celled small compact table Tls_resolve_list">
+                                <thead>
+                                    <tr>
+                                        <th>Hostname</th>
+                                        <th>Resolve to Certificate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rows will be dynamically populated -->
+                                </tbody>
+                            </table>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="Tls_EnableSNI">
+                                <label>Enable SNI<br>
+                                    <small>Resolve Server Name Indication (SNI) and automatically select a certificate</small>
+                                </label>
+                            </div>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="Tls_EnableLegacyCertificateMatching">
+                                <label>Enable Legacy Certificate Matching<br>
+                                    <small>Use legacy filename / hostname matching for loading certificates</small>
+                                </label>
+                            </div>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="Tls_EnableAutoHTTPS">
+                                <label>Enable Auto HTTPS<br>
+                                    <small>Automatically request a certificate for the domain</small>
+                                </label>
+                            </div>
+                            
                             <br>
                             <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
                         </div>
@@ -709,6 +738,66 @@
     function exitProxyInlineEdit(){
         listProxyEndpoints();
         $("#httpProxyList").find(".editBtn").removeClass("disabled");
+    }
+
+    function saveTlsConfigs(uuid){
+        let enableSNI = $("#httprpEditModal .Tls_EnableSNI")[0].checked;
+        let enableLegacyCertificateMatching = $("#httprpEditModal .Tls_EnableLegacyCertificateMatching")[0].checked;
+        let enableAutoHTTPS = $("#httprpEditModal .Tls_EnableAutoHTTPS")[0].checked;
+        let newTlsOption = {
+            "DisableSNI": !enableSNI,
+            "DisableLegacyCertificateMatching": !enableLegacyCertificateMatching,
+            "EnableAutoHTTPS": enableAutoHTTPS
+        }
+        $.cjax({
+            url: "/api/proxy/setTlsConfig",
+            method: "POST",
+            data: {
+                "ep": uuid,
+                "tlsConfig": JSON.stringify(newTlsOption)
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false, 3000);
+                }else{
+                    msgbox("TLS Config updated");
+                }
+                updateTlsResolveList(uuid);
+            }
+        });
+    }
+
+    function updateTlsResolveList(uuid){
+        let editor = $("#httprpEditModalWrapper");
+        //Update the TLS resolve list
+        $.ajax({
+            url: "/api/cert/resolve?domain=" + uuid,
+            method: "GET",
+            success: function(data) {
+                // Populate the TLS resolve list
+                let resolveList = editor.find(".Tls_resolve_list tbody");
+                resolveList.empty(); // Clear existing entries
+                let primaryDomain = data.domain;
+                let aliasDomains = data.alias_domains || [];
+                let certMap = data.domain_key_pair;
+
+                // Add primary domain entry
+                resolveList.append(`
+                    <tr>
+                        <td>${primaryDomain}</td>
+                        <td>${certMap[primaryDomain] || "Fallback Certificate"}</td>
+                    </tr>
+                `);
+                aliasDomains.forEach(alias => {
+                    resolveList.append(`
+                        <tr>
+                            <td>${alias}</td>
+                            <td>${certMap[alias] || "Fallback Certificate"}</td>
+                        </tr>
+                    `);
+                });
+            }
+        });
     }
 
     function saveProxyInlineEdit(uuid){
@@ -1245,6 +1334,20 @@
         editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
 
         /* ------------ TLS ------------ */
+        updateTlsResolveList(uuid);
+        editor.find(".Tls_EnableSNI").prop("checked", !subd.TlsOptions.DisableSNI);
+        editor.find(".Tls_EnableLegacyCertificateMatching").prop("checked", !subd.TlsOptions.DisableLegacyCertificateMatching);
+        editor.find(".Tls_EnableAutoHTTPS").prop("checked", !!subd.TlsOptions.EnableAutoHTTPS);
+
+        editor.find(".Tls_EnableSNI").off("change").on("change", function() {
+            saveTlsConfigs(uuid);
+        });
+        editor.find(".Tls_EnableLegacyCertificateMatching").off("change").on("change", function() {
+            saveTlsConfigs(uuid);
+        });
+        editor.find(".Tls_EnableAutoHTTPS").off("change").on("change", function() {
+            saveTlsConfigs(uuid);
+        });
 
         /* ------------ Tags ------------ */
         (()=>{

@@ -175,7 +175,8 @@ type ProxyEndpoint struct {
 	Disabled             bool                    //If the rule is disabled
 
 	//Inbound TLS/SSL Related
-	BypassGlobalTLS bool //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
+	BypassGlobalTLS bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
+	TlsOptions      *tlscert.HostSpecificTlsBehavior //TLS options for this endpoint, if nil, use global TLS options
 
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint

@@ -15,6 +15,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
+	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -59,12 +60,18 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		thisConfigEndpoint.Tags = []string{}
 	}
 
+	//Make sure the TLS options are not nil
+	if thisConfigEndpoint.TlsOptions == nil {
+		thisConfigEndpoint.TlsOptions = tlscert.GetDefaultHostSpecificTlsBehavior()
+	}
+
 	//Matching domain not set. Assume root
 	if thisConfigEndpoint.RootOrMatchingDomain == "" {
 		thisConfigEndpoint.RootOrMatchingDomain = "/"
 	}
 
-	if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyTypeRoot {
+	switch thisConfigEndpoint.ProxyType {
+	case dynamicproxy.ProxyTypeRoot:
 		//This is a root config file
 		rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
 		if err != nil {
@@ -73,7 +80,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 
 		dynamicProxyRouter.SetProxyRouteAsRoot(rootProxyEndpoint)
 
-	} else if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyTypeHost {
+	case dynamicproxy.ProxyTypeHost:
 		//This is a host config file
 		readyProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
 		if err != nil {
@@ -81,7 +88,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		}
 
 		dynamicProxyRouter.AddProxyRouteToRuntime(readyProxyEndpoint)
-	} else {
+	default:
 		return errors.New("not supported proxy type")
 	}
 
