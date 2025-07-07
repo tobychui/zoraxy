@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -100,6 +101,13 @@ func handleListCertificate(w http.ResponseWriter, r *http.Request) {
 
 			results = append(results, &thisCertInfo)
 		}
+
+		// convert ExpireDate to date object and sort asc
+		sort.Slice(results, func(i, j int) bool {
+			date1, _ := time.Parse("2006-01-02 15:04:05", results[i].ExpireDate)
+			date2, _ := time.Parse("2006-01-02 15:04:05", results[j].ExpireDate)
+			return date1.Before(date2)
+		})
 
 		js, _ := json.Marshal(results)
 		w.Header().Set("Content-Type", "application/json")
