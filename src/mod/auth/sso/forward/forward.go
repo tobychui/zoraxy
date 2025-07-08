@@ -60,11 +60,11 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 
 	// Helper function to clean empty strings from split results
 	cleanSplit := func(s string) []string {
-		parts := strings.Split(s, ",")
-		if len(parts) == 1 && parts[0] == "" {
-			return []string{}
-		}
-		return parts
+	        if s == "" {
+	          return nil
+	        }
+
+		return strings.Split(s, ",")
 	}
 
 	options.ResponseHeaders = cleanSplit(responseHeaders)
