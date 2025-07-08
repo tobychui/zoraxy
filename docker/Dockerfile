@@ -34,34 +34,18 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
     chmod 755 /usr/local/bin/zerotier-one
 
 
-## Fetch plugin
-FROM docker.io/golang:alpine AS fetch-plugin
-
-RUN mkdir -p /opt/zoraxy/zoraxy_plugin/
-
-RUN apk add --update --no-cache git
-
-WORKDIR /opt/zoraxy/
-
-RUN git clone https://github.com/aroz-online/zoraxy-official-plugins &&\
-    cp -r ./zoraxy-official-plugins/src/ztnc/mod/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
-
-
 ## Main
-FROM docker.io/golang:alpine
+FROM docker.io/alpine:latest
 
-# If you build it yourself, you will need to add the example directory into the docker directory.
+RUN apk add --update --no-cache python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
+    rm -rf /var/cache/apk/* /tmp/*
 
-COPY --chmod=700 ./entrypoint.sh /opt/zoraxy/
-COPY --chmod=700 ./build_plugins.sh /usr/local/bin/build_plugins
-
-COPY --from=fetch-plugin --chmod=700 /opt/zoraxy/zoraxy_plugin/ /opt/zoraxy/zoraxy_plugin/
+COPY --chmod=700 ./entrypoint.py /opt/zoraxy/
 
 COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
 
-RUN apk add --update --no-cache bash sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
-    mkdir -p /opt/zoraxy/plugin/ &&\
+RUN mkdir -p /opt/zoraxy/plugin/ &&\
     echo "tun" | tee -a /etc/modules
 
 WORKDIR /opt/zoraxy/config/
@@ -89,7 +73,7 @@ VOLUME [ "/opt/zoraxy/config/" ]
 
 LABEL com.imuslab.zoraxy.container-identifier="Zoraxy"
 
-ENTRYPOINT [ "/opt/zoraxy/entrypoint.sh" ]
+ENTRYPOINT [ "python3", "-u", "/opt/zoraxy/entrypoint.py" ]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
 

@@ -119,18 +119,14 @@ Or for Docker Compose:
 
 ### Plugins
 
-You can find official plugins at https://github.com/aroz-online/zoraxy-official-plugins
-
-Place your plugins inside the volume `/path/to/zoraxy/plugin/:/opt/zoraxy/plugin/` (Adjust to your actual install location). Any plugins you have added will then be built and used on the next restart.
-
-> [!IMPORTANT]
-> Plugins are currently experimental.
+Zoraxy includes a (experimental) store to download and use official plugins right from inside Zoraxy, no preparation required.
+For those looking to use custom plugins, build your plugins and place them inside the volume `/path/to/zoraxy/plugin/:/opt/zoraxy/plugin/` (Adjust to your actual install location).
 
 ### Building
 
 To build the Docker image:
   - Check out the repository/branch.
-  - Copy the Zoraxy `src/` and `example/` directory into the `docker/` (here) directory.
+  - Copy the Zoraxy `src/` directory into the `docker/` (here) directory.
   - Run the build command with `docker build -t zoraxy_build .`
   - You can now use the image `zoraxy_build`
     - If you wish to change the image name, then modify`zoraxy_build` in the previous step and then build again.

@@ -29,8 +29,6 @@ src/Zoraxy_*_*
 src/certs/*
 src/rules/*
 src/README.md
-docker/ContainerTester.sh
-docker/docker-compose.yaml
 src/mod/acme/test/stackoverflow.pem
 /tools/dns_challenge_update/code-gen/acmedns
 /tools/dns_challenge_update/code-gen/lego
@@ -41,10 +39,14 @@ src/sys.uuid
 src/zoraxy
 src/log/
 
-
 # dev-tags
 /Dockerfile
 /Entrypoint.sh
+
+# docker testing stuff
+docker/test/
+docker/container-builder.sh
+docker/docker-compose.yaml
 
 # plugins
 example/plugins/ztnc/ztnc.db
@@ -58,3 +60,4 @@ sys.*
 www/html/index.html
 *.exe
 /src/dist
+
