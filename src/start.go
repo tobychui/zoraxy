@@ -1,7 +1,6 @@
 package main
 
 import (
-	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -99,7 +100,7 @@ func startupSequence() {
 	})
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, *development_build, SystemWideLogger)
+	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -366,6 +367,9 @@ func finalSequence() {
 
 	//Inject routing rules
 	registerBuildInRoutingRules()
+
+	//Set the host specific TLS behavior resolver for resolving TLS behavior for each hostname
+	tlsCertManager.SetHostSpecificTlsBehavior(dynamicProxyRouter.ResolveHostSpecificTlsBehaviorForHostname)
 }
 
 /* Shutdown Sequence */

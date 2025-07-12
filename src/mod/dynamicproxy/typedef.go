@@ -75,16 +75,20 @@ type RouterOption struct {
 /* Router Object */
 type Router struct {
 	Option         *RouterOption
-	ProxyEndpoints *sync.Map                 //Map of ProxyEndpoint objects, each ProxyEndpoint object is a routing rule that handle incoming requests
-	Running        bool                      //If the router is running
-	Root           *ProxyEndpoint            //Root proxy endpoint, default site
-	mux            http.Handler              //HTTP handler
-	server         *http.Server              //HTTP server
-	tlsListener    net.Listener              //TLS listener, handle SNI routing
-	loadBalancer   *loadbalance.RouteManager //Load balancer routing manager
-	routingRules   []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
+	ProxyEndpoints *sync.Map      //Map of ProxyEndpoint objects, each ProxyEndpoint object is a routing rule that handle incoming requests
+	Running        bool           //If the router is running
+	Root           *ProxyEndpoint //Root proxy endpoint, default site
 
-	tlsRedirectStop  chan bool              //Stop channel for tls redirection server
+	/* Internals */
+	mux          http.Handler              //HTTP handler
+	server       *http.Server              //HTTP server
+	loadBalancer *loadbalance.RouteManager //Load balancer routing manager
+	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
+
+	tlsListener      net.Listener //TLS listener, handle SNI routing
+	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map
+	tlsRedirectStop  chan bool    //Stop channel for tls redirection server
+
 	rateLimterStop   chan bool              //Stop channel for rate limiter
 	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
 }

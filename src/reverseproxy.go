@@ -140,7 +140,7 @@ func ReverseProxtInit() {
 		err := LoadReverseProxyConfig(conf)
 		if err != nil {
 			SystemWideLogger.PrintAndLog("proxy-config", "Failed to load config file: "+filepath.Base(conf), err)
-			return
+			continue
 		}
 	}
 
@@ -715,6 +715,11 @@ func ReverseProxyHandleSetTlsConfig(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
+	}
+
+	if newTlsConfig.PreferredCertificate == nil {
+		//No update needed, reuse the current TLS config
+		newTlsConfig.PreferredCertificate = ept.TlsOptions.PreferredCertificate
 	}
 
 	ept.TlsOptions = newTlsConfig

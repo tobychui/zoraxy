@@ -61,7 +61,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		hostPath := strings.Split(r.Host, ":")
 		domainOnly = hostPath[0]
 	}
-	sep := h.Parent.getProxyEndpointFromHostname(domainOnly)
+	sep := h.Parent.GetProxyEndpointFromHostname(domainOnly)
 	if sep != nil && !sep.Disabled {
 		//Matching proxy rule found
 		//Access Check (blacklist / whitelist)

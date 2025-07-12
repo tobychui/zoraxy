@@ -72,15 +72,20 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 
 // Register the APIs for TLS / SSL certificate management functions
 func RegisterTLSAPIs(authRouter *auth.RouterDef) {
+	//Global certificate settings
 	authRouter.HandleFunc("/api/cert/tls", handleToggleTLSProxy)
 	authRouter.HandleFunc("/api/cert/tlsRequireLatest", handleSetTlsRequireLatest)
-	authRouter.HandleFunc("/api/cert/upload", handleCertUpload)
-	authRouter.HandleFunc("/api/cert/download", handleCertDownload)
-	authRouter.HandleFunc("/api/cert/list", handleListCertificate)
-	authRouter.HandleFunc("/api/cert/listdomains", handleListDomains)
-	authRouter.HandleFunc("/api/cert/checkDefault", handleDefaultCertCheck)
-	authRouter.HandleFunc("/api/cert/delete", handleCertRemove)
 	authRouter.HandleFunc("/api/cert/resolve", handleCertTryResolve)
+	authRouter.HandleFunc("/api/cert/setPreferredCertificate", handleSetDomainPreferredCertificate)
+
+	//Certificate store functions
+	authRouter.HandleFunc("/api/cert/upload", tlsCertManager.HandleCertUpload)
+	authRouter.HandleFunc("/api/cert/download", tlsCertManager.HandleCertDownload)
+	authRouter.HandleFunc("/api/cert/list", tlsCertManager.HandleListCertificate)
+	authRouter.HandleFunc("/api/cert/listdomains", tlsCertManager.HandleListDomains)
+	authRouter.HandleFunc("/api/cert/checkDefault", tlsCertManager.HandleDefaultCertCheck)
+	authRouter.HandleFunc("/api/cert/delete", tlsCertManager.HandleCertRemove)
+	authRouter.HandleFunc("/api/cert/selfsign", tlsCertManager.HandleSelfSignCertGenerate)
 }
 
 // Register the APIs for Authentication handlers like Forward Auth and OAUTH2

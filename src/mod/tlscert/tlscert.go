@@ -21,10 +21,10 @@ type CertCache struct {
 }
 
 type HostSpecificTlsBehavior struct {
-	DisableSNI                       bool   //If SNI is enabled for this server name
-	DisableLegacyCertificateMatching bool   //If legacy certificate matching is disabled for this server name
-	EnableAutoHTTPS                  bool   //If auto HTTPS is enabled for this server name
-	PreferredCertificate             string //Preferred certificate for this server name, if empty, use the first matching certificate
+	DisableSNI                       bool              //If SNI is enabled for this server name
+	DisableLegacyCertificateMatching bool              //If legacy certificate matching is disabled for this server name
+	EnableAutoHTTPS                  bool              //If auto HTTPS is enabled for this server name
+	PreferredCertificate             map[string]string //Preferred certificate for this server name, if empty, use the first matching certificate
 }
 
 type Manager struct {
@@ -34,13 +34,12 @@ type Manager struct {
 
 	/* External handlers */
 	hostSpecificTlsBehavior func(serverName string) (*HostSpecificTlsBehavior, error) // Function to get host specific TLS behavior, if nil, use global TLS options
-	verbal                  bool
 }
 
 //go:embed localhost.pem localhost.key
 var buildinCertStore embed.FS
 
-func NewManager(certStore string, verbal bool, logger *logger.Logger) (*Manager, error) {
+func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	if !utils.FileExists(certStore) {
 		os.MkdirAll(certStore, 0775)
 	}
@@ -63,7 +62,6 @@ func NewManager(certStore string, verbal bool, logger *logger.Logger) (*Manager,
 		CertStore:               certStore,
 		LoadedCerts:             []*CertCache{},
 		hostSpecificTlsBehavior: defaultHostSpecificTlsBehavior, //Default to no SNI and no auto HTTPS
-		verbal:                  verbal,
 		Logger:                  logger,
 	}
 
@@ -82,12 +80,16 @@ func GetDefaultHostSpecificTlsBehavior() *HostSpecificTlsBehavior {
 		DisableSNI:                       false,
 		DisableLegacyCertificateMatching: false,
 		EnableAutoHTTPS:                  false,
-		PreferredCertificate:             "",
+		PreferredCertificate:             map[string]string{}, // No preferred certificate, use the first matching certificate
 	}
 }
 
 func defaultHostSpecificTlsBehavior(serverName string) (*HostSpecificTlsBehavior, error) {
 	return GetDefaultHostSpecificTlsBehavior(), nil
+}
+
+func (m *Manager) SetHostSpecificTlsBehavior(fn func(serverName string) (*HostSpecificTlsBehavior, error)) {
+	m.hostSpecificTlsBehavior = fn
 }
 
 // Update domain mapping from file
@@ -213,13 +215,17 @@ func (m *Manager) GetCertificateByHostname(hostname string) (string, string, err
 	if err != nil {
 		tlsBehavior, _ = defaultHostSpecificTlsBehavior(hostname)
 	}
+	preferredCertificate, ok := tlsBehavior.PreferredCertificate[hostname]
+	if !ok {
+		preferredCertificate = ""
+	}
 
-	if tlsBehavior.DisableSNI && tlsBehavior.PreferredCertificate != "" &&
-		utils.FileExists(filepath.Join(m.CertStore, tlsBehavior.PreferredCertificate+".pem")) &&
-		utils.FileExists(filepath.Join(m.CertStore, tlsBehavior.PreferredCertificate+".key")) {
+	if tlsBehavior.DisableSNI && preferredCertificate != "" &&
+		utils.FileExists(filepath.Join(m.CertStore, preferredCertificate+".pem")) &&
+		utils.FileExists(filepath.Join(m.CertStore, preferredCertificate+".key")) {
 		//User setup a Preferred certificate, use the preferred certificate directly
-		pubKey = filepath.Join(m.CertStore, tlsBehavior.PreferredCertificate+".pem")
-		priKey = filepath.Join(m.CertStore, tlsBehavior.PreferredCertificate+".key")
+		pubKey = filepath.Join(m.CertStore, preferredCertificate+".pem")
+		priKey = filepath.Join(m.CertStore, preferredCertificate+".key")
 	} else {
 		if !tlsBehavior.DisableLegacyCertificateMatching &&
 			utils.FileExists(filepath.Join(m.CertStore, hostname+".pem")) &&
