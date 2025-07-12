@@ -586,6 +586,28 @@
                         aliasDomains += `</small><br>`;
                     }
 
+                    //Build the sorting value
+                    let destSortValue = subd.ActiveOrigins.map(o => {
+                        // Check if it's an IP address (with optional port)
+                        let upstreamAddr = o.OriginIpOrDomain;
+                        let subpath = "";
+                        if (upstreamAddr.indexOf("/") !== -1) {
+                            let parts = upstreamAddr.split("/");
+                            subpath = parts.slice(1).join("/");
+                            upstreamAddr = parts[0];
+                        }
+                        let ipPortRegex = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/;
+                        if (ipPortRegex.test(upstreamAddr)) {
+                            let [ip, port] = upstreamAddr.split(":");
+                            // Convert IP to hex
+                            let hexIp = ip.split('.').map(x => ('00' + parseInt(x).toString(16)).slice(-2)).join('');
+                            let hexPort = port ? (port.length < 5 ? port.padStart(5, '0') : port) : '';
+                            return hexIp + (hexPort ? ':' + hexPort : '') + "/" + subpath;
+                        }
+                        // Otherwise, treat it as a domain name
+                        return upstreamAddr;
+                    }).join(",");
+                    
                     //Build tag list
                     let tagList = renderTagList(subd);
                     let tagListEmpty = (subd.Tags.length == 0);
@@ -602,7 +624,7 @@
                             ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
-                        <td data-label="" editable="true" datatype="domain">
+                        <td data-label="" editable="true" datatype="domain" data-sort-value="${destSortValue}" style="word-break: break-all;">
                             <div class="upstreamList">
                                 ${upstreams}        
                             </div>
