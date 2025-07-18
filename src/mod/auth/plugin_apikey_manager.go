@@ -84,7 +84,7 @@ func (m *APIKeyManager) ValidateAPIKeyForEndpoint(endpoint string, method string
 
 	// Check if the endpoint is permitted
 	for _, permittedEndpoint := range pluginAPIKey.PermittedEndpoints {
-		if permittedEndpoint.Endpoint == endpoint {
+		if permittedEndpoint.Endpoint == endpoint && permittedEndpoint.Method == method {
 			return pluginAPIKey, nil
 		}
 	}
