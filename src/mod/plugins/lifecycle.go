@@ -139,6 +139,19 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	thisPlugin.process = cmd
 	thisPlugin.Enabled = true
 
+	// Register event subscriptions
+	if thisPlugin.Spec.SubscriptionsEvents != nil {
+		for eventName := range thisPlugin.Spec.SubscriptionsEvents {
+			eventType := zoraxyPlugin.EventName(eventName)
+			err := EventSystem.Subscribe(thisPlugin.Spec.ID, eventType)
+			if err != nil {
+				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+eventName, err)
+			} else {
+				m.Log("Subscribed plugin "+thisPlugin.Spec.Name+" to event "+eventName, nil)
+			}
+		}
+	}
+
 	//Create a new static forwarder router for each of the static capture paths
 	thisPlugin.StartAllStaticPathRouters()
 
@@ -270,6 +283,13 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	thisPlugin.Enabled = false
 	thisPlugin.StopAllStaticPathRouters()
 	thisPlugin.StopDynamicForwardRouter()
+
+	//Unsubscribe from all events
+	err = EventSystem.UnsubscribeAll(thisPlugin.Spec.ID)
+	if err != nil {
+		m.Log("Failed to unsubscribe plugin "+thisPlugin.Spec.Name+" from events", err)
+	}
+
 	return nil
 }
 
