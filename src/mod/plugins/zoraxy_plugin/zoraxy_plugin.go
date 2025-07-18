@@ -97,7 +97,7 @@ type IntroSpect struct {
 
 	/* Subscriptions Settings */
 	SubscriptionPath    string            `json:"subscription_path"`    //Subscription event path of your plugin (e.g. /notifyme), a POST request with SubscriptionEvent as body will be sent to this path when the event is triggered
-	SubscriptionsEvents map[string]string `json:"subscriptions_events"` //Subscriptions events of your plugin, see Zoraxy documentation for more details
+	SubscriptionsEvents map[string]string `json:"subscriptions_events"` //Subscriptions events of your plugin, paired with comments describing how the event is used, see Zoraxy documentation for more details
 }
 
 /*
@@ -156,12 +156,12 @@ func RecvConfigureSpec() (*ConfigureSpec, error) {
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("No port specified after -configure flag")
+				return nil, fmt.Errorf("no port specified after -configure flag")
 			}
 			return &configSpec, nil
 		}
 	}
-	return nil, fmt.Errorf("No -configure flag found")
+	return nil, fmt.Errorf("no -configure flag found")
 }
 
 /*

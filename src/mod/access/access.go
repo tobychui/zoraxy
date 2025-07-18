@@ -60,6 +60,7 @@ func NewAccessController(options *Options) (*Controller, error) {
 		//Create one
 		js, _ := json.MarshalIndent(defaultAccessRule, "", " ")
 		os.WriteFile(defaultRuleSettingFile, js, 0775)
+
 	}
 
 	//Generate a controller object
@@ -191,6 +192,7 @@ func (c *Controller) AddNewAccessRule(newRule *AccessRule) error {
 
 	//Save rule to file
 	newRule.SaveChanges()
+
 	return nil
 }
 
