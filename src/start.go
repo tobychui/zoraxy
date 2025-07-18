@@ -347,6 +347,11 @@ func startupSequence() {
 		HotReloadInterval: 5,                  //seconds
 	})
 
+	/*
+		Event Manager
+	*/
+	plugins.InitEventManager(pluginManager.GetPluginByID, SystemWideLogger)
+
 	//Sync latest plugin list from the plugin store
 	go func() {
 		err = pluginManager.UpdateDownloadablePluginList()
