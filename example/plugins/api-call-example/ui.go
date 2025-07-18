@@ -69,10 +69,36 @@ func allowedEndpointInvalidKey(cfg *plugin.ConfigureSpec) (string, error) {
 	return string(respDump), nil
 }
 
-func disallowedEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
+func unaccessibleEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
 	// Make an API call to an endpoint that is not permitted
 	client := &http.Client{}
 	apiURL := fmt.Sprintf("http://localhost:%d/api/acme/listExpiredDomains", cfg.ZoraxyPort)
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+	// Use the API key from the runtime config
+	req.Header.Set("Authorization", "Bearer "+cfg.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error making API call: %v", err)
+	}
+	defer resp.Body.Close()
+
+	respDump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return "", fmt.Errorf("error dumping response: %v", err)
+	}
+
+	return string(respDump), nil
+}
+
+func unpermittedEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
+	// Make an API call to an endpoint that is plugin-accessible but is not permitted
+	client := &http.Client{}
+	apiURL := fmt.Sprintf("http://localhost:%d/api/proxy/list", cfg.ZoraxyPort)
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
@@ -116,14 +142,24 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 		RenderedInvalidKeyResponseHTML = fmt.Sprintf("<pre>%s</pre>", html.EscapeString(invalidKeyResponse))
 	}
 
-	// Make an API call to an endpoint that is not permitted
-	disallowedResponse, err := disallowedEndpoint(config)
-	var RenderedDisallowedResponseHTML string
+	// Make an API call to an endpoint that is not plugin-accessible
+	unaccessibleResponse, err := unaccessibleEndpoint(config)
+	var RenderedUnaccessibleResponseHTML string
 	if err != nil {
-		RenderedDisallowedResponseHTML = fmt.Sprintf("<p>Error with disallowed endpoint: %v</p>", err)
+		RenderedUnaccessibleResponseHTML = fmt.Sprintf("<p>Error with unaccessible endpoint: %v</p>", err)
 	} else {
-		// Render the disallowed response as HTML
-		RenderedDisallowedResponseHTML = fmt.Sprintf("<pre>%s</pre>", html.EscapeString(disallowedResponse))
+		// Render the unaccessible response as HTML
+		RenderedUnaccessibleResponseHTML = fmt.Sprintf("<pre>%s</pre>", html.EscapeString(unaccessibleResponse))
+	}
+
+	// Make an API call to an endpoint that is plugin-accessible but is not permitted
+	unpermittedResponse, err := unpermittedEndpoint(config)
+	var RenderedUnpermittedResponseHTML string
+	if err != nil {
+		RenderedUnpermittedResponseHTML = fmt.Sprintf("<p>Error with unpermitted endpoint: %v</p>", err)
+	} else {
+		// Render the unpermitted response as HTML
+		RenderedUnpermittedResponseHTML = fmt.Sprintf("<pre>%s</pre>", html.EscapeString(unpermittedResponse))
 	}
 
 	// Render the UI for the plugin
@@ -133,7 +169,7 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 	<!DOCTYPE html>
 	<html>
 	<head>
-		<title>Plugin UI</title>
+		<title>API Call Example Plugin UI</title>
 		<meta charset="UTF-8">
 		<link rel="stylesheet" href="/main.css">
 		<script src="/script/jquery-3.6.0.min.js"></script>
@@ -188,8 +224,8 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 		<!-- Dark theme script must be included after body tag-->
 		<link rel="stylesheet" href="/darktheme.css">
 		<script src="/script/darktheme.js"></script>
-		
-		<h1>Welcome to the Plugin UI</h1>
+
+		<h1>Welcome to the API Call Example Plugin UI</h1>
 		<p>Plugin is running on port: ` + strconv.Itoa(config.Port) + `</p>
 
 		<h2>API Call Examples</h2>
@@ -212,9 +248,17 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 
 		<div class="response-block warning">
 			<h3>⚠️ Disallowed Endpoint</h3>
-			<p>Making a GET request to <code>/api/acme/listExpiredDomains</code> (not in allowed endpoints):</p>
+			<p>Making a GET request to <code>/api/acme/listExpiredDomains</code> (not a plugin-accessible endpoint):</p>
 			<div class="response-content">
-				` + RenderedDisallowedResponseHTML + `
+				` + RenderedUnaccessibleResponseHTML + `
+			</div>
+		</div>
+
+		<div class="response-block warning">
+			<h3>⚠️ Unpermitted Endpoint</h3>
+			<p>Making a GET request to <code>/api/proxy/list</code> (plugin-accessible but not permitted):</p>
+			<div class="response-content">
+				` + RenderedUnpermittedResponseHTML + `
 			</div>
 		</div>
 	</body>
