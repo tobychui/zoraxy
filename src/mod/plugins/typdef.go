@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -42,9 +43,13 @@ type ManagerOptions struct {
 
 	/* Runtime */
 	SystemConst  *zoraxyPlugin.RuntimeConstantValue //The system constant value
+	ZoraxyPort   int                                //The port of the Zoraxy instance, used for API calls
 	CSRFTokenGen func(*http.Request) string         `json:"-"` //The CSRF token generator function
 	Database     *database.Database                 `json:"-"`
 	Logger       *logger.Logger                     `json:"-"`
+
+	/* API Key Management */
+	APIKeyManager *auth.APIKeyManager `json:"-"` //The API key manager for the plugins
 
 	/* Development */
 	EnableHotReload   bool //Check if the plugin file is changed and reload the plugin automatically

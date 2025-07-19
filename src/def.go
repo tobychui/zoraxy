@@ -144,6 +144,9 @@ var (
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins
 
+	//Plugin auth related
+	pluginApiKeyManager *auth.APIKeyManager //API key manager for plugin authentication
+
 	//Authentication Provider
 	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication
 	oauth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication

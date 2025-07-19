@@ -41,6 +41,18 @@ func (m *Manager) StartPlugin(pluginID string) error {
 		Port:         getRandomPortNumber(),
 		RuntimeConst: *m.Options.SystemConst,
 	}
+
+	// Generate API key if the plugin has permitted endpoints
+	if len(thisPlugin.Spec.PermittedAPIEndpoints) > 0 {
+		apiKey, err := m.Options.APIKeyManager.GenerateAPIKey(thisPlugin.Spec.ID, thisPlugin.Spec.PermittedAPIEndpoints)
+		if err != nil {
+			return err
+		}
+		pluginConfiguration.APIKey = apiKey.APIKey
+		pluginConfiguration.ZoraxyPort = m.Options.ZoraxyPort
+		m.Log("Generated API key for plugin "+thisPlugin.Spec.Name, nil)
+	}
+
 	js, _ := json.Marshal(pluginConfiguration)
 
 	//Start the plugin with given configuration
@@ -270,6 +282,13 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	thisPlugin.Enabled = false
 	thisPlugin.StopAllStaticPathRouters()
 	thisPlugin.StopDynamicForwardRouter()
+
+	//Clean up API key
+	err = m.Options.APIKeyManager.RevokeAPIKeysForPlugin(thisPlugin.Spec.ID)
+	if err != nil {
+		m.Log("Failed to revoke API keys for plugin "+thisPlugin.Spec.Name, err)
+	}
+
 	return nil
 }
 

@@ -139,6 +139,26 @@
                         </tbody>
                     </table>
                     <div class="ui divider"></div>
+                    <h4>Plugin IntroSpect Permitted API Endpoints</h4>
+                    <p>The following API endpoints are registered by this plugin and will be accessible by the plugin's API key:</p>
+                    <table class="ui basic celled unstackable table">
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th>Method</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <!-- This tbody will be filled by JavaScript -->
+                        <tbody id="plugin_permitted_api_endpoints">
+                        </tbody>
+                    </table>
+                    <p>
+                        Note that the API endpoints are only accessible by the plugin's API key.
+                        If the plugin does not have an API key, it will not be able to access these endpoints.
+                        API keys are generated automatically by Zoraxy when a plugin with permitted API endpoints is enabled.
+                    </p>
+                    <div class="ui divider"></div>
                 </div>
             </div>
         </div>
@@ -219,6 +239,22 @@
                 $("#dynamic_capture_sniffing_path").text(dynamicCaptureSniffingPath);
                 $("#dynamic_capture_ingress").text(dynamicCaptureIngress);
                 $("#registered_ui_proxy_path").text(registeredUIProxyPath);
+
+                //Update permitted API endpoints
+                let apiEndpoints = data.Spec.permitted_api_endpoints;
+                if (apiEndpoints == null || apiEndpoints.length == 0) {
+                    $("#plugin_permitted_api_endpoints").html('<tr><td colspan="3">No API endpoints registered</td></tr>');
+                } else {
+                    let endpointRows = '';
+                    apiEndpoints.forEach(function(endpoint) {
+                        endpointRows += `<tr>
+                            <td>${endpoint.endpoint}</td>
+                            <td>${endpoint.method}</td>
+                            <td>${endpoint.reason}</td>
+                        </tr>`;
+                    });
+                    $("#plugin_permitted_api_endpoints").html(endpointRows);
+                }
                 });
             }
 
