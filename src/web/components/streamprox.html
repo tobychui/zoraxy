@@ -137,7 +137,7 @@
         });
             
         function clearStreamProxyAddEditForm(){
-            $('#streamProxyForm input, #streamProxyForm select').val('');
+            $('#streamProxyForm').find('input:not([type=checkbox]), select').val('');
             $('#streamProxyForm select').dropdown('clear');
             $("#streamProxyForm input[name=timeout]").val(10);
             $("#streamProxyForm .toggle.checkbox").checkbox("set unchecked");
