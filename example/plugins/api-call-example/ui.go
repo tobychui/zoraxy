@@ -28,15 +28,15 @@ func allowedEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	// Check if the response status is OK
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("received non-OK response status %d", resp.StatusCode)
-	}
-
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
 
 		return "", fmt.Errorf("error dumping response: %v", err)
+	}
+
+	// Check if the response status is OK
+	if resp.StatusCode != http.StatusOK {
+		return string(respDump), fmt.Errorf("received non-OK response status %d", resp.StatusCode)
 	}
 
 	return string(respDump), nil
@@ -126,7 +126,11 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 	accessList, err := allowedEndpoint(config)
 	var RenderedAccessListHTML string
 	if err != nil {
-		RenderedAccessListHTML = fmt.Sprintf("<p>Error fetching access list: %v</p>", err)
+		if accessList != "" {
+			RenderedAccessListHTML = fmt.Sprintf("<p>Error fetching access list: %v</p><pre>%s</pre>", err, html.EscapeString(accessList))
+		} else {
+			RenderedAccessListHTML = fmt.Sprintf("<p>Error fetching access list: %v</p>", err)
+		}
 	} else {
 		// Render the access list as HTML
 		RenderedAccessListHTML = fmt.Sprintf("<pre>%s</pre>", html.EscapeString(accessList))

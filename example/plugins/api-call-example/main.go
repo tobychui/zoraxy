@@ -32,7 +32,7 @@ func main() {
 		PermittedAPIEndpoints: []plugin.PermittedAPIEndpoint{
 			{
 				Method:   http.MethodGet,
-				Endpoint: "/api/access/list",
+				Endpoint: "/plugin/api/access/list",
 				Reason:   "Used to display all configured Access Rules",
 			},
 		},
