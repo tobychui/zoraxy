@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.4"
+	SYSTEM_VERSION    = "3.2.5"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
@@ -63,14 +63,19 @@ const (
 	LOG_EXTENSION                = ".log"
 	STATISTIC_AUTO_SAVE_INTERVAL = 600 /* Seconds */
 
-	/* Configuration Folder Storage Path Constants */
-	CONF_HTTP_PROXY    = "./conf/proxy"
-	CONF_STREAM_PROXY  = "./conf/streamproxy"
-	CONF_CERT_STORE    = "./conf/certs"
-	CONF_REDIRECTION   = "./conf/redirect"
-	CONF_ACCESS_RULE   = "./conf/access"
-	CONF_PATH_RULE     = "./conf/rules/pathrules"
-	CONF_PLUGIN_GROUPS = "./conf/plugin_groups.json"
+	/*
+		Configuration Folder Storage Path Constants
+		Note: No tailing slash in the path
+	*/
+	CONF_FOLDER        = "./conf"
+	CONF_HTTP_PROXY    = CONF_FOLDER + "/proxy"
+	CONF_STREAM_PROXY  = CONF_FOLDER + "/streamproxy"
+	CONF_CERT_STORE    = CONF_FOLDER + "/certs"
+	CONF_REDIRECTION   = CONF_FOLDER + "/redirect"
+	CONF_ACCESS_RULE   = CONF_FOLDER + "/access"
+	CONF_PATH_RULE     = CONF_FOLDER + "/rules/pathrules"
+	CONF_PLUGIN_GROUPS = CONF_FOLDER + "/plugin_groups.json"
+	CONF_GEODB_PATH    = CONF_FOLDER + "/geodb"
 )
 
 /* System Startup Flags */

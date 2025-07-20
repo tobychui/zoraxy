@@ -135,7 +135,7 @@ func ReverseProxtInit() {
 		Load all conf from files
 
 	*/
-	confs, _ := filepath.Glob("./conf/proxy/*.config")
+	confs, _ := filepath.Glob(CONF_HTTP_PROXY + "/*.config")
 	for _, conf := range confs {
 		err := LoadReverseProxyConfig(conf)
 		if err != nil {
