@@ -28,8 +28,6 @@ type AuthAgent struct {
 	Database                *db.Database
 	LoginRedirectionHandler func(http.ResponseWriter, *http.Request)
 	Logger                  *logger.Logger
-	//Plugin related
-	PluginAuthMiddleware *PluginAuthMiddleware //Plugin authentication middleware
 }
 
 type AuthEndpoints struct {
@@ -41,16 +39,13 @@ type AuthEndpoints struct {
 }
 
 // Constructor
-func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, allowReg bool, systemLogger *logger.Logger, loginRedirectionHandler func(http.ResponseWriter, *http.Request), apiKeyManager *APIKeyManager) *AuthAgent {
+func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, allowReg bool, systemLogger *logger.Logger, loginRedirectionHandler func(http.ResponseWriter, *http.Request)) *AuthAgent {
 	store := sessions.NewCookieStore(key)
 	err := sysdb.NewTable("auth")
 	if err != nil {
 		systemLogger.Println("Failed to create auth database. Terminating.")
 		panic(err)
 	}
-
-	//Initialize the plugin authentication middleware
-	pluginAuthMiddleware := NewPluginAuthMiddleware(apiKeyManager)
 
 	//Create a new AuthAgent object
 	newAuthAgent := AuthAgent{
@@ -59,7 +54,6 @@ func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, 
 		Database:                sysdb,
 		LoginRedirectionHandler: loginRedirectionHandler,
 		Logger:                  systemLogger,
-		PluginAuthMiddleware:    pluginAuthMiddleware,
 	}
 
 	//Return the authAgent

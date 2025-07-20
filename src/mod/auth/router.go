@@ -25,7 +25,7 @@ func NewManagedHTTPRouter(option RouterOption) *RouterDef {
 	}
 }
 
-func (router *RouterDef) HandleFunc(endpoint string, handler func(http.ResponseWriter, *http.Request), pluginAccessible bool) error {
+func (router *RouterDef) HandleFunc(endpoint string, handler func(http.ResponseWriter, *http.Request)) error {
 	//Check if the endpoint already registered
 	if _, exist := router.endpoints[endpoint]; exist {
 		fmt.Println("WARNING! Duplicated registering of web endpoint: " + endpoint)
@@ -34,28 +34,31 @@ func (router *RouterDef) HandleFunc(endpoint string, handler func(http.ResponseW
 
 	authAgent := router.option.AuthAgent
 
-	authWrapper := func(w http.ResponseWriter, r *http.Request) {
-		//Check authentication of the user
-		X_Plugin_Auth := r.Header.Get("X-Zoraxy-Plugin-Auth")
-		if router.option.RequireAuth && !(pluginAccessible && X_Plugin_Auth == "true") {
-			authAgent.HandleCheckAuth(w, r, func(w http.ResponseWriter, r *http.Request) {
-				handler(w, r)
-			})
-		} else {
-			handler(w, r)
-		}
-	}
-
-	// if the endpoint is supposed to be plugin accessible, wrap it with plugin authentication middleware
-	if pluginAccessible {
-		authWrapper = router.option.AuthAgent.PluginAuthMiddleware.WrapHandler(endpoint, authWrapper)
-	}
-
 	//OK. Register handler
 	if router.option.TargetMux == nil {
-		http.HandleFunc(endpoint, authWrapper)
+		http.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+			//Check authentication of the user
+			if router.option.RequireAuth {
+				authAgent.HandleCheckAuth(w, r, func(w http.ResponseWriter, r *http.Request) {
+					handler(w, r)
+				})
+			} else {
+				handler(w, r)
+			}
+
+		})
 	} else {
-		router.option.TargetMux.HandleFunc(endpoint, authWrapper)
+		router.option.TargetMux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+			//Check authentication of the user
+			if router.option.RequireAuth {
+				authAgent.HandleCheckAuth(w, r, func(w http.ResponseWriter, r *http.Request) {
+					handler(w, r)
+				})
+			} else {
+				handler(w, r)
+			}
+
+		})
 	}
 
 	router.endpoints[endpoint] = handler
