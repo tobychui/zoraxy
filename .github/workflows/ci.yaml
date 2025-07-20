@@ -1,0 +1,51 @@
+name: CI (lints, tests (todo), and builds)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.22
+          cache-dependency-path: src/go.sum
+
+      - name: Verify dependencies
+        run: go mod verify
+        working-directory: src
+
+      - name: Install dependencies
+        run: go mod tidy
+        working-directory: src
+
+      - name: Build
+        run: go build ./...
+        working-directory: src
+
+      - name: Lint code (go vet)
+        run: go vet ./...
+        working-directory: src
+
+      - name: install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        working-directory: src
+          
+      - name: Lint code (staticcheck)
+        run: staticcheck ./...
+        working-directory: src
+
+    #   - name: Run tests # on my machine, the tests hang, so I'm not running them here yet
+    #     run: go test ./...
