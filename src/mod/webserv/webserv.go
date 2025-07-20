@@ -210,6 +210,27 @@ func (ws *WebServer) Stop() error {
 	return nil
 }
 
+func (ws *WebServer) Restart() error {
+	if ws.isRunning {
+		if err := ws.Stop(); err != nil {
+			return err
+		}
+	}
+
+	if err := ws.Start(); err != nil {
+		return err
+	}
+
+	ws.option.Logger.PrintAndLog("static-webserv", "Static Web Server restarted. Listening on :"+ws.option.Port, nil)
+	return nil
+}
+
+func (ws *WebServer) IsRunning() bool {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	return ws.isRunning
+}
+
 // UpdateDirectoryListing enables or disables directory listing.
 func (ws *WebServer) UpdateDirectoryListing(enable bool) {
 	ws.option.EnableDirectoryListing = enable

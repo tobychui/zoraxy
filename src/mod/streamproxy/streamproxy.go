@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -24,24 +23,44 @@ import (
 */
 
 type ProxyRelayOptions struct {
-	Name          string
-	ListeningAddr string
-	ProxyAddr     string
-	Timeout       int
-	UseTCP        bool
-	UseUDP        bool
+	Name             string
+	ListeningAddr    string
+	ProxyAddr        string
+	Timeout          int
+	UseTCP           bool
+	UseUDP           bool
+	UseProxyProtocol bool
+	EnableLogging    bool
 }
 
-type ProxyRelayConfig struct {
-	UUID                        string       //A UUIDv4 representing this config
-	Name                        string       //Name of the config
-	Running                     bool         //Status, read only
-	AutoStart                   bool         //If the service suppose to started automatically
-	ListeningAddress            string       //Listening Address, usually 127.0.0.1:port
-	ProxyTargetAddr             string       //Proxy target address
-	UseTCP                      bool         //Enable TCP proxy
-	UseUDP                      bool         //Enable UDP proxy
-	Timeout                     int          //Timeout for connection in sec
+// ProxyRuleUpdateConfig is used to update the proxy rule config
+type ProxyRuleUpdateConfig struct {
+	InstanceUUID     string //The target instance UUID to update
+	NewName          string //New name for the instance, leave empty for no change
+	NewListeningAddr string //New listening address, leave empty for no change
+	NewProxyAddr     string //New proxy target address, leave empty for no change
+	UseTCP           bool   //Enable TCP proxy, default to false
+	UseUDP           bool   //Enable UDP proxy, default to false
+	UseProxyProtocol bool   //Enable Proxy Protocol, default to false
+	EnableLogging    bool   //Enable Logging TCP/UDP Message, default to true
+	NewTimeout       int    //New timeout for the connection, leave -1 for no change
+}
+
+type ProxyRelayInstance struct {
+	/* Runtime Config */
+	UUID             string //A UUIDv4 representing this config
+	Name             string //Name of the config
+	Running          bool   //Status, read only
+	AutoStart        bool   //If the service suppose to started automatically
+	ListeningAddress string //Listening Address, usually 127.0.0.1:port
+	ProxyTargetAddr  string //Proxy target address
+	UseTCP           bool   //Enable TCP proxy
+	UseUDP           bool   //Enable UDP proxy
+	UseProxyProtocol bool   //Enable Proxy Protocol
+	EnableLogging    bool   //Enable logging for ProxyInstance
+	Timeout          int    //Timeout for connection in sec
+
+	/* Internal */
 	tcpStopChan                 chan bool    //Stop channel for TCP listener
 	udpStopChan                 chan bool    //Stop channel for UDP listener
 	aTobAccumulatedByteTransfer atomic.Int64 //Accumulated byte transfer from A to B
@@ -60,13 +79,14 @@ type Options struct {
 type Manager struct {
 	//Config and stores
 	Options *Options
-	Configs []*ProxyRelayConfig
+	Configs []*ProxyRelayInstance
 
 	//Realtime Statistics
 	Connections int //currently connected connect counts
 
 }
 
+// NewStreamProxy creates a new stream proxy manager with the given options
 func NewStreamProxy(options *Options) (*Manager, error) {
 	if !utils.FileExists(options.ConfigStore) {
 		err := os.MkdirAll(options.ConfigStore, 0775)
@@ -76,7 +96,7 @@ func NewStreamProxy(options *Options) (*Manager, error) {
 	}
 
 	//Load relay configs from db
-	previousRules := []*ProxyRelayConfig{}
+	previousRules := []*ProxyRelayInstance{}
 	streamProxyConfigFiles, err := filepath.Glob(options.ConfigStore + "/*.config")
 	if err != nil {
 		return nil, err
@@ -89,7 +109,7 @@ func NewStreamProxy(options *Options) (*Manager, error) {
 			options.Logger.PrintAndLog("stream-prox", "Read stream proxy config failed", err)
 			continue
 		}
-		thisRelayConfig := &ProxyRelayConfig{}
+		thisRelayConfig := &ProxyRelayInstance{}
 		err = json.Unmarshal(configBytes, thisRelayConfig)
 		if err != nil {
 			options.Logger.PrintAndLog("stream-prox", "Unmarshal stream proxy config failed", err)
@@ -142,6 +162,7 @@ func (m *Manager) logf(message string, originalError error) {
 	m.Options.Logger.PrintAndLog("stream-prox", message, originalError)
 }
 
+// NewConfig creates a new proxy relay config with the given options
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 	//Generate two zero value for atomic int64
 	aAcc := atomic.Int64{}
@@ -150,13 +171,15 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 	bAcc.Store(0)
 	//Generate a new config from options
 	configUUID := uuid.New().String()
-	thisConfig := ProxyRelayConfig{
+	thisConfig := ProxyRelayInstance{
 		UUID:                        configUUID,
 		Name:                        config.Name,
 		ListeningAddress:            config.ListeningAddr,
 		ProxyTargetAddr:             config.ProxyAddr,
 		UseTCP:                      config.UseTCP,
 		UseUDP:                      config.UseUDP,
+		UseProxyProtocol:            config.UseProxyProtocol,
+		EnableLogging:               config.EnableLogging,
 		Timeout:                     config.Timeout,
 		tcpStopChan:                 nil,
 		udpStopChan:                 nil,
@@ -170,7 +193,7 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 	return configUUID
 }
 
-func (m *Manager) GetConfigByUUID(configUUID string) (*ProxyRelayConfig, error) {
+func (m *Manager) GetConfigByUUID(configUUID string) (*ProxyRelayInstance, error) {
 	// Find and return the config with the specified UUID
 	for _, config := range m.Configs {
 		if config.UUID == configUUID {
@@ -181,32 +204,34 @@ func (m *Manager) GetConfigByUUID(configUUID string) (*ProxyRelayConfig, error) 
 }
 
 // Edit the config based on config UUID, leave empty for unchange fields
-func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr string, newProxyAddr string, useTCP bool, useUDP bool, newTimeout int) error {
+func (m *Manager) EditConfig(newConfig *ProxyRuleUpdateConfig) error {
 	// Find the config with the specified UUID
-	foundConfig, err := m.GetConfigByUUID(configUUID)
+	foundConfig, err := m.GetConfigByUUID(newConfig.InstanceUUID)
 	if err != nil {
 		return err
 	}
 
 	// Validate and update the fields
-	if newName != "" {
-		foundConfig.Name = newName
+	if newConfig.NewName != "" {
+		foundConfig.Name = newConfig.NewName
 	}
-	if newListeningAddr != "" {
-		foundConfig.ListeningAddress = newListeningAddr
+	if newConfig.NewListeningAddr != "" {
+		foundConfig.ListeningAddress = newConfig.NewListeningAddr
 	}
-	if newProxyAddr != "" {
-		foundConfig.ProxyTargetAddr = newProxyAddr
+	if newConfig.NewProxyAddr != "" {
+		foundConfig.ProxyTargetAddr = newConfig.NewProxyAddr
 	}
 
-	foundConfig.UseTCP = useTCP
-	foundConfig.UseUDP = useUDP
+	foundConfig.UseTCP = newConfig.UseTCP
+	foundConfig.UseUDP = newConfig.UseUDP
+	foundConfig.UseProxyProtocol = newConfig.UseProxyProtocol
+	foundConfig.EnableLogging = newConfig.EnableLogging
 
-	if newTimeout != -1 {
-		if newTimeout < 0 {
+	if newConfig.NewTimeout != -1 {
+		if newConfig.NewTimeout < 0 {
 			return errors.New("invalid timeout value given")
 		}
-		foundConfig.Timeout = newTimeout
+		foundConfig.Timeout = newConfig.NewTimeout
 	}
 
 	m.SaveConfigToDatabase()
@@ -215,12 +240,11 @@ func (m *Manager) EditConfig(configUUID string, newName string, newListeningAddr
 	if foundConfig.IsRunning() {
 		foundConfig.Restart()
 	}
-
 	return nil
 }
 
+// Remove the config from file by UUID
 func (m *Manager) RemoveConfig(configUUID string) error {
-	//Remove the config from file
 	err := os.Remove(filepath.Join(m.Options.ConfigStore, configUUID+".config"))
 	if err != nil {
 		return err
@@ -249,92 +273,4 @@ func (m *Manager) SaveConfigToDatabase() {
 			m.logf("Failed to save stream proxy config", err)
 		}
 	}
-}
-
-/*
-	Config Functions
-*/
-
-// Start a proxy if stopped
-func (c *ProxyRelayConfig) Start() error {
-	if c.IsRunning() {
-		c.Running = true
-		return errors.New("proxy already running")
-	}
-
-	// Create a stopChan to control the loop
-	tcpStopChan := make(chan bool)
-	udpStopChan := make(chan bool)
-
-	//Start the proxy service
-	if c.UseUDP {
-		c.udpStopChan = udpStopChan
-		go func() {
-			err := c.ForwardUDP(c.ListeningAddress, c.ProxyTargetAddr, udpStopChan)
-			if err != nil {
-				if !c.UseTCP {
-					c.Running = false
-					c.udpStopChan = nil
-					c.parent.SaveConfigToDatabase()
-				}
-				c.parent.logf("[proto:udp] Error starting stream proxy "+c.Name+"("+c.UUID+")", err)
-			}
-		}()
-	}
-
-	if c.UseTCP {
-		c.tcpStopChan = tcpStopChan
-		go func() {
-			//Default to transport mode
-			err := c.Port2host(c.ListeningAddress, c.ProxyTargetAddr, tcpStopChan)
-			if err != nil {
-				c.Running = false
-				c.tcpStopChan = nil
-				c.parent.SaveConfigToDatabase()
-				c.parent.logf("[proto:tcp] Error starting stream proxy "+c.Name+"("+c.UUID+")", err)
-			}
-		}()
-	}
-
-	//Successfully spawned off the proxy routine
-	c.Running = true
-	c.parent.SaveConfigToDatabase()
-	return nil
-}
-
-// Return if a proxy config is running
-func (c *ProxyRelayConfig) IsRunning() bool {
-	return c.tcpStopChan != nil || c.udpStopChan != nil
-}
-
-// Restart a proxy config
-func (c *ProxyRelayConfig) Restart() {
-	if c.IsRunning() {
-		c.Stop()
-	}
-	time.Sleep(3000 * time.Millisecond)
-	c.Start()
-}
-
-// Stop a running proxy if running
-func (c *ProxyRelayConfig) Stop() {
-	c.parent.logf("Stopping Stream Proxy "+c.Name, nil)
-
-	if c.udpStopChan != nil {
-		c.parent.logf("Stopping UDP for "+c.Name, nil)
-		c.udpStopChan <- true
-		c.udpStopChan = nil
-	}
-
-	if c.tcpStopChan != nil {
-		c.parent.logf("Stopping TCP for "+c.Name, nil)
-		c.tcpStopChan <- true
-		c.tcpStopChan = nil
-	}
-
-	c.parent.logf("Stopped Stream Proxy "+c.Name, nil)
-	c.Running = false
-
-	//Update the running status
-	c.parent.SaveConfigToDatabase()
 }

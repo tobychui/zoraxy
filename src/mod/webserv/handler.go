@@ -69,6 +69,12 @@ func (ws *WebServer) HandlePortChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if newPort is a valid TCP port number (1-65535)
+	if newPort < 1 || newPort > 65535 {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
 	err = ws.ChangePort(strconv.Itoa(newPort))
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
@@ -106,6 +112,17 @@ func (ws *WebServer) SetDisableListenToAllInterface(w http.ResponseWriter, r *ht
 		utils.SendErrorResponse(w, "unable to save setting")
 		return
 	}
+
+	// Update the option in the web server instance
 	ws.option.DisableListenToAllInterface = disableListen
+
+	// If the server is running and the setting is changed, we need to restart the server
+	if ws.IsRunning() {
+		err = ws.Restart()
+		if err != nil {
+			utils.SendErrorResponse(w, "unable to restart web server: "+err.Error())
+			return
+		}
+	}
 	utils.SendOK(w)
 }

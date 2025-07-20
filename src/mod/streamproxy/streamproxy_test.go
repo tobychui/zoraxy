@@ -12,7 +12,7 @@ func TestPort2Port(t *testing.T) {
 	stopChan := make(chan bool)
 
 	// Create a ProxyRelayConfig with dummy values
-	config := &streamproxy.ProxyRelayConfig{
+	config := &streamproxy.ProxyRelayInstance{
 		Timeout: 1,
 	}
 

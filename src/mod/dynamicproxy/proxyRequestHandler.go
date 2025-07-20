@@ -34,7 +34,7 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 }
 
 // Get the proxy endpoint from hostname, which might includes checking of wildcard certificates
-func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
+func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoint {
 	var targetSubdomainEndpoint *ProxyEndpoint = nil
 	hostname = strings.ToLower(hostname)
 	ep, ok := router.ProxyEndpoints.Load(hostname)
@@ -63,7 +63,7 @@ func (router *Router) getProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 		}
 
 		//Wildcard not match. Check for alias
-		if ep.MatchingDomainAlias != nil && len(ep.MatchingDomainAlias) > 0 {
+		if len(ep.MatchingDomainAlias) > 0 {
 			for _, aliasDomain := range ep.MatchingDomainAlias {
 				match, err := filepath.Match(aliasDomain, hostname)
 				if err != nil {

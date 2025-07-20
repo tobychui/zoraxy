@@ -338,10 +338,45 @@
                     <!-- TLS / SSL -->
                     <div class="rpconfig_content" rpcfg="ssl">
                         <div class="ui segment">
-                            <p>Work In Progress <br>
-                            Please use the outer-most menu TLS / SSL tab for now. </p>
+                            <p>The table below shows which certificate will be served by Zoraxy when a client request the following hostnames.</p>
+                            <div class="ui blue message sni_grey_out_info" style="margin-bottom: 1em; display:none;">
+                                <i class="info circle icon"></i>
+                                Certificate dropdowns are greyed out because SNI is enabled
+                            </div>
+                            <table class="ui celled small compact table sortable Tls_resolve_list">
+                                <thead>
+                                    <tr>
+                                        <th>Hostname</th>
+                                        <th class="no-sort">Resolve to Certificate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rows will be dynamically populated -->
+                                </tbody>
+                            </table>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="Tls_EnableSNI">
+                                <label>Enable SNI<br>
+                                    <small>Resolve Server Name Indication (SNI) and automatically select a certificate</small>
+                                </label>
+                            </div>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="Tls_EnableLegacyCertificateMatching">
+                                <label>Enable Legacy Certificate Matching<br>
+                                    <small>Use filename for hostname matching, faster but less accurate</small>
+                                </label>
+                            </div>
+                            <div class="ui disabled checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="Tls_EnableAutoHTTPS">
+                                <label>Enable Auto HTTPS (WIP)<br>
+                                    <small>Automatically request a certificate for the domain</small>
+                                </label>
+                            </div>
+                            
                             <br>
+                            <div class="ui divider"></div>
                             <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
+                            <button class="ui basic small button getSelfSignCertBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="yellow lock icon"></i> Generate Self-Signed Certificate</button>
                         </div>
                     </div>
                     <!-- Custom Headers -->
@@ -551,6 +586,28 @@
                         aliasDomains += `</small><br>`;
                     }
 
+                    //Build the sorting value
+                    let destSortValue = subd.ActiveOrigins.map(o => {
+                        // Check if it's an IP address (with optional port)
+                        let upstreamAddr = o.OriginIpOrDomain;
+                        let subpath = "";
+                        if (upstreamAddr.indexOf("/") !== -1) {
+                            let parts = upstreamAddr.split("/");
+                            subpath = parts.slice(1).join("/");
+                            upstreamAddr = parts[0];
+                        }
+                        let ipPortRegex = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/;
+                        if (ipPortRegex.test(upstreamAddr)) {
+                            let [ip, port] = upstreamAddr.split(":");
+                            // Convert IP to hex
+                            let hexIp = ip.split('.').map(x => ('00' + parseInt(x).toString(16)).slice(-2)).join('');
+                            let hexPort = port ? (port.length < 5 ? port.padStart(5, '0') : port) : '';
+                            return hexIp + (hexPort ? ':' + hexPort : '') + "/" + subpath;
+                        }
+                        // Otherwise, treat it as a domain name
+                        return upstreamAddr;
+                    }).join(",");
+                    
                     //Build tag list
                     let tagList = renderTagList(subd);
                     let tagListEmpty = (subd.Tags.length == 0);
@@ -567,7 +624,7 @@
                             ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
-                        <td data-label="" editable="true" datatype="domain">
+                        <td data-label="" editable="true" datatype="domain" data-sort-value="${destSortValue}" style="word-break: break-all;">
                             <div class="upstreamList">
                                 ${upstreams}        
                             </div>
@@ -709,6 +766,112 @@
     function exitProxyInlineEdit(){
         listProxyEndpoints();
         $("#httpProxyList").find(".editBtn").removeClass("disabled");
+    }
+
+    function saveTlsConfigs(uuid){
+        let enableSNI = $("#httprpEditModal .Tls_EnableSNI")[0].checked;
+        let enableLegacyCertificateMatching = $("#httprpEditModal .Tls_EnableLegacyCertificateMatching")[0].checked;
+        let enableAutoHTTPS = $("#httprpEditModal .Tls_EnableAutoHTTPS")[0].checked;
+        let newTlsOption = {
+            "DisableSNI": !enableSNI,
+            "DisableLegacyCertificateMatching": !enableLegacyCertificateMatching,
+            "EnableAutoHTTPS": enableAutoHTTPS,
+        }
+        $.cjax({
+            url: "/api/proxy/setTlsConfig",
+            method: "POST",
+            data: {
+                "ep": uuid,
+                "tlsConfig": JSON.stringify(newTlsOption)
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false, 3000);
+                }else{
+                    msgbox("TLS Config updated");
+                }
+                updateTlsResolveList(uuid);
+            }
+        });
+    }
+
+    function updateTlsResolveList(uuid){
+        let editor = $("#httprpEditModalWrapper");
+        editor.find(".certificateDropdown .ui.dropdown").off("change");
+        editor.find(".certificateDropdown .ui.dropdown").remove();
+
+        //Update the TLS resolve list
+        $.ajax({
+            url: "/api/cert/resolve?domain=" + uuid,
+            method: "GET",
+            success: function(data) {
+                // Populate the TLS resolve list
+                let resolveList = editor.find(".Tls_resolve_list tbody");
+                resolveList.empty(); // Clear existing entries
+                let primaryDomain = data.domain;
+                let aliasDomains = data.alias_domains || [];
+                let certMap = data.domain_key_pair;
+
+                // Add primary domain entry
+                resolveList.append(`
+                    <tr>
+                        <td>${primaryDomain}</td>
+                        <td class="certificateDropdown" domain="${primaryDomain}">${certMap[primaryDomain] || "Fallback Certificate"}</td>
+                    </tr>
+                `);
+                aliasDomains.forEach(alias => {
+                    resolveList.append(`
+                        <tr>
+                            <td>${alias}</td>
+                            <td class="certificateDropdown" domain="${alias}">${certMap[alias] || "Fallback Certificate"}</td>
+                        </tr>
+                    `);
+                });
+
+                //Generate the certificate dropdown
+                generateCertificateDropdown(function(dropdown) {
+                    let SNIEnabled = editor.find(".Tls_EnableSNI")[0].checked;
+                    editor.find(".certificateDropdown").html(dropdown);
+                    editor.find(".certificateDropdown").each(function() {
+                        let dropdownDomain = $(this).attr("domain");
+                        let selectedCertname = certMap[dropdownDomain];
+                        if (selectedCertname) {
+                            $(this).find(".ui.dropdown").dropdown("set selected", selectedCertname);
+                        }
+                    });
+
+                    editor.find(".certificateDropdown .ui.dropdown").dropdown({
+                        onChange: function(value, text, $selectedItem) {
+                            console.log("Selected certificate for domain:", $(this).parent().attr("domain"), "Value:", value);
+                            let domain = $(this).parent().attr("domain");
+                            let newCertificateName = value;
+                            $.cjax({
+                                url: "/api/cert/setPreferredCertificate",
+                                method: "POST",
+                                data: {
+                                    "domain": domain,
+                                    "certname": newCertificateName
+                                },
+                                success: function(data) {
+                                    if (data.error !== undefined) {
+                                        msgbox(data.error, false, 3000);
+                                    } else {
+                                        msgbox("Preferred Certificate updated");
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    
+                    if (SNIEnabled) {
+                        editor.find(".certificateDropdown .ui.dropdown").addClass("disabled");
+                        editor.find(".sni_grey_out_info").show();
+                    }else{
+                        editor.find(".sni_grey_out_info").hide();
+                    }
+                });
+            }
+        });
     }
 
     function saveProxyInlineEdit(uuid){
@@ -857,6 +1020,29 @@
         renewCertificate(renewDomainKey, false, btn);
     }
 
+    function generateSelfSignedCertificate(uuid, domains, btn=undefined){
+        let payload = JSON.stringify(domains);
+        $.cjax({
+            url: "/api/cert/selfsign",
+            data: {
+                "cn": uuid,
+                "domains": payload
+            },
+            success: function(data){
+                if (data.error == undefined){
+                    msgbox("Self-Signed Certificate Generated", true);
+                    resyncProxyEditorConfig();
+                    if (typeof(initManagedDomainCertificateList) != undefined){
+                        //Re-init the managed domain certificate list
+                        initManagedDomainCertificateList();
+                    }
+                }else{
+                    msgbox(data.error, false);
+                }
+            }
+        });
+    }
+
     /* Tags & Search */
     function handleSearchInput(event){
         if (event.key == "Escape"){
@@ -985,6 +1171,28 @@
         return subd;
     }
 
+    // Generate a certificate dropdown for the HTTP Proxy Rule Editor
+    // so user can pick which certificate they want to use for the current editing hostname
+    function generateCertificateDropdown(callback){
+        $.ajax({
+            url: "/api/cert/list",
+            method: "GET",
+            success: function(data) {
+                let dropdown = $('<div class="ui fluid selection dropdown"></div>');
+                let menu = $('<div class="menu"></div>');
+                data.forEach(cert => {
+                    menu.append(`<div class="item" data-value="${cert}">${cert}</div>`);
+                });
+                // Add a hidden input to store the selected certificate
+                dropdown.append('<input type="hidden" name="certificate">');
+                dropdown.append('<i class="dropdown icon"></i>');
+                dropdown.append('<div class="default text">Fallback Certificate</div>');
+                dropdown.append(menu);
+                callback(dropdown);
+            }
+        })
+    }
+
     //Initialize the http proxy rule editor
     function initHttpProxyRuleEditorModal(rulepayload){
         let subd = JSON.parse(JSON.stringify(rulepayload));
@@ -1086,39 +1294,6 @@
             
         });
         editor.find(".downstream_alias_hostname").html(aliasHTML);
-        
-        //TODO: Move this to SSL TLS section
-        let enableQuickRequestButton = true;
-        let domains = [subd.RootOrMatchingDomain]; //Domain for getting certificate if needed
-        for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
-            let thisAliasName = subd.MatchingDomainAlias[i];
-            domains.push(thisAliasName);
-        }
-
-        //Check if the domain or alias contains wildcard, if yes, disabled the get certificate button
-        if (subd.RootOrMatchingDomain.indexOf("*") > -1){
-            enableQuickRequestButton = false;
-        }
-        
-        if (subd.MatchingDomainAlias != undefined){
-            for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
-                if (subd.MatchingDomainAlias[i].indexOf("*") > -1){
-                    enableQuickRequestButton = false;
-                    break;
-                }
-            }
-        }
-
-        let certificateDomains = encodeURIComponent(JSON.stringify(domains));
-        if (enableQuickRequestButton){
-            editor.find(".getCertificateBtn").removeClass("disabled");
-        }else{
-            editor.find(".getCertificateBtn").addClass("disabled");
-        }
-
-        editor.find(".getCertificateBtn").off("click").on("click", function(){
-            requestCertificateForExistingHost(uuid, certificateDomains, this);
-        });
 
         /* ------------ Upstreams ------------ */
         editor.find(".upstream_list").html(renderUpstreamList(subd));
@@ -1148,6 +1323,8 @@
         editor.find(".vdir_list").html(renderVirtualDirectoryList(subd));
         editor.find(".editVdirBtn").off("click").on("click", function(){
             quickEditVdir(uuid);
+            //Temporary restore scroll
+            $("body").css("overflow", "auto");
         });
 
         /* ------------ Alias ------------ */ 
@@ -1245,6 +1422,60 @@
         editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
 
         /* ------------ TLS ------------ */
+        updateTlsResolveList(uuid);
+        editor.find(".Tls_EnableSNI").prop("checked", !subd.TlsOptions.DisableSNI);
+       
+        editor.find(".Tls_EnableLegacyCertificateMatching").prop("checked", !subd.TlsOptions.DisableLegacyCertificateMatching);
+        editor.find(".Tls_EnableAutoHTTPS").prop("checked", !!subd.TlsOptions.EnableAutoHTTPS);
+
+        editor.find(".Tls_EnableSNI").off("change").on("change", function() {
+            saveTlsConfigs(uuid);
+        });
+        editor.find(".Tls_EnableLegacyCertificateMatching").off("change").on("change", function() {
+            saveTlsConfigs(uuid);
+        });
+        editor.find(".Tls_EnableAutoHTTPS").off("change").on("change", function() {
+            saveTlsConfigs(uuid);
+        });
+
+        /* Quick access to get certificate for the current host */
+        let enableQuickRequestButton = true;
+        let domains = [subd.RootOrMatchingDomain]; //Domain for getting certificate if needed
+        for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
+            let thisAliasName = subd.MatchingDomainAlias[i];
+            domains.push(thisAliasName);
+        }
+
+        //Check if the domain or alias contains wildcard, if yes, disabled the get certificate button
+        if (subd.RootOrMatchingDomain.indexOf("*") > -1){
+            enableQuickRequestButton = false;
+        }
+        
+        if (subd.MatchingDomainAlias != undefined){
+            for (var i = 0; i < subd.MatchingDomainAlias.length; i++){
+                if (subd.MatchingDomainAlias[i].indexOf("*") > -1){
+                    enableQuickRequestButton = false;
+                    break;
+                }
+            }
+        }
+        if (enableQuickRequestButton){
+            editor.find(".getCertificateBtn").removeClass("disabled");
+        }else{
+            editor.find(".getCertificateBtn").addClass("disabled");
+        }
+
+        editor.find(".getCertificateBtn").off("click").on("click", function(){
+            let certificateDomains = encodeURIComponent(JSON.stringify(domains));
+            requestCertificateForExistingHost(uuid, certificateDomains, this);
+        });
+
+        // Bind event to self-signed certificate button
+        editor.find(".getSelfSignCertBtn").off("click").on("click", function() {
+            generateSelfSignedCertificate(uuid, domains, this);
+        });
+
+       
 
         /* ------------ Tags ------------ */
         (()=>{
@@ -1308,7 +1539,6 @@
         });
     }
 
-
     /*
         Page Initialization Functions 
     */
@@ -1333,7 +1563,9 @@
             // there is a chance where the user has modified the Vdir
             // we need to get the latest setting from server side and 
             // render it again
-            updateVdirInProxyEditor();
+            resyncProxyEditorConfig();
+            window.scrollTo(0, 0);
+            $("body").css("overflow", "hidden");
         } else {
             listProxyEndpoints();
             //Reset the tag filter

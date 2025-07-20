@@ -111,7 +111,7 @@ func (router *Router) StartProxyService() error {
 						hostPath := strings.Split(r.Host, ":")
 						domainOnly = hostPath[0]
 					}
-					sep := router.getProxyEndpointFromHostname(domainOnly)
+					sep := router.GetProxyEndpointFromHostname(domainOnly)
 					if sep != nil && sep.BypassGlobalTLS {
 						//Allow routing via non-TLS handler
 						originalHostHeader := r.Host
@@ -335,7 +335,7 @@ func (router *Router) IsProxiedSubdomain(r *http.Request) bool {
 		hostname = r.Host
 	}
 	hostname = strings.Split(hostname, ":")[0]
-	subdEndpoint := router.getProxyEndpointFromHostname(hostname)
+	subdEndpoint := router.GetProxyEndpointFromHostname(hostname)
 	return subdEndpoint != nil
 }
 

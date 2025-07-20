@@ -151,11 +151,31 @@
             dataType: 'json',
             success: function(data) {
                 $('#forwardAuthAddress').val(data.address);
-                $('#forwardAuthResponseHeaders').val(data.responseHeaders.join(","));
-                $('#forwardAuthResponseClientHeaders').val(data.responseClientHeaders.join(","));
-                $('#forwardAuthRequestHeaders').val(data.requestHeaders.join(","));
-                $('#forwardAuthRequestIncludedCookies').val(data.requestIncludedCookies.join(","));
-                $('#forwardAuthRequestExcludedCookies').val(data.requestExcludedCookies.join(","));
+                if (data.responseHeaders != null) {
+                    $('#forwardAuthResponseHeaders').val(data.responseHeaders.join(","));
+                } else {
+                    $('#forwardAuthResponseHeaders').val("");
+                }
+                if (data.responseClientHeaders != null) {
+                    $('#forwardAuthResponseClientHeaders').val(data.responseClientHeaders.join(","));
+                } else {
+                    $('#forwardAuthResponseClientHeaders').val("");
+                }
+                if (data.requestHeaders != null) {
+                    $('#forwardAuthRequestHeaders').val(data.requestHeaders.join(","));
+                } else {
+                    $('#forwardAuthRequestHeaders').val("");
+                }
+                if (data.requestIncludedCookies != null) {
+                    $('#forwardAuthRequestIncludedCookies').val(data.requestIncludedCookies.join(","));
+                } else {
+                    $('#forwardAuthRequestIncludedCookies').val("");
+                }
+                if (data.requestExcludedCookies != null) {
+                    $('#forwardAuthRequestExcludedCookies').val(data.requestExcludedCookies.join(","));
+                } else {
+                    $('#forwardAuthRequestExcludedCookies').val("");
+                }
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);

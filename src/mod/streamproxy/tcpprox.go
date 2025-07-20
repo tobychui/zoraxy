@@ -2,6 +2,7 @@ package streamproxy
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -30,48 +31,67 @@ func isValidPort(port string) bool {
 	return true
 }
 
-func connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *atomic.Int64) {
+func (c *ProxyRelayInstance) connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *atomic.Int64) {
 	n, err := io.Copy(conn1, conn2)
 	if err != nil {
 		return
 	}
 	accumulator.Add(n) //Add to accumulator
 	conn1.Close()
-	log.Println("[←]", "close the connect at local:["+conn1.LocalAddr().String()+"] and remote:["+conn1.RemoteAddr().String()+"]")
+	c.LogMsg("[←] close the connect at local:["+conn1.LocalAddr().String()+"] and remote:["+conn1.RemoteAddr().String()+"]", nil)
 	//conn2.Close()
-	//log.Println("[←]", "close the connect at local:["+conn2.LocalAddr().String()+"] and remote:["+conn2.RemoteAddr().String()+"]")
+	//c.LogMsg("[←] close the connect at local:["+conn2.LocalAddr().String()+"] and remote:["+conn2.RemoteAddr().String()+"]", nil)
 	wg.Done()
 }
 
-func forward(conn1 net.Conn, conn2 net.Conn, aTob *atomic.Int64, bToa *atomic.Int64) {
-	log.Printf("[+] start transmit. [%s],[%s] <-> [%s],[%s] \n", conn1.LocalAddr().String(), conn1.RemoteAddr().String(), conn2.LocalAddr().String(), conn2.RemoteAddr().String())
+func writeProxyProtocolHeaderV1(dst net.Conn, src net.Conn) error {
+	clientAddr, ok1 := src.RemoteAddr().(*net.TCPAddr)
+	proxyAddr, ok2 := src.LocalAddr().(*net.TCPAddr)
+	if !ok1 || !ok2 {
+		return errors.New("invalid TCP address for proxy protocol")
+	}
+
+	header := fmt.Sprintf("PROXY TCP4 %s %s %d %d\r\n",
+		clientAddr.IP.String(),
+		proxyAddr.IP.String(),
+		clientAddr.Port,
+		proxyAddr.Port)
+
+	_, err := dst.Write([]byte(header))
+	return err
+}
+
+func (c *ProxyRelayInstance) forward(conn1 net.Conn, conn2 net.Conn, aTob *atomic.Int64, bToa *atomic.Int64) {
+	msg := fmt.Sprintf("[+] start transmit. [%s],[%s] <-> [%s],[%s]",
+		conn1.LocalAddr().String(), conn1.RemoteAddr().String(),
+		conn2.LocalAddr().String(), conn2.RemoteAddr().String())
+	c.LogMsg(msg, nil)
+
 	var wg sync.WaitGroup
-	// wait tow goroutines
 	wg.Add(2)
-	go connCopy(conn1, conn2, &wg, aTob)
-	go connCopy(conn2, conn1, &wg, bToa)
-	//blocking when the wg is locked
+	go c.connCopy(conn1, conn2, &wg, aTob)
+	go c.connCopy(conn2, conn1, &wg, bToa)
 	wg.Wait()
 }
 
-func (c *ProxyRelayConfig) accept(listener net.Listener) (net.Conn, error) {
+func (c *ProxyRelayInstance) accept(listener net.Listener) (net.Conn, error) {
 	conn, err := listener.Accept()
 	if err != nil {
 		return nil, err
 	}
 
-	//Check if connection in blacklist or whitelist
+	// Check if connection in blacklist or whitelist
 	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
 		if !c.parent.Options.AccessControlHandler(conn) {
 			time.Sleep(300 * time.Millisecond)
 			conn.Close()
-			log.Println("[x]", "Connection from "+addr.IP.String()+" rejected by access control policy")
+			c.LogMsg("[x] Connection from "+addr.IP.String()+" rejected by access control policy", nil)
 			return nil, errors.New("Connection from " + addr.IP.String() + " rejected by access control policy")
 		}
 	}
 
-	log.Println("[√]", "accept a new client. remote address:["+conn.RemoteAddr().String()+"], local address:["+conn.LocalAddr().String()+"]")
-	return conn, err
+	c.LogMsg("[√] accept a new client. remote address:["+conn.RemoteAddr().String()+"], local address:["+conn.LocalAddr().String()+"]", nil)
+	return conn, nil
 }
 
 func startListener(address string) (net.Listener, error) {
@@ -92,7 +112,7 @@ func startListener(address string) (net.Listener, error) {
 portA -> server
 server -> portB
 */
-func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, stopChan chan bool) error {
+func (c *ProxyRelayInstance) Port2host(allowPort string, targetAddress string, stopChan chan bool) error {
 	listenerStartingAddr := allowPort
 	if isValidPort(allowPort) {
 		//number only, e.g. 8080
@@ -112,7 +132,7 @@ func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, sto
 	//Start stop handler
 	go func() {
 		<-stopChan
-		log.Println("[x]", "Received stop signal. Exiting Port to Host forwarder")
+		c.LogMsg("[x] Received stop signal. Exiting Port to Host forwarder", nil)
 		server.Close()
 	}()
 
@@ -129,18 +149,32 @@ func (c *ProxyRelayConfig) Port2host(allowPort string, targetAddress string, sto
 		}
 
 		go func(targetAddress string) {
-			log.Println("[+]", "start connect host:["+targetAddress+"]")
+			c.LogMsg("[+] start connect host:["+targetAddress+"]", nil)
 			target, err := net.Dial("tcp", targetAddress)
 			if err != nil {
 				// temporarily unavailable, don't use fatal.
-				log.Println("[x]", "connect target address ["+targetAddress+"] faild. retry in ", c.Timeout, "seconds. ")
+				c.LogMsg("[x] connect target address ["+targetAddress+"] failed. retry in "+strconv.Itoa(c.Timeout)+" seconds.", nil)
 				conn.Close()
-				log.Println("[←]", "close the connect at local:["+conn.LocalAddr().String()+"] and remote:["+conn.RemoteAddr().String()+"]")
+				c.LogMsg("[←] close the connect at local:["+conn.LocalAddr().String()+"] and remote:["+conn.RemoteAddr().String()+"]", nil)
 				time.Sleep(time.Duration(c.Timeout) * time.Second)
 				return
 			}
-			log.Println("[→]", "connect target address ["+targetAddress+"] success.")
-			forward(target, conn, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
+			c.LogMsg("[→] connect target address ["+targetAddress+"] success.", nil)
+
+			if c.UseProxyProtocol {
+				c.LogMsg("[+] write proxy protocol header to target address ["+targetAddress+"]", nil)
+				err = writeProxyProtocolHeaderV1(target, conn)
+				if err != nil {
+					c.LogMsg("[x] Write proxy protocol header failed: "+err.Error(), nil)
+					target.Close()
+					conn.Close()
+					c.LogMsg("[←] close the connect at local:["+conn.LocalAddr().String()+"] and remote:["+conn.RemoteAddr().String()+"]", nil)
+					time.Sleep(time.Duration(c.Timeout) * time.Second)
+					return
+				}
+			}
+
+			c.forward(target, conn, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
 		}(targetAddress)
 	}
 }

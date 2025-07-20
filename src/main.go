@@ -69,7 +69,7 @@ func main() {
 		os.Exit(0)
 	}
 	if *geoDbUpdate {
-		geodb.DownloadGeoDBUpdate("./conf/geodb")
+		geodb.DownloadGeoDBUpdate(CONF_GEODB_PATH)
 		os.Exit(0)
 	}
 

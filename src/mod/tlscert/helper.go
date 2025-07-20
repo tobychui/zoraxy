@@ -43,3 +43,30 @@ func matchClosestDomainCertificate(subdomain string, domains []string) string {
 
 	return matchingDomain
 }
+
+// Convert a domain name to a filename format
+func domainToFilename(domain string, ext string) string {
+	// Replace wildcard '*' with '_'
+	domain = strings.TrimSpace(domain)
+	if strings.HasPrefix(domain, "*") {
+		domain = "_" + strings.TrimPrefix(domain, "*")
+	}
+
+	// Add .pem extension
+	ext = strings.TrimPrefix(ext, ".") // Ensure ext does not start with a dot
+	return domain + "." + ext
+}
+
+func filenameToDomain(filename string) string {
+	// Remove the extension
+	ext := filepath.Ext(filename)
+	if ext != "" {
+		filename = strings.TrimSuffix(filename, ext)
+	}
+
+	if strings.HasPrefix(filename, "_") {
+		filename = "*" + filename[1:]
+	}
+
+	return filename
+}

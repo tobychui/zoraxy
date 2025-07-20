@@ -15,6 +15,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
+	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -59,12 +60,18 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		thisConfigEndpoint.Tags = []string{}
 	}
 
+	//Make sure the TLS options are not nil
+	if thisConfigEndpoint.TlsOptions == nil {
+		thisConfigEndpoint.TlsOptions = tlscert.GetDefaultHostSpecificTlsBehavior()
+	}
+
 	//Matching domain not set. Assume root
 	if thisConfigEndpoint.RootOrMatchingDomain == "" {
 		thisConfigEndpoint.RootOrMatchingDomain = "/"
 	}
 
-	if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyTypeRoot {
+	switch thisConfigEndpoint.ProxyType {
+	case dynamicproxy.ProxyTypeRoot:
 		//This is a root config file
 		rootProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
 		if err != nil {
@@ -73,7 +80,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 
 		dynamicProxyRouter.SetProxyRouteAsRoot(rootProxyEndpoint)
 
-	} else if thisConfigEndpoint.ProxyType == dynamicproxy.ProxyTypeHost {
+	case dynamicproxy.ProxyTypeHost:
 		//This is a host config file
 		readyProxyEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisConfigEndpoint)
 		if err != nil {
@@ -81,7 +88,7 @@ func LoadReverseProxyConfig(configFilepath string) error {
 		}
 
 		dynamicProxyRouter.AddProxyRouteToRuntime(readyProxyEndpoint)
-	} else {
+	default:
 		return errors.New("not supported proxy type")
 	}
 
@@ -101,9 +108,9 @@ func filterProxyConfigFilename(filename string) string {
 
 func SaveReverseProxyConfig(endpoint *dynamicproxy.ProxyEndpoint) error {
 	//Get filename for saving
-	filename := filepath.Join("./conf/proxy/", endpoint.RootOrMatchingDomain+".config")
+	filename := filepath.Join(CONF_HTTP_PROXY, endpoint.RootOrMatchingDomain+".config")
 	if endpoint.ProxyType == dynamicproxy.ProxyTypeRoot {
-		filename = "./conf/proxy/root.config"
+		filename = filepath.Join(CONF_HTTP_PROXY, "root.config")
 	}
 
 	filename = filterProxyConfigFilename(filename)
@@ -118,9 +125,9 @@ func SaveReverseProxyConfig(endpoint *dynamicproxy.ProxyEndpoint) error {
 }
 
 func RemoveReverseProxyConfig(endpoint string) error {
-	filename := filepath.Join("./conf/proxy/", endpoint+".config")
+	filename := filepath.Join(CONF_HTTP_PROXY, endpoint+".config")
 	if endpoint == "/" {
-		filename = "./conf/proxy/root.config"
+		filename = filepath.Join(CONF_HTTP_PROXY, "/root.config")
 	}
 
 	filename = filterProxyConfigFilename(filename)
@@ -172,11 +179,11 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Specify the folder path to be zipped
-	if !utils.FileExists("./conf") {
+	if !utils.FileExists(CONF_FOLDER) {
 		SystemWideLogger.PrintAndLog("Backup", "Configuration folder not found", nil)
 		return
 	}
-	folderPath := "./conf"
+	folderPath := CONF_FOLDER
 
 	// Set the Content-Type header to indicate it's a zip file
 	w.Header().Set("Content-Type", "application/zip")
@@ -277,12 +284,12 @@ func ImportConfigFromZip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Create the target directory to unzip the files
-	targetDir := "./conf"
+	targetDir := CONF_FOLDER
 	if utils.FileExists(targetDir) {
 		//Backup the old config to old
 		//backupPath := filepath.Dir(*path_conf) + filepath.Base(*path_conf) + ".old_" + strconv.Itoa(int(time.Now().Unix()))
 		//os.Rename(*path_conf, backupPath)
-		os.Rename("./conf", "./conf.old_"+strconv.Itoa(int(time.Now().Unix())))
+		os.Rename(CONF_FOLDER, CONF_FOLDER+".old_"+strconv.Itoa(int(time.Now().Unix())))
 	}
 
 	err = os.MkdirAll(targetDir, os.ModePerm)

@@ -53,7 +53,7 @@ func initUDPConnections(listenAddr string, targetAddress string) (*net.UDPConn, 
 }
 
 // Go routine which manages connection from server to single client
-func (c *ProxyRelayConfig) RunUDPConnectionRelay(conn *udpClientServerConn, lisenter *net.UDPConn) {
+func (c *ProxyRelayInstance) RunUDPConnectionRelay(conn *udpClientServerConn, lisenter *net.UDPConn) {
 	var buffer [1500]byte
 	for {
 		// Read from server
@@ -74,7 +74,7 @@ func (c *ProxyRelayConfig) RunUDPConnectionRelay(conn *udpClientServerConn, lise
 }
 
 // Close all connections that waiting for read from server
-func (c *ProxyRelayConfig) CloseAllUDPConnections() {
+func (c *ProxyRelayInstance) CloseAllUDPConnections() {
 	c.udpClientMap.Range(func(clientAddr, clientServerConn interface{}) bool {
 		conn := clientServerConn.(*udpClientServerConn)
 		conn.ServerConn.Close()
@@ -82,7 +82,7 @@ func (c *ProxyRelayConfig) CloseAllUDPConnections() {
 	})
 }
 
-func (c *ProxyRelayConfig) ForwardUDP(address1, address2 string, stopChan chan bool) error {
+func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan bool) error {
 	//By default the incoming listen Address is int
 	//We need to add the loopback address into it
 	if isValidPort(address1) {
@@ -138,12 +138,12 @@ func (c *ProxyRelayConfig) ForwardUDP(address1, address2 string, stopChan chan b
 				continue
 			}
 			c.udpClientMap.Store(saddr, conn)
-			log.Println("[UDP] Created new connection for client " + saddr)
+			c.LogMsg("[UDP] Created new connection for client "+saddr, nil)
 			// Fire up routine to manage new connection
 			go c.RunUDPConnectionRelay(conn, lisener)
 
 		} else {
-			log.Println("[UDP] Found connection for client " + saddr)
+			c.LogMsg("[UDP] Found connection for client "+saddr, nil)
 			conn = rawConn.(*udpClientServerConn)
 		}
 

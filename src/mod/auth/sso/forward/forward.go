@@ -58,11 +58,20 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestIncludedCookies, &requestIncludedCookies)
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestExcludedCookies, &requestExcludedCookies)
 
-	options.ResponseHeaders = strings.Split(responseHeaders, ",")
-	options.ResponseClientHeaders = strings.Split(responseClientHeaders, ",")
-	options.RequestHeaders = strings.Split(requestHeaders, ",")
-	options.RequestIncludedCookies = strings.Split(requestIncludedCookies, ",")
-	options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
+	// Helper function to clean empty strings from split results
+	cleanSplit := func(s string) []string {
+	        if s == "" {
+	          return nil
+	        }
+
+		return strings.Split(s, ",")
+	}
+
+	options.ResponseHeaders = cleanSplit(responseHeaders)
+	options.ResponseClientHeaders = cleanSplit(responseClientHeaders)
+	options.RequestHeaders = cleanSplit(requestHeaders)
+	options.RequestIncludedCookies = cleanSplit(requestIncludedCookies)
+	options.RequestExcludedCookies = cleanSplit(requestExcludedCookies)
 
 	return &AuthRouter{
 		client: &http.Client{

@@ -47,15 +47,19 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 
 	useTCP, _ := utils.PostBool(r, "useTCP")
 	useUDP, _ := utils.PostBool(r, "useUDP")
+	useProxyProtocol, _ := utils.PostBool(r, "useProxyProtocol")
+	enableLogging, _ := utils.PostBool(r, "enableLogging")
 
 	//Create the target config
 	newConfigUUID := m.NewConfig(&ProxyRelayOptions{
-		Name:          name,
-		ListeningAddr: strings.TrimSpace(listenAddr),
-		ProxyAddr:     strings.TrimSpace(proxyAddr),
-		Timeout:       timeout,
-		UseTCP:        useTCP,
-		UseUDP:        useUDP,
+		Name:             name,
+		ListeningAddr:    strings.TrimSpace(listenAddr),
+		ProxyAddr:        strings.TrimSpace(proxyAddr),
+		Timeout:          timeout,
+		UseTCP:           useTCP,
+		UseUDP:           useUDP,
+		UseProxyProtocol: useProxyProtocol,
+		EnableLogging:    enableLogging,
 	})
 
 	js, _ := json.Marshal(newConfigUUID)
@@ -75,6 +79,8 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 	proxyAddr, _ := utils.PostPara(r, "proxyAddr")
 	useTCP, _ := utils.PostBool(r, "useTCP")
 	useUDP, _ := utils.PostBool(r, "useUDP")
+	useProxyProtocol, _ := utils.PostBool(r, "useProxyProtocol")
+	enableLogging, _ := utils.PostBool(r, "enableLogging")
 
 	newTimeoutStr, _ := utils.PostPara(r, "timeout")
 	newTimeout := -1
@@ -86,8 +92,21 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Create a new ProxyRuleUpdateConfig with the extracted parameters
+	newConfig := &ProxyRuleUpdateConfig{
+		InstanceUUID:     configUUID,
+		NewName:          newName,
+		NewListeningAddr: listenAddr,
+		NewProxyAddr:     proxyAddr,
+		UseTCP:           useTCP,
+		UseUDP:           useUDP,
+		UseProxyProtocol: useProxyProtocol,
+		EnableLogging:    enableLogging,
+		NewTimeout:       newTimeout,
+	}
+
 	// Call the EditConfig method to modify the configuration
-	err = m.EditConfig(configUUID, newName, listenAddr, proxyAddr, useTCP, useUDP, newTimeout)
+	err = m.EditConfig(newConfig)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
