@@ -1,3 +1,20 @@
+# v3.2.5 20 Jul 2025
+
+
++ Added new API endpoint /api/proxy/setTlsConfig (for HTTP Proxy Editor TLS tab)
++ Refactored TLS certificate management APIs with new handlers
++ Removed redundant functions from src/cert.go and delegated to tlsCertManager
++ Code optimization in tlscert module
++ Introduced a new constant CONF_FOLDER and updated configuration storage paths (phasing out hard coded paths)
++ Updated functions to set default TLS options when missing, default to SNI
++ Added Proxy Protocol v1 support in stream proxy [jemmy1794](https://github.com/jemmy1794)
++ Fixed Proxy UI bug [jemmy1794](https://github.com/jemmy1794)
++ Fixed assign static server to localhost or all interfaces [#688](https://github.com/tobychui/zoraxy/issues/688)
++ fixed empty SSO parameters by [7brend7](https://github.com/7brend7)
++ sort list of loaded certificates by expire date by [7brend7](https://github.com/7brend7)
++ Docker hardening by [PassiveLemon](https://github.com/PassiveLemon)
++ Fixed sort by destination [#713](https://github.com/tobychui/zoraxy/issues/713)
+
 # v3.2.4 28 Jun 2025
 
 A big release since v3.1.9. Versions from 3.2.0 to 3.2.3 were prereleases.
