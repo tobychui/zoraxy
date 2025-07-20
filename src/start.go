@@ -91,7 +91,6 @@ func startupSequence() {
 	os.MkdirAll(CONF_HTTP_PROXY, 0775)
 
 	//Create an auth agent
-	pluginApiKeyManager = auth.NewAPIKeyManager()
 	sessionKey, err := auth.GetSessionKey(sysdb, SystemWideLogger)
 	if err != nil {
 		log.Fatal(err)
@@ -99,7 +98,10 @@ func startupSequence() {
 	authAgent = auth.NewAuthenticationAgent(SYSTEM_NAME, []byte(sessionKey), sysdb, true, SystemWideLogger, func(w http.ResponseWriter, r *http.Request) {
 		//Not logged in. Redirecting to login page
 		http.Redirect(w, r, "/login.html", http.StatusTemporaryRedirect)
-	}, pluginApiKeyManager)
+	})
+
+	// Create an API key manager for plugin authentication
+	pluginApiKeyManager = auth.NewAPIKeyManager()
 
 	//Create a TLS certificate manager
 	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, SystemWideLogger)
