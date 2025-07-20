@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/netip"
 	"os"
 	"runtime"
 	"strconv"
@@ -98,6 +99,9 @@ func startupSequence() {
 		//Not logged in. Redirecting to login page
 		http.Redirect(w, r, "/login.html", http.StatusTemporaryRedirect)
 	})
+
+	// Create an API key manager for plugin authentication
+	pluginApiKeyManager = auth.NewAPIKeyManager()
 
 	//Create a TLS certificate manager
 	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, SystemWideLogger)
@@ -313,11 +317,18 @@ func startupSequence() {
 	*/
 	pluginFolder := *path_plugin
 	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
+	ZoraxyAddrPort, err := netip.ParseAddrPort(*webUIPort)
+	ZoraxyPort := 8000
+	if err == nil && ZoraxyAddrPort.IsValid() && ZoraxyAddrPort.Port() > 0 {
+		ZoraxyPort = int(ZoraxyAddrPort.Port())
+	}
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir:          pluginFolder,
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
+		APIKeyManager:      pluginApiKeyManager,
+		ZoraxyPort:         ZoraxyPort,
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},

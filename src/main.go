@@ -115,6 +115,7 @@ func main() {
 	//Initiate management interface APIs
 	requireAuth = !(*noauth)
 	initAPIs(webminPanelMux)
+	initRestAPI(webminPanelMux)
 
 	//Start the reverse proxy server in go routine
 	go func() {
