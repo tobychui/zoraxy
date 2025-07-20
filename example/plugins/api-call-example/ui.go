@@ -13,7 +13,7 @@ import (
 func allowedEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
 	// Make an API call to the permitted endpoint
 	client := &http.Client{}
-	apiURL := fmt.Sprintf("http://localhost:%d/api/access/list", cfg.ZoraxyPort)
+	apiURL := fmt.Sprintf("http://localhost:%d/plugin/api/access/list", cfg.ZoraxyPort)
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
@@ -45,7 +45,7 @@ func allowedEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
 func allowedEndpointInvalidKey(cfg *plugin.ConfigureSpec) (string, error) {
 	// Make an API call to the permitted endpoint with an invalid key
 	client := &http.Client{}
-	apiURL := fmt.Sprintf("http://localhost:%d/api/access/list", cfg.ZoraxyPort)
+	apiURL := fmt.Sprintf("http://localhost:%d/plugin/api/access/list", cfg.ZoraxyPort)
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
@@ -98,7 +98,7 @@ func unaccessibleEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
 func unpermittedEndpoint(cfg *plugin.ConfigureSpec) (string, error) {
 	// Make an API call to an endpoint that is plugin-accessible but is not permitted
 	client := &http.Client{}
-	apiURL := fmt.Sprintf("http://localhost:%d/api/proxy/list", cfg.ZoraxyPort)
+	apiURL := fmt.Sprintf("http://localhost:%d/plugin/api/proxy/list", cfg.ZoraxyPort)
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %v", err)
@@ -232,35 +232,36 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 		
 		<div class="response-block success">
 			<h3>✅ Allowed Endpoint (Valid API Key)</h3>
-			<p>Making a GET request to <code>/api/access/list</code> with a valid API key:</p>
+			<p>Making a GET request to <code>/plugin/api/access/list</code> with a valid API key:</p>
 			<div class="response-content">
 				` + RenderedAccessListHTML + `
 			</div>
 		</div>
 
-		<div class="response-block error">
-			<h3>❌ Invalid API Key</h3>
-			<p>Making a GET request to <code>/api/access/list</code> with an invalid API key:</p>
+		<div class="response-block warning">
+			<h3>⚠️ Invalid API Key</h3>
+			<p>Making a GET request to <code>/plugin/api/access/list</code> with an invalid API key:</p>
 			<div class="response-content">
 				` + RenderedInvalidKeyResponseHTML + `
 			</div>
 		</div>
 
 		<div class="response-block warning">
-			<h3>⚠️ Disallowed Endpoint</h3>
+			<h3>⚠️ Unpermitted Endpoint</h3>
+			<p>Making a GET request to <code>/plugin/api/proxy/list</code> (not a permitted endpoint):</p>
+			<div class="response-content">
+				` + RenderedUnpermittedResponseHTML + `
+			</div>
+		</div>
+
+		<div class="response-block error">
+			<h3>❌ Disallowed Endpoint</h3>
 			<p>Making a GET request to <code>/api/acme/listExpiredDomains</code> (not a plugin-accessible endpoint):</p>
 			<div class="response-content">
 				` + RenderedUnaccessibleResponseHTML + `
 			</div>
 		</div>
 
-		<div class="response-block warning">
-			<h3>⚠️ Unpermitted Endpoint</h3>
-			<p>Making a GET request to <code>/api/proxy/list</code> (plugin-accessible but not permitted):</p>
-			<div class="response-content">
-				` + RenderedUnpermittedResponseHTML + `
-			</div>
-		</div>
 	</body>
 	</html>`
 	w.Write([]byte(html))
