@@ -92,19 +92,6 @@ func (m *APIKeyManager) ValidateAPIKeyForEndpoint(endpoint string, method string
 	return nil, fmt.Errorf("endpoint not permitted for this API key")
 }
 
-// RevokeAPIKey revokes an API key
-func (m *APIKeyManager) RevokeAPIKey(apiKey string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if _, exists := m.keys[apiKey]; !exists {
-		return fmt.Errorf("API key not found")
-	}
-
-	delete(m.keys, apiKey)
-	return nil
-}
-
 // RevokeAPIKeysForPlugin revokes all API keys for a specific plugin
 func (m *APIKeyManager) RevokeAPIKeysForPlugin(pluginID string) error {
 	m.mutex.Lock()
@@ -122,31 +109,4 @@ func (m *APIKeyManager) RevokeAPIKeysForPlugin(pluginID string) error {
 	}
 
 	return nil
-}
-
-// GetAPIKeyForPlugin returns the API key for a plugin (if exists)
-func (m *APIKeyManager) GetAPIKeyForPlugin(pluginID string) (*PluginAPIKey, error) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	for _, pluginAPIKey := range m.keys {
-		if pluginAPIKey.PluginID == pluginID {
-			return pluginAPIKey, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no API key found for plugin")
-}
-
-// ListAPIKeys returns all API keys (for debugging purposes)
-func (m *APIKeyManager) ListAPIKeys() []*PluginAPIKey {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	keys := make([]*PluginAPIKey, 0, len(m.keys))
-	for _, pluginAPIKey := range m.keys {
-		keys = append(keys, pluginAPIKey)
-	}
-
-	return keys
 }

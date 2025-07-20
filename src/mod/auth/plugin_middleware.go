@@ -19,11 +19,6 @@ func NewPluginAuthMiddleware(apiKeyManager *APIKeyManager) *PluginAuthMiddleware
 	}
 }
 
-// ValidatePluginAPIRequest validates an API request with plugin API key for a specific endpoint
-func (m *PluginAuthMiddleware) ValidatePluginAPIRequest(endpoint string, method string, apiKey string) (*PluginAPIKey, error) {
-	return m.apiKeyManager.ValidateAPIKeyForEndpoint(endpoint, method, apiKey)
-}
-
 // WrapHandler wraps an HTTP handler with plugin authentication middleware
 func (m *PluginAuthMiddleware) WrapHandler(endpoint string, handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +45,7 @@ func (m *PluginAuthMiddleware) WrapHandler(endpoint string, handler http.Handler
 		apiKey := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// Validate the API key for this endpoint
-		pluginAPIKey, err := m.ValidatePluginAPIRequest(endpoint, r.Method, apiKey)
+		pluginAPIKey, err := m.apiKeyManager.ValidateAPIKeyForEndpoint(endpoint, r.Method, apiKey)
 		if err != nil {
 			// Invalid API key or endpoint not permitted
 			http.Error(w, "Unauthorized: Invalid API key or endpoint not permitted", http.StatusUnauthorized)
@@ -64,14 +59,4 @@ func (m *PluginAuthMiddleware) WrapHandler(endpoint string, handler http.Handler
 		// Call the original handler
 		handler(w, r)
 	}
-}
-
-// GetPluginIDFromRequest extracts the plugin ID from the request if authenticated via plugin API key
-func GetPluginIDFromRequest(r *http.Request) string {
-	return r.Header.Get("X-Plugin-ID")
-}
-
-// IsPluginAuthenticated checks if the request is authenticated via plugin API key
-func IsPluginAuthenticated(r *http.Request) bool {
-	return r.Header.Get("X-Plugin-Auth") == "true"
 }
