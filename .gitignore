@@ -61,3 +61,4 @@ www/html/index.html
 *.exe
 /src/dist
 
+/src/plugins
