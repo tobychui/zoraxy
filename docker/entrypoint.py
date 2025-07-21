@@ -73,7 +73,10 @@ def start_zerotier():
 
   os.makedirs(config_dir, exist_ok=True)
 
-  os.symlink(config_dir, zt_path, target_is_directory=True)
+  try:
+    os.symlink(config_dir, zt_path, target_is_directory=True)
+  except FileExistsError:
+    print(f"Symlink {zt_path} already exists, skipping creation.")
 
   zerotier_proc = popen(["zerotier-one"])
 
