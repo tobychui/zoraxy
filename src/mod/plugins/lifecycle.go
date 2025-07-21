@@ -157,9 +157,9 @@ func (m *Manager) StartPlugin(pluginID string) error {
 			eventType := zoraxyPlugin.EventName(eventName)
 			err := EventSystem.Subscribe(thisPlugin.Spec.ID, eventType)
 			if err != nil {
-				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+eventName, err)
+				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), err)
 			} else {
-				m.Log("Subscribed plugin "+thisPlugin.Spec.Name+" to event "+eventName, nil)
+				m.Log("Subscribed plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), nil)
 			}
 		}
 	}

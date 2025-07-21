@@ -102,8 +102,8 @@ type IntroSpect struct {
 	UIPath string `json:"ui_path"` //UI path of your plugin (e.g. /ui), will proxy the whole subpath tree to Zoraxy Web UI as plugin UI
 
 	/* Subscriptions Settings */
-	SubscriptionPath    string            `json:"subscription_path"`    //Subscription event path of your plugin (e.g. /notifyme), a POST request with SubscriptionEvent as body will be sent to this path when the event is triggered
-	SubscriptionsEvents map[string]string `json:"subscriptions_events"` //Subscriptions events of your plugin, paired with comments describing how the event is used, see Zoraxy documentation for more details
+	SubscriptionPath    string               `json:"subscription_path"`    //Subscription event path of your plugin (e.g. /notifyme), a POST request with SubscriptionEvent as body will be sent to this path when the event is triggered
+	SubscriptionsEvents map[EventName]string `json:"subscriptions_events"` //Subscriptions events of your plugin, paired with comments describing how the event is used, see Zoraxy documentation for more details
 
 	/* API Access Control */
 	PermittedAPIEndpoints []PermittedAPIEndpoint `json:"permitted_api_endpoints"` //List of API endpoints this plugin can access, and a description of why the plugin needs to access this endpoint

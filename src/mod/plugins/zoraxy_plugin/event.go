@@ -1,7 +1,8 @@
 package zoraxy_plugin
 
 import (
-	"time"
+	"encoding/json"
+	"fmt"
 )
 
 // EventName represents the type of event
@@ -15,8 +16,8 @@ type EventPayload interface {
 
 // Event represents a system event
 type Event struct {
-	Name      EventName    `json:"type"`
-	Timestamp time.Time    `json:"timestamp"`
+	Name      EventName    `json:"name"`
+	Timestamp int64        `json:"timestamp"` // Unix timestamp
 	Data      EventPayload `json:"data"`
 }
 
@@ -59,11 +60,52 @@ func (e *BlacklistToggledEvent) GetName() EventName {
 type AccessRuleCreatedEvent struct {
 	ID               string `json:"id"`
 	Name             string `json:"name"`
-	Desc             string `json:"description"`
+	Desc             string `json:"desc"`
 	BlacklistEnabled bool   `json:"blacklist_enabled"`
 	WhitelistEnabled bool   `json:"whitelist_enabled"`
 }
 
 func (e *AccessRuleCreatedEvent) GetName() EventName {
 	return EventAccessRuleCreated
+}
+
+// ParseEvent parses a JSON byte slice into an Event struct
+func ParseEvent(jsonData []byte, event *Event) error {
+	// First, determine the event type, and parse shared fields, from the JSON data
+	var temp struct {
+		Name      EventName `json:"name"`
+		Timestamp int64     `json:"timestamp"`
+	}
+	if err := json.Unmarshal(jsonData, &temp); err != nil {
+		return err
+	}
+
+	// Set the event name and timestamp
+	event.Name = temp.Name
+	event.Timestamp = temp.Timestamp
+
+	// Now, based on the event type, unmarshal the specific payload
+	switch temp.Name {
+	case EventBlacklistedIPBlocked:
+		var payload BlacklistedIPBlockedEvent
+		if err := json.Unmarshal(jsonData, &payload); err != nil {
+			return err
+		}
+		event.Data = &payload
+	case EventBlacklistToggled:
+		var payload BlacklistToggledEvent
+		if err := json.Unmarshal(jsonData, &payload); err != nil {
+			return err
+		}
+		event.Data = &payload
+	case EventAccessRuleCreated:
+		var payload AccessRuleCreatedEvent
+		if err := json.Unmarshal(jsonData, &payload); err != nil {
+			return err
+		}
+		event.Data = &payload
+	default:
+		return fmt.Errorf("unknown event: %s, %v", temp.Name, jsonData)
+	}
+	return nil
 }

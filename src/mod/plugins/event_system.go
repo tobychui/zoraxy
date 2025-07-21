@@ -109,7 +109,7 @@ func (em *eventManager) Emit(payload zoraxyPlugin.EventPayload) error {
 	// Create the event
 	event := zoraxyPlugin.Event{
 		Name:      eventName,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().Unix(),
 		Data:      payload,
 	}
 
@@ -176,6 +176,17 @@ func (em *eventManager) dispatchToPlugin(pluginID string, event zoraxyPlugin.Eve
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		em.logger.PrintAndLog("event-system", "Plugin "+pluginID+" returned non-200 status for event: "+resp.Status, nil)
+		respBody := fmt.Errorf("no response body")
+		if resp.ContentLength > 0 {
+			buffer := bytes.NewBuffer(make([]byte, 0, resp.ContentLength))
+			_, respErr := buffer.ReadFrom(resp.Body)
+			if respErr != nil {
+				respBody = fmt.Errorf("failed to read response body: %v", respErr)
+			} else {
+				respBody = fmt.Errorf("response body: %s", buffer.String())
+			}
+		}
+
+		em.logger.PrintAndLog("event-system", fmt.Sprintf("Plugin %s returned non-200 status for event `%s`: %s", pluginID, event.Name, resp.Status), respBody)
 	}
 }
