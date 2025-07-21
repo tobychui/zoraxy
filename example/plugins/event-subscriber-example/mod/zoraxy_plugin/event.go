@@ -87,23 +87,32 @@ func ParseEvent(jsonData []byte, event *Event) error {
 	// Now, based on the event type, unmarshal the specific payload
 	switch temp.Name {
 	case EventBlacklistedIPBlocked:
-		var payload BlacklistedIPBlockedEvent
+		type tempData struct {
+			Data BlacklistedIPBlockedEvent `json:"data"`
+		}
+		var payload tempData
 		if err := json.Unmarshal(jsonData, &payload); err != nil {
 			return err
 		}
-		event.Data = &payload
+		event.Data = &payload.Data
 	case EventBlacklistToggled:
-		var payload BlacklistToggledEvent
+		type tempData struct {
+			Data BlacklistToggledEvent `json:"data"`
+		}
+		var payload tempData
 		if err := json.Unmarshal(jsonData, &payload); err != nil {
 			return err
 		}
-		event.Data = &payload
+		event.Data = &payload.Data
 	case EventAccessRuleCreated:
-		var payload AccessRuleCreatedEvent
+		type tempData struct {
+			Data AccessRuleCreatedEvent `json:"data"`
+		}
+		var payload tempData
 		if err := json.Unmarshal(jsonData, &payload); err != nil {
 			return err
 		}
-		event.Data = &payload
+		event.Data = &payload.Data
 	default:
 		return fmt.Errorf("unknown event: %s, %v", temp.Name, jsonData)
 	}
