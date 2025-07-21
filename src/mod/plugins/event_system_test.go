@@ -83,6 +83,31 @@ func TestEventDeSerialization(t *testing.T) {
 			if err := zoraxy_plugin.ParseEvent(jsonData, &deserializedEvent); err != nil {
 				t.Fatalf("Failed to parse event: %v", err)
 			}
+
+			// Compare the original event with the deserialized event
+			if deserializedEvent.Name != test.event.Name || deserializedEvent.Timestamp != test.event.Timestamp {
+				t.Fatalf("Deserialized event does not match original.\nGot:  %+v\nWant: %+v", deserializedEvent, test.event)
+			}
+
+			switch data := deserializedEvent.Data.(type) {
+			case *zoraxy_plugin.BlacklistedIPBlockedEvent:
+				originalData, ok := test.event.Data.(*zoraxy_plugin.BlacklistedIPBlockedEvent)
+				if !ok || *data != *originalData {
+					t.Fatalf("Deserialized BlacklistedIPBlockedEvent does not match original.\nGot:  %+v\nWant: %+v", data, originalData)
+				}
+			case *zoraxy_plugin.AccessRuleCreatedEvent:
+				originalData, ok := test.event.Data.(*zoraxy_plugin.AccessRuleCreatedEvent)
+				if !ok || *data != *originalData {
+					t.Fatalf("Deserialized AccessRuleCreatedEvent does not match original.\nGot:  %+v\nWant: %+v", data, originalData)
+				}
+			case *zoraxy_plugin.BlacklistToggledEvent:
+				originalData, ok := test.event.Data.(*zoraxy_plugin.BlacklistToggledEvent)
+				if !ok || *data != *originalData {
+					t.Fatalf("Deserialized BlacklistToggledEvent does not match original.\nGot:  %+v\nWant: %+v", data, originalData)
+				}
+			default:
+				t.Fatalf("Unknown event type: %T", data)
+			}
 		})
 	}
 }
