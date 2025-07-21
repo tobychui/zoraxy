@@ -175,9 +175,15 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 	<head>
 		<title>API Call Example Plugin UI</title>
 		<meta charset="UTF-8">
-		<link rel="stylesheet" href="/main.css">
+		<link rel="stylesheet" href="/script/semantic/semantic.min.css">
 		<script src="/script/jquery-3.6.0.min.js"></script>
+		<script src="/script/semantic/semantic.min.js"></script>
+		<link rel="stylesheet" href="/main.css">
 		<style>
+			body {
+				background: none;
+			}
+
 			.response-block {
 				background-color: var(--theme_bg_primary);
 				border: 1px solid var(--theme_divider);
@@ -225,15 +231,19 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 		</style>
 	</head>
 	<body>
-		<!-- Dark theme script must be included after body tag-->
-		<link rel="stylesheet" href="/darktheme.css">
-		<script src="/script/darktheme.js"></script>
+	<!-- Dark theme script must be included after body tag-->
+	<link rel="stylesheet" href="/darktheme.css">
+	<script src="/script/darktheme.js"></script>
+	<div class="ui container">
 
-		<h1>Welcome to the API Call Example Plugin UI</h1>
-		<p>Plugin is running on port: ` + strconv.Itoa(config.Port) + `</p>
+		<div class="ui basic segment">
+			<h1 class="ui header">Welcome to the API Call Example Plugin UI</h1>
+			<p>Plugin is running on port: ` + strconv.Itoa(config.Port) + `</p>
+		</div>
+		<div class="ui divider"></div>
 
 		<h2>API Call Examples</h2>
-		
+
 		<div class="response-block success">
 			<h3>✅ Allowed Endpoint (Valid API Key)</h3>
 			<p>Making a GET request to <code>/plugin/api/access/list</code> with a valid API key:</p>
@@ -265,7 +275,7 @@ func RenderUI(config *plugin.ConfigureSpec, w http.ResponseWriter, r *http.Reque
 				` + RenderedUnaccessibleResponseHTML + `
 			</div>
 		</div>
-
+	</div>
 	</body>
 	</html>`
 	w.Write([]byte(html))
