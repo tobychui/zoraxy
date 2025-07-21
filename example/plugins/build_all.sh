@@ -4,7 +4,7 @@
 echo "Copying zoraxy_plugin to all mods"
 for dir in ./*; do
     if [ -d "$dir" ]; then
-        cp -r ../mod/plugins/zoraxy_plugin "$dir/mod"
+        cp -r ../../src/mod/plugins/zoraxy_plugin "$dir/mod/"
     fi
 done
 

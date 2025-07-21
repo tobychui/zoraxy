@@ -1,6 +1,7 @@
 package access
 
 import (
+	"fmt"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/netutils"
@@ -91,4 +92,43 @@ func (s *AccessRule) IsIPBlacklisted(ipAddr string) bool {
 	}
 
 	return false
+}
+
+// GetBlacklistedIPComment returns the comment for a blacklisted IP address
+// Searches blacklist for a Country (if country-code provided), IP address, or CIDR that matches the IP address
+// returns error if not found
+func (s *AccessRule) GetBlacklistedIPComment(ipAddr string) (string, error) {
+	if countryInfo, err := s.parent.Options.GeoDB.ResolveCountryCodeFromIP(ipAddr); err == nil {
+		CCBlacklist := *s.BlackListContryCode
+		countryCode := strings.ToLower(countryInfo.CountryIsoCode)
+
+		if comment, ok := CCBlacklist[countryCode]; ok {
+			return comment, nil
+		}
+	}
+
+	IPBlacklist := *s.BlackListIP
+	if comment, ok := IPBlacklist[ipAddr]; ok {
+		return comment, nil
+	}
+
+	//Check for CIDR
+	for ipOrCIDR, comment := range IPBlacklist {
+		wildcardMatch := netutils.MatchIpWildcard(ipAddr, ipOrCIDR)
+		if wildcardMatch {
+			return comment, nil
+		}
+
+		cidrMatch := netutils.MatchIpCIDR(ipAddr, ipOrCIDR)
+		if cidrMatch {
+			return comment, nil
+		}
+	}
+
+	return "", fmt.Errorf("IP %s not found in blacklist", ipAddr)
+}
+
+// GetParent returns the parent controller
+func (s *AccessRule) GetParent() *Controller {
+	return s.parent
 }
