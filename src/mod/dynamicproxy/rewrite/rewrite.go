@@ -75,5 +75,9 @@ func SplitUpDownStreamHeaders(rewriteOptions *HeaderRewriteOptions) ([][]string,
 		downstreamHeaderCounter++
 	}
 
+	// Slice the arrays to only include the filled portions to prevent nil slice access
+	upstreamHeaders = upstreamHeaders[:upstreamHeaderCounter]
+	downstreamHeaders = downstreamHeaders[:downstreamHeaderCounter]
+
 	return upstreamHeaders, downstreamHeaders
 }
