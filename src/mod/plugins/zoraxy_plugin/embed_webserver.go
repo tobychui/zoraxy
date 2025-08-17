@@ -145,6 +145,24 @@ func (p *PluginUiRouter) RegisterTerminateHandler(termFunc func(), mux *http.Ser
 	})
 }
 
+// HandleFunc registers a handler function for the given pattern
+// The pattern should start with the handler prefix, e.g. /ui/hello
+// If the pattern does not start with the handler prefix, it will be prepended with the handler prefix
+func (p *PluginUiRouter) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request), mux *http.ServeMux) {
+	// If mux is nil, use the default ServeMux
+	if mux == nil {
+		mux = http.DefaultServeMux
+	}
+
+	// Make sure the pattern starts with the handler prefix
+	if !strings.HasPrefix(pattern, p.HandlerPrefix) {
+		pattern = p.HandlerPrefix + pattern
+	}
+
+	// Register the handler with the http.ServeMux
+	mux.HandleFunc(pattern, handler)
+}
+
 // Attach the embed UI handler to the target http.ServeMux
 func (p *PluginUiRouter) AttachHandlerToMux(mux *http.ServeMux) {
 	if mux == nil {
