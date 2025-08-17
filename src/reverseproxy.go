@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -956,10 +957,10 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 
 // List, Update or Remove the exception paths for basic auth.
 func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
+
 	ep, err := utils.GetPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
@@ -981,6 +982,7 @@ func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 	}
 	js, _ := json.Marshal(results)
 	utils.SendJSONResponse(w, string(js))
+
 	return
 }
 
@@ -991,10 +993,9 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matchingPrefix, err := utils.PostPara(r, "prefix")
+	exceptionType, err := utils.PostInt(r, "type")
 	if err != nil {
-		utils.SendErrorResponse(w, "Invalid matching prefix given")
-		return
+		exceptionType = 0x00 //Default to paths
 	}
 
 	//Load the target proxy object from router
@@ -1004,26 +1005,100 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Check if the prefix starts with /. If not, prepend it
-	if !strings.HasPrefix(matchingPrefix, "/") {
-		matchingPrefix = "/" + matchingPrefix
-	}
-
-	//Add a new exception rule if it is not already exists
-	alreadyExists := false
-	for _, thisExceptionRule := range targetProxy.AuthenticationProvider.BasicAuthExceptionRules {
-		if thisExceptionRule.PathPrefix == matchingPrefix {
-			alreadyExists = true
-			break
+	switch exceptionType {
+	case 0x00:
+		matchingPrefix, err := utils.PostPara(r, "prefix")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid matching prefix given")
+			return
 		}
-	}
-	if alreadyExists {
-		utils.SendErrorResponse(w, "This matching path already exists")
+
+		//Check if the prefix starts with /. If not, prepend it
+		if !strings.HasPrefix(matchingPrefix, "/") {
+			matchingPrefix = "/" + matchingPrefix
+		}
+
+		//Add a new exception rule if it is not already exists
+		alreadyExists := false
+		for _, thisExceptionRule := range targetProxy.AuthenticationProvider.BasicAuthExceptionRules {
+			if thisExceptionRule.PathPrefix == matchingPrefix {
+				alreadyExists = true
+				break
+			}
+		}
+		if alreadyExists {
+			utils.SendErrorResponse(w, "This matching path already exists")
+			return
+		}
+		targetProxy.AuthenticationProvider.BasicAuthExceptionRules = append(targetProxy.AuthenticationProvider.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
+			RuleType:   dynamicproxy.AuthExceptionType_Paths,
+			PathPrefix: strings.TrimSpace(matchingPrefix),
+		})
+
+	case 0x01:
+		matchingCIDR, err := utils.PostPara(r, "cidr")
+		if err != nil {
+			utils.SendErrorResponse(w, "Invalid matching CIDR given")
+			return
+		}
+
+		// Accept CIDR, IP address, or wildcard like 192.168.0.*
+		matchingCIDR = strings.TrimSpace(matchingCIDR)
+		isValid := false
+
+		// Check if it's a valid CIDR
+		if _, _, err := net.ParseCIDR(matchingCIDR); err == nil {
+			isValid = true
+		} else if ip := net.ParseIP(matchingCIDR); ip != nil {
+			// Valid IP address
+			isValid = true
+		} else if strings.Contains(matchingCIDR, "*") {
+			// Accept wildcard like 192.168.0.*
+			parts := strings.Split(matchingCIDR, ".")
+			if len(parts) == 4 && parts[3] == "*" {
+				// Check first 3 parts are numbers 0-255
+				validParts := true
+				for i := 0; i < 3; i++ {
+					n, err := strconv.Atoi(parts[i])
+					if err != nil || n < 0 || n > 255 {
+						validParts = false
+						break
+					}
+				}
+				if validParts {
+					isValid = true
+				}
+			}
+		}
+
+		if !isValid {
+			utils.SendErrorResponse(w, "Invalid CIDR, IP, or wildcard given")
+			return
+		}
+
+		//Add a new exception rule if it is not already exists
+		alreadyExists := false
+		for _, thisExceptionRule := range targetProxy.AuthenticationProvider.BasicAuthExceptionRules {
+			if thisExceptionRule.CIDR == matchingCIDR {
+				alreadyExists = true
+				break
+			}
+		}
+		if alreadyExists {
+			utils.SendErrorResponse(w, "This matching CIDR already exists")
+			return
+		}
+		targetProxy.AuthenticationProvider.BasicAuthExceptionRules = append(targetProxy.AuthenticationProvider.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
+			RuleType: dynamicproxy.AuthExceptionType_CIDR,
+			CIDR:     strings.TrimSpace(matchingCIDR),
+		})
+
+	default:
+		//Invalid exception type given
+		utils.SendErrorResponse(w, "Invalid exception type given")
 		return
+
 	}
-	targetProxy.AuthenticationProvider.BasicAuthExceptionRules = append(targetProxy.AuthenticationProvider.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
-		PathPrefix: strings.TrimSpace(matchingPrefix),
-	})
 
 	//Save configs to runtime and file
 	targetProxy.UpdateToRuntime()
@@ -1040,9 +1115,39 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	exceptionType, err := utils.PostInt(r, "type")
+	if err != nil {
+		exceptionType = 0x00 //Default to paths
+	}
+
 	matchingPrefix, err := utils.PostPara(r, "prefix")
 	if err != nil {
-		utils.SendErrorResponse(w, "Invalid matching prefix given")
+		matchingPrefix = ""
+	}
+
+	matchingCIDR, err := utils.PostPara(r, "cidr")
+	if err != nil {
+		matchingCIDR = ""
+	}
+
+	var typeToCheck dynamicproxy.AuthExceptionType
+	switch exceptionType {
+	case 0x01:
+		typeToCheck = dynamicproxy.AuthExceptionType_CIDR
+		//Check if the CIDR is valid
+		if matchingCIDR == "" {
+			utils.SendErrorResponse(w, "Invalid matching CIDR given")
+			return
+		}
+	case 0x00:
+		fallthrough //For backward compatibility
+	default:
+		typeToCheck = dynamicproxy.AuthExceptionType_Paths
+		//Check if the prefix is valid
+		if matchingPrefix == "" {
+			utils.SendErrorResponse(w, "Invalid matching prefix given")
+			return
+		}
 		return
 	}
 
@@ -1056,10 +1161,22 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 	newExceptionRuleList := []*dynamicproxy.BasicAuthExceptionRule{}
 	matchingExists := false
 	for _, thisExceptionalRule := range targetProxy.AuthenticationProvider.BasicAuthExceptionRules {
-		if thisExceptionalRule.PathPrefix != matchingPrefix {
-			newExceptionRuleList = append(newExceptionRuleList, thisExceptionalRule)
-		} else {
-			matchingExists = true
+		switch typeToCheck {
+		case dynamicproxy.AuthExceptionType_CIDR:
+			if thisExceptionalRule.CIDR != matchingCIDR {
+				newExceptionRuleList = append(newExceptionRuleList, thisExceptionalRule)
+			} else {
+				matchingExists = true
+			}
+		case dynamicproxy.AuthExceptionType_Paths:
+			fallthrough //For backward compatibility
+		default:
+			if thisExceptionalRule.PathPrefix != matchingPrefix {
+				newExceptionRuleList = append(newExceptionRuleList, thisExceptionalRule)
+			} else {
+				matchingExists = true
+			}
+
 		}
 	}
 

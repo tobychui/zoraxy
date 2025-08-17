@@ -106,9 +106,18 @@ type BasicAuthUnhashedCredentials struct {
 	Password string
 }
 
+type AuthExceptionType int
+
+const (
+	AuthExceptionType_Paths AuthExceptionType = iota //Path exception, match by path prefix
+	AuthExceptionType_CIDR                           //CIDR exception, match by CIDR
+)
+
 // Paths to exclude in basic auth enabled proxy handler
 type BasicAuthExceptionRule struct {
-	PathPrefix string
+	RuleType   AuthExceptionType //The type of the exception rule
+	PathPrefix string            //Path prefix to match, e.g. /api/v1/
+	CIDR       string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
 }
 
 /* Routing Rule Data Structures */

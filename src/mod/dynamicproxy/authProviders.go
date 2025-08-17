@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/netutils"
 )
 
 /*
@@ -70,9 +71,36 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 	if len(pe.AuthenticationProvider.BasicAuthExceptionRules) > 0 {
 		//Check if the current path matches the exception rules
 		for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
-			if strings.HasPrefix(r.RequestURI, exceptionRule.PathPrefix) {
-				//This path is excluded from basic auth
-				return nil
+			exceptionType := exceptionRule.RuleType
+			switch exceptionType {
+			case AuthExceptionType_Paths:
+				if strings.HasPrefix(r.RequestURI, exceptionRule.PathPrefix) {
+					//This path is excluded from basic auth
+					return nil
+				}
+			case AuthExceptionType_CIDR:
+				requesterIp := netutils.GetRequesterIP(r)
+				if requesterIp != "" {
+					if requesterIp == exceptionRule.CIDR {
+						// This IP is excluded from basic auth
+						return nil
+					}
+
+					wildcardMatch := netutils.MatchIpWildcard(requesterIp, exceptionRule.CIDR)
+					if wildcardMatch {
+						// This IP is excluded from basic auth
+						return nil
+					}
+
+					cidrMatch := netutils.MatchIpCIDR(requesterIp, exceptionRule.CIDR)
+					if cidrMatch {
+						// This IP is excluded from basic auth
+						return nil
+					}
+				}
+			default:
+				//Unknown exception type, skip this rule
+				continue
 			}
 		}
 	}
