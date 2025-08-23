@@ -90,6 +90,7 @@
                 </div>
             </div>
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button" type="button" id="forwardAuthClear"><i class="red trash icon"></i> Clear</button>
         </form>
         </div>
         <div class="ui bottom attached tab segment" data-tab="oauth2_tab">
@@ -109,9 +110,9 @@
                 <small>Secret key of the OAuth2 application</small>
             </div>
             <div class="field">
-                <label for="oauth2WellKnownUrl">OIDC well-known URL</label>
+                <label for="oauth2WellKnownUrl">Discovery URL</label>
                 <input type="text" id="oauth2WellKnownUrl" name="oauth2WellKnownUrl" placeholder="Enter Well-Known URL">
-                <small>URL to the OIDC discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
+                <small>URL to the OpenID Connect 1.0 Discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
             </div>
 
             <div class="field">
@@ -138,6 +139,7 @@
                 <small>Scopes required by the OAuth2 provider to retrieve information about the authenticated user. Refer to your OAuth2 provider documentation for more information about this. Optional if Well-Known url is configured.</small>
             </div>
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button" type="button" id="oauth2Clear"><i class="red trash icon"></i> Clear</button>
         </form>
         </div>
         <div class="ui bottom attached tab segment" data-tab="zoraxy_sso_tab">
@@ -153,6 +155,18 @@
 
     $(document).ready(function() {
         /* Load Forward Authz settings from backend */
+        getForwardAuthSettings();
+
+        /* Load OAuth 2.0 settings from backend */
+        getOAuth20Settings();
+
+        /* Add more initialization code here if needed */
+    });
+
+    /*
+        Forward Auth settings fetcher.
+    */
+    function getForwardAuthSettings() {
         $.cjax({
             url: '/api/sso/forward-auth',
             method: 'GET',
@@ -199,28 +213,7 @@
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
             }
         });
-
-        /* Load OAuth 2.0 settings from backend */
-        $.cjax({
-            url: '/api/sso/OAuth2',
-            method: 'GET',
-            dataType: 'json',
-            success: function(data) {
-                $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl);
-                $('#oauth2ServerUrl').val(data.oauth2ServerUrl);
-                $('#oauth2TokenUrl').val(data.oauth2TokenUrl);
-                $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl);
-                $('#oauth2ClientId').val(data.oauth2ClientId);
-                $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
-                $('#oauth2Scopes').val(data.oauth2Scopes);
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error fetching SSO settings:', textStatus, errorThrown);
-            }
-        });
-
-        /* Add more initialization code here if needed */
-    });
+    }
 
     /*
         Forward Auth settings update handler.
@@ -266,11 +259,73 @@
         });
     });
 
+    $( "#forwardAuthClear" ).on( "click", function( event ) {
+        event.preventDefault();
+
+        $.cjax({
+            url: '/api/sso/forward-auth',
+            method: 'DELETE',
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                getForwardAuthSettings();
+
+                msgbox('Forward Auth settings cleared', true);
+                console.log('Forward Auth settings cleared:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error clearing Forward Auth settings:', textStatus, errorThrown);
+                msgbox('Error clearing Forward Auth settings, check console', false);
+            }
+        });
+    });
+
+    /*
+        OAuth 2.0 settings fetcher.
+    */
+    function getOAuth20Settings() {
+        $.cjax({
+            url: '/api/sso/OAuth2',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl);
+                $('#oauth2ServerUrl').val(data.oauth2ServerUrl);
+                $('#oauth2TokenUrl').val(data.oauth2TokenUrl);
+                $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl);
+                $('#oauth2ClientId').val(data.oauth2ClientId);
+                $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
+                $('#oauth2Scopes').val(data.oauth2Scopes);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching SSO settings:', textStatus, errorThrown);
+            }
+        });
+    }
+
     /*
         OAuth 2.0 settings update handler.
     */
     $( "#oauth2Settings" ).on( "submit", function( event ) {
         event.preventDefault();
+
+        if ($('#oauth2ClientId').val().length === 0 || $('#oauth2ClientSecret').val().length === 0) {
+            msgbox("You must specify the Client ID and Client Secret.", false);
+
+            return;
+        }
+
+        if ($('#oauth2WellKnownUrl').val().length === 0) {
+            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoURL').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
+                msgbox("You must specify either the Well Known URL or configure the Authorization URL, Token URL, User Info URL, and Scopes.", false);
+
+                return;
+            }
+        }
+
         $.cjax({
             url: '/api/sso/OAuth2',
             method: 'POST',
@@ -286,6 +341,30 @@
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error updating OAuth2 settings:', textStatus, errorThrown);
                 msgbox('Error updating OAuth2 settings, check console', false);
+            }
+        });
+    });
+
+    $( "#oauth2Clear" ).on( "click", function( event ) {
+        event.preventDefault();
+
+        $.cjax({
+            url: '/api/sso/OAuth2',
+            method: 'DELETE',
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                getOAuth20Settings();
+
+                msgbox('OAuth2 settings cleared', true);
+                console.log('OAuth2 settings cleared:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error clearing OAuth2 settings:', textStatus, errorThrown);
+                msgbox('Error clearing OAuth2 settings, check console', false);
             }
         });
     });
