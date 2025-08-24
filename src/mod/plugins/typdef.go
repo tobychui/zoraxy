@@ -60,7 +60,7 @@ type Manager struct {
 	LoadedPlugins      map[string]*Plugin   //Storing *Plugin
 	tagPluginMap       sync.Map             //Storing *radix.Tree for each plugin tag
 	tagPluginListMutex sync.RWMutex         //Mutex for the tagPluginList
-	tagPluginList      map[string][]*Plugin //Storing the plugin list for each tag, only concurrent READ is allowed
+	tagPluginList      map[string][]*Plugin //Storing the plugin list for each tag, only concurrent read is allowed
 	Options            *ManagerOptions
 
 	PluginHash map[string]string //The hash of the plugin file, used to check if the plugin file is changed
