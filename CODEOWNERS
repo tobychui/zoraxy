@@ -1,0 +1,12 @@
+# tobycui is the default owner for all files in this repository
+*       @tobychui
+
+# PassiveLemon is the docker maintainer
+/docker @PassiveLemon
+
+# jemmy1794 maintains the stream proxy module
+/src/mod/streamproxy @jemmy1794
+
+# AnthonyMichaelTDM maintains the plugins module
+/src/mod/plugins @AnthonyMichaelTDM
+/example/plugins @AnthonyMichaelTDM
