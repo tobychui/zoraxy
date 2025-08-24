@@ -5,7 +5,7 @@
 /docker @PassiveLemon
 
 # james-d-elliott is the community maintainer for forward-auth related functions
-/src/mod/auth/sso/forward @james-d-elliott
+# /src/mod/auth/sso/forward @james-d-elliott
 
 # jemmy1794 maintains the stream proxy module
 /src/mod/streamproxy @jemmy1794
