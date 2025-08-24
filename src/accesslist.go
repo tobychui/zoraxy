@@ -10,7 +10,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 
 	"imuslab.com/zoraxy/mod/access"
-	"imuslab.com/zoraxy/mod/plugins"
+	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -100,7 +100,7 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// emit an event for the new access rule creation
-	plugins.EventSystem.Emit(
+	eventsystem.Publisher.Emit(
 		&zoraxy_plugin.AccessRuleCreatedEvent{
 			ID:               ruleUUID,
 			Name:             ruleName,
@@ -372,7 +372,7 @@ func handleBlacklistEnable(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		plugins.EventSystem.Emit(&zoraxy_plugin.BlacklistToggledEvent{
+		eventsystem.Publisher.Emit(&zoraxy_plugin.BlacklistToggledEvent{
 			RuleID:  ruleID,
 			Enabled: rule.BlacklistEnabled,
 		})

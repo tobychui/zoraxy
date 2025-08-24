@@ -1,4 +1,4 @@
-package plugins
+package eventsystem
 
 import (
 	"encoding/json"

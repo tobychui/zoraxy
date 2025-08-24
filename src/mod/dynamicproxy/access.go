@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/netutils"
-	"imuslab.com/zoraxy/mod/plugins"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
@@ -51,7 +51,7 @@ func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory strin
 		if err != nil {
 			comment = "blacklisted"
 		}
-		plugins.EventSystem.Emit(
+		eventsystem.Publisher.Emit(
 			&zoraxy_plugin.BlacklistedIPBlockedEvent{
 				IP:           clientIpAddr,
 				Comment:      comment,

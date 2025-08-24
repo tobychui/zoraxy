@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
+	"imuslab.com/zoraxy/mod/eventsystem"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -350,7 +351,7 @@ func startupSequence() {
 	/*
 		Event Manager
 	*/
-	plugins.InitEventManager(pluginManager.GetPluginByID, SystemWideLogger)
+	eventsystem.InitEventSystem(SystemWideLogger)
 
 	//Sync latest plugin list from the plugin store
 	go func() {

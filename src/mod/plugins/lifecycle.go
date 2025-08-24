@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/eventsystem"
 	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
@@ -155,7 +156,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	if thisPlugin.Spec.SubscriptionsEvents != nil {
 		for eventName := range thisPlugin.Spec.SubscriptionsEvents {
 			eventType := zoraxyPlugin.EventName(eventName)
-			err := EventSystem.Subscribe(thisPlugin.Spec.ID, eventType)
+			err := eventsystem.Publisher.RegisterSubscriberToEvent(thisPlugin, eventType)
 			if err != nil {
 				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), err)
 			} else {
@@ -302,7 +303,7 @@ func (m *Manager) StopPlugin(pluginID string) error {
 		m.Log("Failed to revoke API keys for plugin "+thisPlugin.Spec.Name, err)
 	}
 	//Unsubscribe from all events
-	err = EventSystem.UnsubscribeAll(thisPlugin.Spec.ID)
+	err = eventsystem.Publisher.UnregisterSubscriber(eventsystem.ListenerID(thisPlugin.Spec.ID))
 	if err != nil {
 		m.Log("Failed to unsubscribe plugin "+thisPlugin.Spec.Name+" from events", err)
 	}
