@@ -39,13 +39,14 @@ jobs:
         run: go vet ./...
         working-directory: src
 
+      - name: Run tests
+        run: go test ./...
+        working-directory: src
+
       - name: install staticcheck
         run: go install honnef.co/go/tools/cmd/staticcheck@latest
         working-directory: src
-          
+
       - name: Lint code (staticcheck)
         run: staticcheck ./...
         working-directory: src
-
-    #   - name: Run tests # on my machine, the tests hang, so I'm not running them here yet
-    #     run: go test ./...
