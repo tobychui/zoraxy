@@ -1,4 +1,4 @@
-# /bin/sh
+#! /bin/sh
 
 # Build the acmedns
 echo "Building ACMEDNS"
