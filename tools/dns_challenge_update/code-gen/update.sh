@@ -2,17 +2,21 @@
 
 repo_url="https://github.com/go-acme/lego"
 
+# Get the latest lego version
+version=$(curl -s https://api.github.com/repos/go-acme/lego/releases/latest | grep tag_name | cut -d '"' -f 4)
+
 # Check if the folder "./lego" exists
 if [ -d "./lego" ]; then
   # If the folder exists, change into it and perform a git pull
   echo "Folder './lego' exists. Pulling updates..."
   cd "./lego" || exit
   git pull
+  git switch --detach "$version"
   cd ../
 else
   # If the folder doesn't exist, clone the repository
   echo "Folder './lego' does not exist. Cloning the repository..."
-  git clone "$repo_url" "./lego" || exit
+  git clone --branch "$version" "$repo_url" "./lego" || exit
 fi
 
 # Run the extract.go to get all the config from lego source code
@@ -26,4 +30,3 @@ sleep 2
 # This is to help go compiler to not load all the lego source file when compile
 #rm -rf ./lego/
 echo "Config generated"
-
