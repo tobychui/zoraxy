@@ -76,6 +76,8 @@ func getExcludedDNSProviders() []string {
 		"exec",         //Not a DNS provider
 		"httpreq",      //Not a DNS provider
 		"hurricane",    //Multi-credentials arch
+		"dnshomede",    //Multi-credentials arch
+		"myaddr",       //Multi-credentials arch
 		"oraclecloud",  //Evil company
 		"acmedns",      //Not a DNS provider
 		"selectelv2",   //Not sure why not working with our code generator
