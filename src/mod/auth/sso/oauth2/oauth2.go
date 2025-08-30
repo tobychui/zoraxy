@@ -66,86 +66,117 @@ func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 
 // HandleSetOAuth2Settings is the internal handler for setting the OAuth URL and HTTPS
 func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		//Return the current settings
-		js, _ := json.Marshal(map[string]interface{}{
-			"oauth2WellKnownUrl": ar.options.OAuth2WellKnownUrl,
-			"oauth2ServerUrl":    ar.options.OAuth2ServerURL,
-			"oauth2TokenUrl":     ar.options.OAuth2TokenURL,
-			"oauth2UserInfoUrl":  ar.options.OAuth2UserInfoUrl,
-			"oauth2Scopes":       ar.options.OAuth2Scopes,
-			"oauth2ClientSecret": ar.options.OAuth2ClientSecret,
-			"oauth2ClientId":     ar.options.OAuth2ClientId,
-		})
-
-		utils.SendJSONResponse(w, string(js))
-		return
-	} else if r.Method == http.MethodPost {
-		//Update the settings
-		var oauth2ServerUrl, oauth2TokenURL, oauth2Scopes, oauth2UserInfoUrl string
-		oauth2WellKnownUrl, err := utils.PostPara(r, "oauth2WellKnownUrl")
-		if err != nil {
-			oauth2ServerUrl, err = utils.PostPara(r, "oauth2ServerUrl")
-			if err != nil {
-				utils.SendErrorResponse(w, "oauth2ServerUrl not found")
-				return
-			}
-
-			oauth2TokenURL, err = utils.PostPara(r, "oauth2TokenUrl")
-			if err != nil {
-				utils.SendErrorResponse(w, "oauth2TokenUrl not found")
-				return
-			}
-
-			oauth2Scopes, err = utils.PostPara(r, "oauth2Scopes")
-			if err != nil {
-				utils.SendErrorResponse(w, "oauth2Scopes not found")
-				return
-			}
-
-			oauth2UserInfoUrl, err = utils.PostPara(r, "oauth2UserInfoUrl")
-			if err != nil {
-				utils.SendErrorResponse(w, "oauth2UserInfoUrl not found")
-				return
-			}
-		}
-
-		oauth2ClientId, err := utils.PostPara(r, "oauth2ClientId")
-		if err != nil {
-			utils.SendErrorResponse(w, "oauth2ClientId not found")
-			return
-		}
-
-		oauth2ClientSecret, err := utils.PostPara(r, "oauth2ClientSecret")
-		if err != nil {
-			utils.SendErrorResponse(w, "oauth2ClientSecret not found")
-			return
-		}
-
-		//Write changes to runtime
-		ar.options.OAuth2WellKnownUrl = oauth2WellKnownUrl
-		ar.options.OAuth2ServerURL = oauth2ServerUrl
-		ar.options.OAuth2TokenURL = oauth2TokenURL
-		ar.options.OAuth2UserInfoUrl = oauth2UserInfoUrl
-		ar.options.OAuth2ClientId = oauth2ClientId
-		ar.options.OAuth2ClientSecret = oauth2ClientSecret
-		ar.options.OAuth2Scopes = oauth2Scopes
-
-		//Write changes to database
-		ar.options.Database.Write("oauth2", "oauth2WellKnownUrl", oauth2WellKnownUrl)
-		ar.options.Database.Write("oauth2", "oauth2ServerUrl", oauth2ServerUrl)
-		ar.options.Database.Write("oauth2", "oauth2TokenUrl", oauth2TokenURL)
-		ar.options.Database.Write("oauth2", "oauth2UserInfoUrl", oauth2UserInfoUrl)
-		ar.options.Database.Write("oauth2", "oauth2ClientId", oauth2ClientId)
-		ar.options.Database.Write("oauth2", "oauth2ClientSecret", oauth2ClientSecret)
-		ar.options.Database.Write("oauth2", "oauth2Scopes", oauth2Scopes)
-
-		utils.SendOK(w)
-	} else {
+	switch r.Method {
+	case http.MethodGet:
+		ar.handleSetOAuthSettingsGET(w, r)
+	case http.MethodPost:
+		ar.handleSetOAuthSettingsPOST(w, r)
+	case http.MethodDelete:
+		ar.handleSetOAuthSettingsDELETE(w, r)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (ar *OAuth2Router) handleSetOAuthSettingsGET(w http.ResponseWriter, r *http.Request) {
+	//Return the current settings
+	js, _ := json.Marshal(map[string]interface{}{
+		"oauth2WellKnownUrl": ar.options.OAuth2WellKnownUrl,
+		"oauth2ServerUrl":    ar.options.OAuth2ServerURL,
+		"oauth2TokenUrl":     ar.options.OAuth2TokenURL,
+		"oauth2UserInfoUrl":  ar.options.OAuth2UserInfoUrl,
+		"oauth2Scopes":       ar.options.OAuth2Scopes,
+		"oauth2ClientSecret": ar.options.OAuth2ClientSecret,
+		"oauth2ClientId":     ar.options.OAuth2ClientId,
+	})
+
+	utils.SendJSONResponse(w, string(js))
+}
+
+func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *http.Request) {
+	//Update the settings
+	var oauth2ServerUrl, oauth2TokenURL, oauth2Scopes, oauth2UserInfoUrl string
+
+	oauth2ClientId, err := utils.PostPara(r, "oauth2ClientId")
+	if err != nil {
+		utils.SendErrorResponse(w, "oauth2ClientId not found")
 		return
 	}
 
+	oauth2ClientSecret, err := utils.PostPara(r, "oauth2ClientSecret")
+	if err != nil {
+		utils.SendErrorResponse(w, "oauth2ClientSecret not found")
+		return
+	}
+
+	oauth2WellKnownUrl, err := utils.PostPara(r, "oauth2WellKnownUrl")
+	if err != nil {
+		oauth2ServerUrl, err = utils.PostPara(r, "oauth2ServerUrl")
+		if err != nil {
+			utils.SendErrorResponse(w, "oauth2ServerUrl not found")
+			return
+		}
+
+		oauth2TokenURL, err = utils.PostPara(r, "oauth2TokenUrl")
+		if err != nil {
+			utils.SendErrorResponse(w, "oauth2TokenUrl not found")
+			return
+		}
+
+		oauth2UserInfoUrl, err = utils.PostPara(r, "oauth2UserInfoUrl")
+		if err != nil {
+			utils.SendErrorResponse(w, "oauth2UserInfoUrl not found")
+			return
+		}
+
+		oauth2Scopes, err = utils.PostPara(r, "oauth2Scopes")
+		if err != nil {
+			utils.SendErrorResponse(w, "oauth2Scopes not found")
+			return
+		}
+	} else {
+		oauth2Scopes, _ = utils.PostPara(r, "oauth2Scopes")
+	}
+
+	//Write changes to runtime
+	ar.options.OAuth2WellKnownUrl = oauth2WellKnownUrl
+	ar.options.OAuth2ServerURL = oauth2ServerUrl
+	ar.options.OAuth2TokenURL = oauth2TokenURL
+	ar.options.OAuth2UserInfoUrl = oauth2UserInfoUrl
+	ar.options.OAuth2ClientId = oauth2ClientId
+	ar.options.OAuth2ClientSecret = oauth2ClientSecret
+	ar.options.OAuth2Scopes = oauth2Scopes
+
+	//Write changes to database
+	ar.options.Database.Write("oauth2", "oauth2WellKnownUrl", oauth2WellKnownUrl)
+	ar.options.Database.Write("oauth2", "oauth2ServerUrl", oauth2ServerUrl)
+	ar.options.Database.Write("oauth2", "oauth2TokenUrl", oauth2TokenURL)
+	ar.options.Database.Write("oauth2", "oauth2UserInfoUrl", oauth2UserInfoUrl)
+	ar.options.Database.Write("oauth2", "oauth2ClientId", oauth2ClientId)
+	ar.options.Database.Write("oauth2", "oauth2ClientSecret", oauth2ClientSecret)
+	ar.options.Database.Write("oauth2", "oauth2Scopes", oauth2Scopes)
+
+	utils.SendOK(w)
+}
+
+func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *http.Request) {
+	ar.options.OAuth2WellKnownUrl = ""
+	ar.options.OAuth2ServerURL = ""
+	ar.options.OAuth2TokenURL = ""
+	ar.options.OAuth2UserInfoUrl = ""
+	ar.options.OAuth2ClientId = ""
+	ar.options.OAuth2ClientSecret = ""
+	ar.options.OAuth2Scopes = ""
+
+	ar.options.Database.Delete("oauth2", "oauth2WellKnownUrl")
+	ar.options.Database.Delete("oauth2", "oauth2ServerUrl")
+	ar.options.Database.Delete("oauth2", "oauth2TokenUrl")
+	ar.options.Database.Delete("oauth2", "oauth2UserInfoUrl")
+	ar.options.Database.Delete("oauth2", "oauth2ClientId")
+	ar.options.Database.Delete("oauth2", "oauth2ClientSecret")
+	ar.options.Database.Delete("oauth2", "oauth2Scopes")
+
+	utils.SendOK(w)
 }
 
 func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2.Config, error) {

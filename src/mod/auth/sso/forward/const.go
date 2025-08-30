@@ -13,14 +13,21 @@ const (
 	DatabaseKeyRequestHeaders         = "requestHeaders"
 	DatabaseKeyRequestIncludedCookies = "requestIncludedCookies"
 	DatabaseKeyRequestExcludedCookies = "requestExcludedCookies"
+	DatabaseKeyRequestIncludeBody     = "requestIncludeBody"
+	DatabaseKeyUseXOriginalHeaders    = "useXOriginalHeaders"
 
 	HeaderXForwardedProto  = "X-Forwarded-Proto"
 	HeaderXForwardedHost   = "X-Forwarded-Host"
-	HeaderXForwardedFor    = "X-Forwarded-For"
 	HeaderXForwardedURI    = "X-Forwarded-URI"
+	HeaderXForwardedFor    = "X-Forwarded-For"
 	HeaderXForwardedMethod = "X-Forwarded-Method"
 
-	HeaderCookie = "Cookie"
+	HeaderXOriginalURL    = "X-Original-URL"
+	HeaderXOriginalIP     = "X-Original-IP"
+	HeaderXOriginalMethod = "X-Original-Method"
+
+	HeaderCookie   = "Cookie"
+	HeaderLocation = "Location"
 
 	HeaderUpgrade          = "Upgrade"
 	HeaderConnection       = "Connection"
