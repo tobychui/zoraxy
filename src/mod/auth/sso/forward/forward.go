@@ -2,8 +2,10 @@ package forward
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/database"
@@ -34,6 +36,13 @@ type AuthRouterOptions struct {
 	// RequestExcludedCookies is a list of cookie keys that should be removed from every request sent to the upstream.
 	RequestExcludedCookies []string
 
+	// RequestIncludeBody enables copying the request body to the request to the authorization server.
+	RequestIncludeBody bool
+
+	// UseXOriginalHeaders is a boolean that determines if the X-Original-* headers should be used instead of the
+	// X-Forwarded-* headers.
+	UseXOriginalHeaders bool
+
 	Logger   *logger.Logger
 	Database *database.Database
 }
@@ -57,15 +66,8 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestHeaders, &requestHeaders)
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestIncludedCookies, &requestIncludedCookies)
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestExcludedCookies, &requestExcludedCookies)
-
-	// Helper function to clean empty strings from split results
-	cleanSplit := func(s string) []string {
-	        if s == "" {
-	          return nil
-	        }
-
-		return strings.Split(s, ",")
-	}
+	options.Database.Read(DatabaseTable, DatabaseKeyRequestIncludeBody, &options.RequestIncludeBody)
+	options.Database.Read(DatabaseTable, DatabaseKeyUseXOriginalHeaders, &options.UseXOriginalHeaders)
 
 	options.ResponseHeaders = cleanSplit(responseHeaders)
 	options.ResponseClientHeaders = cleanSplit(responseClientHeaders)
@@ -73,7 +75,7 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	options.RequestIncludedCookies = cleanSplit(requestIncludedCookies)
 	options.RequestExcludedCookies = cleanSplit(requestExcludedCookies)
 
-	return &AuthRouter{
+	r := &AuthRouter{
 		client: &http.Client{
 			CheckRedirect: func(r *http.Request, via []*http.Request) (err error) {
 				return http.ErrUseLastResponse
@@ -81,6 +83,10 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 		},
 		options: options,
 	}
+
+	r.logOptions()
+
+	return r
 }
 
 // HandleAPIOptions is the internal handler for setting the options.
@@ -103,6 +109,8 @@ func (ar *AuthRouter) handleOptionsGET(w http.ResponseWriter, r *http.Request) {
 		DatabaseKeyRequestHeaders:         ar.options.RequestHeaders,
 		DatabaseKeyRequestIncludedCookies: ar.options.RequestIncludedCookies,
 		DatabaseKeyRequestExcludedCookies: ar.options.RequestExcludedCookies,
+		DatabaseKeyRequestIncludeBody:     ar.options.RequestIncludeBody,
+		DatabaseKeyUseXOriginalHeaders:    ar.options.UseXOriginalHeaders,
 	})
 
 	utils.SendJSONResponse(w, string(js))
@@ -125,6 +133,8 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	requestHeaders, _ := utils.PostPara(r, DatabaseKeyRequestHeaders)
 	requestIncludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestIncludedCookies)
 	requestExcludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestExcludedCookies)
+	requestIncludeBody, _ := utils.PostPara(r, DatabaseKeyRequestIncludeBody)
+	useXOriginalHeaders, _ := utils.PostPara(r, DatabaseKeyUseXOriginalHeaders)
 
 	// Write changes to runtime
 	ar.options.Address = address
@@ -133,6 +143,8 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	ar.options.RequestHeaders = strings.Split(requestHeaders, ",")
 	ar.options.RequestIncludedCookies = strings.Split(requestIncludedCookies, ",")
 	ar.options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
+	ar.options.RequestIncludeBody, _ = strconv.ParseBool(requestIncludeBody)
+	ar.options.UseXOriginalHeaders, _ = strconv.ParseBool(useXOriginalHeaders)
 
 	// Write changes to database
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyAddress, address)
@@ -141,6 +153,10 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestHeaders, requestHeaders)
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestIncludedCookies, requestIncludedCookies)
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestExcludedCookies, requestExcludedCookies)
+	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestIncludeBody, ar.options.RequestIncludeBody)
+	ar.options.Database.Write(DatabaseTable, DatabaseKeyUseXOriginalHeaders, ar.options.UseXOriginalHeaders)
+
+	ar.logOptions()
 
 	utils.SendOK(w)
 }
@@ -158,9 +174,6 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 	}
 
 	// Make a request to Authz Server to verify the request
-	// TODO: Add opt-in support for copying the request body to the forward auth request. Currently it's just an
-	//       empty body which is usually fine in most instances. It's likely best to see if anyone wants this feature
-	//       as I'm unaware of any specific forward auth implementation that needs it.
 	req, err := http.NewRequest(http.MethodGet, ar.options.Address, nil)
 	if err != nil {
 		return ar.handle500Error(w, err, "Unable to create request")
@@ -171,7 +184,17 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 
 	// TODO: Add support for headers from upstream proxies. This will likely involve implementing some form of
 	//       proxy specific trust system within Zoraxy.
-	rSetForwardedHeaders(r, req)
+	if ar.options.UseXOriginalHeaders {
+		rSetXOriginalHeaders(r, req)
+	} else {
+		rSetXForwardedHeaders(r, req)
+	}
+
+	if ar.options.RequestIncludeBody {
+		if err = rCopyBody(r, req); err != nil {
+			return ar.handle500Error(w, err, "Unable to perform forwarded auth due to a request copy error")
+		}
+	}
 
 	// Make the Authz Request.
 	respForwarded, err := ar.client.Do(req)
@@ -202,15 +225,14 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 	// Copy the unsuccessful response.
 	headerCopyExcluded(respForwarded.Header, w.Header(), nil)
 
-	w.WriteHeader(respForwarded.StatusCode)
-
-	body, err := io.ReadAll(respForwarded.Body)
-	if err != nil {
-		return ar.handle500Error(w, err, "Unable to read response to forward auth request")
+	if ar.options.UseXOriginalHeaders && respForwarded.StatusCode == 401 && respForwarded.Header.Get(HeaderLocation) != "" {
+		w.WriteHeader(http.StatusFound)
+	} else {
+		w.WriteHeader(respForwarded.StatusCode)
 	}
 
-	if _, err = w.Write(body); err != nil {
-		return ar.handle500Error(w, err, "Unable to write response")
+	if _, err = io.Copy(w, respForwarded.Body); err != nil {
+		return ar.handle500Error(w, err, "Unable to copy response")
 	}
 
 	return ErrUnauthorized
@@ -223,4 +245,8 @@ func (ar *AuthRouter) handle500Error(w http.ResponseWriter, err error, message s
 	ar.options.Logger.PrintAndLog(LogTitle, message, err)
 
 	return ErrInternalServerError
+}
+
+func (ar *AuthRouter) logOptions() {
+	ar.options.Logger.PrintAndLog(LogTitle, fmt.Sprintf("Forward Authz Options -> Address: %s, Response Headers: %s, Response Client Headers: %s, Request Headers: %s, Request Included Cookies: %s, Request Excluded Cookies: %s, Request Include Body: %t, Use X-Original Headers: %t", ar.options.Address, strings.Join(ar.options.ResponseHeaders, ";"), strings.Join(ar.options.ResponseClientHeaders, ";"), strings.Join(ar.options.RequestHeaders, ";"), strings.Join(ar.options.RequestIncludedCookies, ";"), strings.Join(ar.options.RequestExcludedCookies, ";"), ar.options.RequestIncludeBody, ar.options.UseXOriginalHeaders), nil)
 }
