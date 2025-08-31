@@ -1426,11 +1426,17 @@
 
         /* ------------ TLS ------------ */
         updateTlsResolveList(uuid);
-        editor.find(".Tls_EnableSNI").prop("checked", !subd.TlsOptions.DisableSNI);
-       
-        editor.find(".Tls_EnableLegacyCertificateMatching").prop("checked", !subd.TlsOptions.DisableLegacyCertificateMatching);
-        editor.find(".Tls_EnableAutoHTTPS").prop("checked", !!subd.TlsOptions.EnableAutoHTTPS);
-
+        if (subd.TlsOptions != null){
+            //Use the saved settings
+            editor.find(".Tls_EnableSNI").prop("checked", !subd.TlsOptions.DisableSNI);
+            editor.find(".Tls_EnableLegacyCertificateMatching").prop("checked", !subd.TlsOptions.DisableLegacyCertificateMatching);
+            editor.find(".Tls_EnableAutoHTTPS").prop("checked", !!subd.TlsOptions.EnableAutoHTTPS);
+        }else{
+            //Default settings
+            editor.find(".Tls_EnableSNI").prop("checked", true);
+            editor.find(".Tls_EnableLegacyCertificateMatching").prop("checked", false);
+            editor.find(".Tls_EnableAutoHTTPS").prop("checked", false);
+        }
         editor.find(".Tls_EnableSNI").off("change").on("change", function() {
             saveTlsConfigs(uuid);
         });
