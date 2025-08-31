@@ -11,7 +11,6 @@
     <script type="text/javascript" src="../script/jquery-3.6.0.min.js"></script>
     <script type="text/javascript" src="../script/semantic/semantic.min.js"></script>
     <link rel="stylesheet" href="main.css">
-    <link rel="stylesheet" href="darktheme.css">
     <style>
         .clickable{
             cursor: pointer;
@@ -70,58 +69,15 @@
             color:white; 
         }
 
-        body.darkTheme .loglist {
-            background-color: #1b1c1d;
-            color: #ffffff;
+        #errorHighlightWrapper{
+            background-color: #f9f9f9;
+            padding: 1em;
+            border-radius: 0.3em;
+            max-height:300px;
+            overflow-y:auto;
+            margin-bottom:1em;
+            border: 1px solid #b3b3b3;
         }
-
-        body.darkTheme .loglist .ui.header .content .sub.header {
-            color: #bbbbbb;
-        }
-
-        body.darkTheme .loglist .ui.divider {
-            border-color: #333333;
-        }
-
-        body.darkTheme .loglist .ui.accordion .title,
-        body.darkTheme .loglist .ui.accordion .content {
-            background-color: #1b1c1d;
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.accordion .title:hover {
-            background-color: #333333;
-        }
-
-        body.darkTheme .loglist .ui.list .item {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.list .item .content {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.list .item .showing {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.button.filterbtn {
-            background-color: #333333;
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.button.filterbtn:hover {
-            background-color: #555555;
-        }
-
-        body.darkTheme .loglist .ui.toggle.checkbox label {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist small {
-            color: #bbbbbb;
-        }
-
 
         @media (min-width: 768px) {
             #logfileDropdown {
@@ -136,22 +92,34 @@
                 margin-left: 0.4em !important;
             }
         }
+
+        @media (max-width: 767px) {
+            #toggleFullscreenBtn {
+                display: none !important;
+            }
+
+            #logrenderWrapper{
+                margin-left: 0em !important;
+                margin-right: 0em !important;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Currently not darktheme ready -->
     <link rel="stylesheet" href="../darktheme.css">
-    <script src="../script/darktheme.js"></script>
+     <!-- <script src="../script/darktheme.js"></script> -->
     <br>
     <div class="ui container">
         <div class="ui stackable secondary menu">
             <div class="item" style="font-weight: bold;">
                 Zoraxy LogView
             </div>
-            <a class="item active panel_menu_btn" id="dashboardMenu">
-                Dashboard
-            </a>
-            <a class="item panel_menu_btn" id="logViewMenu">
+             <a class="item active panel_menu_btn" id="logViewMenu">
                 Log View
+            </a>
+            <a class="item panel_menu_btn" id="summaryMenu">
+                Summary
             </a>
             <a class="item panel_menu_btn" id="settingsMenu">
                 Settings
@@ -194,32 +162,83 @@
         </div>
     </div>
     <br><br>
-    <!-- Dashboard View -->
-    <div id="dashboard" class="ui container subpanel">
+    <!-- Summary View -->
+    <div id="summary" class="ui container subpanel">
         <h3 class="ui header">
-            Dashboard
+            Summary
         </h3>
         <div class="ui divider"></div>
-        <p>Welcome to LogVPro! Use the left menu to select a log file </p>
-        <div id="analyzer">
+        <div class="ui small statistics" style="display: flex; justify-content: center;">
+            <div class="statistic">
+                <div class="value" id="successRequestsCount"></div>
+                <div class="label">Success Requests</div>
+            </div>
+            <div class="statistic">
+                <div class="value" id="errorRequestsCount"></div>
+                <div class="label">Error Requests</div>
+            </div>
+            <div class="statistic">
+                <div class="value" id="totalRequestsCount"></div>
+                <div class="label">Total Requests</div>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <!-- Error Highlight Section -->
+        <h4 class="ui header">Error Highlights</h4>
+        <div id="errorHighlightWrapper">
+            <p><i class="ui green circle check icon"></i> No error data loaded</p>
+        </div>
 
+        <div class="ui divider"></div>
+        <div id="analyzer">
+            <div class="ui info message">
+                <div class="header">
+                    No log file selected
+                </div>
+                <p>Please select a log file from the dropdown menu to view analysis and summary.</p>
+            </div>
         </div>
     </div>
 
     <!-- Log Viewer -->
-    <div id="logviewer" class="ui container subpanel" style="display:none;">
-        <textarea id="logrender" spellcheck="false" readonly="true">
+    <div id="logviewer" class="subpanel" style="display:none;">
+        <div id="logrenderWrapper" class="ui container" style="position:relative;">
+            <textarea id="logrender" spellcheck="false" readonly="true">
 Pick a log file from the menu to start debugging
-        </textarea>
-        <br><br>
-        <div class="ui divider"></div>
-        <div class="ui toggle checkbox">
-            <input type="checkbox" id="enableAutoScroll" onchange="handleAutoScrollTicker(event, this.checked);">
-            <label>Auto Refresh<br>
-            <small>Refresh the viewing log every 10 seconds</small></label>
+            </textarea>
+            <!-- Full Screen Button -->
+            <button id="toggleFullscreenBtn" class="ui icon black button" title="Toggle Full Screen" style="border: 1px solid white; position:absolute; top:0.5em; right:0.5em; z-index:999;">
+                <i class="expand arrows alternate icon"></i>
+            </button>
+            <!-- Scroll to Bottom Button -->
+            <button id="scrollBottomBtn" class="ui icon black button" title="Scroll to Bottom" style="border: 1px solid white; position:absolute; bottom:0.5em; right:0.5em; z-index:999;">
+                <i class="angle double down icon"></i>
+            </button>
+            <script>
+                $("#scrollBottomBtn").on("click", function() {
+                    var textarea = document.getElementById('logrender');
+                    textarea.scrollTop = textarea.scrollHeight;
+                });
+            </script>
         </div>
-        <div class="ui divider"></div>
-        <small>Notes: Some log files might be huge. Make sure you have checked the log file size before opening</small>
+        <script>
+            // Toggle full screen for logrenderWrapper
+            $("#toggleFullscreenBtn").on("click", function() {
+                $("#logrenderWrapper").toggleClass("ui container");
+                $(this).find("i").toggleClass("expand arrows alternate compress arrows alternate");
+            });
+        </script>
+        <br>
+        <div class="ui container">
+            <div class="ui divider"></div>
+            <div class="ui toggle checkbox">
+                <input type="checkbox" id="enableAutoScroll" onchange="handleAutoScrollTicker(event, this.checked);">
+                <label>Auto Refresh<br>
+                <small>Refresh the viewing log every 3 seconds</small></label>
+            </div>
+            <div class="ui divider"></div>
+            <small>Notes: Some log files might be huge. Make sure you have checked the log file size before opening</small>
+        </div>
     </div>
 
     <!-- Settings -->
@@ -247,14 +266,14 @@ Pick a log file from the menu to start debugging
 
     /* Menu Subpanel Switch */
     $(".subpanel").hide();
-    $("#dashboard").show();
+    $("#logviewer").show();
     $(".panel_menu_btn").on("click", function() {
         var id = $(this).attr("id");
         $(".subpanel").hide();
         $(".ui.menu .item").removeClass("active");
         $(this).addClass("active");
-        if (id === "dashboardMenu") {
-            $("#dashboard").show();
+        if (id === "summaryMenu") {
+            $("#summary").show();
         } else if (id === "logViewMenu") {
             $("#logviewer").show();
         } else if (id === "settingsMenu") {
@@ -276,12 +295,18 @@ Pick a log file from the menu to start debugging
                 });
             }
             $('#logfileDropdown').dropdown('refresh');
+
+            //let firstItem = $menu.find('.item').first();
+            //if (firstItem.length) {
+            //    $('#logfileDropdown').dropdown('set selected', firstItem.data('value'));
+            //}
         });
     }
     $('#logfileDropdown').dropdown({
         onChange: function(value, text, $choice) {
             if (value) {
                 openLog(null, $choice.data('category'), value, currentFilter || "all");
+                loadLogSummary(value);
             }
         }
     });
@@ -333,6 +358,198 @@ Pick a log file from the menu to start debugging
         });
     });
 
+    /* Analyzer */
+    function loadLogSummary(filename){
+        $.get("/api/log/summary?file=" + filename, function(data){
+            if (data.error !== undefined){
+                $("#analyzer").html("<div class='ui negative message'><div class='header'>Error</div><p>" + data.error + "</p></div>");
+                return;
+            }
+            
+            $("#successRequestsCount").text(data.total_valid || 0);
+            $("#errorRequestsCount").text(data.total_errors || 0);
+            $("#totalRequestsCount").text(data.total_requests || 0);
+            renderSummaryToHTML(data);
+        });
+
+        $.get("/api/log/errors?file=" + encodeURIComponent(filename), function(data) {
+            renderErrorHighlights(data);
+        }).fail(function() {
+            $("#errorHighlightWrapper").html(
+                `<div class="ui error message">
+                    <div class="header">Failed to load error highlights</div>
+                </div>`
+            );
+        });
+
+    }
+
+    function renderSummaryToHTML(data){
+        /* Render summary analysis to #analyzer */
+        let html = `
+            <div class="ui stackable grid">
+                <div class="eight wide column">
+                    <h4 class="ui header">Request Methods</h4>
+                    <canvas id="requestMethodsChart" height="180"></canvas>
+                </div>
+                <div class="eight wide column">
+                    <h4 class="ui header">Hits Per Day</h4>
+                    <canvas id="hitsPerDayChart" height="180"></canvas>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui stackable grid">
+                <div class="sixteen wide column">
+                    <h4 class="ui header">Hits Per Site</h4>
+                    <div id="siteCharts"></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui stackable grid">
+                <div class="eight wide column">
+                    <h4 class="ui header">Unique IPs</h4>
+                    <table class="ui celled table">
+                        <thead><tr><th>IP</th><th>Requests</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.unique_ips)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([ip, count]) => `<tr><td>${ip}</td><td>${count}</td></tr>`)
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="eight wide column">
+                    <h4 class="ui header">Top User Agents</h4>
+                    <table class="ui celled table">
+                        <thead><tr><th>User Agent</th><th>Requests</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.top_user_agents)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([ua, count]) => `<tr><td style="word-break:break-all;">${ua}</td><td>${count}</td></tr>`)
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui stackable grid">
+                <div class="sixteen wide column">
+                    <h4 class="ui header">Top Paths</h4>
+                    <table class="ui celled table">
+                        <thead><tr><th>Path</th><th>Requests</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.top_paths)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([path, count]) => `<tr><td style="word-break:break-all;">${path}</td><td>${count}</td></tr>`)
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        $("#analyzer").html(html);
+
+        // Load Chart.js if not loaded
+        function loadChartJs(cb) {
+            if (window.Chart) { cb(); return; }
+            let s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/chart.js";
+            s.onload = cb;
+            document.head.appendChild(s);
+        }
+
+        // Prepare data for charts
+        function getDateRangeLabels(hitPerDay) {
+            let dates = Object.keys(hitPerDay).sort();
+            if (dates.length === 0) return [];
+            let start = new Date(dates[0]);
+            let end = new Date(dates[dates.length - 1]);
+            let labels = [];
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                let y = d.getFullYear(), m = (d.getMonth() + 1).toString().padStart(2, "0"), day = d.getDate().toString().padStart(2, "0");
+                labels.push(`${y}-${m}-${day}`);
+            }
+            return labels;
+        }
+
+        loadChartJs(function() {
+            // 1. Pie chart for request methods
+            let reqMethods = data.request_methods || {};
+            let reqLabels = Object.keys(reqMethods);
+            let reqCounts = Object.values(reqMethods);
+            new Chart(document.getElementById("requestMethodsChart"), {
+                type: "pie",
+                data: {
+                    labels: reqLabels,
+                    datasets: [{
+                        data: reqCounts,
+                        backgroundColor: ["#4b75ff", "#21ba45", "#db2828", "#fbbd08", "#b5cc18", "#a333c8"]
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+            });
+
+            // 2. Histogram for hit_per_day
+            let hitPerDay = data.hit_per_day || {};
+            let dayLabels = getDateRangeLabels(hitPerDay);
+            let dayCounts = dayLabels.map(d => hitPerDay[d] || 0);
+            new Chart(document.getElementById("hitsPerDayChart"), {
+                type: "bar",
+                data: {
+                    labels: dayLabels,
+                    datasets: [{
+                        label: "Hits",
+                        data: dayCounts,
+                        backgroundColor: "#4b75ff"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } }
+                }
+            });
+
+            // 3. Line chart for each site in hit_per_site
+            let siteChartsDiv = $("#siteCharts");
+            let siteData = data.hit_per_site || {};
+            let i = 0;
+            for (let [site, counts] of Object.entries(siteData)) {
+                let canvasId = "siteChart_" + i;
+                siteChartsDiv.append(`
+                    <div style="margin-bottom:2em;">
+                        <b>${site}</b>
+                        <canvas id="${canvasId}" height="100"></canvas>
+                    </div>
+                `);
+                // If counts length doesn't match dayLabels, pad left with zeros
+                let paddedCounts = counts.slice(-dayLabels.length);
+                while (paddedCounts.length < dayLabels.length) paddedCounts.unshift(0);
+                new Chart(document.getElementById(canvasId), {
+                    type: "line",
+                    data: {
+                        labels: dayLabels,
+                        datasets: [{
+                            label: "Hits",
+                            data: paddedCounts,
+                            fill: false,
+                            borderColor: "#21ba45",
+                            backgroundColor: "#21ba45",
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } }
+                    }
+                });
+                i++;
+            }
+        });
+    }
+
 
     function openLog(object, catergory, filename, filter="all"){
         $(".logfile.active").removeClass('active');
@@ -347,48 +564,13 @@ Pick a log file from the menu to start debugging
             renderLogWithCurrentFilter(data);
         });
     }
-</script>
-<script>
+
     function openLogInNewTab(){
         if (currentOpenedLogURL != ""){
             window.open(currentOpenedLogURL);
         }
     }
 
-    function initLogList(){
-        $("#logList").html("");
-        $.get("/api/log/list", function(data){
-            //console.log(data);
-            for (let [key, value] of Object.entries(data)) {
-                console.log(key, value);
-                value.reverse(); //Default value was from oldest to newest
-                var fileItemList = "";
-                value.forEach(file => {
-                    fileItemList += `<div class="item clickable logfile" onclick="openLog(this, '${key}','${file.Filename}');">
-                            <i class="file outline icon"></i>
-                            <div class="content">
-                                ${file.Title} (${formatBytes(file.Filesize)})
-                                <div class="showing"><i class="green chevron right icon"></i></div>
-                            </div>
-                        </div>`;
-                })
-                $("#logList").append(`<div class="title">
-                    <i class="dropdown icon"></i>
-                        ${key}
-                    </div>
-                    <div class="content">
-                        <div class="ui list">
-                            ${fileItemList}
-                        </div>
-                    </div>`);
-            }
-
-            $(".ui.accordion").accordion();
-        });
-    }
-    initLogList();
-
-    
     function formatBytes(x){
         var units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         let l = 0, n = parseInt(x, 10) || 0;
@@ -405,26 +587,6 @@ Pick a log file from the menu to start debugging
         textarea.scrollTop = textarea.scrollHeight;
     }
 
-    /* Filter related functions */
-    $(".filterbtn").on("click", function(evt){
-        //Set filter type
-        let filterType = $(this).attr("filter");
-        currentFilter = (filterType);
-        $(".filterbtn.active").removeClass("active");
-        $(this).addClass('active');
-
-        //Reload the log with filter
-        if (currentOpenedLogURL != ""){
-            $.get(currentOpenedLogURL, function(data){
-                if (data.error !== undefined){
-                    alert(data.error);
-                    return;
-                }
-                renderLogWithCurrentFilter(data);
-            }); 
-        }
-    });
-
     /* Auto scroll function */
     setInterval(function(){
         if (autoscroll){
@@ -439,174 +601,42 @@ Pick a log file from the menu to start debugging
                 }); 
             }
         }
-    }, 10000);
+    }, 3000);
     function handleAutoScrollTicker(event, checked){
         autoscroll = checked;
     }
 
-
-    /* Log analyzer */
-    /* --- Log Analyzer UI --- */
-    $("#analyzer").html(`
-        <div class="ui segment">
-            <h4 class="ui header">Log Analytics</h4>
-            <div class="ui divider"></div>
-            <div class="ui grid">
-                <div class="eight wide column">
-                    <canvas id="requestTypePie"></canvas>
-                </div>
-                <div class="eight wide column" id="originCharts"></div>
-            </div>
-            <div class="ui divider"></div>
-            <h5>Client IP Table</h5>
-            <div style="max-height:300px;overflow:auto;">
-                <table class="ui celled table" id="clientIpTable">
-                    <thead>
-                        <tr>
-                            <th>Client IP</th>
-                            <th>Requests</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    `);
-
-    // Load Chart.js
-    if (typeof Chart === "undefined") {
-        var chartjs = document.createElement("script");
-        chartjs.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        chartjs.onload = function() {
-            setupLogAnalyzer();
-        };
-        document.head.appendChild(chartjs);
-    } else {
-        setupLogAnalyzer();
-    }
-
-    function setupLogAnalyzer() {
-        // Add button to analyze current log
-        if ($("#analyzeLogBtn").length === 0) {
-            $("<button class='ui blue button' id='analyzeLogBtn' style='margin-bottom:1em;'>Analyze Current Log</button>")
-                .insertBefore("#analyzer .ui.segment");
+    // Error Highlights Rendering
+    function renderErrorHighlights(errors) {
+        if (!Array.isArray(errors) || errors.length === 0) {
+            $("#errorHighlightWrapper").html(
+                `<div class="ui positive message">
+                    <div class="header">No errors found</div>
+                    <p>This log file contains no errors.</p>
+                </div>`
+            );
+            return;
         }
-        $("#analyzeLogBtn").off("click").on("click", function() {
-            let log = $("#logrender").val();
-            if (!log || log.indexOf("Pick a log file") !== -1) {
-                alert("Please open a log file first.");
-                return;
-            }
-            analyzeLog(log);
+        let html = `<div class="ui list">`;
+        errors.forEach(function(err) {
+            let [timestamp, method, path, code] = err;
+            html += `
+                <div class="item">
+                    <div class="ui ${code.startsWith('5') ? 'red' : 'yellow'} message" style="margin-bottom:0.7em;">
+                        <div class="header">
+                            <span style="font-family:monospace;">[${timestamp}]</span>
+                            <span style="font-family:monospace;">${method}</span>
+                            <span style="margin-left:1em;font-family:monospace;">${path}</span>
+                            <span style="float:right;font-weight:bold;">${code}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         });
-    }
-
-    function analyzeLog(log) {
-        // Parse log lines
-        let lines = log.split("\n").filter(l => l.trim().length > 0 && l[0] === "[");
-        let reqTypeCount = {};
-        let originDayCount = {};
-        let clientIpCount = {};
-
-        let reqTypeRegex = /\] ([A-Z]+) /;
-        let originRegex = /\[origin:([^\]]+)\]/;
-        let dateRegex = /^\[([0-9\-]+) /;
-        let clientIpRegex = /\[client: ([^\]]+)\]/;
-        lines.forEach(line => {
-            // Request type
-            let reqTypeMatch = line.match(reqTypeRegex);
-            let reqType = reqTypeMatch ? reqTypeMatch[1] : "OTHER";
-            reqTypeCount[reqType] = (reqTypeCount[reqType] || 0) + 1;
-
-            // Origin
-            let originMatch = line.match(originRegex);
-            let origin = originMatch ? originMatch[1] : null;
-            
-            // Date
-            let dateMatch = line.match(dateRegex);
-            let date = dateMatch ? dateMatch[1] : null;
-
-            // Skip if origin or date is unknown
-            if (!origin || !date) return;
-
-            // Per-origin per-day
-            if (!originDayCount[origin]) originDayCount[origin] = {};
-            originDayCount[origin][date] = (originDayCount[origin][date] || 0) + 1;
-
-            // Client IP
-            let ipMatch = line.match(clientIpRegex);
-            let ip = ipMatch ? ipMatch[1] : "unknown";
-            clientIpCount[ip] = (clientIpCount[ip] || 0) + 1;
-        });
-
-        // --- Pie Chart: Request Type Ratio ---
-        let pieCtx = document.getElementById("requestTypePie").getContext("2d");
-        if (window.requestTypePieChart) window.requestTypePieChart.destroy();
-        window.requestTypePieChart = new Chart(pieCtx, {
-            type: "pie",
-            data: {
-                labels: Object.keys(reqTypeCount),
-                datasets: [{
-                    data: Object.values(reqTypeCount),
-                    backgroundColor: [
-                        "#2185d0", "#21ba45", "#db2828", "#fbbd08", "#a333c8", "#00b5ad", "#b5cc18"
-                    ]
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: { position: "bottom" }
-                }
-            }
-        });
-
-        // --- Histogram Charts: Requests per Host (Origin) per Day ---
-        let $originCharts = $("#originCharts");
-        $originCharts.html("");
-        Object.keys(originDayCount).forEach((origin, idx) => {
-            let chartId = "originChart_" + idx;
-            $originCharts.append(`<div style="margin-bottom:2em;"><b>${origin}</b><canvas id="${chartId}" height="120"></canvas></div>`);
-            let dayCounts = originDayCount[origin];
-            let days = Object.keys(dayCounts).sort();
-            let counts = days.map(d => dayCounts[d]);
-            let ctx = document.getElementById(chartId).getContext("2d");
-            new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels: days,
-                datasets: [{
-                label: "Requests",
-                data: counts,
-                backgroundColor: "#2185d0"
-                }]
-            },
-            options: {
-                plugins: {
-                legend: { display: false }
-                },
-                scales: {
-                x: { 
-                    title: { display: true, text: "Date" },
-                    grid: { display: false }
-                },
-                y: { 
-                    title: { display: true, text: "Requests" }, 
-                    beginAtZero: true,
-                    grid: { display: true }
-                }
-                }
-            }
-            });
-        });
-
-        // --- Table: Client IPs ---
-        let $tbody = $("#clientIpTable tbody");
-        $tbody.html("");
-        Object.entries(clientIpCount)
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([ip, count]) => {
-                $tbody.append(`<tr><td>${ip}</td><td>${count}</td></tr>`);
-            });
+        html += `</div>`;
+        $("#errorHighlightWrapper").html(html);
+        //Scroll to bottom of the error highlight
+        $("#errorHighlightWrapper").scrollTop($("#errorHighlightWrapper")[0].scrollHeight);
     }
 </script>
 </html>

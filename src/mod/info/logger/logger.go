@@ -18,9 +18,10 @@ import (
 */
 
 type Logger struct {
-	Prefix         string //Prefix for log files
-	LogFolder      string //Folder to store the log  file
-	CurrentLogFile string //Current writing filename
+	Prefix         string       //Prefix for log files
+	LogFolder      string       //Folder to store the log  file
+	CurrentLogFile string       //Current writing filename
+	RotateOption   RotateOption //Options for log rotation, see rotate.go
 	logger         *log.Logger
 	file           *os.File
 }
