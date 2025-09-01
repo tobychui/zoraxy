@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/eventsystem"
-	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 func (p *Plugin) GetID() eventsystem.ListenerID {
@@ -20,7 +20,7 @@ func (p *Plugin) GetID() eventsystem.ListenerID {
 }
 
 // Send an event to the plugin
-func (p *Plugin) Notify(event zoraxyPlugin.Event) error {
+func (p *Plugin) Notify(event events.Event) error {
 	// Handle the event notification
 	if !p.Enabled || p.AssignedPort == 0 {
 		return fmt.Errorf("plugin %s is not running", p.Spec.ID)

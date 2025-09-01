@@ -1,4 +1,4 @@
-package zoraxy_plugin
+package events
 
 import (
 	"encoding/json"

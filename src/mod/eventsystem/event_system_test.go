@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 // Test (de)serialization of events
 func TestEventDeSerialization(t *testing.T) {
 	type SerializationTest struct {
 		name         string
-		event        zoraxy_plugin.Event
+		event        events.Event
 		expectedJson string
 	}
 
@@ -22,10 +22,10 @@ func TestEventDeSerialization(t *testing.T) {
 	tests := []SerializationTest{
 		{
 			name: "BlacklistedIPBlocked",
-			event: zoraxy_plugin.Event{
-				Name:      zoraxy_plugin.EventBlacklistedIPBlocked,
+			event: events.Event{
+				Name:      events.EventBlacklistedIPBlocked,
 				Timestamp: timestamp,
-				Data: &zoraxy_plugin.BlacklistedIPBlockedEvent{
+				Data: &events.BlacklistedIPBlockedEvent{
 					IP:           "192.168.1.1",
 					Comment:      "Test comment",
 					RequestedURL: "http://example.com",
@@ -38,10 +38,10 @@ func TestEventDeSerialization(t *testing.T) {
 		},
 		{
 			name: "BlacklistToggled",
-			event: zoraxy_plugin.Event{
-				Name:      zoraxy_plugin.EventBlacklistToggled,
+			event: events.Event{
+				Name:      events.EventBlacklistToggled,
 				Timestamp: timestamp,
-				Data: &zoraxy_plugin.BlacklistToggledEvent{
+				Data: &events.BlacklistToggledEvent{
 					RuleID:  "rule123",
 					Enabled: true,
 				},
@@ -50,10 +50,10 @@ func TestEventDeSerialization(t *testing.T) {
 		},
 		{
 			name: "AccessRuleCreated",
-			event: zoraxy_plugin.Event{
-				Name:      zoraxy_plugin.EventAccessRuleCreated,
+			event: events.Event{
+				Name:      events.EventAccessRuleCreated,
 				Timestamp: timestamp,
-				Data: &zoraxy_plugin.AccessRuleCreatedEvent{
+				Data: &events.AccessRuleCreatedEvent{
 					ID:               "rule456",
 					Name:             "New Access Rule",
 					Desc:             "A dummy access rule",
@@ -79,8 +79,8 @@ func TestEventDeSerialization(t *testing.T) {
 			}
 
 			// Deserialize the JSON back into an event
-			var deserializedEvent zoraxy_plugin.Event
-			if err := zoraxy_plugin.ParseEvent(jsonData, &deserializedEvent); err != nil {
+			var deserializedEvent events.Event
+			if err := events.ParseEvent(jsonData, &deserializedEvent); err != nil {
 				t.Fatalf("Failed to parse event: %v", err)
 			}
 
@@ -90,18 +90,18 @@ func TestEventDeSerialization(t *testing.T) {
 			}
 
 			switch data := deserializedEvent.Data.(type) {
-			case *zoraxy_plugin.BlacklistedIPBlockedEvent:
-				originalData, ok := test.event.Data.(*zoraxy_plugin.BlacklistedIPBlockedEvent)
+			case *events.BlacklistedIPBlockedEvent:
+				originalData, ok := test.event.Data.(*events.BlacklistedIPBlockedEvent)
 				if !ok || *data != *originalData {
 					t.Fatalf("Deserialized BlacklistedIPBlockedEvent does not match original.\nGot:  %+v\nWant: %+v", data, originalData)
 				}
-			case *zoraxy_plugin.AccessRuleCreatedEvent:
-				originalData, ok := test.event.Data.(*zoraxy_plugin.AccessRuleCreatedEvent)
+			case *events.AccessRuleCreatedEvent:
+				originalData, ok := test.event.Data.(*events.AccessRuleCreatedEvent)
 				if !ok || *data != *originalData {
 					t.Fatalf("Deserialized AccessRuleCreatedEvent does not match original.\nGot:  %+v\nWant: %+v", data, originalData)
 				}
-			case *zoraxy_plugin.BlacklistToggledEvent:
-				originalData, ok := test.event.Data.(*zoraxy_plugin.BlacklistToggledEvent)
+			case *events.BlacklistToggledEvent:
+				originalData, ok := test.event.Data.(*events.BlacklistToggledEvent)
 				if !ok || *data != *originalData {
 					t.Fatalf("Deserialized BlacklistToggledEvent does not match original.\nGot:  %+v\nWant: %+v", data, originalData)
 				}

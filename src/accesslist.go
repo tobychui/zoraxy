@@ -11,7 +11,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/eventsystem"
-	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -101,7 +101,7 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 
 	// emit an event for the new access rule creation
 	eventsystem.Publisher.Emit(
-		&zoraxy_plugin.AccessRuleCreatedEvent{
+		&events.AccessRuleCreatedEvent{
 			ID:               ruleUUID,
 			Name:             ruleName,
 			Desc:             ruleDesc,
@@ -372,7 +372,7 @@ func handleBlacklistEnable(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		eventsystem.Publisher.Emit(&zoraxy_plugin.BlacklistToggledEvent{
+		eventsystem.Publisher.Emit(&events.BlacklistToggledEvent{
 			RuleID:  ruleID,
 			Enabled: rule.BlacklistEnabled,
 		})

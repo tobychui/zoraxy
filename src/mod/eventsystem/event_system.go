@@ -6,21 +6,22 @@ import (
 
 	"imuslab.com/zoraxy/mod/info/logger"
 	// "imuslab.com/zoraxy/mod/plugins"
-	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 type ListenerID string
 type Listener interface {
-	Notify(event zoraxyPlugin.Event) error
+	Notify(event events.Event) error
 	GetID() ListenerID
 }
 
 // eventManager manages event subscriptions and dispatching events to listeners
 type eventManager struct {
-	subscriptions map[zoraxyPlugin.EventName][]ListenerID // EventType -> []Subscriber, tracks which events each listener is subscribed to
-	subscribers   map[ListenerID]Listener                 // ListenerID -> Listener, tracks all registered listeners
-	logger        *logger.Logger                          // Logger for the event manager
-	mutex         sync.RWMutex                            // Mutex for concurrent access
+	subscriptions map[events.EventName][]ListenerID // EventType -> []Subscriber, tracks which events each listener is subscribed to
+	subscribers   map[ListenerID]Listener           // ListenerID -> Listener, tracks all registered listeners
+	logger        *logger.Logger                    // Logger for the event manager
+	mutex         sync.RWMutex                      // Mutex for concurrent access
 }
 
 var (
@@ -33,7 +34,7 @@ var (
 func InitEventSystem(logger *logger.Logger) {
 	once.Do(func() {
 		Publisher = &eventManager{
-			subscriptions: make(map[zoraxyPlugin.EventName][]ListenerID),
+			subscriptions: make(map[events.EventName][]ListenerID),
 			subscribers:   make(map[ListenerID]Listener),
 			logger:        logger,
 		}
@@ -41,7 +42,7 @@ func InitEventSystem(logger *logger.Logger) {
 }
 
 // RegisterSubscriberToEvent adds a listener to the subscription list for an event type
-func (em *eventManager) RegisterSubscriberToEvent(subscriber Listener, eventType zoraxyPlugin.EventName) error {
+func (em *eventManager) RegisterSubscriberToEvent(subscriber Listener, eventType events.EventName) error {
 	em.mutex.Lock()
 	defer em.mutex.Unlock()
 
@@ -86,7 +87,7 @@ func (em *eventManager) UnregisterSubscriber(listenerID ListenerID) error {
 }
 
 // Emit dispatches an event to all subscribed listeners
-func (em *eventManager) Emit(payload zoraxyPlugin.EventPayload) error {
+func (em *eventManager) Emit(payload events.EventPayload) error {
 	eventName := payload.GetName()
 
 	em.mutex.RLock()
@@ -98,7 +99,7 @@ func (em *eventManager) Emit(payload zoraxyPlugin.EventPayload) error {
 	}
 
 	// Create the event
-	event := zoraxyPlugin.Event{
+	event := events.Event{
 		Name:      eventName,
 		Timestamp: time.Now().Unix(),
 		Data:      payload,

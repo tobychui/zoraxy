@@ -16,6 +16,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/eventsystem"
 	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 func (m *Manager) StartPlugin(pluginID string) error {
@@ -155,7 +156,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	// Register event subscriptions
 	if thisPlugin.Spec.SubscriptionsEvents != nil {
 		for eventName := range thisPlugin.Spec.SubscriptionsEvents {
-			eventType := zoraxyPlugin.EventName(eventName)
+			eventType := events.EventName(eventName)
 			err := eventsystem.Publisher.RegisterSubscriberToEvent(thisPlugin, eventType)
 			if err != nil {
 				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), err)
