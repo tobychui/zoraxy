@@ -65,6 +65,27 @@ func startupSequence() {
 	} else {
 		panic(err)
 	}
+
+	if !*enableLog {
+		//Disable file logging, use fmt logger instead
+		l, err = logger.NewFmtLogger()
+		if err != nil {
+			panic(err)
+		}
+		SystemWideLogger = l
+		SystemWideLogger.Println("System wide logging is disabled, all logs will be printed to STDOUT only")
+	} else {
+		l.SetRotateOption(&logger.RotateOption{
+			Enabled:    *logRotate != 0,
+			MaxSize:    int64(*logRotate) * 1024, //Convert to bytes
+			MaxBackups: 10,
+			Compress:   *enableLogCompression,
+			BackupDir:  "",
+		})
+		SystemWideLogger = l
+		SystemWideLogger.Println("System wide logging is enabled")
+	}
+
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
 		RootFolder: *path_logFile,
 		Extension:  LOG_EXTENSION,
@@ -72,9 +93,10 @@ func startupSequence() {
 
 	//Create database
 	backendType := database.GetRecommendedBackendType()
-	if *databaseBackend == "leveldb" {
+	switch *databaseBackend {
+	case "leveldb":
 		backendType = dbinc.BackendLevelDB
-	} else if *databaseBackend == "boltdb" {
+	case "boltdb":
 		backendType = dbinc.BackendBoltDB
 	}
 	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)

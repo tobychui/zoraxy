@@ -121,9 +121,9 @@
             <a class="item panel_menu_btn" id="summaryMenu">
                 Summary
             </a>
-            <a class="item panel_menu_btn" id="settingsMenu">
+            <!-- <a class="item panel_menu_btn" id="settingsMenu">
                 Settings
-            </a>
+            </a> -->
         </div>
     </div>
     <div class="ui container">
@@ -158,6 +158,11 @@
             <!-- Open in New Tab Button -->
             <button class="ui icon basic button logfile_menu_btn" onclick="openLogInNewTab();" title="Open in New Tab">
                 <i class="external alternate icon"></i>
+            </button>
+
+            <!-- Refresh -->
+            <button class="ui icon basic button logfile_menu_btn" id="refreshLogBtn" title="Refresh Current Log">
+                <i class="black sync icon"></i>
             </button>
         </div>
     </div>
@@ -278,6 +283,16 @@ Pick a log file from the menu to start debugging
             $("#logviewer").show();
         } else if (id === "settingsMenu") {
             $("#settings").show();
+        }
+    });
+
+    /* Refresh Button */
+    $("#refreshLogBtn").on("click", function() {
+        if (currentLogFile) {
+            openLog(null, null, currentLogFile, currentFilter);
+            loadLogSummary(currentLogFile);
+        } else {
+            alert('Please select a log file first.');
         }
     });
 
@@ -610,10 +625,7 @@ Pick a log file from the menu to start debugging
     function renderErrorHighlights(errors) {
         if (!Array.isArray(errors) || errors.length === 0) {
             $("#errorHighlightWrapper").html(
-                `<div class="ui positive message">
-                    <div class="header">No errors found</div>
-                    <p>This log file contains no errors.</p>
-                </div>`
+                `<p><i class="ui green circle check icon"></i> No error found</p>`
             );
             return;
         }

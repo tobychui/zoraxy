@@ -4,20 +4,31 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
+
+	"imuslab.com/zoraxy/mod/utils"
 )
 
 type RotateOption struct {
-	Enabled    bool   //Whether log rotation is enabled
+	Enabled    bool   //Whether log rotation is enabled, default false
 	MaxSize    int64  //Maximum size of the log file in bytes before rotation (e.g. 10 * 1024 * 1024 for 10MB)
 	MaxBackups int    //Maximum number of backup files to keep
 	Compress   bool   //Whether to compress the rotated files
 	BackupDir  string //Directory to store backup files, if empty, use the same directory as the log file
 }
 
+// Stop the log rotation ticker
+func (l *Logger) StopLogRotateTicker() {
+	if l.logRotateTicker != nil {
+		l.logRotateTicker.Stop()
+	}
+}
+
+// Check if the log file needs rotation
 func (l *Logger) LogNeedRotate(filename string) bool {
 	if !l.RotateOption.Enabled {
 		return false
@@ -29,19 +40,82 @@ func (l *Logger) LogNeedRotate(filename string) bool {
 	return info.Size() >= l.RotateOption.MaxSize
 }
 
+// Handle web request trigger log ratation
+func (l *Logger) HandleDebugTriggerLogRotation(w http.ResponseWriter, r *http.Request) {
+	err := l.RotateLog()
+	if err != nil {
+		utils.SendErrorResponse(w, "Log rotation error: "+err.Error())
+		return
+	}
+	l.PrintAndLog("logger", "Log rotation triggered via REST API", nil)
+	utils.SendOK(w)
+}
+
+// ArchiveLog will archive the given log file, use during month change
+func (l *Logger) ArchiveLog(filename string) error {
+	if l.RotateOption == nil || !l.RotateOption.Enabled {
+		return nil
+	}
+
+	// Determine backup directory
+	backupDir := l.RotateOption.BackupDir
+	if backupDir == "" {
+		backupDir = filepath.Dir(filename)
+	}
+
+	// Ensure backup directory exists
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return err
+	}
+
+	// Generate archived filename with timestamp
+	timestamp := time.Now().Format("20060102-150405")
+	baseName := filepath.Base(filename)
+	baseName = baseName[:len(baseName)-len(filepath.Ext(baseName))]
+	archivedName := fmt.Sprintf("%s.%s.log", baseName, timestamp)
+	archivedPath := filepath.Join(backupDir, archivedName)
+
+	// Rename current log file to archived file
+	if err := os.Rename(filename, archivedPath); err != nil {
+		return err
+	}
+
+	// Optionally compress the archived file
+	if l.RotateOption.Compress {
+		if err := compressFile(archivedPath); err != nil {
+			return err
+		}
+		os.Remove(archivedPath)
+	}
+
+	return nil
+}
+
+// Execute log rotation
 func (l *Logger) RotateLog() error {
-	if !l.RotateOption.Enabled {
+	if l.RotateOption == nil || !l.RotateOption.Enabled {
 		return nil
 	}
 
 	needRotate := l.LogNeedRotate(l.CurrentLogFile)
+	l.PrintAndLog("logger", fmt.Sprintf("Log rotation check: need rotate = %v", needRotate), nil)
 	if !needRotate {
 		return nil
 	}
 
-	//Close current file
+	// Close current file with retry on failure
 	if l.file != nil {
-		l.file.Close()
+		var closeErr error
+		for i := 0; i < 5; i++ {
+			closeErr = l.file.Close()
+			if closeErr == nil {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+		if closeErr != nil {
+			return closeErr
+		}
 	}
 
 	// Determine backup directory
@@ -58,7 +132,8 @@ func (l *Logger) RotateLog() error {
 	// Generate rotated filename with timestamp
 	timestamp := time.Now().Format("20060102-150405")
 	baseName := filepath.Base(l.CurrentLogFile)
-	rotatedName := fmt.Sprintf("%s.%s", baseName, timestamp)
+	baseName = baseName[:len(baseName)-len(filepath.Ext(baseName))]
+	rotatedName := fmt.Sprintf("%s.%s.log", baseName, timestamp)
 	rotatedPath := filepath.Join(backupDir, rotatedName)
 
 	// Rename current log file to rotated file
@@ -95,7 +170,9 @@ func (l *Logger) RotateLog() error {
 		return err
 	}
 	l.file = file
-
+	if l.logger != nil {
+		l.logger.SetOutput(file)
+	}
 	return nil
 }
 
