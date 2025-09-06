@@ -157,6 +157,10 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	if thisPlugin.Spec.SubscriptionsEvents != nil {
 		for eventName := range thisPlugin.Spec.SubscriptionsEvents {
 			eventType := events.EventName(eventName)
+			if !eventType.IsValid() {
+				m.Log("Invalid event name: "+string(eventName), nil)
+				continue
+			}
 			err := eventsystem.Publisher.RegisterSubscriberToEvent(thisPlugin, eventType)
 			if err != nil {
 				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), err)

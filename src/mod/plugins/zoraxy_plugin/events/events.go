@@ -32,6 +32,19 @@ const (
 	// Add more event types as needed
 )
 
+var validEventNames = map[EventName]bool{
+	EventBlacklistedIPBlocked: true,
+	EventBlacklistToggled:     true,
+	EventAccessRuleCreated:    true,
+	// Add more event types as needed
+	// NOTE: Keep up-to-date with event names specified above
+}
+
+// Check if the event name is valid
+func (name EventName) IsValid() bool {
+	return validEventNames[name]
+}
+
 // BlacklistedIPBlockedEvent represents an event when a blacklisted IP is blocked
 type BlacklistedIPBlockedEvent struct {
 	IP           string `json:"ip"`
