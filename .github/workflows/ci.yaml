@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup-build:
+  build-lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -50,3 +50,31 @@ jobs:
       - name: Lint code (staticcheck)
         run: staticcheck ./...
         working-directory: src
+
+  check-example-plugins:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.22
+          cache-dependency-path: src/go.sum
+
+      - name: Verify dependencies (for zoraxy)
+        run: go mod verify
+        working-directory: src
+
+      - name: Install dependencies (for zoraxy)
+        run: go mod tidy
+        working-directory: src
+
+      - name: Example plugins are up to date and build successfully
+        run: |
+          bash build-all.sh && git diff --exit-code # if code fails to build, or if there are code changes, this step will fail
+        working-directory: example/plugins
+
+      # TODO: if possible, it may be good to test whether the plugins correctly
+      #       report their introspection data when run with the -introspect flag.
