@@ -390,6 +390,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			//TLS
 			BypassGlobalTLS:  useBypassGlobalTLS,
 			AccessFilterUUID: accessRuleID,
+			TlsOptions:       tlscert.GetDefaultHostSpecificTlsBehavior(),
+
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
 			//Custom headers
