@@ -120,7 +120,7 @@
         <div class="selectColTitle">Unassigned Plugins</div>
         <div id="selectablePluginList" class="ui relaxed divided list" style="border: 1px solid var(--divider_color);">
           <div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
-            <i class="ui arrow up icon"></i> Select a tag to view available plugins
+            <i class="ui green check circle icon"></i> No selected tag
           </div>
         </div>
       </div>
@@ -314,7 +314,9 @@ loadTags();
 
 //This is used as a dummy function to initialize the selectable plugin list
 function initSelectablePluginList(){
-  $("#selectablePluginList").html("");
+  $("#selectablePluginList").html(`<div class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
+            <i class="ui green check circle icon"></i> No selected tag
+          </div>`);
   $.get(`/api/plugins/list`, function(data){
       data.forEach(plugin => {
       if (plugin.Spec.type != 0) {

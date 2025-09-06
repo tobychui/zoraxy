@@ -566,11 +566,12 @@ func handleWhitelistAllowLoopback(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		if enable == "true" {
+		switch enable {
+		case "true":
 			rule.ToggleAllowLoopback(true)
-		} else if enable == "false" {
+		case "false":
 			rule.ToggleAllowLoopback(false)
-		} else {
+		default:
 			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
 			return
 		}

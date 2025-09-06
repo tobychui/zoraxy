@@ -1059,7 +1059,7 @@
             })
         });
 
-        $.get("/api/whitelist/allowLocal", function(data){
+        $.get("/api/whitelist/allowLocal?id=" + currentEditingAccessRule, function(data){
             if (data == true){
                 $('#enableWhitelistLoopback').parent().checkbox("set checked");
             }else{
@@ -1080,7 +1080,19 @@
             url: '/api/whitelist/allowLocal',
             data: { enable: isChecked, id: currentEditingAccessRule},
             success: function(data){
-                msgbox("Loopback whitelist " + (isChecked ? "enabled" : "disabled"), true);
+                if (data.error != undefined){
+                    msgbox("Failed to update loopback whitelist: " + data.error, false);
+                    //Revert the checkbox state
+                    if (isChecked){
+                        $('#enableWhitelistLoopback').parent().checkbox("set unchecked");
+                    }else{
+                        $('#enableWhitelistLoopback').parent().checkbox("set checked");
+                    }
+                    return;
+                }else{
+                    msgbox("Loopback whitelist " + (isChecked ? "enabled" : "disabled"), true);
+                }
+                
             }
         });
     }
