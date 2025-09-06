@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/eventsystem"
 	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 func (m *Manager) StartPlugin(pluginID string) error {
@@ -150,6 +152,19 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	// Store the cmd object so it can be accessed later for stopping the plugin
 	thisPlugin.process = cmd
 	thisPlugin.Enabled = true
+
+	// Register event subscriptions
+	if thisPlugin.Spec.SubscriptionsEvents != nil {
+		for eventName := range thisPlugin.Spec.SubscriptionsEvents {
+			eventType := events.EventName(eventName)
+			err := eventsystem.Publisher.RegisterSubscriberToEvent(thisPlugin, eventType)
+			if err != nil {
+				m.Log("Failed to subscribe plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), err)
+			} else {
+				m.Log("Subscribed plugin "+thisPlugin.Spec.Name+" to event "+string(eventName), nil)
+			}
+		}
+	}
 
 	//Create a new static forwarder router for each of the static capture paths
 	thisPlugin.StartAllStaticPathRouters()
@@ -287,6 +302,11 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	err = m.Options.APIKeyManager.RevokeAPIKeysForPlugin(thisPlugin.Spec.ID)
 	if err != nil {
 		m.Log("Failed to revoke API keys for plugin "+thisPlugin.Spec.Name, err)
+	}
+	//Unsubscribe from all events
+	err = eventsystem.Publisher.UnregisterSubscriber(eventsystem.ListenerID(thisPlugin.Spec.ID))
+	if err != nil {
+		m.Log("Failed to unsubscribe plugin "+thisPlugin.Spec.Name+" from events", err)
 	}
 
 	return nil

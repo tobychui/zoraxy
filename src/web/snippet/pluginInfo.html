@@ -136,6 +136,11 @@
                                 <small>The relative path of the web UI</small></td>
                                 <td id="registered_ui_proxy_path"></td>
                             </tr>
+                            <tr>
+                                <td>Registered Subscribed Event Path</td>
+                                <small>Path where subscribed events are sent</small>
+                                <td id="registered_subscription_path">Not registered</td>
+                            </tr>
                         </tbody>
                     </table>
                     <div class="ui divider"></div>
@@ -158,6 +163,23 @@
                         If the plugin does not have an API key, it will not be able to access these endpoints.
                         API keys are generated automatically by Zoraxy when a plugin with permitted API endpoints is enabled.
                     </p>
+                    <div class="ui divider"></div>
+                    <h4>Plugin IntroSpect Event Subscriptions</h4>
+                    <p>The following events are subscribed to by this plugin and will be sent to the plugin's event subscription path:</p>
+                    <table class="ui basic celled unstackable table">
+                        <thead>
+                            <tr>
+                                <th>Event Type</th>
+                                <th>Comment</th>
+                            </tr>
+                        </thead>
+                        <!-- This tbody will be filled by JavaScript -->
+                        <tbody id="plugin_subscriptions_events">
+                            <tr>
+                                <td colspan="2">No subscribed events</td>
+                            </tr>
+                        </tbody>
+                    </table>
                     <div class="ui divider"></div>
                 </div>
             </div>
@@ -234,11 +256,16 @@
                 if (registeredUIProxyPath == null || registeredUIProxyPath == "") {
                     registeredUIProxyPath = "No UI registered";
                 }
+                let subscriptionPath = data.Spec.subscription_path;
+                if (subscriptionPath == null || subscriptionPath == "") {
+                    subscriptionPath = "Not registered";
+                }
 
                 $("#static_capture_ingress").text(staticCaptureIngress);
                 $("#dynamic_capture_sniffing_path").text(dynamicCaptureSniffingPath);
                 $("#dynamic_capture_ingress").text(dynamicCaptureIngress);
                 $("#registered_ui_proxy_path").text(registeredUIProxyPath);
+                $("#registered_subscription_path").text(subscriptionPath);
 
                 //Update permitted API endpoints
                 let apiEndpoints = data.Spec.permitted_api_endpoints;
@@ -255,9 +282,24 @@
                     });
                     $("#plugin_permitted_api_endpoints").html(endpointRows);
                 }
+                
+                //Update subscribed events if available
+                let subscriptionsEvents = data.Spec.subscriptions_events; // this is a map of event_type to comment
+                if (subscriptionsEvents == null || Object.keys(subscriptionsEvents).length == 0) {
+                    $("#plugin_subscriptions_events").html('<tr><td colspan="2">No subscribed events</td></tr>');
+                } else {
+                let eventRows = '';
+                Object.keys(subscriptionsEvents).forEach(function(eventType) {
+                    eventRows += `<tr>
+                        <td>${eventType}</td>
+                        <td>${subscriptionsEvents[eventType] || "No comment"}</td>
+                        </tr>`;
+                    });
+                    $("#plugin_subscriptions_events").html(eventRows);
+                }
+                
                 });
             }
-
             $(".advanceSettings").accordion();
 
             function closeThisWrapper(){
