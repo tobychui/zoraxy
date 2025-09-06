@@ -73,7 +73,7 @@ jobs:
 
       - name: Example plugins are up to date and build successfully
         run: |
-          bash build-all.sh && git diff --exit-code # if code fails to build, or if there are code changes, this step will fail
+          bash build_all.sh && git diff --exit-code # if code fails to build, or if there are code changes, this step will fail
         working-directory: example/plugins
 
       # TODO: if possible, it may be good to test whether the plugins correctly
