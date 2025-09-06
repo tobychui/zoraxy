@@ -96,6 +96,8 @@ func (ar *AuthRouter) HandleAPIOptions(w http.ResponseWriter, r *http.Request) {
 		ar.handleOptionsGET(w, r)
 	case http.MethodPost:
 		ar.handleOptionsPOST(w, r)
+	case http.MethodDelete:
+		ar.handleOptionsDelete(w, r)
 	default:
 		ar.handleOptionsMethodNotAllowed(w, r)
 	}
@@ -157,6 +159,28 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyUseXOriginalHeaders, ar.options.UseXOriginalHeaders)
 
 	ar.logOptions()
+
+	utils.SendOK(w)
+}
+
+func (ar *AuthRouter) handleOptionsDelete(w http.ResponseWriter, r *http.Request) {
+	ar.options.Address = ""
+	ar.options.ResponseHeaders = nil
+	ar.options.ResponseClientHeaders = nil
+	ar.options.RequestHeaders = nil
+	ar.options.RequestIncludedCookies = nil
+	ar.options.RequestExcludedCookies = nil
+	ar.options.RequestIncludeBody = false
+	ar.options.UseXOriginalHeaders = false
+
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyAddress)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyResponseHeaders)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyResponseClientHeaders)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyRequestHeaders)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyRequestIncludedCookies)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyRequestExcludedCookies)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyRequestIncludeBody)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyUseXOriginalHeaders)
 
 	utils.SendOK(w)
 }
