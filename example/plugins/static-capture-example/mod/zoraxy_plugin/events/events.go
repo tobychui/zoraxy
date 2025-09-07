@@ -12,6 +12,9 @@ type EventName string
 type EventPayload interface {
 	// GetName returns the event type
 	GetName() EventName
+
+	// Returns the "source" of the event, that is, the component or plugin that emitted the event
+	GetEventSource() string
 }
 
 // Event represents a system event
@@ -62,6 +65,10 @@ func (e *BlacklistedIPBlockedEvent) GetName() EventName {
 	return EventBlacklistedIPBlocked
 }
 
+func (e *BlacklistedIPBlockedEvent) GetEventSource() string {
+	return "proxy-access"
+}
+
 // BlacklistToggledEvent represents an event when the blacklist is disabled for an access rule
 type BlacklistToggledEvent struct {
 	RuleID  string `json:"rule_id"`
@@ -70,6 +77,10 @@ type BlacklistToggledEvent struct {
 
 func (e *BlacklistToggledEvent) GetName() EventName {
 	return EventBlacklistToggled
+}
+
+func (e *BlacklistToggledEvent) GetEventSource() string {
+	return "accesslist-api"
 }
 
 // AccessRuleCreatedEvent represents an event when a new access ruleset is created
@@ -83,6 +94,10 @@ type AccessRuleCreatedEvent struct {
 
 func (e *AccessRuleCreatedEvent) GetName() EventName {
 	return EventAccessRuleCreated
+}
+
+func (e *AccessRuleCreatedEvent) GetEventSource() string {
+	return "accesslist-api"
 }
 
 // ParseEvent parses a JSON byte slice into an Event struct
