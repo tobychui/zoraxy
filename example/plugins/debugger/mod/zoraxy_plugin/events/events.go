@@ -17,7 +17,10 @@ type EventPayload interface {
 // Event represents a system event
 type Event struct {
 	Name      EventName    `json:"name"`
-	Timestamp int64        `json:"timestamp"` // Unix timestamp
+	// Unix timestamp
+	Timestamp int64        `json:"timestamp"`
+	// UUID for the event
+	UUID      string       `json:"uuid"`
 	Data      EventPayload `json:"data"`
 }
 
@@ -88,6 +91,7 @@ func ParseEvent(jsonData []byte, event *Event) error {
 	var temp struct {
 		Name      EventName `json:"name"`
 		Timestamp int64     `json:"timestamp"`
+		UUID      string    `json:"uuid"`
 	}
 	if err := json.Unmarshal(jsonData, &temp); err != nil {
 		return err
@@ -96,6 +100,7 @@ func ParseEvent(jsonData []byte, event *Event) error {
 	// Set the event name and timestamp
 	event.Name = temp.Name
 	event.Timestamp = temp.Timestamp
+	event.UUID = temp.UUID
 
 	// Now, based on the event type, unmarshal the specific payload
 	switch temp.Name {

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
@@ -18,6 +19,7 @@ func TestEventDeSerialization(t *testing.T) {
 	}
 
 	timestamp := time.Now().Unix()
+	uuid := uuid.New().String()
 
 	tests := []SerializationTest{
 		{
@@ -25,6 +27,7 @@ func TestEventDeSerialization(t *testing.T) {
 			event: events.Event{
 				Name:      events.EventBlacklistedIPBlocked,
 				Timestamp: timestamp,
+				UUID:      uuid,
 				Data: &events.BlacklistedIPBlockedEvent{
 					IP:           "192.168.1.1",
 					Comment:      "Test comment",
@@ -34,25 +37,27 @@ func TestEventDeSerialization(t *testing.T) {
 					Method:       "GET",
 				},
 			},
-			expectedJson: `{"name":"blacklistedIpBlocked","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"data":{"ip":"192.168.1.1","comment":"Test comment","requested_url":"http://example.com","hostname":"example.com","user_agent":"TestUserAgent","method":"GET"}}`,
+			expectedJson: `{"name":"blacklistedIpBlocked","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"uuid":"` + uuid + `","data":{"ip":"192.168.1.1","comment":"Test comment","requested_url":"http://example.com","hostname":"example.com","user_agent":"TestUserAgent","method":"GET"}}`,
 		},
 		{
 			name: "BlacklistToggled",
 			event: events.Event{
 				Name:      events.EventBlacklistToggled,
 				Timestamp: timestamp,
+				UUID:      uuid,
 				Data: &events.BlacklistToggledEvent{
 					RuleID:  "rule123",
 					Enabled: true,
 				},
 			},
-			expectedJson: `{"name":"blacklistToggled","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"data":{"rule_id":"rule123","enabled":true}}`,
+			expectedJson: `{"name":"blacklistToggled","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"uuid":"` + uuid + `","data":{"rule_id":"rule123","enabled":true}}`,
 		},
 		{
 			name: "AccessRuleCreated",
 			event: events.Event{
 				Name:      events.EventAccessRuleCreated,
 				Timestamp: timestamp,
+				UUID:      uuid,
 				Data: &events.AccessRuleCreatedEvent{
 					ID:               "rule456",
 					Name:             "New Access Rule",
@@ -61,7 +66,7 @@ func TestEventDeSerialization(t *testing.T) {
 					WhitelistEnabled: false,
 				},
 			},
-			expectedJson: `{"name":"accessRuleCreated","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"data":{"id":"rule456","name":"New Access Rule","desc":"A dummy access rule","blacklist_enabled":true,"whitelist_enabled":false}}`,
+			expectedJson: `{"name":"accessRuleCreated","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"uuid":"` + uuid + `","data":{"id":"rule456","name":"New Access Rule","desc":"A dummy access rule","blacklist_enabled":true,"whitelist_enabled":false}}`,
 		},
 	}
 

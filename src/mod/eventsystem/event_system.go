@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/info/logger"
-	// "imuslab.com/zoraxy/mod/plugins"
 
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
@@ -102,6 +102,7 @@ func (em *eventManager) Emit(payload events.EventPayload) error {
 	event := events.Event{
 		Name:      eventName,
 		Timestamp: time.Now().Unix(),
+		UUID:      uuid.New().String(),
 		Data:      payload,
 	}
 
