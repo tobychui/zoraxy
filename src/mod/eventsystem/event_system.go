@@ -86,8 +86,39 @@ func (em *eventManager) UnregisterSubscriber(listenerID ListenerID) error {
 	return nil
 }
 
+// EmitToSubscribersAnd dispatches an event to the specific listeners in addition to the events subscribers.
+//
+// The primary use-case of this function is for plugin-to-plugin communication
+func (em *eventManager) EmitToSubscribersAnd(listenerIDs []ListenerID, payload events.EventPayload) {
+	eventName := payload.GetName()
+
+	if len(listenerIDs) == 0 {
+		return // No subscribers
+	}
+
+	// Create the event
+	event := events.Event{
+		Name:      eventName,
+		Timestamp: time.Now().Unix(),
+		UUID:      uuid.New().String(),
+		Data:      payload,
+	}
+
+	// Dispatch to all specified listeners asynchronously
+	em.emitTo(listenerIDs, event)
+
+	// Also emit to all subscribers of the event as usual
+	em.mutex.RLock()
+	subscribers, exists := em.subscriptions[eventName]
+	em.mutex.RUnlock()
+	if !exists || len(subscribers) == 0 {
+		return // No subscribers
+	}
+	em.emitTo(subscribers, event)
+}
+
 // Emit dispatches an event to all subscribed listeners
-func (em *eventManager) Emit(payload events.EventPayload) error {
+func (em *eventManager) Emit(payload events.EventPayload) {
 	eventName := payload.GetName()
 
 	em.mutex.RLock()
@@ -95,7 +126,7 @@ func (em *eventManager) Emit(payload events.EventPayload) error {
 	subscribers, exists := em.subscriptions[eventName]
 
 	if !exists || len(subscribers) == 0 {
-		return nil // No subscribers
+		return // No subscribers
 	}
 
 	// Create the event
@@ -107,11 +138,26 @@ func (em *eventManager) Emit(payload events.EventPayload) error {
 	}
 
 	// Dispatch to all subscribers asynchronously
-	for _, listenerID := range subscribers {
+	em.emitTo(subscribers, event)
+}
+
+// Dispatch event to all specified listeners asynchronously
+func (em *eventManager) emitTo(listenerIDs []ListenerID, event events.Event) {
+	if len(listenerIDs) == 0 {
+		return
+	}
+
+	// Dispatch to all specified listeners asynchronously
+	em.mutex.RLock()
+	defer em.mutex.RUnlock()
+	for _, listenerID := range listenerIDs {
 		listener, exists := em.subscribers[listenerID]
 
 		if !exists {
 			em.logger.PrintAndLog("event-system", "Failed to get listener for event dispatch, removing "+string(listenerID)+" from subscriptions", nil)
+			// Remove the listener from the subscription list
+			// This is done in a separate goroutine to avoid deadlock
+			go em.UnregisterSubscriber(listenerID)
 			continue
 		}
 
@@ -121,6 +167,4 @@ func (em *eventManager) Emit(payload events.EventPayload) error {
 			}
 		}(listener)
 	}
-
-	return nil
 }

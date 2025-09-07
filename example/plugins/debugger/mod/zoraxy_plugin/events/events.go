@@ -20,10 +20,8 @@ type EventPayload interface {
 // Event represents a system event
 type Event struct {
 	Name      EventName    `json:"name"`
-	// Unix timestamp
-	Timestamp int64        `json:"timestamp"`
-	// UUID for the event
-	UUID      string       `json:"uuid"`
+	Timestamp int64        `json:"timestamp"` // Unix timestamp
+	UUID      string       `json:"uuid"`      // UUID for the event
 	Data      EventPayload `json:"data"`
 }
 
@@ -34,6 +32,9 @@ const (
 	EventBlacklistToggled EventName = "blacklistToggled"
 	// EventAccessRuleCreated is emitted when a new access ruleset is created
 	EventAccessRuleCreated EventName = "accessRuleCreated"
+	// A custom event emitted by a plugin, with the intention of being broadcast
+	// to the designated recipient(s)
+	EventCustom EventName = "customEvent"
 
 	// Add more event types as needed
 )
@@ -42,6 +43,7 @@ var validEventNames = map[EventName]bool{
 	EventBlacklistedIPBlocked: true,
 	EventBlacklistToggled:     true,
 	EventAccessRuleCreated:    true,
+	EventCustom:               true,
 	// Add more event types as needed
 	// NOTE: Keep up-to-date with event names specified above
 }
@@ -100,6 +102,20 @@ func (e *AccessRuleCreatedEvent) GetEventSource() string {
 	return "accesslist-api"
 }
 
+type CustomEvent struct {
+	SourcePlugin string         `json:"source_plugin"`
+	Recipients   []string       `json:"recipients"`
+	Payload      map[string]any `json:"payload"`
+}
+
+func (e *CustomEvent) GetName() EventName {
+	return EventCustom
+}
+
+func (e *CustomEvent) GetEventSource() string {
+	return e.SourcePlugin
+}
+
 // ParseEvent parses a JSON byte slice into an Event struct
 func ParseEvent(jsonData []byte, event *Event) error {
 	// First, determine the event type, and parse shared fields, from the JSON data
@@ -140,6 +156,15 @@ func ParseEvent(jsonData []byte, event *Event) error {
 	case EventAccessRuleCreated:
 		type tempData struct {
 			Data AccessRuleCreatedEvent `json:"data"`
+		}
+		var payload tempData
+		if err := json.Unmarshal(jsonData, &payload); err != nil {
+			return err
+		}
+		event.Data = &payload.Data
+	case EventCustom:
+		type tempData struct {
+			Data CustomEvent `json:"data"`
 		}
 		var payload tempData
 		if err := json.Unmarshal(jsonData, &payload); err != nil {
