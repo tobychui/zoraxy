@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	plugin "aroz.org/zoraxy/event-subscriber-example/mod/zoraxy_plugin"
+	"aroz.org/zoraxy/event-subscriber-example/mod/zoraxy_plugin/events"
 )
 
 const (
@@ -38,11 +39,11 @@ func main() {
 
 		/* Subscriptions Settings */
 		SubscriptionPath: "/notifyme",
-		SubscriptionsEvents: map[plugin.EventName]string{
+		SubscriptionsEvents: map[string]string{
 			// for this example, we will subscribe to all events that exist at time of writing
-			plugin.EventBlacklistedIPBlocked: "This event is triggered when a blacklisted IP is blocked",
-			plugin.EventBlacklistToggled:     "This event is triggered when the blacklist is toggled for an access rule",
-			plugin.EventAccessRuleCreated:    "This event is triggered when a new access ruleset is created",
+			string(events.EventBlacklistedIPBlocked): "This event is triggered when a blacklisted IP is blocked",
+			string(events.EventBlacklistToggled):     "This event is triggered when the blacklist is toggled for an access rule",
+			string(events.EventAccessRuleCreated):    "This event is triggered when a new access ruleset is created",
 		},
 	})
 

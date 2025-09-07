@@ -167,12 +167,12 @@ func RecvConfigureSpec() (*ConfigureSpec, error) {
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("No port specified after -configure flag")
+				return nil, fmt.Errorf("no port specified after -configure flag")
 			}
 			return &configSpec, nil
 		}
 	}
-	return nil, fmt.Errorf("No -configure flag found")
+	return nil, fmt.Errorf("no -configure flag found")
 }
 
 /*
