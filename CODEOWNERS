@@ -13,5 +13,5 @@
 # AnthonyMichaelTDM maintains the plugin and event systems
 /src/mod/plugins @AnthonyMichaelTDM
 /example/plugins @AnthonyMichaelTDM
-/src/plugin_*.go @AnthonyMichaelTDM
+/src/**/plugin_*.go @AnthonyMichaelTDM
 /src/mod/eventsystem @AnthonyMichaelTDM
