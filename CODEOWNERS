@@ -10,6 +10,8 @@
 # jemmy1794 maintains the stream proxy module
 /src/mod/streamproxy @jemmy1794
 
-# AnthonyMichaelTDM maintains the plugins module
+# AnthonyMichaelTDM maintains the plugin and event systems
 /src/mod/plugins @AnthonyMichaelTDM
 /example/plugins @AnthonyMichaelTDM
+/src/**/plugin_*.go @AnthonyMichaelTDM
+/src/mod/eventsystem @AnthonyMichaelTDM

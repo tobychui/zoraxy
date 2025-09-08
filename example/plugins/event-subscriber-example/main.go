@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	EventLog      = make([]plugin.Event, 0) // A slice to store events
+	EventLog      = make([]events.Event, 0) // A slice to store events
 	EventLogMutex = &sync.Mutex{}           // Mutex to protect access to the event log
 )
 
@@ -58,7 +58,7 @@ func main() {
 	})
 	http.HandleFunc(EVENT_PATH, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			var event plugin.Event
+			var event events.Event
 
 			// read the request body
 			if r.Body == nil || r.ContentLength == 0 {
@@ -74,7 +74,7 @@ func main() {
 			}
 
 			// parse the event from the request body
-			if err := plugin.ParseEvent(buffer.Bytes(), &event); err != nil {
+			if err := events.ParseEvent(buffer.Bytes(), &event); err != nil {
 				http.Error(w, fmt.Sprintf("Failed to parse event: %v", err), http.StatusBadRequest)
 				return
 			}
