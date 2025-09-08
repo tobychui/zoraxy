@@ -247,7 +247,7 @@ func TestEventEmissionToSpecificListener(t *testing.T) {
 	select {
 	case <-listener1.receivedEvents:
 		t.Fatal("Listener1 should not have received any events")
-	case <-time.After(500 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		// No event received, as expected
 	}
 
@@ -274,7 +274,7 @@ func TestEventEmissionToSpecificListener(t *testing.T) {
 	select {
 	case <-listener2.receivedEvents:
 		t.Fatal("Listener2 should not have received any new events")
-	case <-time.After(500 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		// No event received, as expected
 	}
 
@@ -283,7 +283,7 @@ func TestEventEmissionToSpecificListener(t *testing.T) {
 		"Hello from pluginA": false,
 		"Hello from pluginB": false,
 	}
-	for i := 0; i < 2; i++ {
+	for range expectedMessagesSeen {
 		select {
 		case receivedEvent := <-moderator.receivedEvents:
 			if receivedEvent.Name != events.EventCustom {
@@ -319,7 +319,69 @@ func TestEventEmissionToSpecificListener(t *testing.T) {
 	select {
 	case <-otherListener.receivedEvents:
 		t.Fatal("otherListener should not have received any events")
-	case <-time.After(500 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
+		// No event received, as expected
+	}
+}
+
+func TestEmissionToNonExistentListener(t *testing.T) {
+	// Create a test listener and register it
+	listenerID := ListenerID("testListener")
+	testListener := &TestListener{
+		id:             listenerID,
+		receivedEvents: make(chan events.Event, 10),
+	}
+
+	// Create event manager with the test listener marked as subscribed to BlacklistToggledEvents,
+	// but not actually registered
+	logger, err := logger.NewFmtLogger()
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
+	em := eventManager{
+		subscriptions: map[events.EventName][]ListenerID{
+			events.EventBlacklistToggled: {listenerID},
+		},
+		subscribers: make(map[ListenerID]Listener),
+		logger:      logger,
+	}
+
+	// Emit a BlacklistToggled event
+	testEvent := &events.BlacklistToggledEvent{
+		RuleID:  "rule123",
+		Enabled: false,
+	}
+	eventEmitted := make(chan struct{})
+	go func() {
+		em.Emit(testEvent)
+		time.Sleep(10 * time.Millisecond) // Give some time for the emission to process
+		close(eventEmitted)
+	}()
+
+	// Wait for the event emission to complete
+	select {
+	case <-eventEmitted:
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for event emission to complete, likely due to deadlock")
+	}
+
+	// check if the listener is still tracked by the event manager
+	em.mutex.RLock()
+	_, isRegistered := em.subscribers[listenerID]
+	subscribers := em.subscriptions[events.EventBlacklistToggled]
+	em.mutex.RUnlock()
+	if len(subscribers) != 0 {
+		t.Fatal("Listener should have been removed from subscriptions after failed dispatch")
+	}
+	if isRegistered {
+		t.Fatal("Listener was somehow registered")
+	}
+
+	// Since the listener was unregistered, it should not receive any events
+	select {
+	case <-testListener.receivedEvents:
+		t.Fatal("Listener should not have received any events after being unregistered")
+	case <-time.After(100 * time.Millisecond):
 		// No event received, as expected
 	}
 }

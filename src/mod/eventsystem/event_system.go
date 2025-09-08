@@ -93,7 +93,7 @@ func (em *eventManager) EmitToSubscribersAnd(listenerIDs []ListenerID, payload e
 	eventName := payload.GetName()
 
 	if len(listenerIDs) == 0 {
-		return // No subscribers
+		return // No listeners specified
 	}
 
 	// Create the event
@@ -109,8 +109,8 @@ func (em *eventManager) EmitToSubscribersAnd(listenerIDs []ListenerID, payload e
 
 	// Also emit to all subscribers of the event as usual
 	em.mutex.RLock()
+	defer em.mutex.RUnlock()
 	subscribers, exists := em.subscriptions[eventName]
-	em.mutex.RUnlock()
 	if !exists || len(subscribers) == 0 {
 		return // No subscribers
 	}
@@ -150,14 +150,14 @@ func (em *eventManager) emitTo(listenerIDs []ListenerID, event events.Event) {
 	// Dispatch to all specified listeners asynchronously
 	em.mutex.RLock()
 	defer em.mutex.RUnlock()
+	listenersToUnregister := []ListenerID{}
 	for _, listenerID := range listenerIDs {
 		listener, exists := em.subscribers[listenerID]
 
 		if !exists {
 			em.logger.PrintAndLog("event-system", "Failed to get listener for event dispatch, removing "+string(listenerID)+" from subscriptions", nil)
-			// Remove the listener from the subscription list
-			// This is done in a separate goroutine to avoid deadlock
-			go em.UnregisterSubscriber(listenerID)
+			// Mark for removal
+			listenersToUnregister = append(listenersToUnregister, listenerID)
 			continue
 		}
 
@@ -167,4 +167,11 @@ func (em *eventManager) emitTo(listenerIDs []ListenerID, event events.Event) {
 			}
 		}(listener)
 	}
+
+	// Unregister any listeners that no longer exist, asynchronously
+	go func() {
+		for _, id := range listenersToUnregister {
+			em.UnregisterSubscriber(id)
+		}
+	}()
 }
