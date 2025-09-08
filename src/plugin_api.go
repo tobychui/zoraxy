@@ -108,6 +108,10 @@ func RegisterPluginRestAPI(authRouter *auth.PluginAuthMiddleware) {
 	authRouter.HandleFunc("/api/plugins/groups/list", pluginManager.HandleListPluginGroups)
 
 	authRouter.HandleFunc("/api/plugins/store/list", pluginManager.HandleListDownloadablePlugins)
+
+	// recall that these plugin APIs are under the /plugin path, so
+	// the full path to this endpoint is /plugin/event/emit
+	authRouter.HandleFunc("/event/emit", pluginManager.HandleEmitCustomEvent)
 }
 
 /* Register all the APIs */
