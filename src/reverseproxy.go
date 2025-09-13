@@ -26,7 +26,7 @@ var (
 )
 
 // Add user customizable reverse proxy
-func ReverseProxtInit() {
+func ReverseProxyInit() {
 	/*
 		Load Reverse Proxy Global Settings
 	*/

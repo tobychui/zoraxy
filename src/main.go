@@ -99,8 +99,9 @@ func main() {
 	}
 	nodeUUID = string(uuidBytes)
 
-	//Create a new webmin mux and csrf middleware layer
+	//Create a new webmin mux, plugin mux and csrf middleware layer
 	webminPanelMux = http.NewServeMux()
+	pluginAPIMux := http.NewServeMux()
 	csrfMiddleware = csrf.Protect(
 		[]byte(nodeUUID),
 		csrf.CookieName(CSRF_COOKIENAME),
@@ -112,24 +113,19 @@ func main() {
 	//Startup all modules, see start.go
 	startupSequence()
 
-	//Initiate management interface APIs
+	//Initiate APIs
 	requireAuth = !(*noauth)
 	initAPIs(webminPanelMux)
-
-	// Create a new plugin API mux
-	pluginAPIMux := http.NewServeMux()
 	initRestAPI(pluginAPIMux)
 
-	// Create a parent mux to route /plugin endpoints without CSRF, others with CSRF
-	parentMux := http.NewServeMux()
-	// /plugin (rest API) endpoints: no CSRF
-	parentMux.Handle("/plugin/", pluginAPIMux)
-	// all other endpoints: with CSRF
-	parentMux.Handle("/", csrfMiddleware(webminPanelMux))
+	// Create a entry mux to accept all management interface requests
+	entryMux := http.NewServeMux()
+	entryMux.Handle("/plugin/", pluginAPIMux)            //For plugins API access
+	entryMux.Handle("/", csrfMiddleware(webminPanelMux)) //For webmin UI access, require csrf token
 
 	// Start the reverse proxy server in go routine
 	go func() {
-		ReverseProxtInit()
+		ReverseProxyInit()
 	}()
 
 	time.Sleep(500 * time.Millisecond)
@@ -144,7 +140,7 @@ func main() {
 		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://" + *webUIPort)
 	}
 
-	err = http.ListenAndServe(*webUIPort, parentMux)
+	err = http.ListenAndServe(*webUIPort, entryMux)
 
 	if err != nil {
 		log.Fatal(err)
