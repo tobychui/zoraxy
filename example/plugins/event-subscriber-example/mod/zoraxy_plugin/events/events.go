@@ -35,6 +35,8 @@ const (
 	// A custom event emitted by a plugin, with the intention of being broadcast
 	// to the designated recipient(s)
 	EventCustom EventName = "customEvent"
+	// A dummy event to satisfy the requirement of having at least one event
+	EventDummy EventName = "dummy"
 
 	// Add more event types as needed
 )
@@ -44,6 +46,7 @@ var validEventNames = map[EventName]bool{
 	EventBlacklistToggled:     true,
 	EventAccessRuleCreated:    true,
 	EventCustom:               true,
+	EventDummy:                true,
 	// Add more event types as needed
 	// NOTE: Keep up-to-date with event names specified above
 }
