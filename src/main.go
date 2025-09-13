@@ -115,9 +115,19 @@ func main() {
 	//Initiate management interface APIs
 	requireAuth = !(*noauth)
 	initAPIs(webminPanelMux)
-	initRestAPI(webminPanelMux)
 
-	//Start the reverse proxy server in go routine
+	// Create a new plugin API mux
+	pluginAPIMux := http.NewServeMux()
+	initRestAPI(pluginAPIMux)
+
+	// Create a parent mux to route /plugin endpoints without CSRF, others with CSRF
+	parentMux := http.NewServeMux()
+	// /plugin (rest API) endpoints: no CSRF
+	parentMux.Handle("/plugin/", pluginAPIMux)
+	// all other endpoints: with CSRF
+	parentMux.Handle("/", csrfMiddleware(webminPanelMux))
+
+	// Start the reverse proxy server in go routine
 	go func() {
 		ReverseProxtInit()
 	}()
@@ -134,7 +144,7 @@ func main() {
 		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://" + *webUIPort)
 	}
 
-	err = http.ListenAndServe(*webUIPort, csrfMiddleware(webminPanelMux))
+	err = http.ListenAndServe(*webUIPort, parentMux)
 
 	if err != nil {
 		log.Fatal(err)
