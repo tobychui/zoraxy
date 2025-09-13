@@ -34,6 +34,7 @@ func (p *Plugin) Notify(event events.Event) error {
 	if !strings.HasPrefix(subscriptionPath, "/") {
 		subscriptionPath = "/" + subscriptionPath
 	}
+	subscriptionPath = strings.TrimSuffix(subscriptionPath, "/")
 
 	// Prepare the URL
 	url := fmt.Sprintf("http://127.0.0.1:%d%s/%s", p.AssignedPort, subscriptionPath, event.Name)
