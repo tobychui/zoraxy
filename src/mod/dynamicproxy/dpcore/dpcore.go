@@ -2,10 +2,10 @@ package dpcore
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -391,7 +391,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 
 	return res.StatusCode, nil
 }
-
 func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
 	hij, ok := rw.(http.Hijacker)
 	if !ok {
@@ -407,12 +406,23 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (in
 		return http.StatusInternalServerError, err
 	}
 
-	proxyConn, err := net.Dial("tcp", req.URL.Host)
+	// Extract SNI/hostname for TLS handshake
+	host := req.URL.Host
+	if !strings.Contains(host, ":") {
+		host += ":443"
+	}
+	serverName := req.URL.Hostname()
+
+	// Connect with SNI offload
+	tlsConfig := &tls.Config{
+		ServerName: serverName,
+	}
+	proxyConn, err := tls.Dial("tcp", host, tlsConfig)
 	if err != nil {
 		if p.Verbal {
 			p.logf("http: proxy error: %v", err)
 		}
-
+		clientConn.Close()
 		return http.StatusInternalServerError, err
 	}
 
