@@ -162,7 +162,9 @@ func (l *Logger) ValidateAndUpdateLogFilepath() {
 
 func (l *Logger) Close() {
 	if l.file != nil {
-		l.file.Close()
+		if err := l.file.Close(); err != nil {
+			log.Println("Error closing log file:", err)
+		}
 	}
 	l.StopLogRotateTicker()
 }
