@@ -211,6 +211,10 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			UserDefinedHeaders: rewrittenUserDefinedHeaders,
 		})
 		for _, headerValuePair := range upstreamHeaders {
+			//Skip empty header pairs
+			if len(headerValuePair) < 2 {
+				continue
+			}
 			//Do not copy Upgrade and Connection headers, it will be handled by the upgrader
 			if strings.EqualFold(headerValuePair[0], "Upgrade") || strings.EqualFold(headerValuePair[0], "Connection") {
 				continue

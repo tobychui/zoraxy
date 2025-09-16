@@ -87,7 +87,10 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `DB` | `auto` (String) | Database backend to use (leveldb, boltdb, auto) Note that fsdb will be used on unsupported platforms like RISCV (default "auto"). |
 | `DOCKER` | `true` (Boolean) | Run Zoraxy in docker compatibility mode. |
 | `EARLYRENEW` | `30` (Integer) | Number of days to early renew a soon expiring certificate. |
+| `ENABLELOG` | `true` (Boolean) | Enable system wide logging, set to false for writing log to STDOUT only. |
+| `ENABLELOGCOMPRESS` | `true` (Boolean) | Enable log compression for rotated log files. |
 | `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices). |
+| `LOGROTATE` | `0` (Integer) | Enable log rotation and set the maximum log file size in KB (e.g. 25 for 25KB), set to 0 for disable. |
 | `MDNS` | `true` (Boolean) | Enable mDNS scanner and transponder. |
 | `MDNSNAME` | `''` (String) | mDNS name, leave empty to use default (zoraxy_{node-uuid}.local). |
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |

@@ -62,3 +62,4 @@ www/html/index.html
 /src/dist
 
 /src/plugins
+.DS_Store

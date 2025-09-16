@@ -10,6 +10,8 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/eventsystem"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -96,6 +98,17 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
+
+	// emit an event for the new access rule creation
+	eventsystem.Publisher.Emit(
+		&events.AccessRuleCreatedEvent{
+			ID:               ruleUUID,
+			Name:             ruleName,
+			Desc:             ruleDesc,
+			BlacklistEnabled: false,
+			WhitelistEnabled: false,
+		},
+	)
 
 	utils.SendOK(w)
 }
@@ -359,6 +372,11 @@ func handleBlacklistEnable(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		eventsystem.Publisher.Emit(&events.BlacklistToggledEvent{
+			RuleID:  ruleID,
+			Enabled: rule.BlacklistEnabled,
+		})
+
 		utils.SendOK(w)
 	}
 }
@@ -566,11 +584,12 @@ func handleWhitelistAllowLoopback(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		if enable == "true" {
+		switch enable {
+		case "true":
 			rule.ToggleAllowLoopback(true)
-		} else if enable == "false" {
+		case "false":
 			rule.ToggleAllowLoopback(false)
-		} else {
+		default:
 			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
 			return
 		}

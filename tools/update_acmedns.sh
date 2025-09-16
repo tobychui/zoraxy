@@ -1,4 +1,4 @@
-# /bin/sh
+#!/bin/sh
 
 # Build the acmedns
 echo "Building ACMEDNS"
@@ -8,3 +8,4 @@ cd ../../../
 
 cp ./tools/dns_challenge_update/code-gen/acmedns/acmedns.go ./src/mod/acme/acmedns/acmedns.go
 cp ./tools/dns_challenge_update/code-gen/acmedns/providers.json ./src/mod/acme/acmedns/providers.json
+

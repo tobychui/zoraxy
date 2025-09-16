@@ -6,7 +6,7 @@
     <div class="ui divider"></div>
     <div class="ui top attached tabular menu ssoTabs">
         <a class="item active" data-tab="forward_auth_tab">Forward Auth</a>
-        <a class="item" data-tab="oauth2_tab">Oauth2</a>
+        <a class="item" data-tab="oauth2_tab">OAuth 2.0</a>
         <!-- <a class="item" data-tab="zoraxy_sso_tab">Zoraxy SSO</a> -->
         </div>
         <div class="ui bottom attached tab segment active" data-tab="forward_auth_tab">
@@ -28,7 +28,7 @@
             <div class="field">
                 <label for="forwardAuthAddress">Address</label>
                 <input type="text" id="forwardAuthAddress" name="forwardAuthAddress" placeholder="Enter Forward Auth Address">
-                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> https://auth.example.com/authz/forward-auth</small>
+                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth</small>
             </div>
             <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
                 <div class="ui advancedSSOForwardAuthOptions accordion">
@@ -78,14 +78,23 @@
                                 <strong>Example:</strong> <code>authelia_session,another_session</code>
                             </small>
                         </div>
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="forwardAuthRequestIncludeBody" name="forwardAuthRequestIncludeBody" value="Forward Auth Request Include Request Body">
+                            <label for="forwardAuthRequestIncludeBody">Forward Auth Request Include Request Body<br><small>This allows the request body from the <b><i>request made from the client</i></b> to be included in the <b><i>request made to the authorization server</i></b>. Generally this should not be enabled.</small></label>
+                        </div>
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="forwardAuthRequestUseXOriginalHeaders" name="forwardAuthRequestUseXOriginalHeaders" value="Use X-Original-* Headers">
+                            <label for="forwardAuthRequestUseXOriginalHeaders">Use X-Original-* Headers<br><small>This is used for implementations which do not use the X-Forwarded-* headers. In addition if the authorization server responds with a 401 and Location header the status will be changed to 302.</small></label>
+                        </div>
                     </div>
                 </div>
             </div>
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button" type="button" id="forwardAuthClear"><i class="red trash icon"></i> Clear</button>
         </form>
         </div>
         <div class="ui bottom attached tab segment" data-tab="oauth2_tab">
-        <!-- Oauth 2 -->
+        <!-- OAuth 2.0 -->
         <h2>OAuth 2.0</h2>
         <p>Configuration settings for OAuth 2.0 authentication provider.</p>
 
@@ -96,14 +105,14 @@
                 <small>Public identifier of the OAuth2 application</small>
             </div>
             <div class="field">
-                <label for="oauth2ClientId">Client Secret</label>
+                <label for="oauth2ClientSecret">Client Secret</label>
                 <input type="password" id="oauth2ClientSecret" name="oauth2ClientSecret" placeholder="Enter Client Secret">
                 <small>Secret key of the OAuth2 application</small>
             </div>
             <div class="field">
-                <label for="oauth2WellKnownUrl">OIDC well-known URL</label>
+                <label for="oauth2WellKnownUrl">Discovery URL</label>
                 <input type="text" id="oauth2WellKnownUrl" name="oauth2WellKnownUrl" placeholder="Enter Well-Known URL">
-                <small>URL to the OIDC discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
+                <small>URL to the OpenID Connect 1.0 Discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
             </div>
 
             <div class="field">
@@ -130,6 +139,7 @@
                 <small>Scopes required by the OAuth2 provider to retrieve information about the authenticated user. Refer to your OAuth2 provider documentation for more information about this. Optional if Well-Known url is configured.</small>
             </div>
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
+            <button class="ui basic button" type="button" id="oauth2Clear"><i class="red trash icon"></i> Clear</button>
         </form>
         </div>
         <div class="ui bottom attached tab segment" data-tab="zoraxy_sso_tab">
@@ -144,7 +154,19 @@
     $(".ssoTabs .item").tab();
 
     $(document).ready(function() {
-        /* Load forward-auth settings from backend */
+        /* Load Forward Authz settings from backend */
+        getForwardAuthSettings();
+
+        /* Load OAuth 2.0 settings from backend */
+        getOAuth20Settings();
+
+        /* Add more initialization code here if needed */
+    });
+
+    /*
+        Forward Auth settings fetcher.
+    */
+    function getForwardAuthSettings() {
         $.cjax({
             url: '/api/sso/forward-auth',
             method: 'GET',
@@ -176,13 +198,95 @@
                 } else {
                     $('#forwardAuthRequestExcludedCookies').val("");
                 }
+                if (data.requestIncludeBody != null && data.requestIncludeBody === true) {
+                    $("#forwardAuthRequestIncludeBody").parent().checkbox("set checked");
+                } else {
+                    $("#forwardAuthRequestIncludeBody").parent().checkbox("set unchecked");
+                }
+                if (data.useXOriginalHeaders != null && data.useXOriginalHeaders === true) {
+                    $("#forwardAuthRequestUseXOriginalHeaders").parent().checkbox("set checked");
+                } else {
+                    $("#forwardAuthRequestUseXOriginalHeaders").parent().checkbox("set unchecked");
+                }
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
             }
         });
+    }
 
-        /* Load Oauth2 settings from backend */
+    /*
+        Forward Auth settings update handler.
+    */
+    $("#forwardAuthSettings").on("submit", function(event) {
+        event.preventDefault();
+
+        const address = $('#forwardAuthAddress').val();
+        const responseHeaders = $('#forwardAuthResponseHeaders').val();
+        const responseClientHeaders = $('#forwardAuthResponseClientHeaders').val();
+        const requestHeaders = $('#forwardAuthRequestHeaders').val();
+        const requestIncludedCookies = $('#forwardAuthRequestIncludedCookies').val();
+        const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
+        const requestIncludeBody = $('#forwardAuthRequestIncludeBody').is(':checked');
+        const useXOriginalHeaders = $('#forwardAuthRequestUseXOriginalHeaders').is(':checked');
+
+        console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Included Cookies: ${requestIncludedCookies}. Request Excluded Cookies: ${requestExcludedCookies}. Request Include Body: ${requestIncludeBody}. Use X-Original-* Headers: ${useXOriginalHeaders}.`);
+
+        $.cjax({
+            url: '/api/sso/forward-auth',
+            method: 'POST',
+            data: {
+                address: address,
+                responseHeaders: responseHeaders,
+                responseClientHeaders: responseClientHeaders,
+                requestHeaders: requestHeaders,
+                requestIncludedCookies: requestIncludedCookies,
+                requestExcludedCookies: requestExcludedCookies,
+                requestIncludeBody: requestIncludeBody,
+                useXOriginalHeaders: useXOriginalHeaders,
+            },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('Forward Auth settings updated', true);
+                console.log('Forward Auth settings updated:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Forward Auth settings:', textStatus, errorThrown);
+            }
+        });
+    });
+
+    $( "#forwardAuthClear" ).on( "click", function( event ) {
+        event.preventDefault();
+
+        $.cjax({
+            url: '/api/sso/forward-auth',
+            method: 'DELETE',
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                getForwardAuthSettings();
+
+                msgbox('Forward Auth settings cleared', true);
+                console.log('Forward Auth settings cleared:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error clearing Forward Auth settings:', textStatus, errorThrown);
+                msgbox('Error clearing Forward Auth settings, check console', false);
+            }
+        });
+    });
+
+    /*
+        OAuth 2.0 settings fetcher.
+    */
+    function getOAuth20Settings() {
         $.cjax({
             url: '/api/sso/OAuth2',
             method: 'GET',
@@ -200,84 +304,28 @@
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
             }
         });
-
-        /* Add more initialization code here if needed */
-    });
-
-    /* 
-        Function to update Forward Auth settings.
-    */
-
-    function updateForwardAuthSettings() {
-        const address = $('#forwardAuthAddress').val();
-        const responseHeaders = $('#forwardAuthResponseHeaders').val();
-        const responseClientHeaders = $('#forwardAuthResponseClientHeaders').val();
-        const requestHeaders = $('#forwardAuthRequestHeaders').val();
-        const requestIncludedCookies = $('#forwardAuthRequestIncludedCookies').val();
-        const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
-
-        console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Excluded Cookies: ${requestExcludedCookies}.`);
-
-        $.cjax({
-            url: '/api/sso/forward-auth',
-            method: 'POST',
-            data: {
-                address: address,
-                responseHeaders: responseHeaders,
-                responseClientHeaders: responseClientHeaders,
-                requestHeaders: requestHeaders,
-                requestExcludedCookies: requestExcludedCookies
-            },
-            success: function(data) {
-                if (data.error !== undefined) {
-                    msgbox(data.error, false);
-                    return;
-                }
-                msgbox('Forward Auth settings updated', true);
-                console.log('Forward Auth settings updated:', data);
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error updating Forward Auth settings:', textStatus, errorThrown);
-            }
-        });
     }
 
-    $("#forwardAuthSettings").on("submit", function(event) {
-        event.preventDefault();
-        updateForwardAuthSettings();
-    });
-
     /*
-        Oauth2 settings update handler.
+        OAuth 2.0 settings update handler.
     */
-    $( "#authentikSettings" ).on( "submit", function( event ) {
-        event.preventDefault();
-        $.cjax({
-            url: '/api/sso/forward-auth',
-            method: 'POST',
-            data: {
-                address: address,
-                responseHeaders: responseHeaders,
-                responseClientHeaders: responseClientHeaders,
-                requestHeaders: requestHeaders,
-                requestExcludedCookies: requestExcludedCookies
-            },
-            success: function(data) {
-                if (data.error !== undefined) {
-                    msgbox(data.error, false);
-                    return;
-                }
-                msgbox('Forward Auth settings updated', true);
-                console.log('Forward Auth settings updated:', data);
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error updating Forward Auth settings:', textStatus, errorThrown);
-            }
-        });
-    });
-
     $( "#oauth2Settings" ).on( "submit", function( event ) {
         event.preventDefault();
+
+        if ($('#oauth2ClientId').val().length === 0 || $('#oauth2ClientSecret').val().length === 0) {
+            msgbox("You must specify the Client ID and Client Secret.", false);
+
+            return;
+        }
+
+        if ($('#oauth2WellKnownUrl').val().length === 0) {
+            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoURL').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
+                msgbox("You must specify either the Well Known URL or configure the Authorization URL, Token URL, User Info URL, and Scopes.", false);
+
+                return;
+            }
+        }
+
         $.cjax({
             url: '/api/sso/OAuth2',
             method: 'POST',
@@ -293,6 +341,30 @@
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error updating OAuth2 settings:', textStatus, errorThrown);
                 msgbox('Error updating OAuth2 settings, check console', false);
+            }
+        });
+    });
+
+    $( "#oauth2Clear" ).on( "click", function( event ) {
+        event.preventDefault();
+
+        $.cjax({
+            url: '/api/sso/OAuth2',
+            method: 'DELETE',
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                getOAuth20Settings();
+
+                msgbox('OAuth2 settings cleared', true);
+                console.log('OAuth2 settings cleared:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error clearing OAuth2 settings:', textStatus, errorThrown);
+                msgbox('Error clearing OAuth2 settings, check console', false);
             }
         });
     });

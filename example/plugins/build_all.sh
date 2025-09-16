@@ -4,7 +4,12 @@
 echo "Copying zoraxy_plugin to all mods"
 for dir in ./*; do
     if [ -d "$dir" ]; then
-        cp -r ../mod/plugins/zoraxy_plugin "$dir/mod"
+        # remove existing zoraxy_plugin module, if it exists
+        if [ -d "${dir}/mod/zoraxy_plugin" ]; then
+            rm -r $dir/mod/zoraxy_plugin
+        fi
+        # copy over updated module
+        cp -r ../../src/mod/plugins/zoraxy_plugin "$dir/mod"
     fi
 done
 

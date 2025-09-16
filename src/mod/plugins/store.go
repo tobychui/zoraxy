@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -350,6 +352,42 @@ func (m *Manager) HandleUninstallPlugin(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		utils.SendErrorResponse(w, "Failed to uninstall plugin: "+err.Error())
 		return
+	}
+
+	utils.SendOK(w)
+}
+
+// HandleEmitCustomEvent is the handler for emitting a custom event from a plugin to other plugins
+func (m *Manager) HandleEmitCustomEvent(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.SendErrorResponse(w, "Method not allowed")
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "" || !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+		utils.SendErrorResponse(w, "Invalid or missing Content-Type, expected application/json")
+		return
+	}
+
+	// parse the event payload from the request body
+	var payload events.CustomEvent
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utils.SendErrorResponse(w, "Failed to parse event: "+err.Error())
+		return
+	}
+
+	// collect the recipients
+	if len(payload.Recipients) > 0 {
+		recipients := make([]eventsystem.ListenerID, 0, len(payload.Recipients))
+		for _, rid := range payload.Recipients {
+			recipients = append(recipients, eventsystem.ListenerID(rid))
+		}
+		// Emit the event to subscribers and specified recipients
+		eventsystem.Publisher.EmitToSubscribersAnd(recipients, &payload)
+	} else {
+		// Emit the event to all subscribers
+		eventsystem.Publisher.Emit(&payload)
 	}
 
 	utils.SendOK(w)

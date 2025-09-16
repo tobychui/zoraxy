@@ -77,8 +77,8 @@ func main() {
 			fmt.Println("ProtoMajor:", dsfr.ProtoMajor)
 			fmt.Println("ProtoMinor:", dsfr.ProtoMinor)
 
-			// We want to handle this request, reply with aSniffResultAccept
-			return plugin.SniffResultAccpet
+			// We want to handle this request, reply with a SniffResultAccept
+			return plugin.SniffResultAccept
 		}
 
 		// If the request URI does not match, we skip this request

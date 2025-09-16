@@ -382,7 +382,9 @@ func initAPIs(targetMux *http.ServeMux) {
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
 	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)
 	authRouter.HandleFunc("/api/log/read", LogViewer.HandleReadLog)
-
+	authRouter.HandleFunc("/api/log/summary", LogViewer.HandleReadLogSummary)
+	authRouter.HandleFunc("/api/log/errors", LogViewer.HandleLogErrorSummary)
+	authRouter.HandleFunc("/api/log/rotate/debug.trigger", SystemWideLogger.HandleDebugTriggerLogRotation)
 	//Debug
 	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
 }

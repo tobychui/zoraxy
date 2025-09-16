@@ -47,6 +47,12 @@ type RuntimeConstantValue struct {
 	DevelopmentBuild bool   `json:"development_build"` //Whether the Zoraxy is a development build or not
 }
 
+type PermittedAPIEndpoint struct {
+	Method   string `json:"method"`   //HTTP method for the API endpoint (e.g., GET, POST)
+	Endpoint string `json:"endpoint"` //The API endpoint that the plugin can access
+	Reason   string `json:"reason"`   //The reason why the plugin needs to access this endpoint
+}
+
 /*
 IntroSpect Payload
 
@@ -97,7 +103,10 @@ type IntroSpect struct {
 
 	/* Subscriptions Settings */
 	SubscriptionPath    string            `json:"subscription_path"`    //Subscription event path of your plugin (e.g. /notifyme), a POST request with SubscriptionEvent as body will be sent to this path when the event is triggered
-	SubscriptionsEvents map[string]string `json:"subscriptions_events"` //Subscriptions events of your plugin, see Zoraxy documentation for more details
+	SubscriptionsEvents map[string]string `json:"subscriptions_events"` //Subscriptions events of your plugin, paired with comments describing how the event is used, see Zoraxy documentation for more details
+
+	/* API Access Control */
+	PermittedAPIEndpoints []PermittedAPIEndpoint `json:"permitted_api_endpoints"` //List of API endpoints this plugin can access, and a description of why the plugin needs to access this endpoint
 }
 
 /*
@@ -126,8 +135,10 @@ by the supplied values like starting a web server at given port
 that listens to 127.0.0.1:port
 */
 type ConfigureSpec struct {
-	Port         int                  `json:"port"`          //Port to listen
-	RuntimeConst RuntimeConstantValue `json:"runtime_const"` //Runtime constant values
+	Port         int                  `json:"port"`                  //Port to listen
+	RuntimeConst RuntimeConstantValue `json:"runtime_const"`         //Runtime constant values
+	APIKey       string               `json:"api_key,omitempty"`     //API key for accessing Zoraxy APIs, if the plugin has permitted endpoints
+	ZoraxyPort   int                  `json:"zoraxy_port,omitempty"` //The port that Zoraxy is running on, used for making API calls to Zoraxy
 	//To be expanded
 }
 
@@ -156,12 +167,12 @@ func RecvConfigureSpec() (*ConfigureSpec, error) {
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("No port specified after -configure flag")
+				return nil, fmt.Errorf("no port specified after -configure flag")
 			}
 			return &configSpec, nil
 		}
 	}
-	return nil, fmt.Errorf("No -configure flag found")
+	return nil, fmt.Errorf("no -configure flag found")
 }
 
 /*

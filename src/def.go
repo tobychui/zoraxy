@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.5"
+	SYSTEM_VERSION    = "3.2.6"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
@@ -93,6 +93,11 @@ var (
 	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+
+	/* Logging Configuration Flags */
+	enableLog            = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
+	enableLogCompression = flag.Bool("enablelogcompress", true, "Enable log compression for rotated log files")
+	logRotate            = flag.Int("logrotate", 0, "Enable log rotation and set the maximum log file size in KB (e.g. 25 for 25KB), set to 0 for disable")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
@@ -148,6 +153,9 @@ var (
 	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins
+
+	//Plugin auth related
+	pluginApiKeyManager *auth.APIKeyManager //API key manager for plugin authentication
 
 	//Authentication Provider
 	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication

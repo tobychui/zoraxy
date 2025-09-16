@@ -86,7 +86,7 @@ func main() {
 		if strings.HasPrefix(dsfr.RequestURI, "/test_") {
 			reqUUID := dsfr.GetRequestUUID()
 			fmt.Println("Accepting request with UUID: " + reqUUID)
-			return plugin.SniffResultAccpet
+			return plugin.SniffResultAccept
 		}
 
 		return plugin.SniffResultSkip

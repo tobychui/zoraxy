@@ -1,8 +1,11 @@
 package forward
 
 import (
+	"bytes"
+	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -121,17 +124,65 @@ func stringInSliceFold(needle string, haystack []string) bool {
 	return false
 }
 
-func rSetForwardedHeaders(r, req *http.Request) {
-	if r.RemoteAddr != "" {
-		before, _, _ := strings.Cut(r.RemoteAddr, ":")
-
-		if ip := net.ParseIP(before); ip != nil {
-			req.Header.Set(HeaderXForwardedFor, ip.String())
-		}
+func rSetIPHeader(r, req *http.Request, headers ...string) {
+	if r.RemoteAddr == "" || len(headers) == 0 {
+		return
 	}
 
+	before, _, _ := strings.Cut(r.RemoteAddr, ":")
+
+	ip := net.ParseIP(before)
+	if ip == nil {
+		return
+	}
+
+	for _, header := range headers {
+		req.Header.Set(header, ip.String())
+	}
+}
+
+func rSetXForwardedHeaders(r, req *http.Request) {
+	rSetIPHeader(r, req, HeaderXForwardedFor)
 	req.Header.Set(HeaderXForwardedMethod, r.Method)
 	req.Header.Set(HeaderXForwardedProto, scheme(r))
 	req.Header.Set(HeaderXForwardedHost, r.Host)
 	req.Header.Set(HeaderXForwardedURI, r.URL.Path)
+}
+
+func rSetXOriginalHeaders(r, req *http.Request) {
+	// The X-Forwarded-For header has larger support, so we include both.
+	rSetIPHeader(r, req, HeaderXOriginalIP, HeaderXForwardedFor)
+
+	original := &url.URL{
+		Scheme: scheme(r),
+		Host:   r.Host,
+		Path:   r.URL.Path,
+	}
+
+	req.Header.Set(HeaderXOriginalMethod, r.Method)
+	req.Header.Set(HeaderXOriginalURL, original.String())
+}
+
+func rCopyBody(req, freq *http.Request) (err error) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return err
+	}
+
+	if len(body) == 0 {
+		return nil
+	}
+
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	freq.Body = io.NopCloser(bytes.NewReader(body))
+
+	return nil
+}
+
+func cleanSplit(s string) []string {
+	if s == "" {
+		return nil
+	}
+
+	return strings.Split(s, ",")
 }

@@ -198,6 +198,12 @@ Some section of Zoraxy are contributed by our amazing community and if you have 
   - (Legacy) Authentik Support added by [@JokerQyou](https://github.com/JokerQyou)
 
 
+- ACME
+
+  - ACME integration (Looking for maintainer)
+
+  - DNS Challenge by [@zen8841](https://github.com/zen8841)
+
 - Docker Container List by [@eyerrock](https://github.com/eyerrock)
 
 - Stream Proxy [@jemmy1794](https://github.com/jemmy1794)

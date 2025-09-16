@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 // Handle access check (blacklist / whitelist), return true if request is handled (aka blocked)
@@ -42,6 +44,23 @@ func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory strin
 		} else {
 			w.Write(template)
 		}
+
+		// Emit blacklisted IP blocked event
+		// Get the comment for this IP
+		comment, err := accessRule.GetBlacklistedIPComment(clientIpAddr)
+		if err != nil {
+			comment = "blacklisted"
+		}
+		eventsystem.Publisher.Emit(
+			&events.BlacklistedIPBlockedEvent{
+				IP:           clientIpAddr,
+				Comment:      comment,
+				RequestedURL: r.URL.String(),
+				Hostname:     r.Host,
+				UserAgent:    r.Header.Get("User-Agent"),
+				Method:       r.Method,
+			},
+		)
 
 		return true, "blacklist"
 	}

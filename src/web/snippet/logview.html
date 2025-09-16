@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html ng-app="App">
 <head>
-    <title>System Logs</title>
+    <title>LogView | Zoraxy</title>
     <meta charset="UTF-8">
+    <meta name="theme-color" content="#4b75ff">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <link rel="icon" type="image/png" href="../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
     <link rel="stylesheet" href="../script/semantic/semantic.min.css">
     <script type="text/javascript" src="../script/jquery-3.6.0.min.js"></script>
     <script type="text/javascript" src="../script/semantic/semantic.min.js"></script>
+    <link rel="stylesheet" href="main.css">
     <style>
         .clickable{
             cursor: pointer;
@@ -14,6 +18,15 @@
         .clickable:hover{
             opacity: 0.7;
         }
+
+        /* Panel menu */
+        .logfile_menu_btn{
+            height: 2.8em !important;
+            margin-top: 0.4em !important;
+            margin-right: 0 !important;
+        }
+
+        /* Log file list */
         .logfile{
             padding-left: 1em !important;
             position: relative;
@@ -56,109 +69,516 @@
             color:white; 
         }
 
-        body.darkTheme .loglist {
-            background-color: #1b1c1d;
-            color: #ffffff;
+        #errorHighlightWrapper{
+            background-color: #f9f9f9;
+            padding: 1em;
+            border-radius: 0.3em;
+            max-height:300px;
+            overflow-y:auto;
+            margin-bottom:1em;
+            border: 1px solid #b3b3b3;
         }
 
-        body.darkTheme .loglist .ui.header .content .sub.header {
-            color: #bbbbbb;
+        @media (min-width: 768px) {
+            #logfileDropdown {
+                margin-left: 0.4em !important;
+            }
+
+            .logfile_menu_btn{
+                margin-left:0.4em !important;
+            }
+
+            #logfileDropdown{
+                margin-left: 0.4em !important;
+            }
         }
 
-        body.darkTheme .loglist .ui.divider {
-            border-color: #333333;
-        }
+        @media (max-width: 767px) {
+            #toggleFullscreenBtn {
+                display: none !important;
+            }
 
-        body.darkTheme .loglist .ui.accordion .title,
-        body.darkTheme .loglist .ui.accordion .content {
-            background-color: #1b1c1d;
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.accordion .title:hover {
-            background-color: #333333;
-        }
-
-        body.darkTheme .loglist .ui.list .item {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.list .item .content {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.list .item .showing {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.button.filterbtn {
-            background-color: #333333;
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist .ui.button.filterbtn:hover {
-            background-color: #555555;
-        }
-
-        body.darkTheme .loglist .ui.toggle.checkbox label {
-            color: #ffffff;
-        }
-
-        body.darkTheme .loglist small {
-            color: #bbbbbb;
+            #logrenderWrapper{
+                margin-left: 0em !important;
+                margin-right: 0em !important;
+            }
         }
     </style>
 </head>
-
 <body>
+    <!-- Currently not darktheme ready -->
     <link rel="stylesheet" href="../darktheme.css">
-    <script src="../script/darktheme.js"></script>
+     <!-- <script src="../script/darktheme.js"></script> -->
     <br>
     <div class="ui container">
-        <div class="ui stackable grid">
-            <div class="four wide column loglist">
-                <h3 class="ui header" style="padding-top: 1em;">
-                    <div class="content">
-                        Log View
-                        <div class="sub header">Check System Log in Real Time</div>
-                    </div>
-                </h3>
-                <div class="ui divider"></div>
-                <div id="logList" class="ui accordion">
-                    
-                </div>
-                <div class="ui divider"></div>
-                <h5>Filters</h5>
-                <button style="margin-top: 0.4em;" filter="system" class="ui fluid basic small button filterbtn"><i class="ui blue info circle icon"></i> System</button>
-                <button style="margin-top: 0.4em;" filter="request" class="ui fluid basic small button filterbtn"><i class="green exchange icon"></i> Request</button>
-                <button style="margin-top: 0.4em;" filter="error" class="ui fluid basic small button filterbtn"><i class="red exclamation triangle icon"></i> Error</button>
-                <button style="margin-top: 0.4em;" filter="all" class="ui fluid basic active small button filterbtn">All</button>
-                <div class="ui divider"></div>
-                <div class="ui toggle checkbox">
-                    <input type="checkbox" id="enableAutoScroll" onchange="handleAutoScrollTicker(event, this.checked);">
-                    <label>Auto Refresh<br>
-                    <small>Refresh the viewing log every 10 seconds</small></label>
-                </div>
-                <div class="ui divider"></div>
-                <small>Notes: Some log files might be huge. Make sure you have checked the log file size before opening</small>
+        <div class="ui stackable secondary menu">
+            <div class="item" style="font-weight: bold;">
+                Zoraxy LogView
             </div>
-            <div class="twelve wide column">
-                <textarea id="logrender" spellcheck="false" readonly="true">
-← Pick a log file from the left menu to start debugging
-                </textarea>
-                <a href="#" onclick="openLogInNewTab();">Open In New Tab</a>
-                <br><br>
+             <a class="item active panel_menu_btn" id="logViewMenu">
+                Log View
+            </a>
+            <a class="item panel_menu_btn" id="summaryMenu">
+                Summary
+            </a>
+            <!-- <a class="item panel_menu_btn" id="settingsMenu">
+                Settings
+            </a> -->
+        </div>
+    </div>
+    <div class="ui container">
+        <div class="ui divider"></div>
+        <div class="ui stackable secondary menu">
+            <!-- Filter Dropdown -->
+            <div class="ui selection dropdown" id="filterDropdown" style="margin-top:0.4em;">
+                <div class="text">Select Filter</div>
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                    <div class="item" data-value="all"><i class="filter icon"></i> All</div>
+                    <div class="item" data-value="system"><i class="blue info circle icon"></i> System</div>
+                    <div class="item" data-value="request"><i class="green exchange icon"></i> Request</div>
+                    <div class="item" data-value="error"><i class="red exclamation triangle icon"></i> Error</div>
+                </div>
+            </div>
+
+            <!-- Log File Dropdown -->
+            <div class="ui selection dropdown" id="logfileDropdown" style="margin-top: 0.4em; height: 2.8em;">
+                <div class="text">Select Log File</div>
+                <i class="dropdown icon"></i>
+                <div class="menu" id="logfileDropdownMenu">
+                    <!-- Log files will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Download Button -->
+            <button class="ui icon basic button logfile_menu_btn" id="downloadLogBtn" title="Download Current Log File">
+                <i class="black download icon"></i>
+            </button>
+
+            <!-- Open in New Tab Button -->
+            <button class="ui icon basic button logfile_menu_btn" onclick="openLogInNewTab();" title="Open in New Tab">
+                <i class="external alternate icon"></i>
+            </button>
+
+            <!-- Refresh -->
+            <button class="ui icon basic button logfile_menu_btn" id="refreshLogBtn" title="Refresh Current Log">
+                <i class="black sync icon"></i>
+            </button>
+        </div>
+    </div>
+    <br><br>
+    <!-- Summary View -->
+    <div id="summary" class="ui container subpanel">
+        <h3 class="ui header">
+            Summary
+        </h3>
+        <div class="ui divider"></div>
+        <div class="ui small statistics" style="display: flex; justify-content: center;">
+            <div class="statistic">
+                <div class="value" id="successRequestsCount"></div>
+                <div class="label">Success Requests</div>
+            </div>
+            <div class="statistic">
+                <div class="value" id="errorRequestsCount"></div>
+                <div class="label">Error Requests</div>
+            </div>
+            <div class="statistic">
+                <div class="value" id="totalRequestsCount"></div>
+                <div class="label">Total Requests</div>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <!-- Error Highlight Section -->
+        <h4 class="ui header">Error Highlights</h4>
+        <div id="errorHighlightWrapper">
+            <p><i class="ui green circle check icon"></i> No error data loaded</p>
+        </div>
+
+        <div class="ui divider"></div>
+        <div id="analyzer">
+            <div class="ui info message">
+                <div class="header">
+                    No log file selected
+                </div>
+                <p>Please select a log file from the dropdown menu to view analysis and summary.</p>
             </div>
         </div>
     </div>
+
+    <!-- Log Viewer -->
+    <div id="logviewer" class="subpanel" style="display:none;">
+        <div id="logrenderWrapper" class="ui container" style="position:relative;">
+            <textarea id="logrender" spellcheck="false" readonly="true">
+Pick a log file from the menu to start debugging
+            </textarea>
+            <!-- Full Screen Button -->
+            <button id="toggleFullscreenBtn" class="ui icon black button" title="Toggle Full Screen" style="border: 1px solid white; position:absolute; top:0.5em; right:0.5em; z-index:999;">
+                <i class="expand arrows alternate icon"></i>
+            </button>
+            <!-- Scroll to Bottom Button -->
+            <button id="scrollBottomBtn" class="ui icon black button" title="Scroll to Bottom" style="border: 1px solid white; position:absolute; bottom:0.5em; right:0.5em; z-index:999;">
+                <i class="angle double down icon"></i>
+            </button>
+            <script>
+                $("#scrollBottomBtn").on("click", function() {
+                    var textarea = document.getElementById('logrender');
+                    textarea.scrollTop = textarea.scrollHeight;
+                });
+            </script>
+        </div>
+        <script>
+            // Toggle full screen for logrenderWrapper
+            $("#toggleFullscreenBtn").on("click", function() {
+                $("#logrenderWrapper").toggleClass("ui container");
+                $(this).find("i").toggleClass("expand arrows alternate compress arrows alternate");
+            });
+        </script>
+        <br>
+        <div class="ui container">
+            <div class="ui divider"></div>
+            <div class="ui toggle checkbox">
+                <input type="checkbox" id="enableAutoScroll" onchange="handleAutoScrollTicker(event, this.checked);">
+                <label>Auto Refresh<br>
+                <small>Refresh the viewing log every 3 seconds</small></label>
+            </div>
+            <div class="ui divider"></div>
+            <small>Notes: Some log files might be huge. Make sure you have checked the log file size before opening</small>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="settings" class="ui container subpanel" style="display:none;">
+        <h3 class="ui header">
+            Settings
+        </h3>
+    </div> 
+
     <br>
+    <div class="ui container">
+        <div class="ui divider"></div>
+        <small>Zoraxy LogView - Advance log viewer for Zoraxy log files</small>
+        <br><br><br>
+    </div>
 </body>
 <script>
-    var currentOpenedLogURL = "";
+    //LogView Implementation
     var currentFilter = "all";
+    var currentOpenedLogURL = "";
+    var currentLogFile = "";
     var autoscroll = false;
 
     $(".checkbox").checkbox();
+
+    /* Menu Subpanel Switch */
+    $(".subpanel").hide();
+    $("#logviewer").show();
+    $(".panel_menu_btn").on("click", function() {
+        var id = $(this).attr("id");
+        $(".subpanel").hide();
+        $(".ui.menu .item").removeClass("active");
+        $(this).addClass("active");
+        if (id === "summaryMenu") {
+            $("#summary").show();
+        } else if (id === "logViewMenu") {
+            $("#logviewer").show();
+        } else if (id === "settingsMenu") {
+            $("#settings").show();
+        }
+    });
+
+    /* Refresh Button */
+    $("#refreshLogBtn").on("click", function() {
+        if (currentLogFile) {
+            openLog(null, null, currentLogFile, currentFilter);
+            loadLogSummary(currentLogFile);
+        } else {
+            alert('Please select a log file first.');
+        }
+    });
+
+    /* Log file dropdown */
+    function populateLogfileDropdown() {
+        $.get("/api/log/list", function(data){
+            let $menu = $("#logfileDropdownMenu");
+            $menu.html("");
+            for (let [key, value] of Object.entries(data)) {
+                value.reverse();
+                value.forEach(file => {
+                    $menu.append(
+                        `<div class="item" data-value="${file.Filename}" data-category="${key}">${file.Title} (${formatBytes(file.Filesize)})</div>`
+                    );
+                });
+            }
+            $('#logfileDropdown').dropdown('refresh');
+
+            //let firstItem = $menu.find('.item').first();
+            //if (firstItem.length) {
+            //    $('#logfileDropdown').dropdown('set selected', firstItem.data('value'));
+            //}
+        });
+    }
+    $('#logfileDropdown').dropdown({
+        onChange: function(value, text, $choice) {
+            if (value) {
+                openLog(null, $choice.data('category'), value, currentFilter || "all");
+                loadLogSummary(value);
+            }
+        }
+    });
+    populateLogfileDropdown();
+
+    /* Filter dropdown */
+    $('#filterDropdown').dropdown({
+        onChange: function(value) {
+            currentFilter = value;
+            if (!currentLogFile) {
+                return;
+            }
+            $(".filterbtn.active").removeClass("active");
+            $(`.filterbtn[filter="${value}"]`).addClass("active");
+            openLog(null, null, currentLogFile, currentFilter);
+        }
+    });
+
+    // Set default filter to "error"
+    $('#filterDropdown').dropdown('set selected', 'all');
+    currentFilter = "all";
+
+    /* Log download button */
+    $("#downloadLogBtn").on("click", function() {
+        if (!currentLogFile) {
+            alert("Please select a log file first.");
+            return;
+        }
+        if (!currentOpenedLogURL) {
+            alert("No log file is currently opened.");
+            return;
+        }
+        $.get(currentOpenedLogURL, function(data) {
+            if (data.error !== undefined) {
+                alert(data.error);
+                return;
+            }
+            let blob = new Blob([data], {type: "text/plain"});
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = currentLogFile || "log.txt";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        });
+    });
+
+    /* Analyzer */
+    function loadLogSummary(filename){
+        $.get("/api/log/summary?file=" + filename, function(data){
+            if (data.error !== undefined){
+                $("#analyzer").html("<div class='ui negative message'><div class='header'>Error</div><p>" + data.error + "</p></div>");
+                return;
+            }
+            
+            $("#successRequestsCount").text(data.total_valid || 0);
+            $("#errorRequestsCount").text(data.total_errors || 0);
+            $("#totalRequestsCount").text(data.total_requests || 0);
+            renderSummaryToHTML(data);
+        });
+
+        $.get("/api/log/errors?file=" + encodeURIComponent(filename), function(data) {
+            renderErrorHighlights(data);
+        }).fail(function() {
+            $("#errorHighlightWrapper").html(
+                `<div class="ui error message">
+                    <div class="header">Failed to load error highlights</div>
+                </div>`
+            );
+        });
+
+    }
+
+    function renderSummaryToHTML(data){
+        /* Render summary analysis to #analyzer */
+        let html = `
+            <div class="ui stackable grid">
+                <div class="eight wide column">
+                    <h4 class="ui header">Request Methods</h4>
+                    <canvas id="requestMethodsChart" height="180"></canvas>
+                </div>
+                <div class="eight wide column">
+                    <h4 class="ui header">Hits Per Day</h4>
+                    <canvas id="hitsPerDayChart" height="180"></canvas>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui stackable grid">
+                <div class="sixteen wide column">
+                    <h4 class="ui header">Hits Per Site</h4>
+                    <div id="siteCharts"></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui stackable grid">
+                <div class="eight wide column">
+                    <h4 class="ui header">Unique IPs</h4>
+                    <table class="ui celled table">
+                        <thead><tr><th>IP</th><th>Requests</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.unique_ips)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([ip, count]) => `<tr><td>${ip}</td><td>${count}</td></tr>`)
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="eight wide column">
+                    <h4 class="ui header">Top User Agents</h4>
+                    <table class="ui celled table">
+                        <thead><tr><th>User Agent</th><th>Requests</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.top_user_agents)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([ua, count]) => `<tr><td style="word-break:break-all;">${ua}</td><td>${count}</td></tr>`)
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui stackable grid">
+                <div class="sixteen wide column">
+                    <h4 class="ui header">Top Paths</h4>
+                    <table class="ui celled table">
+                        <thead><tr><th>Path</th><th>Requests</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.top_paths)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([path, count]) => `<tr><td style="word-break:break-all;">${path}</td><td>${count}</td></tr>`)
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        $("#analyzer").html(html);
+
+        // Load Chart.js if not loaded
+        function loadChartJs(cb) {
+            if (window.Chart) { cb(); return; }
+            let s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/chart.js";
+            s.onload = cb;
+            document.head.appendChild(s);
+        }
+
+        // Prepare data for charts
+        function getDateRangeLabels(hitPerDay) {
+            let dates = Object.keys(hitPerDay).sort();
+            if (dates.length === 0) return [];
+            let start = new Date(dates[0]);
+            let end = new Date(dates[dates.length - 1]);
+            let labels = [];
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                let y = d.getFullYear(), m = (d.getMonth() + 1).toString().padStart(2, "0"), day = d.getDate().toString().padStart(2, "0");
+                labels.push(`${y}-${m}-${day}`);
+            }
+            return labels;
+        }
+
+        loadChartJs(function() {
+            // 1. Pie chart for request methods
+            let reqMethods = data.request_methods || {};
+            let reqLabels = Object.keys(reqMethods);
+            let reqCounts = Object.values(reqMethods);
+            new Chart(document.getElementById("requestMethodsChart"), {
+                type: "pie",
+                data: {
+                    labels: reqLabels,
+                    datasets: [{
+                        data: reqCounts,
+                        backgroundColor: ["#4b75ff", "#21ba45", "#db2828", "#fbbd08", "#b5cc18", "#a333c8"]
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+            });
+
+            // 2. Histogram for hit_per_day
+            let hitPerDay = data.hit_per_day || {};
+            let dayLabels = getDateRangeLabels(hitPerDay);
+            let dayCounts = dayLabels.map(d => hitPerDay[d] || 0);
+            new Chart(document.getElementById("hitsPerDayChart"), {
+                type: "bar",
+                data: {
+                    labels: dayLabels,
+                    datasets: [{
+                        label: "Hits",
+                        data: dayCounts,
+                        backgroundColor: "#4b75ff"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } }
+                }
+            });
+
+            // 3. Line chart for each site in hit_per_site
+            let siteChartsDiv = $("#siteCharts");
+            let siteData = data.hit_per_site || {};
+            let i = 0;
+            for (let [site, counts] of Object.entries(siteData)) {
+                let canvasId = "siteChart_" + i;
+                siteChartsDiv.append(`
+                    <div style="margin-bottom:2em;">
+                        <b>${site}</b>
+                        <canvas id="${canvasId}" height="100"></canvas>
+                    </div>
+                `);
+                // If counts length doesn't match dayLabels, pad left with zeros
+                let paddedCounts = counts.slice(-dayLabels.length);
+                while (paddedCounts.length < dayLabels.length) paddedCounts.unshift(0);
+                new Chart(document.getElementById(canvasId), {
+                    type: "line",
+                    data: {
+                        labels: dayLabels,
+                        datasets: [{
+                            label: "Hits",
+                            data: paddedCounts,
+                            fill: false,
+                            borderColor: "#21ba45",
+                            backgroundColor: "#21ba45",
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } } }
+                    }
+                });
+                i++;
+            }
+        });
+    }
+
+
+    function openLog(object, catergory, filename, filter="all"){
+        $(".logfile.active").removeClass('active');
+        $(object).addClass("active");
+        currentLogFile = filename;
+        currentOpenedLogURL = "/api/log/read?file=" + filename + "&filter=" + filter;
+        $.get(currentOpenedLogURL, function(data){
+            if (data.error !== undefined){
+                alert(data.error);
+                return;
+            }
+            renderLogWithCurrentFilter(data);
+        });
+    }
 
     function openLogInNewTab(){
         if (currentOpenedLogURL != ""){
@@ -166,53 +586,6 @@
         }
     }
 
-    function openLog(object, catergory, filename){
-        $(".logfile.active").removeClass('active');
-        $(object).addClass("active");
-        currentOpenedLogURL = "/api/log/read?file=" + filename;
-        $.get(currentOpenedLogURL, function(data){
-            if (data.error !== undefined){
-                alert(data.error);
-                return;
-            }
-            renderLogWithCurrentFilter(data);
-        }); 
-    }
-
-    function initLogList(){
-        $("#logList").html("");
-        $.get("/api/log/list", function(data){
-            //console.log(data);
-            for (let [key, value] of Object.entries(data)) {
-                console.log(key, value);
-                value.reverse(); //Default value was from oldest to newest
-                var fileItemList = "";
-                value.forEach(file => {
-                    fileItemList += `<div class="item clickable logfile" onclick="openLog(this, '${key}','${file.Filename}');">
-                            <i class="file outline icon"></i>
-                            <div class="content">
-                                ${file.Title} (${formatBytes(file.Filesize)})
-                                <div class="showing"><i class="green chevron right icon"></i></div>
-                            </div>
-                        </div>`;
-                })
-                $("#logList").append(`<div class="title">
-                    <i class="dropdown icon"></i>
-                        ${key}
-                    </div>
-                    <div class="content">
-                        <div class="ui list">
-                            ${fileItemList}
-                        </div>
-                    </div>`);
-            }
-
-            $(".ui.accordion").accordion();
-        });
-    }
-    initLogList();
-
-    
     function formatBytes(x){
         var units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         let l = 0, n = parseInt(x, 10) || 0;
@@ -224,46 +597,10 @@
 
     //Filter the log and render it to text area based on current filter choice
     function renderLogWithCurrentFilter(data){
-        if (currentFilter == "all"){
-            $("#logrender").val(data);
-        }else{
-            let filterLines = data.split("\n");
-            let filteredLogFile = "";
-            for (var i = 0; i < filterLines.length; i++){
-                const thisLine = filterLines[i];
-                if (currentFilter == "system" && thisLine.indexOf("[system:") >= 0){
-                    filteredLogFile += thisLine + "\n";
-                }else if (currentFilter == "request" && thisLine.indexOf("[router:") >= 0){
-                    filteredLogFile += thisLine + "\n";
-                }else if (currentFilter == "error" && thisLine.indexOf(":error]") >= 0){
-                    filteredLogFile += thisLine + "\n";
-                }
-            }
-            $("#logrender").val(filteredLogFile);
-        }
+        $("#logrender").val(data);
         var textarea = document.getElementById('logrender');
         textarea.scrollTop = textarea.scrollHeight;
     }
-
-    /* Filter related functions */
-    $(".filterbtn").on("click", function(evt){
-        //Set filter type
-        let filterType = $(this).attr("filter");
-        currentFilter = (filterType);
-        $(".filterbtn.active").removeClass("active");
-        $(this).addClass('active');
-
-        //Reload the log with filter
-        if (currentOpenedLogURL != ""){
-            $.get(currentOpenedLogURL, function(data){
-                if (data.error !== undefined){
-                    alert(data.error);
-                    return;
-                }
-                renderLogWithCurrentFilter(data);
-            }); 
-        }
-    });
 
     /* Auto scroll function */
     setInterval(function(){
@@ -279,9 +616,39 @@
                 }); 
             }
         }
-    }, 10000);
+    }, 3000);
     function handleAutoScrollTicker(event, checked){
         autoscroll = checked;
+    }
+
+    // Error Highlights Rendering
+    function renderErrorHighlights(errors) {
+        if (!Array.isArray(errors) || errors.length === 0) {
+            $("#errorHighlightWrapper").html(
+                `<p><i class="ui green circle check icon"></i> No error found</p>`
+            );
+            return;
+        }
+        let html = `<div class="ui list">`;
+        errors.forEach(function(err) {
+            let [timestamp, method, path, code] = err;
+            html += `
+                <div class="item">
+                    <div class="ui ${code.startsWith('5') ? 'red' : 'yellow'} message" style="margin-bottom:0.7em;">
+                        <div class="header">
+                            <span style="font-family:monospace;">[${timestamp}]</span>
+                            <span style="font-family:monospace;">${method}</span>
+                            <span style="margin-left:1em;font-family:monospace;">${path}</span>
+                            <span style="float:right;font-weight:bold;">${code}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        $("#errorHighlightWrapper").html(html);
+        //Scroll to bottom of the error highlight
+        $("#errorHighlightWrapper").scrollTop($("#errorHighlightWrapper")[0].scrollHeight);
     }
 </script>
 </html>

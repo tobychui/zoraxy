@@ -1200,6 +1200,9 @@
         //Populate all the information in the proxy editor
         populateAndBindEventsToHTTPProxyEditor(subd);
 
+        //Hide all previously opened editor side-frame wrapper
+        hideEditorSideWrapper();
+
         //Show the first rpconfig
         $("#httprpEditModal .rpconfig_content").hide();
         $("#httprpEditModal .rpconfig_content[rpcfg='downstream']").show();
@@ -1433,7 +1436,7 @@
             editor.find(".Tls_EnableLegacyCertificateMatching").prop("checked", true);
             editor.find(".Tls_EnableAutoHTTPS").prop("checked", false);
         }
-        
+      
         editor.find(".Tls_EnableSNI").off("change").on("change", function() {
             saveTlsConfigs(uuid);
         });

@@ -18,11 +18,15 @@ import (
 */
 
 type Logger struct {
-	Prefix         string //Prefix for log files
-	LogFolder      string //Folder to store the log  file
-	CurrentLogFile string //Current writing filename
-	logger         *log.Logger
-	file           *os.File
+	Prefix         string        //Prefix for log files
+	LogFolder      string        //Folder to store the log  file
+	CurrentLogFile string        //Current writing filename
+	RotateOption   *RotateOption //Options for log rotation, see rotate.go
+
+	//Internal
+	logRotateTicker *time.Ticker
+	logger          *log.Logger
+	file            *os.File
 }
 
 // Create a new logger that log to files
@@ -46,6 +50,17 @@ func NewLogger(logFilePrefix string, logFolder string) (*Logger, error) {
 	thisLogger.CurrentLogFile = logFilePath
 	thisLogger.file = f
 
+	//Initiate the log rotation ticker
+	thisLogger.logRotateTicker = time.NewTicker(1 * time.Hour)
+	go func() {
+		for range thisLogger.logRotateTicker.C {
+			err := thisLogger.RotateLog()
+			if err != nil {
+				log.Println("Log rotation error: ", err.Error())
+			}
+		}
+	}()
+
 	//Start the logger
 	logger := log.New(f, "", log.Flags()&^(log.Ldate|log.Ltime))
 	logger.SetFlags(0)
@@ -63,6 +78,11 @@ func NewFmtLogger() (*Logger, error) {
 		logger:         nil,
 		file:           nil,
 	}, nil
+}
+
+// SetRotateOption will set the log rotation option
+func (l *Logger) SetRotateOption(option *RotateOption) {
+	l.RotateOption = option
 }
 
 func (l *Logger) getLogFilepath() string {
@@ -118,6 +138,12 @@ func (l *Logger) ValidateAndUpdateLogFilepath() {
 		l.file.Close()
 		l.file = nil
 
+		//Archive the old log file
+		err := l.ArchiveLog(l.CurrentLogFile)
+		if err != nil {
+			log.Println("Unable to archive old log file: ", err.Error())
+		}
+
 		//Create a new log file
 		f, err := os.OpenFile(expectedCurrentLogFilepath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
 		if err != nil {
@@ -135,5 +161,10 @@ func (l *Logger) ValidateAndUpdateLogFilepath() {
 }
 
 func (l *Logger) Close() {
-	l.file.Close()
+	if l.file != nil {
+		if err := l.file.Close(); err != nil {
+			log.Println("Error closing log file:", err)
+		}
+	}
+	l.StopLogRotateTicker()
 }

@@ -17,7 +17,7 @@ import (
 type SniffResult int
 
 const (
-	SniffResultAccpet SniffResult = iota // Forward the request to this plugin dynamic capture ingress
+	SniffResultAccept SniffResult = iota // Forward the request to this plugin dynamic capture ingress
 	SniffResultSkip                      // Skip this plugin and let the next plugin handle the request
 )
 
@@ -62,7 +62,7 @@ func (p *PathRouter) RegisterDynamicSniffHandler(sniff_ingress string, mux *http
 		payload.rawRequest = r
 
 		sniffResult := handler(&payload)
-		if sniffResult == SniffResultAccpet {
+		if sniffResult == SniffResultAccept {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
 		} else {

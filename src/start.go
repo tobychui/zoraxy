@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/netip"
 	"os"
 	"runtime"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
+	"imuslab.com/zoraxy/mod/eventsystem"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -64,6 +66,27 @@ func startupSequence() {
 	} else {
 		panic(err)
 	}
+
+	if !*enableLog {
+		//Disable file logging, use fmt logger instead
+		l, err = logger.NewFmtLogger()
+		if err != nil {
+			panic(err)
+		}
+		SystemWideLogger = l
+		SystemWideLogger.Println("System wide logging is disabled, all logs will be printed to STDOUT only")
+	} else {
+		l.SetRotateOption(&logger.RotateOption{
+			Enabled:    *logRotate != 0,
+			MaxSize:    int64(*logRotate) * 1024, //Convert to bytes
+			MaxBackups: 10,
+			Compress:   *enableLogCompression,
+			BackupDir:  "",
+		})
+		SystemWideLogger = l
+		SystemWideLogger.Println("System wide logging is enabled")
+	}
+
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
 		RootFolder: *path_logFile,
 		Extension:  LOG_EXTENSION,
@@ -71,9 +94,10 @@ func startupSequence() {
 
 	//Create database
 	backendType := database.GetRecommendedBackendType()
-	if *databaseBackend == "leveldb" {
+	switch *databaseBackend {
+	case "leveldb":
 		backendType = dbinc.BackendLevelDB
-	} else if *databaseBackend == "boltdb" {
+	case "boltdb":
 		backendType = dbinc.BackendBoltDB
 	}
 	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)
@@ -98,6 +122,9 @@ func startupSequence() {
 		//Not logged in. Redirecting to login page
 		http.Redirect(w, r, "/login.html", http.StatusTemporaryRedirect)
 	})
+
+	// Create an API key manager for plugin authentication
+	pluginApiKeyManager = auth.NewAPIKeyManager()
 
 	//Create a TLS certificate manager
 	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, SystemWideLogger)
@@ -313,11 +340,18 @@ func startupSequence() {
 	*/
 	pluginFolder := *path_plugin
 	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
+	ZoraxyAddrPort, err := netip.ParseAddrPort(*webUIPort)
+	ZoraxyPort := 8000
+	if err == nil && ZoraxyAddrPort.IsValid() && ZoraxyAddrPort.Port() > 0 {
+		ZoraxyPort = int(ZoraxyAddrPort.Port())
+	}
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir:          pluginFolder,
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
+		APIKeyManager:      pluginApiKeyManager,
+		ZoraxyPort:         ZoraxyPort,
 		CSRFTokenGen: func(r *http.Request) string {
 			return csrf.Token(r)
 		},
@@ -335,6 +369,11 @@ func startupSequence() {
 		EnableHotReload:   *development_build, //Default to true if development build
 		HotReloadInterval: 5,                  //seconds
 	})
+
+	/*
+		Event Manager
+	*/
+	eventsystem.InitEventSystem(SystemWideLogger)
 
 	//Sync latest plugin list from the plugin store
 	go func() {
