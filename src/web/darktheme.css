@@ -336,7 +336,7 @@ body.darkTheme .ui.segment.advanceoptions {
 body.darkTheme .ui.segment{
     background-color: transparent !important;
     color: var(--text_color) !important;
-    border: 1px solid transparent !important;
+    border: 0 /*solid transparent*/ !important;
 }
 
 body.darkTheme .sub.header {
