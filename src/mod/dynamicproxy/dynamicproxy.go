@@ -87,8 +87,6 @@ func (router *Router) StartProxyService() error {
 		MinVersion:     uint16(minVersion),
 	}
 
-	//config := router.Option.TlsManager.ServerTLSConfig
-
 	//Start rate limitor
 	err := router.startRateLimterCounterResetTicker()
 	if err != nil {
