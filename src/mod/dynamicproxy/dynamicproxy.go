@@ -81,10 +81,13 @@ func (router *Router) StartProxyService() error {
 	if router.Option.ForceTLSLatest {
 		minVersion = tls.VersionTLS12
 	}
+
 	config := &tls.Config{
 		GetCertificate: router.Option.TlsManager.GetCert,
 		MinVersion:     uint16(minVersion),
 	}
+
+	//config := router.Option.TlsManager.ServerTLSConfig
 
 	//Start rate limitor
 	err := router.startRateLimterCounterResetTicker()
@@ -265,63 +268,77 @@ func (router *Router) StartProxyService() error {
 	return nil
 }
 
+// StopProxyService stops the proxy server and waits for all listeners to close
 func (router *Router) StopProxyService() error {
-	if router.server == nil {
+	if router.server == nil && router.tlsListener == nil && router.tlsRedirectStop == nil {
 		return errors.New("reverse proxy server already stopped")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	err := router.server.Shutdown(ctx)
-	if err != nil {
-		return err
+
+	var wg sync.WaitGroup
+
+	// Stop main TLS/HTTP server
+	if router.server != nil {
+		wg.Add(1)
+		go func(srv *http.Server) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				router.Option.Logger.PrintAndLog("dprouter", "Error shutting down main server", err)
+			}
+		}(router.server)
 	}
 
-	//Stop TLS listener
-	if router.tlsListener != nil {
-		router.tlsListener.Close()
-	}
-
-	//Stop rate limiter
-	if router.rateLimterStop != nil {
-		go func() {
-			// As the rate timer loop has a 1 sec ticker
-			// stop the rate limiter in go routine can prevent
-			// front end from freezing for 1 sec
-			router.rateLimterStop <- true
-		}()
-
-	}
-
-	//Stop TLS redirection (from port 80)
+	// Stop TLS redirect server
 	if router.tlsRedirectStop != nil {
-		router.tlsRedirectStop <- true
+		wg.Add(1)
+		go func(ch chan bool) {
+			defer wg.Done()
+			ch <- true
+		}(router.tlsRedirectStop)
 	}
 
-	//Discard the server object
-	router.tlsListener = nil
+	// Stop rate limiter ticker if exists
+	if router.rateLimterStop != nil {
+		wg.Add(1)
+		go func(ch chan bool) {
+			defer wg.Done()
+			ch <- true
+		}(router.rateLimterStop)
+	}
+
+	// Wait for all shutdown goroutines to finish
+	wg.Wait()
+
+	// Clear server references
 	router.server = nil
-	router.Running = false
+	router.tlsListener = nil
 	router.tlsRedirectStop = nil
+	router.rateLimterStop = nil
+	router.Running = false
+
+	router.Option.Logger.PrintAndLog("dprouter", "Proxy service stopped successfully", nil)
 	return nil
 }
 
-// Restart the current router if it is running.
+// Restart safely restarts the proxy server
 func (router *Router) Restart() error {
-	//Stop the router if it is already running
 	if router.Running {
-		err := router.StopProxyService()
-		if err != nil {
+		router.Option.Logger.PrintAndLog("dprouter", "Restarting proxy server...", nil)
+		if err := router.StopProxyService(); err != nil {
 			return err
 		}
-
-		time.Sleep(100 * time.Millisecond)
-		// Start the server
-		err = router.StartProxyService()
-		if err != nil {
-			return err
-		}
+		// Ensure ports are released
+		time.Sleep(200 * time.Millisecond)
 	}
 
+	if err := router.StartProxyService(); err != nil {
+		router.Option.Logger.PrintAndLog("dprouter", "Failed to restart proxy server", err)
+		return err
+	}
+
+	router.Option.Logger.PrintAndLog("dprouter", "Proxy server restarted successfully", nil)
 	return nil
 }
 
