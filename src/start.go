@@ -12,6 +12,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/eventsystem"
+	"imuslab.com/zoraxy/mod/utils"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -76,14 +77,24 @@ func startupSequence() {
 		SystemWideLogger = l
 		SystemWideLogger.Println("System wide logging is disabled, all logs will be printed to STDOUT only")
 	} else {
+		logRotateSize, err := utils.SizeStringToBytes(*logRotate)
+		if err != nil {
+			//Default disable
+			logRotateSize = 0
+		}
 		l.SetRotateOption(&logger.RotateOption{
-			Enabled:    *logRotate != 0,
-			MaxSize:    int64(*logRotate) * 1024, //Convert to bytes
+			Enabled:    logRotateSize != 0,
+			MaxSize:    int64(logRotateSize),
 			MaxBackups: 10,
 			Compress:   *enableLogCompression,
 			BackupDir:  "",
 		})
 		SystemWideLogger = l
+		if logRotateSize == 0 {
+			SystemWideLogger.Println("Log rotation is disabled")
+		} else {
+			SystemWideLogger.Println("Log rotation is enabled, max log file size " + utils.BytesToHumanReadable(int64(logRotateSize)))
+		}
 		SystemWideLogger.Println("System wide logging is enabled")
 	}
 
