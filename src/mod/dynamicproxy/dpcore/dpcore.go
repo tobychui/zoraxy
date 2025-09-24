@@ -75,7 +75,8 @@ type ResponseRewriteRuleSet struct {
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 
 	/* System Information Payload */
-	Version string //Version number of Zoraxy, use for X-Proxy-By
+	DevelopmentMode bool   //Inject dev mode information to requests
+	Version         string //Version number of Zoraxy, use for X-Proxy-By
 }
 
 type requestCanceler interface {
@@ -284,7 +285,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// Add user defined headers (to upstream)
 	injectUserDefinedHeaders(outreq.Header, rrr.UpstreamHeaders)
 
-	// Rewrite outbound UA, must be after user headers
+	// Rewrite outbound UA top upstream, must be after user headers
 	rewriteUserAgent(outreq.Header, "Zoraxy/"+rrr.Version)
 
 	//Fix proxmox transfer encoding bug if detected Proxmox Cookie
@@ -323,7 +324,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	//Add debug X-Proxy-By tracker
-	res.Header.Set("x-proxy-by", "zoraxy/"+rrr.Version)
+	if rrr.DevelopmentMode {
+		res.Header.Set("x-proxy-by", "zoraxy/"+rrr.Version)
+	}
 
 	//Custom Location header rewriter functions
 	if res.Header.Get("Location") != "" {

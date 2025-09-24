@@ -122,7 +122,8 @@ func ReverseProxyInit() {
 		LoadBalancer:       loadBalancer,
 		PluginManager:      pluginManager,
 		/* Utilities */
-		Logger: SystemWideLogger,
+		DevelopmentMode: *development_build,
+		Logger:          SystemWideLogger,
 	})
 	if err != nil {
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to create dynamic proxy router", err)

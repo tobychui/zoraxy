@@ -172,6 +172,7 @@ func (router *Router) StartProxyService() error {
 							NoRemoveHopByHop:    endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
 							PathPrefix:          "",
 							Version:             sep.parent.Option.HostVersion,
+							DevelopmentMode:     sep.parent.Option.DevelopmentMode,
 						})
 						return
 					}
