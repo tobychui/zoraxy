@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -299,6 +300,29 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			p.logf("http: proxy error: %v", err)
 		}
 		return http.StatusBadGateway, err
+	}
+
+	//Fix for issue #821
+	if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
+		if tr, ok := transport.(*http.Transport); ok {
+			serverName := outreq.Host
+			if h, _, err := net.SplitHostPort(serverName); err == nil {
+				serverName = h
+			}
+
+			if tr.TLSClientConfig == nil || tr.TLSClientConfig.ServerName != serverName {
+				trc := tr.Clone()
+				var cfg *tls.Config
+				if tr.TLSClientConfig != nil {
+					cfg = tr.TLSClientConfig.Clone()
+				} else {
+					cfg = &tls.Config{}
+				}
+				cfg.ServerName = serverName
+				trc.TLSClientConfig = cfg
+				transport = trc
+			}
+		}
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
