@@ -1,0 +1,25 @@
+package eventsystem // import "imuslab.com/zoraxy/mod/eventsystem"
+
+
+VARIABLES
+
+var (
+	// Publisher is the singleton instance of the event manager
+	Publisher *eventManager
+)
+
+FUNCTIONS
+
+func InitEventSystem(logger *logger.Logger)
+    InitEventSystem initializes the event manager with the plugin manager
+
+
+TYPES
+
+type Listener interface {
+	Notify(event events.Event) error
+	GetID() ListenerID
+}
+
+type ListenerID string
+

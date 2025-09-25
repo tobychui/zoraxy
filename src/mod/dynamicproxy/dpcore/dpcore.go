@@ -294,14 +294,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
-	res, err := transport.RoundTrip(outreq)
-	if err != nil {
-		if p.Verbal {
-			p.logf("http: proxy error: %v", err)
-		}
-		return http.StatusBadGateway, err
-	}
-
 	//Fix for issue #821
 	if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
 		if tr, ok := transport.(*http.Transport); ok {
@@ -323,6 +315,14 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 				transport = trc
 			}
 		}
+	}
+
+	res, err := transport.RoundTrip(outreq)
+	if err != nil {
+		if p.Verbal {
+			p.logf("http: proxy error: %v", err)
+		}
+		return http.StatusBadGateway, err
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
