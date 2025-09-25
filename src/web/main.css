@@ -280,7 +280,7 @@ body.darkTheme .menubar{
     }
 
     #mainmenu{
-        width: calc(100% - 1em);
+        width: calc(100% - 0.1em);
     }
 
     .contentWindow{
