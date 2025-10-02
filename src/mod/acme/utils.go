@@ -126,7 +126,6 @@ func CertExpireSoon(certBytes []byte, numberOfDays int) bool {
 //   * Each label ≤ 63 characters
 //   * Only letters, digits, and hyphens
 //   * Labels do not start or end with a hyphen
-//   * Labels must have >= 2 characters
 //   * Full domain ≤ 253 characters
 // Returns an empty string if the domain is invalid.
 func NormalizeDomain(d string) (string, error) {
@@ -145,9 +144,6 @@ func NormalizeDomain(d string) (string, error) {
 	for _, label := range labels {
 		if len(label) == 0 {
 			return "", errors.New("Domain '" + d + "' not valid: Empty label")
-		}
-		if len(label) < 2 {
-			return "", errors.New("Domain '" + d + "' not valid: label '" + label + "' is too short")
 		}
 		if len(label) > 63 {
 			return "", errors.New("Domain not valid: label exceeds 63 characters")
