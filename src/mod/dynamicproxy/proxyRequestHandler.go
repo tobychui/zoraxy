@@ -196,6 +196,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		Version:                        target.parent.Option.HostVersion,
+		DevelopmentMode:                target.parent.Option.DevelopmentMode,
 	})
 
 	//validate the error
@@ -289,6 +290,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		DisableChunkedTransferEncoding: target.parent.DisableChunkedTransferEncoding,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		Version:                        target.parent.parent.Option.HostVersion,
+		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
 	})
 
 	var dnsError *net.DNSError

@@ -72,15 +72,17 @@ body.darkTheme .menubar{
     width: 240px;
     position: sticky;
     top: 4em;
+    padding: 0 1em;
 }
 
 .contentWindow{
     display: inline-block;
-    width: calc(100% - 240px);
+    width: calc(100% - 244px);
     vertical-align: top;
     background-color: var(--theme_bg_primary);
     border-radius: 1em;
-    margin-right: 2em;
+    margin-right: 1em;
+    flex-shrink: 0;
 }
 
 .menutoggle{
@@ -278,7 +280,7 @@ body.darkTheme .menubar{
     }
 
     #mainmenu{
-        width: calc(100% - 1em);
+        width: calc(100% - 0.1em);
     }
 
     .contentWindow{
@@ -309,8 +311,17 @@ body.darkTheme .menubar{
     font-size: 0.8em !important;
     color: #9c9c9c !important;
     padding-left: 0.6em;
+    /* fix the divider being really weird in the sidebar menu */
+    margin: 1rem 0 0.25rem 0 !important;
+    height: 2em !important;
+    border-bottom: 1px solid rgba(34,36,38,.15) !important;
+    border-top: 1px solid rgba(255,255,255,.1) !important;
 }
 
+body.darkTheme .menudivider{
+    border-bottom: 1px solid rgba(255,255,255,.15) !important;
+    border-top: 1px solid rgba(34,36,38,.1) !important;
+}
 /*
     Global rules overwrite
 */

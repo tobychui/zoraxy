@@ -69,7 +69,8 @@ type RouterOption struct {
 	OAuth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
 
 	/* Utilities */
-	Logger *logger.Logger //Logger for reverse proxy requets
+	DevelopmentMode bool           //Enable development mode, provide more debug information in headers
+	Logger          *logger.Logger //Logger for reverse proxy requests
 }
 
 /* Router Object */

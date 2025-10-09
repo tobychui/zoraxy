@@ -2,6 +2,7 @@ package dpcore
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -75,7 +76,8 @@ type ResponseRewriteRuleSet struct {
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 
 	/* System Information Payload */
-	Version string //Version number of Zoraxy, use for X-Proxy-By
+	DevelopmentMode bool   //Inject dev mode information to requests
+	Version         string //Version number of Zoraxy, use for X-Proxy-By
 }
 
 type requestCanceler interface {
@@ -284,12 +286,35 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// Add user defined headers (to upstream)
 	injectUserDefinedHeaders(outreq.Header, rrr.UpstreamHeaders)
 
-	// Rewrite outbound UA, must be after user headers
+	// Rewrite outbound UA top upstream, must be after user headers
 	rewriteUserAgent(outreq.Header, "Zoraxy/"+rrr.Version)
 
 	//Fix proxmox transfer encoding bug if detected Proxmox Cookie
 	if rrr.DisableChunkedTransferEncoding || domainsniff.IsProxmox(req) {
 		outreq.TransferEncoding = []string{"identity"}
+	}
+
+	//Fix for issue #821
+	if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
+		if tr, ok := transport.(*http.Transport); ok {
+			serverName := outreq.Host
+			if h, _, err := net.SplitHostPort(serverName); err == nil {
+				serverName = h
+			}
+
+			if tr.TLSClientConfig == nil || tr.TLSClientConfig.ServerName != serverName {
+				trc := tr.Clone()
+				var cfg *tls.Config
+				if tr.TLSClientConfig != nil {
+					cfg = tr.TLSClientConfig.Clone()
+				} else {
+					cfg = &tls.Config{}
+				}
+				cfg.ServerName = serverName
+				trc.TLSClientConfig = cfg
+				transport = trc
+			}
+		}
 	}
 
 	res, err := transport.RoundTrip(outreq)
@@ -323,7 +348,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	//Add debug X-Proxy-By tracker
-	res.Header.Set("x-proxy-by", "zoraxy/"+rrr.Version)
+	if rrr.DevelopmentMode {
+		res.Header.Set("x-proxy-by", "zoraxy/"+rrr.Version)
+	}
 
 	//Custom Location header rewriter functions
 	if res.Header.Get("Location") != "" {
@@ -391,7 +418,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 
 	return res.StatusCode, nil
 }
-
 func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
 	hij, ok := rw.(http.Hijacker)
 	if !ok {
@@ -407,12 +433,23 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (in
 		return http.StatusInternalServerError, err
 	}
 
-	proxyConn, err := net.Dial("tcp", req.URL.Host)
+	// Extract SNI/hostname for TLS handshake
+	host := req.URL.Host
+	if !strings.Contains(host, ":") {
+		host += ":443"
+	}
+	serverName := req.URL.Hostname()
+
+	// Connect with SNI offload
+	tlsConfig := &tls.Config{
+		ServerName: serverName,
+	}
+	proxyConn, err := tls.Dial("tcp", host, tlsConfig)
 	if err != nil {
 		if p.Verbal {
 			p.logf("http: proxy error: %v", err)
 		}
-
+		clientConn.Close()
 		return http.StatusInternalServerError, err
 	}
 
