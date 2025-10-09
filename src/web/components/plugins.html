@@ -615,6 +615,7 @@ function uninstallPlugin(pluginId, pluginName, btn=undefined) {
                   } else {
                       msgbox(pluginName + " uninstalled successfully", true);
                       initiatePluginList();
+                      initPluginSideMenu();
                   }
               }
           });
