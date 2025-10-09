@@ -90,7 +90,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `ENABLELOG` | `true` (Boolean) | Enable system wide logging, set to false for writing log to STDOUT only. |
 | `ENABLELOGCOMPRESS` | `true` (Boolean) | Enable log compression for rotated log files. |
 | `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices). |
-| `LOGROTATE` | `0` (Integer) | Enable log rotation and set the maximum log file size in KB (e.g. 25 for 25KB), set to 0 for disable. |
+| `LOGROTATE` | `0` (String) | Enable log rotation and set the maximum log file size (Supports K, M, G suffixes). Set to 0 to disable. |
 | `MDNS` | `true` (Boolean) | Enable mDNS scanner and transponder. |
 | `MDNSNAME` | `''` (String) | mDNS name, leave empty to use default (zoraxy_{node-uuid}.local). |
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |
