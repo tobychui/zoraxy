@@ -111,15 +111,21 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 // this prevents unnecessary external DNS lookup and connection, return true if swapped and request is already handled
 // by the loopback handler. Only continue if return is false
 func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, selectedUpstream *loadbalance.Upstream) bool {
-	upstreamHostanme := selectedUpstream.OriginIpOrDomain
-	if strings.Contains(upstreamHostanme, ":") {
-		upstreamHostanme = strings.Split(upstreamHostanme, ":")[0]
+	upstreamHostname := selectedUpstream.OriginIpOrDomain
+	if strings.Contains(upstreamHostname, ":") {
+		upstreamHostname = strings.Split(upstreamHostname, ":")[0]
 	}
-	loopbackProxyEndpoint := h.Parent.GetProxyEndpointFromHostname(upstreamHostanme)
+	loopbackProxyEndpoint := h.Parent.GetProxyEndpointFromHostname(upstreamHostname)
 	if loopbackProxyEndpoint != nil {
 		//This is a loopback request. Swap the target to the loopback target
 		//h.Parent.Option.Logger.PrintAndLog("proxy", "Detected a loopback request to self. Swap the target to "+loopbackProxyEndpoint.RootOrMatchingDomain, nil)
-		h.hostRequest(w, r, loopbackProxyEndpoint)
+		if loopbackProxyEndpoint.IsEnabled() {
+			h.hostRequest(w, r, loopbackProxyEndpoint)
+		} else {
+			//Endpoint disabled, return 503
+			http.ServeFile(w, r, "./web/rperror.html")
+			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname)
+		}
 		return true
 	}
 	return false

@@ -272,6 +272,11 @@ func (ep *ProxyEndpoint) Remove() error {
 	return nil
 }
 
+// Check if the proxy endpoint is enabled
+func (ep *ProxyEndpoint) IsEnabled() bool {
+	return !ep.Disabled
+}
+
 // Write changes to runtime without respawning the proxy handler
 // use prepare -> remove -> add if you change anything in the endpoint
 // that effects the proxy routing src / dest
