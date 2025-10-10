@@ -1,3 +1,28 @@
+# v3.2.7 09 Oct 2025
+
++ Update Sidebar CSS by [Saeraphinx](https://github.com/Saeraphinx)
++ fix restart after acme dns challenge by [jimmyGALLAND](https://github.com/jimmyGALLAND)
++ fix acme renew by [jimmyGALLAND](https://github.com/jimmyGALLAND)
+
+
+# v3.2.6 (Prerelease) 16 Sep 2025
+
++ feat(plugins): Implement plugin API key management and authentication middleware by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ fix: Handle existing symlink in start_zerotier function by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM) [#758](https://github.com/tobychui/zoraxy/issues/758)
++ fix: panics when rewriting headers for websockets, and strange issue with logging across a month boundary by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM) [#771](https://github.com/tobychui/zoraxy/issues/771)
++ add CODEOWNERS file by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ Update lego to v4.25.2 by [zen8841](https://github.com/zen8841)
++ feat(sso): forward auth body and alternate headers by james-d-elliott [#819](https://github.com/tobychui/zoraxy/issues/819)
++ feat(sso): clear settings by [james-d-elliott](https://github.com/james-d-elliott)
++ feat(plugins): Implement event system w/ POC events by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ feature: new container environment vars by [PassiveLemon](https://github.com/PassiveLemon)
++ Update example plugins by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ feat(event system): Flesh out EventPayload interface by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ feat(plugin API): Plugin-to-plugin-comms by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ put plugin API on separate mux not protected by CSRF by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ fix Enable Lan and Loopback [#799](https://github.com/tobychui/zoraxy/issues/799)
+
+
 # v3.2.5 20 Jul 2025
 
 
