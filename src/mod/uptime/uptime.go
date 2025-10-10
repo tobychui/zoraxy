@@ -211,7 +211,6 @@ func getWebsiteStatus(url string) (int, error) {
 	}
 
 	resp, err := client.Do(req)
-	//resp, err := client.Get(url)
 	if err != nil {
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
