@@ -238,6 +238,13 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	bypassGlobalTLS, _ := utils.PostPara(r, "bypassGlobalTLS")
 	if bypassGlobalTLS == "" {
 		bypassGlobalTLS = "false"
+
+	}
+
+	// Enable uptime monitor?
+	enableUtm, err := utils.PostBool(r, "enableUtm")
+	if err != nil {
+		enableUtm = true
 	}
 
 	useBypassGlobalTLS := bypassGlobalTLS == "true"
@@ -410,7 +417,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
 
-			Tags: tags,
+			Tags:                 tags,
+			DisableUptimeMonitor: !enableUtm,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)

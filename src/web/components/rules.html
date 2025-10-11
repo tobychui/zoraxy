@@ -63,6 +63,13 @@
                                         <label>Sticky Session<br><small>Enable stick session on upstream load balancing</small></label>
                                     </div>
                                 </div>
+                                  <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="enableUtm" checked>
+                                        <label>Enable uptime monitor<br><small>Automatically check upstream status and switch to another if offline</small>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div class="field">
                                     <label>Tags</label>
                                     <input type="text" id="proxyTags" placeholder="e.g. mediaserver, management">
@@ -168,22 +175,78 @@
         </div>
         <div class="six wide column">
             <div class="ui basic segment rulesInstructions">
-                <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Domain</span><br>
-                Example of domain matching keyword:<br>
-                <code>aroz.org</code> <br>Any acess requesting aroz.org will be proxy to the IP address below<br>
-                <div class="ui divider"></div>
-                <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Subdomain</span><br>
-                Example of subdomain matching keyword:<br>
-                <code>s1.aroz.org</code> <br>Any request starting with s1.aroz.org will be proxy to the IP address below<br>
-                <div class="ui divider"></div>
-                <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Wildcard</span><br>
-                Example of wildcard matching keyword:<br>
-                <code>*.aroz.org</code> <br>Any request with a host name matching *.aroz.org will be proxy to the IP address below. Here are some examples.<br>
-                <div class="ui list">
-                    <div class="item"><code>www.aroz.org</code></div>
-                    <div class="item"><code>foo.bar.aroz.org</code></div>
+                <div class="ui fluid styled accordion" id="matchingKeywordExamplesAccordion" style="background-color: transparent !important;">
+                    <div class="title active" style="color: white;">
+                        <i class="dropdown icon"></i>
+                        Matching Keyword Examples
+                    </div>
+                    <div class="content active">
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Domain</span><br>
+                        Example of domain matching keyword:<br>
+                        <code>aroz.org</code> <br>Any acess requesting aroz.org will be proxy to the IP address below<br>
+                        <div class="ui divider"></div>
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Subdomain</span><br>
+                        Example of subdomain matching keyword:<br>
+                        <code>s1.aroz.org</code> <br>Any request starting with s1.aroz.org will be proxy to the IP address below<br>
+                        <div class="ui divider"></div>
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Wildcard</span><br>
+                        Example of wildcard matching keyword:<br>
+                        <code>*.aroz.org</code> <br>Any request with a host name matching *.aroz.org will be proxy to the IP address below. Here are some examples.<br>
+                        <div class="ui list">
+                            <div class="item"><code>www.aroz.org</code></div>
+                            <div class="item"><code>foo.bar.aroz.org</code></div>
+                        </div>
+                        <br>
+                    </div>
+
+                    <div class="title" style="color: white;">
+                        <i class="dropdown icon"></i>
+                        Remote Target Require TLS
+                    </div>
+                    <div class="content">
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui green lock icon"></i> Upstream TLS Requirement</span><br>
+                        <p>
+                            When you enable <b>Proxy Target require TLS Connection</b>, it means the <b>upstream server</b> (the target you are proxying to) requires a secure (HTTPS) connection.<br>
+                            <b>This does not affect whether clients connect to this proxy endpoint using HTTP or HTTPS.</b>
+                        </p>
+                        <div class="ui divider"></div>
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> Example</span><br>
+                        <code>Matching Keyword: mydomain.com<br>
+                        Target: example.com:443 (TLS enabled)</code><br>
+                        <ul>
+                            <li>Client connects to <b>mydomain.com</b> (HTTP or HTTPS, depending on your proxy setup)</li>
+                            <li>Proxy forwards requests to <b>example.com:443</b> using <b>HTTPS</b></li>
+                        </ul>
+                        <small>
+                            Use this option if your upstream server only accepts secure connections.<br>
+                            If your upstream uses a self-signed certificate, check the <b>Ignore TLS/SSL Verification Error</b> option in Advance Settings.
+                        </small>
+                    </div>
+
+                    <div class="title" style="color: white;">
+                        <i class="dropdown icon"></i>
+                        What is Sticky Session?
+                    </div>
+                    <div class="content">
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui green sync icon"></i> Sticky Session (Session Affinity)</span><br>
+                        <p>
+                            Sticky session ensures that requests from the same client are always forwarded to the same upstream server. This is useful for applications that store session data locally and require the client to consistently connect to the same backend.<br>
+                        </p>
+                        <div class="ui divider"></div>
+                        <span style="font-size: 1.2em; font-weight: 300;"><i class="ui yellow star icon"></i> How to Add Multiple Upstreams</span><br>
+                        <ul>
+                            <li>Go to <b>HTTP Proxy</b> in the sidebar.</li>
+                            <li>Click <b>Edit</b> on your proxy rule.</li>
+                            <li>Use the <b>Upstreams</b> section to add more upstream endpoints for load balancing.</li>
+                        </ul>
+                        <small>
+                            Sticky session will only work if you have more than one upstream endpoint configured.
+                        </small>
+                    </div>
                 </div>
-                <br>
+                <script>
+                    $('#matchingKeywordExamplesAccordion').accordion();
+                </script>
             </div>
         </div>
     </div>
@@ -204,6 +267,7 @@
         let accessRuleToUse = $("#newProxyRuleAccessFilter").val();
         let useStickySessionLB = $("#useStickySessionLB")[0].checked; 
         let tags = $("#proxyTags").val().trim();
+        let enableUtm = $("#enableUtm")[0].checked;
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -238,6 +302,7 @@
                 access: accessRuleToUse,
                 stickysess: useStickySessionLB,
                 tags: tags,
+                    enableUtm: enableUtm,
             },
             success: function(data){
                 if (data.error != undefined){
