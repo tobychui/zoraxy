@@ -40,8 +40,6 @@ func ExtractDomains(certBytes []byte) ([]string, error) {
 	return []string{}, errors.New("decode cert bytes failed")
 }
 
-
-
 func ExtractIssuerName(certBytes []byte) (string, error) {
 	// Parse the PEM block
 	block, _ := pem.Decode(certBytes)
@@ -71,9 +69,9 @@ func ExtractDomainsFromPEM(pemFilePath string) ([]string, error) {
 
 	certBytes, err := os.ReadFile(pemFilePath)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
-	domains,err := ExtractDomains(certBytes)
+	domains, err := ExtractDomains(certBytes)
 	if err != nil {
 		return nil, err
 	}

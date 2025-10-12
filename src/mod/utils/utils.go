@@ -207,16 +207,17 @@ func ValidateListeningAddress(address string) bool {
 // - Converts to lowercase
 // - Removes trailing dot (FQDN canonicalization)
 // - Checks that the domain conforms to standard rules:
-//   * Each label ≤ 63 characters
-//   * Only letters, digits, and hyphens
-//   * Labels do not start or end with a hyphen
-//   * Full domain ≤ 253 characters
+//   - Each label ≤ 63 characters
+//   - Only letters, digits, and hyphens
+//   - Labels do not start or end with a hyphen
+//   - Full domain ≤ 253 characters
+//
 // Returns an empty string if the domain is invalid.
 func NormalizeDomain(d string) (string, error) {
 	d = strings.TrimSpace(d)
 	d = strings.ToLower(d)
 	d = strings.TrimSuffix(d, ".")
-		
+
 	if len(d) == 0 {
 		return "", errors.New("domain is empty")
 	}
@@ -226,7 +227,7 @@ func NormalizeDomain(d string) (string, error) {
 
 	labels := strings.Split(d, ".")
 	for index, label := range labels {
-		if index ==0 {
+		if index == 0 {
 			if len(label) == 1 && label == "*" {
 				continue
 			}
@@ -239,11 +240,11 @@ func NormalizeDomain(d string) (string, error) {
 		}
 
 		for i, r := range label {
-			if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-') {
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' {
 				return "", errors.New("Domain '" + d + "' not valid: Invalid character '" + string(r) + "' in label")
 			}
 			if (i == 0 || i == len(label)-1) && r == '-' {
-				return "", errors.New("Domain '" + d + "' not valid: label '"+ label +"' starts or ends with hyphen")
+				return "", errors.New("Domain '" + d + "' not valid: label '" + label + "' starts or ends with hyphen")
 			}
 		}
 	}
