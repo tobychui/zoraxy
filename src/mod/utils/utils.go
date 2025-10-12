@@ -225,7 +225,12 @@ func NormalizeDomain(d string) (string, error) {
 	}
 
 	labels := strings.Split(d, ".")
-	for _, label := range labels {
+	for index, label := range labels {
+		if index ==0 {
+			if len(label) == 1 && label == "*" {
+				continue
+			}
+		}
 		if len(label) == 0 {
 			return "", errors.New("Domain '" + d + "' not valid: Empty label")
 		}
