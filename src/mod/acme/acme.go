@@ -438,7 +438,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	if (domainPara != "") {
 		for _, d := range strings.Split(domainPara, ",") {
 			// Apply normalization on each domain
-			nd, err := NormalizeDomain(d)
+			nd, err := utils.NormalizeDomain(d)
 			if err != nil {
 				utils.SendErrorResponse(w, jsonEscape(err.Error()))
 				return
