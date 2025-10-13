@@ -27,6 +27,7 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -438,7 +439,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	if domainPara != "" {
 		for _, d := range strings.Split(domainPara, ",") {
 			// Apply normalization on each domain
-			nd, err := utils.NormalizeDomain(d)
+			nd, err := netutils.NormalizeDomain(d)
 			if err != nil {
 				utils.SendErrorResponse(w, jsonEscape(err.Error()))
 				return
