@@ -17,6 +17,7 @@ require (
 	github.com/likexian/whois v1.15.1
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/monperrus/crawler-user-agents v1.1.0
+	github.com/pires/go-proxyproto v0.8.1
 	github.com/shirou/gopsutil/v4 v4.25.1
 	github.com/stretchr/testify v1.10.0
 	github.com/syndtr/goleveldb v1.0.0

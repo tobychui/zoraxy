@@ -23,42 +23,42 @@ import (
 */
 
 type ProxyRelayOptions struct {
-	Name             string
-	ListeningAddr    string
-	ProxyAddr        string
-	Timeout          int
-	UseTCP           bool
-	UseUDP           bool
-	UseProxyProtocol bool
-	EnableLogging    bool
+	Name                 string
+	ListeningAddr        string
+	ProxyAddr            string
+	Timeout              int
+	UseTCP               bool
+	UseUDP               bool
+	ProxyProtocolVersion int
+	EnableLogging        bool
 }
 
 // ProxyRuleUpdateConfig is used to update the proxy rule config
 type ProxyRuleUpdateConfig struct {
-	InstanceUUID     string //The target instance UUID to update
-	NewName          string //New name for the instance, leave empty for no change
-	NewListeningAddr string //New listening address, leave empty for no change
-	NewProxyAddr     string //New proxy target address, leave empty for no change
-	UseTCP           bool   //Enable TCP proxy, default to false
-	UseUDP           bool   //Enable UDP proxy, default to false
-	UseProxyProtocol bool   //Enable Proxy Protocol, default to false
-	EnableLogging    bool   //Enable Logging TCP/UDP Message, default to true
-	NewTimeout       int    //New timeout for the connection, leave -1 for no change
+	InstanceUUID         string //The target instance UUID to update
+	NewName              string //New name for the instance, leave empty for no change
+	NewListeningAddr     string //New listening address, leave empty for no change
+	NewProxyAddr         string //New proxy target address, leave empty for no change
+	UseTCP               bool   //Enable TCP proxy, default to false
+	UseUDP               bool   //Enable UDP proxy, default to false
+	ProxyProtocolVersion int    //Enable Proxy Protocol v1/v2, default to disabled
+	EnableLogging        bool   //Enable Logging TCP/UDP Message, default to true
+	NewTimeout           int    //New timeout for the connection, leave -1 for no change
 }
 
 type ProxyRelayInstance struct {
 	/* Runtime Config */
-	UUID             string //A UUIDv4 representing this config
-	Name             string //Name of the config
-	Running          bool   //Status, read only
-	AutoStart        bool   //If the service suppose to started automatically
-	ListeningAddress string //Listening Address, usually 127.0.0.1:port
-	ProxyTargetAddr  string //Proxy target address
-	UseTCP           bool   //Enable TCP proxy
-	UseUDP           bool   //Enable UDP proxy
-	UseProxyProtocol bool   //Enable Proxy Protocol
-	EnableLogging    bool   //Enable logging for ProxyInstance
-	Timeout          int    //Timeout for connection in sec
+	UUID                 string //A UUIDv4 representing this config
+	Name                 string //Name of the config
+	Running              bool   //Status, read only
+	AutoStart            bool   //If the service suppose to started automatically
+	ListeningAddress     string //Listening Address, usually 127.0.0.1:port
+	ProxyTargetAddr      string //Proxy target address
+	UseTCP               bool   //Enable TCP proxy
+	UseUDP               bool   //Enable UDP proxy
+	ProxyProtocolVersion int    //Proxy Protocol v1/v2
+	EnableLogging        bool   //Enable logging for ProxyInstance
+	Timeout              int    //Timeout for connection in sec
 
 	/* Internal */
 	tcpStopChan                 chan bool    //Stop channel for TCP listener
@@ -178,7 +178,7 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		ProxyTargetAddr:             config.ProxyAddr,
 		UseTCP:                      config.UseTCP,
 		UseUDP:                      config.UseUDP,
-		UseProxyProtocol:            config.UseProxyProtocol,
+		ProxyProtocolVersion:        config.ProxyProtocolVersion,
 		EnableLogging:               config.EnableLogging,
 		Timeout:                     config.Timeout,
 		tcpStopChan:                 nil,
@@ -224,7 +224,7 @@ func (m *Manager) EditConfig(newConfig *ProxyRuleUpdateConfig) error {
 
 	foundConfig.UseTCP = newConfig.UseTCP
 	foundConfig.UseUDP = newConfig.UseUDP
-	foundConfig.UseProxyProtocol = newConfig.UseProxyProtocol
+	foundConfig.ProxyProtocolVersion = newConfig.ProxyProtocolVersion
 	foundConfig.EnableLogging = newConfig.EnableLogging
 
 	if newConfig.NewTimeout != -1 {
