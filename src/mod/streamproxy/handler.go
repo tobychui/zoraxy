@@ -58,7 +58,7 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 		Timeout:              timeout,
 		UseTCP:               useTCP,
 		UseUDP:               useUDP,
-		ProxyProtocolVersion: ProxyProtocolVersion,
+		ProxyProtocolVersion: convertIntToProxyProtocolVersion(ProxyProtocolVersion),
 		EnableLogging:        enableLogging,
 	})
 

@@ -46,7 +46,7 @@ func (c *ProxyRelayInstance) connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.W
 	wg.Done()
 }
 
-func WriteProxyProtocolHeader(dst net.Conn, src net.Conn, version int) error {
+func WriteProxyProtocolHeader(dst net.Conn, src net.Conn, version ProxyProtocolVersion) error {
 	clientAddr, ok1 := src.RemoteAddr().(*net.TCPAddr)
 	proxyAddr, ok2 := src.LocalAddr().(*net.TCPAddr)
 	if !ok1 || !ok2 {
@@ -54,7 +54,7 @@ func WriteProxyProtocolHeader(dst net.Conn, src net.Conn, version int) error {
 	}
 
 	header := proxyproto.Header{
-		Version:           byte(version),
+		Version:           byte(convertProxyProtocolVersionToInt(version)),
 		Command:           proxyproto.PROXY,
 		TransportProtocol: proxyproto.TCPv4,
 		SourceAddr:        clientAddr,
@@ -165,7 +165,7 @@ func (c *ProxyRelayInstance) Port2host(allowPort string, targetAddress string, s
 			}
 			c.LogMsg("[→] connect target address ["+targetAddress+"] success.", nil)
 
-			if c.ProxyProtocolVersion != 0 {
+			if c.ProxyProtocolVersion != ProxyProtocolDisabled {
 				c.LogMsg("[+] write proxy protocol header to target address ["+targetAddress+"]", nil)
 				err = WriteProxyProtocolHeader(target, conn, c.ProxyProtocolVersion)
 				if err != nil {

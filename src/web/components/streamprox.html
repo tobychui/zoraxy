@@ -90,6 +90,9 @@
                     <option value="2">Proxy Protocol V2</option>
                 </select>
                 <small>Select Proxy Protocol v1 / v2 to use (if any)</small>
+                    <div id="proxyProtocolUdpWarning" style="display:none; color:#bd7100; margin-top:0.5em;">
+                        <i class="exclamation triangle icon"></i> Proxy Protocol V1 is not supported for UDP. The proxy protocol header will not be included in UDP packets if selected.
+                    </div>
             </div>
             <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
             <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event, this);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
@@ -99,6 +102,21 @@
 </div>
     <script>
         let editingStreamProxyConfigUUID = ""; //The current editing TCP Proxy config UUID
+
+        // Show/hide warning for Proxy Protocol V1 + UDP
+        function updateProxyProtocolUdpWarning() {
+            const proxyProtocolVersion = $("#streamProxyForm select[name=proxyProtocolVersion]").val();
+            const useUDP = $("#streamProxyForm input[name=useUDP]")[0].checked;
+            if (proxyProtocolVersion === "1" && useUDP) {
+                $("#proxyProtocolUdpWarning").show();
+            } else {
+                $("#proxyProtocolUdpWarning").hide();
+            }
+        }
+
+        $("#streamProxyForm select[name=proxyProtocolVersion]").on("change", updateProxyProtocolUdpWarning);
+        $("#streamProxyForm input[name=useUDP]").on("change", updateProxyProtocolUdpWarning);
+        $(document).ready(updateProxyProtocolUdpWarning);
 
         $("#streamProxyForm .dropdown").dropdown();
         $('#streamProxyForm').on('submit', function(event) {

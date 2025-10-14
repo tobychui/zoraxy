@@ -88,7 +88,7 @@ func (c *ProxyRelayInstance) CloseAllUDPConnections() {
 // Write Proxy Protocol v2 header to UDP connection
 func WriteProxyProtocolHeaderUDP(conn *net.UDPConn, srcAddr, dstAddr *net.UDPAddr) error {
 	header := proxyproto.Header{
-		Version:           2,
+		Version:           byte(ProxyProtocolV2),
 		Command:           proxyproto.PROXY,
 		TransportProtocol: proxyproto.UDPv4,
 		SourceAddr:        srcAddr,
@@ -164,7 +164,7 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 			go c.RunUDPConnectionRelay(conn, lisener)
 
 			// Send Proxy Protocol header if enabled
-			if c.ProxyProtocolVersion == 2 {
+			if c.ProxyProtocolVersion == ProxyProtocolV2 {
 				_ = WriteProxyProtocolHeaderUDP(conn.ServerConn, cliaddr, targetAddr)
 			}
 		} else {
