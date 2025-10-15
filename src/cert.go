@@ -45,32 +45,49 @@ func handleToggleTLSProxy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handle the GET and SET of reverse proxy TLS versions
-func handleSetTlsRequireLatest(w http.ResponseWriter, r *http.Request) {
-	newState, err := utils.PostPara(r, "set")
-	if err != nil {
-		//GET
-		var reqLatestTLS bool = false
-		if sysdb.KeyExists("settings", "forceLatestTLS") {
-			sysdb.Read("settings", "forceLatestTLS", &reqLatestTLS)
-		}
-
-		js, _ := json.Marshal(reqLatestTLS)
-		utils.SendJSONResponse(w, string(js))
-	} else {
-		switch newState {
-		case "true":
-			sysdb.Write("settings", "forceLatestTLS", true)
-			SystemWideLogger.Println("Updating minimum TLS version to v1.2 or above")
-			dynamicProxyRouter.UpdateTLSVersion(true)
-		case "false":
-			sysdb.Write("settings", "forceLatestTLS", false)
-			SystemWideLogger.Println("Updating minimum TLS version to v1.0 or above")
-			dynamicProxyRouter.UpdateTLSVersion(false)
-		default:
-			utils.SendErrorResponse(w, "invalid state given")
-		}
+func minTlsVersionStringToUint16(version string) uint16 {
+	// Update the setting
+	var tlsVersionUint16 uint16
+	switch version {
+	case "1.0":
+		tlsVersionUint16 = 0x0301
+	case "1.1":
+		tlsVersionUint16 = 0x0302
+	case "1.2":
+		tlsVersionUint16 = 0x0303
+	case "1.3":
+		tlsVersionUint16 = 0x0304
 	}
+	return tlsVersionUint16
+}
+
+// Handle the GET and SET of reverse proxy minimum TLS version
+func handleSetTlsMinVersion(w http.ResponseWriter, r *http.Request) {
+	newVersion, err := utils.PostPara(r, "set")
+	if err != nil {
+		// GET
+		var minTLSVersion string = "1.2" // Default to 1.2
+		if sysdb.KeyExists("settings", "minTLSVersion") {
+			sysdb.Read("settings", "minTLSVersion", &minTLSVersion)
+		}
+		js, _ := json.Marshal(minTLSVersion)
+		utils.SendJSONResponse(w, string(js))
+		return
+	}
+
+	// Validate input
+	allowed := map[string]bool{"1.0": true, "1.1": true, "1.2": true, "1.3": true}
+	if !allowed[newVersion] {
+		utils.SendErrorResponse(w, "invalid TLS version")
+		return
+	}
+
+	sysdb.Write("settings", "minTLSVersion", newVersion)
+	tlsVersionUint16 := minTlsVersionStringToUint16(newVersion)
+	// Update the setting
+	SystemWideLogger.PrintAndLog("TLS", "Updating minimum TLS version to v"+newVersion+" or above", nil)
+	dynamicProxyRouter.SetTlsMinVersion(tlsVersionUint16)
+	utils.SendOK(w)
 }
 
 func handleCertTryResolve(w http.ResponseWriter, r *http.Request) {

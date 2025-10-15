@@ -58,13 +58,9 @@ func ReverseProxyInit() {
 		SystemWideLogger.Println("TLS mode disabled. Serving proxy request with plain http")
 	}
 
-	forceLatestTLSVersion := false
-	sysdb.Read("settings", "forceLatestTLS", &forceLatestTLSVersion)
-	if forceLatestTLSVersion {
-		SystemWideLogger.Println("Force latest TLS mode enabled. Minimum TLS LS version is set to v1.2")
-	} else {
-		SystemWideLogger.Println("Force latest TLS mode disabled. Minimum TLS version is set to v1.0")
-	}
+	minTLSVersion := "1.2" // default
+	sysdb.Read("settings", "minTLSVersion", &minTLSVersion)
+	SystemWideLogger.Println("Minimum TLS version set to v" + minTLSVersion)
 
 	developmentMode := false
 	sysdb.Read("settings", "devMode", &developmentMode)
@@ -106,7 +102,7 @@ func ReverseProxyInit() {
 		HostVersion:        SYSTEM_VERSION,
 		Port:               inboundPort,
 		UseTls:             useTls,
-		ForceTLSLatest:     forceLatestTLSVersion,
+		MinTLSVersion:      minTlsVersionStringToUint16(minTLSVersion),
 		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
@@ -125,6 +121,7 @@ func ReverseProxyInit() {
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
 	})
+
 	if err != nil {
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to create dynamic proxy router", err)
 		return
