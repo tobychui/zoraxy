@@ -210,9 +210,10 @@ func handleListBlacklisted(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resulst := []string{}
-	if bltype == "country" {
+	switch bltype {
+	case "country":
 		resulst = rule.GetAllBlacklistedCountryCode()
-	} else if bltype == "ip" {
+	case "ip":
 		resulst = rule.GetAllBlacklistedIp()
 	}
 

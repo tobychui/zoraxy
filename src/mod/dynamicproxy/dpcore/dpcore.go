@@ -438,7 +438,15 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (in
 	if !strings.Contains(host, ":") {
 		host += ":443"
 	}
-	serverName := req.URL.Hostname()
+	serverName := ""
+	//if p.Transport != nil {
+	//	if tr, ok := p.Transport.(*http.Transport); ok && tr.TLSClientConfig != nil && tr.TLSClientConfig.ServerName != "" {
+	//		serverName = tr.TLSClientConfig.ServerName
+	//	}
+	//}
+	if serverName == "" {
+		serverName = req.URL.Hostname()
+	}
 
 	// Connect with SNI offload
 	tlsConfig := &tls.Config{
