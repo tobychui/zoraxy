@@ -291,6 +291,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassWebsocketOriginCheck := (strbpwsorg == "true")
 
+	//Disable uptime monitor
+	disableUptimeMonitor, err := utils.PostBool(r, "dutm")
+	if err != nil {
+		disableUptimeMonitor = false
+	}
+
 	//Prase the basic auth to correct structure
 	cred, _ := utils.PostPara(r, "cred")
 	basicAuthCredentials := []*dynamicproxy.BasicAuthCredentials{}
@@ -409,6 +415,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
+
+			// Uptime Monitor
+			DisableUptimeMonitor: disableUptimeMonitor,
 
 			Tags: tags,
 		}
