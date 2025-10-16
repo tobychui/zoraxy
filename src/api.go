@@ -74,11 +74,13 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 	//Global certificate settings
 	authRouter.HandleFunc("/api/cert/tls", handleToggleTLSProxy)
-	authRouter.HandleFunc("/api/cert/tlsRequireLatest", handleSetTlsRequireLatest)
+	authRouter.HandleFunc("/api/cert/tlsMinVersion", handleSetTlsMinVersion)
 	authRouter.HandleFunc("/api/cert/resolve", handleCertTryResolve)
 	authRouter.HandleFunc("/api/cert/setPreferredCertificate", handleSetDomainPreferredCertificate)
 
 	//Certificate store functions
+	authRouter.HandleFunc("/api/cert/setDefault", tlsCertManager.SetCertAsDefault)
+	authRouter.HandleFunc("/api/cert/getCommonName", tlsCertManager.HandleGetCertCommonName)
 	authRouter.HandleFunc("/api/cert/upload", tlsCertManager.HandleCertUpload)
 	authRouter.HandleFunc("/api/cert/download", tlsCertManager.HandleCertDownload)
 	authRouter.HandleFunc("/api/cert/list", tlsCertManager.HandleListCertificate)

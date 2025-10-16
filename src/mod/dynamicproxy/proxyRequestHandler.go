@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/statistic"
@@ -95,20 +96,39 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	return targetSubdomainEndpoint
 }
 
-// Clearn URL Path (without the http:// part) replaces // in a URL to /
-func (router *Router) clearnURL(targetUrlOPath string) string {
-	return strings.ReplaceAll(targetUrlOPath, "//", "/")
-}
-
 // Rewrite URL rewrite the prefix part of a virtual directory URL with /
 func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	rewrittenURL := requestURL
 	rewrittenURL = strings.TrimPrefix(rewrittenURL, strings.TrimSuffix(rooturl, "/"))
 
 	if strings.Contains(rewrittenURL, "//") {
-		rewrittenURL = router.clearnURL(rewrittenURL)
+		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
 	}
 	return rewrittenURL
+}
+
+// upstreamHostSwap check if this loopback to one of the proxy rule in the system. If yes, do a shortcut target swap
+// this prevents unnecessary external DNS lookup and connection, return true if swapped and request is already handled
+// by the loopback handler. Only continue if return is false
+func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, selectedUpstream *loadbalance.Upstream) bool {
+	upstreamHostname := selectedUpstream.OriginIpOrDomain
+	if strings.Contains(upstreamHostname, ":") {
+		upstreamHostname = strings.Split(upstreamHostname, ":")[0]
+	}
+	loopbackProxyEndpoint := h.Parent.GetProxyEndpointFromHostname(upstreamHostname)
+	if loopbackProxyEndpoint != nil {
+		//This is a loopback request. Swap the target to the loopback target
+		//h.Parent.Option.Logger.PrintAndLog("proxy", "Detected a loopback request to self. Swap the target to "+loopbackProxyEndpoint.RootOrMatchingDomain, nil)
+		if loopbackProxyEndpoint.IsEnabled() {
+			h.hostRequest(w, r, loopbackProxyEndpoint)
+		} else {
+			//Endpoint disabled, return 503
+			http.ServeFile(w, r, "./web/rperror.html")
+			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname)
+		}
+		return true
+	}
+	return false
 }
 
 // Handle host request
@@ -116,12 +136,19 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
 	reqHostname := r.Host
+
 	/* Load balancing */
 	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession)
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
 		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
 		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host)
+		return
+	}
+
+	/* Upstream Host Swap (use to detect loopback to self) */
+	if h.upstreamHostSwap(w, r, selectedUpstream) {
+		//Request handled by the loopback handler
 		return
 	}
 

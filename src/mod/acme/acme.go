@@ -27,6 +27,7 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -432,18 +433,18 @@ func (a *ACMEHandler) HandleGetExpiredDomains(w http.ResponseWriter, r *http.Req
 // to renew the certificate, and sends a JSON response indicating the result of the renewal process.
 func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
 	domainPara, err := utils.PostPara(r, "domains")
-	
+
 	//Clean each domain
 	cleanedDomains := []string{}
-	if (domainPara != "") {
+	if domainPara != "" {
 		for _, d := range strings.Split(domainPara, ",") {
 			// Apply normalization on each domain
-			nd, err := NormalizeDomain(d)
+			nd, err := netutils.NormalizeDomain(d)
 			if err != nil {
 				utils.SendErrorResponse(w, jsonEscape(err.Error()))
 				return
-			}	
-			cleanedDomains = append(cleanedDomains, nd) 
+			}
+			cleanedDomains = append(cleanedDomains, nd)
 		}
 	}
 
@@ -507,7 +508,6 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		dns = true
 	}
 
-
 	// Default propagation timeout is 300 seconds
 	propagationTimeout := 300
 	if dns {
@@ -548,7 +548,6 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	} else {
 		a.Logf("Could not extract SANs from PEM, using domainPara only", err)
 	}
-
 
 	// Extract DNS servers from the request
 	var dnsServers []string

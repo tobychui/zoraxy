@@ -49,7 +49,7 @@ type RouterOption struct {
 	HostVersion        string //The version of Zoraxy, use for heading mod
 	Port               int    //Incoming port
 	UseTls             bool   //Use TLS to serve incoming requsts
-	ForceTLSLatest     bool   //Force TLS1.2 or above
+	MinTLSVersion      uint16 //Minimum TLS version
 	NoCache            bool   //Force set Cache-Control: no-store
 	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint

@@ -48,8 +48,8 @@ func (router *Router) UpdateTLSSetting(tlsEnabled bool) {
 
 // Update TLS Version in runtime. Will restart proxy server if running.
 // Set this to true to force TLS 1.2 or above
-func (router *Router) UpdateTLSVersion(requireLatest bool) {
-	router.Option.ForceTLSLatest = requireLatest
+func (router *Router) SetTlsMinVersion(minTlsVersion uint16) {
+	router.Option.MinTLSVersion = minTlsVersion
 	router.Restart()
 }
 
@@ -77,9 +77,9 @@ func (router *Router) StartProxyService() error {
 		return errors.New("reverse proxy router root not set")
 	}
 
-	minVersion := tls.VersionTLS10
-	if router.Option.ForceTLSLatest {
-		minVersion = tls.VersionTLS12
+	minVersion := tls.VersionTLS12 //Default to TLS 1.2
+	if router.Option.MinTLSVersion != 0 {
+		minVersion = int(router.Option.MinTLSVersion)
 	}
 
 	config := &tls.Config{

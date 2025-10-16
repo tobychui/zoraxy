@@ -75,6 +75,50 @@ func (m *Manager) HandleCertDownload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Set the selected certificate as the default / fallback certificate
+func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
+	certname, err := utils.PostPara(r, "certname")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid certname given")
+		return
+	}
+
+	//Check if the previous default cert exists. If yes, get its hostname from cert contents
+	defaultPubKey := filepath.Join(m.CertStore, "default.key")
+	defaultPriKey := filepath.Join(m.CertStore, "default.pem")
+	if utils.FileExists(defaultPubKey) && utils.FileExists(defaultPriKey) {
+		//Move the existing default cert to its original name
+		certBytes, err := os.ReadFile(defaultPriKey)
+		if err == nil {
+			block, _ := pem.Decode(certBytes)
+			if block != nil {
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err == nil {
+					os.Rename(defaultPubKey, filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "key")))
+					os.Rename(defaultPriKey, filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "pem")))
+				}
+			}
+		}
+	}
+
+	//Check if the cert exists
+	certname = filepath.Base(certname) //prevent path escape
+	pubKey := filepath.Join(filepath.Join(m.CertStore), certname+".key")
+	priKey := filepath.Join(filepath.Join(m.CertStore), certname+".pem")
+	if utils.FileExists(pubKey) && utils.FileExists(priKey) {
+		os.Rename(pubKey, filepath.Join(m.CertStore, "default.key"))
+		os.Rename(priKey, filepath.Join(m.CertStore, "default.pem"))
+		utils.SendOK(w)
+
+		//Update cert list
+		m.UpdateLoadedCertList()
+
+	} else {
+		utils.SendErrorResponse(w, "invalid key-pairs: private key or public key not found in key store")
+		return
+	}
+}
+
 // Handle upload of the certificate
 func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 	// check if request method is POST
@@ -124,6 +168,13 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// create file in upload directory
+	// Read file contents for validation
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read file", http.StatusBadRequest)
+		return
+	}
+
 	os.MkdirAll(m.CertStore, 0775)
 	f, err := os.Create(filepath.Join(m.CertStore, overWriteFilename))
 	if err != nil {
@@ -134,6 +185,11 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 
 	// copy file contents to destination file
 	_, err = io.Copy(f, file)
+	if err != nil {
+		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		return
+	}
+	_, err = f.Write(fileBytes)
 	if err != nil {
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return
@@ -215,11 +271,13 @@ func (m *Manager) HandleListCertificate(w http.ResponseWriter, r *http.Request) 
 	showDate, _ := utils.GetBool(r, "date")
 	if showDate {
 		type CertInfo struct {
-			Domain           string
+			Domain           string // Domain name of the certificate
+			Filename         string // Filename that stores the certificate
 			LastModifiedDate string
 			ExpireDate       string
 			RemainingDays    int
-			UseDNS           bool
+			UseDNS           bool // Whether this cert is obtained via DNS challenge
+			IsFallback       bool // Whether this cert is the fallback/default cert
 		}
 
 		results := []*CertInfo{}
@@ -248,7 +306,7 @@ func (m *Manager) HandleListCertificate(w http.ResponseWriter, r *http.Request) 
 					if err == nil {
 						certExpireTime = cert.NotAfter.Format("2006-01-02 15:04:05")
 
-						duration := cert.NotAfter.Sub(time.Now())
+						duration := time.Until(cert.NotAfter)
 
 						// Convert the duration to days
 						expiredIn = int(duration.Hours() / 24)
@@ -262,12 +320,23 @@ func (m *Manager) HandleListCertificate(w http.ResponseWriter, r *http.Request) 
 				useDNSValidation = certInfo.UseDNS
 			}
 
+			certDomain := ""
+			block, _ := pem.Decode(certBtyes)
+			if block != nil {
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err == nil {
+					certDomain = cert.Subject.CommonName
+				}
+			}
+
 			thisCertInfo := CertInfo{
-				Domain:           filename,
+				Domain:           certDomain,
+				Filename:         filename,
 				LastModifiedDate: modifiedTime,
 				ExpireDate:       certExpireTime,
 				RemainingDays:    expiredIn,
 				UseDNS:           useDNSValidation,
+				IsFallback:       (filename == "default"), //TODO: figure out a better implementation
 			}
 
 			results = append(results, &thisCertInfo)
@@ -349,4 +418,26 @@ func (m *Manager) HandleSelfSignCertGenerate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	utils.SendOK(w)
+}
+
+// Extract the common name from a PEM encoded certificate
+func (m *Manager) HandleGetCertCommonName(w http.ResponseWriter, r *http.Request) {
+	certContents, err := utils.PostPara(r, "cert")
+	if err != nil {
+		utils.SendErrorResponse(w, "Certificate content not provided")
+		return
+	}
+	block, _ := pem.Decode([]byte(certContents))
+	if block == nil {
+		utils.SendErrorResponse(w, "Failed to decode PEM block")
+		return
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		utils.SendErrorResponse(w, "Failed to parse certificate: "+err.Error())
+		return
+	}
+
+	js, _ := json.Marshal(cert.Subject.CommonName)
+	utils.SendJSONResponse(w, string(js))
 }

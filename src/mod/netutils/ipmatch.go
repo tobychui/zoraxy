@@ -13,6 +13,25 @@ import (
 	CIDR and IPv4 / v6 validations
 */
 
+// Get the requester IP without trusting any proxy headers
+func GetRequesterIPUntrusted(r *http.Request) string {
+	// If the request is from an untrusted IP, we should not trust the X-Real-IP and X-Forwarded-For headers
+	ip := r.RemoteAddr
+	// Trim away the port number
+	reqHost, _, err := net.SplitHostPort(ip)
+	if err == nil {
+		ip = reqHost
+	}
+
+	// Check if the IP is a valid IPv4 or IPv6 address
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return ""
+	}
+	return ip
+}
+
+// Get the requester IP, trust the X-Real-IP and X-Forwarded-For headers
 func GetRequesterIP(r *http.Request) string {
 	ip := r.Header.Get("X-Real-Ip")
 	if ip == "" {

@@ -7,7 +7,12 @@
     .valid.certdate{
         color: #31c071;
     }
+
+    #certifiedDomainList .ui.basic.button{
+        margin-top: 0.1em;
+    }
 </style>
+<script src="script/jsrsasign-all-min.js"></script>
 <div class="standardContainer">
     <div class="ui basic segment">
         <h2>TLS / SSL Certificates</h2>
@@ -21,7 +26,7 @@
         <div class="three fields">
             <div class="field">
             <label>Server Name (Domain)</label>
-            <input type="text" id="certdomain" placeholder="example.com / blog.example.com">
+            <input type="text" id="certdomain" placeholder="">
             <small><i class="exclamation circle yellow icon"></i> Match the server name with your CN/DNS entry in certificate for faster resolve time</small>
             </div>
             <div class="field">
@@ -59,23 +64,25 @@
         </div>
     </div>
     <p>Current list of loaded certificates</p>
-    <div tourstep="certTable">
-        <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+    <div tourstep="certTable" style="width: 100%; overflow-x: auto; padding-bottom: 1em;">
+        <div style="min-width: 960px; max-width: 100%;  ">
             <table class="ui unstackable basic celled table">
                 <thead>
-                <tr><th>Domain</th>
-                <th>Last Update</th>
-                <th>Expire At</th>
-                <th>DNS Challenge</th>
-                <th class="no-sort">Renew</th>
-                <th class="no-sort">Remove</th>
+                <tr>
+                    <th>Domain</th>
+                    <th>Filename</th>
+                    <th>Last Update</th>
+                    <th>Expire At</th>
+                    <th>Fallback</th>
+                    <th>DNS Challenge</th>
+                    <th class="no-sort">Actions</th>
                 </tr></thead>
             <tbody id="certifiedDomainList">
     
             </tbody>
             </table>
         </div>
-        
+        <br>
         <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
     </div>
     <div class="ui divider"></div>
@@ -103,6 +110,8 @@
             <button class="ui basic grey button" onclick="uploadPublicKey();"><i class="globe icon"></i> Public Key</button>
             <button class="ui basic button" onclick="uploadPrivateKey();"><i class="grey lock icon"></i> Private Key</button>
         </div>
+         <div class="ui yellow message"><i class="exclamation triangle icon"></i> We will be removing the fallback certificate section soon. <br>
+            Please use "<i class="ui blue home icon"></i>Set Fallback" button in the certificate list above to set the fallback certificate.</div>
     </div>
     <div class="ui divider"></div>
     <div tourstep="acmeSettings">
@@ -150,6 +159,58 @@
 
     $("#defaultCA").dropdown();
 
+    function getPossibleCommonNameFromSelectedCertificate(){
+        const fileInput = document.getElementById('pubkeySelector');
+        const file = fileInput.files[0];
+        if (!file) {
+            msgbox("No certificate file selected", false, 4000);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const certContent = e.target.result;
+            $.cjax({
+                url: '/api/cert/getCommonName',
+                method: 'POST',
+                data: { cert: certContent },
+                success: function(data) {
+                    if (data.error !== undefined) {
+                        //Ignore error
+                        $("#certdomain").attr("placeholder", "");
+                    } else if (data) {
+                        if (typeof data === "string" && data.startsWith("*.")) {
+                            data = data.substring(2);
+                        }
+                        $("#certdomain").attr("placeholder", data);
+                    }
+                },
+                error: function(xhr) {
+                    //Ignore error
+                }
+            });
+        };
+        reader.readAsText(file);
+    }
+
+    function setSelectedCertAsFallbackCertificate(certDomain){
+        $.cjax({
+            url: '/api/cert/setDefault',
+            method: 'POST',
+            data: { certname: certDomain },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false, 5000);
+                } else {
+                    msgbox('Fallback certificate set successfully!');
+                    initManagedDomainCertificateList();
+                    initDefaultKeypairCheck();
+                }
+            },
+            error: function(xhr) {
+                msgbox('Failed to set fallback certificate', false, 5000);
+            }
+        });
+    }
 
     //Renew certificate by button press
     function renewCertificate(domain, dns, btn=undefined){
@@ -378,17 +439,22 @@
                 });
                 data.forEach(entry => {
                     let isExpired = entry.RemainingDays <= 0;
-                    let entryDomainRenewKey = entry.Domain; 
+                    let entryDomainRenewKey = entry.Filename; 
                     if (entryDomainRenewKey.includes("_.")){
                         entryDomainRenewKey = entryDomainRenewKey.replace("_.","*.");
                     }
                     $("#certifiedDomainList").append(`<tr>
-                        <td><a style="cursor: pointer;" title="Download certificate" onclick="handleCertDownload('${entry.Domain}');">${entry.Domain}</a></td>
+                        <td><a style="cursor: pointer;" title="Download certificate" onclick="handleCertDownload('${entry.Filename}');">${entry.Domain}</a></td>
+                        <td>${entry.Filename}</td>
                         <td>${entry.LastModifiedDate}</td>
                         <td class="${isExpired?"expired":"valid"} certdate">${entry.ExpireDate} (${!isExpired?entry.RemainingDays+" days left":"Expired"})</td>
+                        <td>${entry.IsFallback?"<i class='green check icon'></i>":""}</td>
                         <td><i class="${entry.UseDNS?"green check": "red times"} icon"></i></td>
-                        <td><button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entryDomainRenewKey}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button></td>
-                        <td><button title="Delete key-pair" class="ui mini basic red icon button" onclick="deleteCertificate('${entry.Domain}');"><i class="ui red trash icon"></i></button></td>
+                        <td>
+                            <button title="Set as Default / Fallback Certificate" class="ui mini basic button ${(entry.IsFallback?"disabled":"")} " onclick="setSelectedCertAsFallbackCertificate('${entry.Filename}');"><i class="ui blue home icon"></i> Set Fallback</button>
+                            <button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entryDomainRenewKey}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button>
+                            <button title="Delete key-pair" class="ui mini basic icon red button" onclick="deleteCertificate('${entry.Filename}');"><i class="ui red trash icon"></i></button>
+                        </td>
                     </tr>`);
                 });
 
@@ -413,7 +479,7 @@
             document.getElementById('pubkeySelector').value = '';
             document.getElementById('prikeySelector').value = '';
             document.getElementById('certdomain').value = '';
-
+            $("#certdomain").attr("placeholder", "");
             uploadPendingPublicKey = undefined;
             uploadPendingPrivateKey = undefined;
 
@@ -439,8 +505,17 @@
     function handleDomainKeysUpload(callback=undefined){
         let domain = $("#certdomain").val();
         if (domain.trim() == ""){
-            msgbox("Missing domain", false, 5000);
-            return;
+            //Check if placeholder has value
+            if ($("#certdomain").attr("placeholder").trim() != ""){
+                domain = $("#certdomain").attr("placeholder").trim();
+            }else{
+                domain = undefined;
+            }
+
+            if (domain == undefined || domain.trim() == "") {
+                msgbox("Missing domain", false, 5000);
+                return;
+            }
         }
         if (uploadPendingPublicKey && uploadPendingPrivateKey && typeof uploadPendingPublicKey === 'object' && typeof uploadPendingPrivateKey === 'object') {
             const publicKeyForm = new FormData();
@@ -493,6 +568,7 @@
         const file = event.target.files[0];
         if (ktype == "pub"){
             uploadPendingPublicKey = file;
+            getPossibleCommonNameFromSelectedCertificate();
         }else if (ktype == "pri"){
             uploadPendingPrivateKey = file;
         }

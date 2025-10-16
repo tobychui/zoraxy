@@ -110,10 +110,19 @@
                 Advance Settings
             </div>
             <div class="content">
-                <div id="tlsMinVer" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
-                    <input type="checkbox">
-                    <label>Force TLS v1.2 or above<br>
-                    <small>(Enhance security, but not compatible with legacy browsers)</small></label>
+                <div id="tlsMinVer" class="ui notloopbackOnly tlsEnabledOnly" style="margin-top: 0.6em;">
+                    <div style="display: flex; align-items: center; gap: 1em;">
+                        <select id="tlsVersionSelect" class="ui dropdown">
+                            <option value="1.0">TLS v1.0</option>
+                            <option value="1.1">TLS v1.1</option>
+                            <option value="1.2">TLS v1.2</option>
+                            <option value="1.3">TLS v1.3</option>
+                        </select>
+                        <p for="tlsVersionSelect" style="margin: 0;">
+                            Minimum TLS Version<br>
+                            <small>(Enhance security, but may not be compatible with legacy browsers)</small>
+                        </p>
+                    </div>
                 </div>
                 <br>
                 <div id="developmentMode" class="ui toggle checkbox" style="margin-top: 0.6em;">
@@ -466,31 +475,28 @@
     initHTTPtoHTTPSRedirectSetting();
 
     function initTlsVersionSetting(){
-        $.get("/api/cert/tlsRequireLatest", function(data){
-            if (data == true){
-                $("#tlsMinVer").checkbox("set checked");
-            }else{
-                $("#tlsMinVer").checkbox("set unchecked");
+        $.get("/api/cert/tlsMinVersion", function(data){
+            // Set dropdown value
+            if (data && typeof data === "string") {
+                $("#tlsVersionSelect").val(data);
             }
-
-            //Bind events to the checkbox
-            $("#tlsMinVer").find("input").on("change", function(){
-                let thisValue = $("#tlsMinVer").checkbox("is checked");
+            // Bind change event
+            $("#tlsVersionSelect").off("change").on("change", function(){
+                var selectedVersion = $(this).val();
                 $.cjax({
-                    url: "/api/cert/tlsRequireLatest",
-                    data: {"set": thisValue},
+                    url: "/api/cert/tlsMinVersion",
                     method: "POST",
+                    data: {set: selectedVersion},
                     success: function(data){
                         if (data.error != undefined){
                             msgbox(data.error, false, 5000);
                         }else{
-                            msgbox("TLS Version Setting Updated");
+                            msgbox("TLS minimum version updated");
                         }
                     }
-                })
+                });
             });
         });
-        
     }
     initTlsVersionSetting();
 
