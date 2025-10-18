@@ -1,3 +1,10 @@
+# v3.2.8 16 Oct 2025
+
++ Fixed wildcard certificate bug [#845](https://github.com/tobychui/zoraxy/issues/845) by [zen8841](https://github.com/zen8841)
++ Move function:NormalizeDomain to netutils module by [zen8841](https://github.com/zen8841)
++ Add support for Proxy Protocol V1 and V2 in streamproxy configuration by [jemmy1794](https://github.com/jemmy1794)
++ Added user selectable versions for TLS
+
 # v3.2.7 09 Oct 2025
 
 + Update Sidebar CSS by [Saeraphinx](https://github.com/Saeraphinx)
