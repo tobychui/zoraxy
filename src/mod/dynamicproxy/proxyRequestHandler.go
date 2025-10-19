@@ -110,13 +110,13 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 // upstreamHostSwap check if this loopback to one of the proxy rule in the system. If yes, do a shortcut target swap
 // this prevents unnecessary external DNS lookup and connection, return true if swapped and request is already handled
 // by the loopback handler. Only continue if return is false
-func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, selectedUpstream *loadbalance.Upstream) bool {
+func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, selectedUpstream *loadbalance.Upstream, currentTarget *ProxyEndpoint) bool {
 	upstreamHostname := selectedUpstream.OriginIpOrDomain
 	if strings.Contains(upstreamHostname, ":") {
 		upstreamHostname = strings.Split(upstreamHostname, ":")[0]
 	}
 	loopbackProxyEndpoint := h.Parent.GetProxyEndpointFromHostname(upstreamHostname)
-	if loopbackProxyEndpoint != nil {
+	if loopbackProxyEndpoint != nil && loopbackProxyEndpoint != currentTarget {
 		//This is a loopback request. Swap the target to the loopback target
 		//h.Parent.Option.Logger.PrintAndLog("proxy", "Detected a loopback request to self. Swap the target to "+loopbackProxyEndpoint.RootOrMatchingDomain, nil)
 		if loopbackProxyEndpoint.IsEnabled() {
@@ -147,7 +147,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	/* Upstream Host Swap (use to detect loopback to self) */
-	if h.upstreamHostSwap(w, r, selectedUpstream) {
+	if h.upstreamHostSwap(w, r, selectedUpstream, target) {
 		//Request handled by the loopback handler
 		return
 	}
