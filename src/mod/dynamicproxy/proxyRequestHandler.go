@@ -51,6 +51,11 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	matchProxyEndpoints := []*ProxyEndpoint{}
 	router.ProxyEndpoints.Range(func(k, v interface{}) bool {
 		ep := v.(*ProxyEndpoint)
+		if ep.Disabled {
+			//Skip disabled endpoint
+			return true
+		}
+
 		match, err := filepath.Match(ep.RootOrMatchingDomain, hostname)
 		if err != nil {
 			//Bad pattern. Skip this rule
@@ -83,12 +88,24 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	})
 
 	if len(matchProxyEndpoints) == 1 {
-		//Only 1 match
 		return matchProxyEndpoints[0]
 	} else if len(matchProxyEndpoints) > 1 {
-		//More than one match. Get the best match one
-		sort.Slice(matchProxyEndpoints, func(i, j int) bool {
-			return matchProxyEndpoints[i].RootOrMatchingDomain < matchProxyEndpoints[j].RootOrMatchingDomain
+		// More than one match, pick one that is:
+		// 1. longer RootOrMatchingDomain (more specific)
+		// 2. fewer wildcard characters (* and ?) (more specific)
+		// 3. fallback to lexicographic order
+		sort.SliceStable(matchProxyEndpoints, func(i, j int) bool {
+			a := matchProxyEndpoints[i].RootOrMatchingDomain
+			b := matchProxyEndpoints[j].RootOrMatchingDomain
+			if len(a) != len(b) {
+				return len(a) > len(b)
+			}
+			aw := strings.Count(a, "*") + strings.Count(a, "?")
+			bw := strings.Count(b, "*") + strings.Count(b, "?")
+			if aw != bw {
+				return aw < bw
+			}
+			return a < b
 		})
 		return matchProxyEndpoints[0]
 	}
