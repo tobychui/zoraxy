@@ -24,7 +24,7 @@ type OAuth2RouterOptions struct {
 	OAuth2WellKnownUrl        string //The well-known url for OAuth 2.0 server
 	OAuth2UserInfoUrl         string //The URL of the OAuth 2.0 user info endpoint
 	OAuth2Scopes              string //The scopes for OAuth 2.0 Application
-	OAuth2CodeChallengeMethod string //The authorization code challange method
+	OAuth2CodeChallengeMethod string //The authorization code challenge method
 	Logger                    *logger.Logger
 	Database                  *database.Database
 	OAuth2ConfigCacheTTL      *time.Duration
