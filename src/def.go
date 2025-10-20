@@ -93,6 +93,7 @@ var (
 	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
 	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
+	oauth2ConfigurationCache   = flag.Duration("oauth2cc", 60*time.Second, "Time in seconds to cache OAuth2 configuration, set to 0 to disable cache. Default: 60 seconds")
 
 	/* Logging Configuration Flags */
 	enableLog            = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")

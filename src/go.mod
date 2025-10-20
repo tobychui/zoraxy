@@ -14,6 +14,7 @@ require (
 	github.com/gorilla/sessions v1.2.2
 	github.com/gorilla/websocket v1.5.1
 	github.com/grandcat/zeroconf v1.0.0
+	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/likexian/whois v1.15.1
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/monperrus/crawler-user-agents v1.1.0
