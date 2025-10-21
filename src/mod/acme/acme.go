@@ -508,8 +508,8 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		dns = true
 	}
 
-	// Default propagation timeout is 300 seconds
-	propagationTimeout := 300
+	// Default propagation timeout is 600 seconds (10 minutes)
+	propagationTimeout := 600
 	if dns {
 		ppgTimeout, err := utils.PostPara(r, "ppgTimeout")
 		if err == nil {
