@@ -188,9 +188,8 @@ func startupSequence() {
 	})
 
 	oauth2Router = oauth2.NewOAuth2Router(&oauth2.OAuth2RouterOptions{
-		Logger:               SystemWideLogger,
-		Database:             sysdb,
-		OAuth2ConfigCacheTTL: oauth2ConfigurationCache,
+		Logger:   SystemWideLogger,
+		Database: sysdb,
 	})
 
 	//Create a statistic collector
