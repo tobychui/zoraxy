@@ -320,7 +320,11 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 			return errors.New("unauthorized")
 		}
 
-		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: token.Expiry}
+		cookieExpiry := token.Expiry
+		if cookieExpiry.IsZero() || cookieExpiry.Before(time.Now()) {
+			cookieExpiry = time.Now().Add(time.Hour)
+		}
+		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry}
 		if scheme == "https" {
 			cookie.Secure = true
 			cookie.SameSite = http.SameSiteLaxMode
