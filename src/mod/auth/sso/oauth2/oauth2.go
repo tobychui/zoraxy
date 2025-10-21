@@ -283,7 +283,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 	})
 
 	oauthConfig := oauthConfigCache.Value()
-	if !status {
+	if oauthConfig == nil {
 		w.WriteHeader(500)
 		return errors.New("failed to fetch OIDC configuration")
 	}
