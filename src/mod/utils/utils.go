@@ -81,6 +81,26 @@ func PostPara(r *http.Request, key string) (string, error) {
 	return x, nil
 }
 
+// Get POST parameter as time.Duration
+func PostDuration(r *http.Request, key string) (*time.Duration, error) {
+	// Try to parse the form
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+	// Get first value from the form
+	x := r.Form.Get(key)
+	if len(x) == 0 {
+		return nil, errors.New("invalid " + key + " given")
+	}
+
+	duration, err := time.ParseDuration(x)
+
+	if err != nil {
+		return nil, errors.Join(errors.New("invalid "+key+" duration"), err)
+	}
+	return &duration, nil
+}
+
 // Get POST paramter as boolean, accept 1 or true
 func PostBool(r *http.Request, key string) (bool, error) {
 	x, err := PostPara(r, key)

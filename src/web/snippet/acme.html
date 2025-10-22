@@ -408,8 +408,10 @@
         $("#kidInput").show();
         $("#hmacInput").show();
         $("#skipTLS").show();
-        $("#dnsChallenge").hide();
-        $(".dnsChallengeOnly").hide();
+        $("#dnsChallenge").show();
+        if ($("#useDnsChallenge")[0].checked){
+            $(".dnsChallengeOnly").show();
+        }
       } else if (this.value == "ZeroSSL") {
         $("#kidInput").show();
         $("#hmacInput").show();

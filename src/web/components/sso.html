@@ -110,6 +110,26 @@
                 <small>Secret key of the OAuth2 application</small>
             </div>
             <div class="field">
+                <label for="oauth2CodeChallengeMethod">Code Challenge Method</label>
+
+                <div class="ui selection dropdown" id="oauth2CodeChallengeMethod">
+                    <input type="hidden" name="oauth2CodeChallengeMethod">
+                    <i class="dropdown icon"></i>
+                    <div class="default text">Plain</div>
+                    <div class="menu">
+                        <div class="item" data-value="plain">Plain</div>
+                        <div class="item" data-value="PKCE">PKCE</div>
+                        <div class="item" data-value="PKCE_S256">PKCE (S256)</div>
+                    </div>
+                </div>
+                <small>Options: <br>
+                    Plain: No code challenge is used.<br>
+                    PKCE: Uses a code challenge for added security.<br>
+                    PKCE (S256): Uses a hashed code challenge (SHA-256) for maximum protection.<br>
+                    <strong>Note:</strong> PKCE (especially S256) is recommended for better security.
+                </small>
+            </div>
+            <div class="field">
                 <label for="oauth2WellKnownUrl">Discovery URL</label>
                 <input type="text" id="oauth2WellKnownUrl" name="oauth2WellKnownUrl" placeholder="Enter Well-Known URL">
                 <small>URL to the OpenID Connect 1.0 Discovery document (usually ending with /.well-known/openid-configuration). Used to automatically fetch provider settings.</small>
@@ -138,6 +158,13 @@
                 <input type="text" id="oauth2Scopes" name="oauth2Scopes" placeholder="Enter Scopes">
                 <small>Scopes required by the OAuth2 provider to retrieve information about the authenticated user. Refer to your OAuth2 provider documentation for more information about this. Optional if Well-Known url is configured.</small>
             </div>
+
+            <div class="field">
+                <label for="oauth2ConfigurationCacheTime">Configuration cache time</label>
+                <input type="text" id="oauth2ConfigurationCacheTime" name="oauth2ConfigurationCacheTime" placeholder="Enter Configuration Cache Time">
+                <small>Time to cache OAuth2 configuration before refresh. Accepts Go time.Duration format (e.g. 1m, 10m, 1h). Defaults to 60s.</small>
+            </div>
+
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
             <button class="ui basic button" type="button" id="oauth2Clear"><i class="red trash icon"></i> Clear</button>
         </form>
@@ -299,6 +326,8 @@
                 $('#oauth2ClientId').val(data.oauth2ClientId);
                 $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
                 $('#oauth2Scopes').val(data.oauth2Scopes);
+                $('#oauth2ConfigurationCacheTime').val(data.oauth2ConfigurationCacheTime);
+                $('[data-value="'+data.oauth2CodeChallengeMethod+'"]').click();
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
