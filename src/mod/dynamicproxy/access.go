@@ -13,7 +13,7 @@ import (
 
 // Handle access check (blacklist / whitelist), return true if request is handled (aka blocked)
 // if the return value is false, you can continue process the response writer
-func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter, r *http.Request) bool {
+func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) bool {
 	accessRule, err := h.Parent.Option.AccessController.GetAccessRuleByID(ruleID)
 	if err != nil {
 		//Unable to load access rule. Target rule not found?
@@ -25,7 +25,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 
 	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.Option.WebDirectory, w, r)
 	if isBlocked {
-		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "")
+		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "", sep)
 	}
 	return isBlocked
 }
