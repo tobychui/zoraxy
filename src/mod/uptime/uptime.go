@@ -59,7 +59,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 		//For each target to check online, do the following
 		var thisRecord Record
 		if target.Protocol == "http" || target.Protocol == "https" {
-			online, laterncy, statusCode := m.getWebsiteStatusWithLatency(target.URL)
+			online, laterncy, statusCode := m.getWebsiteStatusWithLatency(target)
 			thisRecord = Record{
 				Timestamp:  time.Now().Unix(),
 				ID:         target.ID,
@@ -167,29 +167,39 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 */
 
 // Get website stauts with latency given URL, return is conn succ and its latency and status code
-func (m *Monitor) getWebsiteStatusWithLatency(url string) (bool, int64, int) {
+func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
-	statusCode, err := getWebsiteStatus(url)
+	statusCode, err := getWebsiteStatus(target.URL)
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
 		m.Config.Logger.PrintAndLog(logModuleName, "Ping upstream timeout. Assume offline", err)
-		m.Config.OnlineStateNotify(url, false)
-		return false, 0, 0
-	} else {
-		diff := end - start
-		succ := false
-		if statusCode >= 200 && statusCode < 300 {
-			//OK
-			succ = true
-		} else if statusCode >= 300 && statusCode < 400 {
-			//Redirection code
-			succ = true
-		} else {
-			succ = false
+
+		// Check if this is the first record
+		// sometime after startup the first check may fail due to network issues
+		// we will log it as failed but not notify dynamic proxy to take down the upstream
+		records, ok := m.OnlineStatusLog[target.ID]
+		if !ok || len(records) == 0 {
+			return false, 0, 0
 		}
-		m.Config.OnlineStateNotify(url, true)
-		return succ, diff, statusCode
+
+		// Otherwise assume offline
+		m.Config.OnlineStateNotify(target.URL, false)
+		return false, 0, 0
 	}
+
+	diff := end - start
+	succ := false
+	if statusCode >= 200 && statusCode < 300 {
+		//OK
+		succ = true
+	} else if statusCode >= 300 && statusCode < 400 {
+		//Redirection code
+		succ = true
+	} else {
+		succ = false
+	}
+	m.Config.OnlineStateNotify(target.URL, true)
+	return succ, diff, statusCode
 
 }
 
