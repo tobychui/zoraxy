@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
+	"github.com/go-acme/lego/v4/providers/dns/acmedns"
 	"github.com/go-acme/lego/v4/providers/dns/active24"
 	"github.com/go-acme/lego/v4/providers/dns/alidns"
 	"github.com/go-acme/lego/v4/providers/dns/allinkl"
@@ -20,6 +21,8 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/azure"
 	"github.com/go-acme/lego/v4/providers/dns/azuredns"
 	"github.com/go-acme/lego/v4/providers/dns/baiducloud"
+	"github.com/go-acme/lego/v4/providers/dns/beget"
+	"github.com/go-acme/lego/v4/providers/dns/binarylane"
 	"github.com/go-acme/lego/v4/providers/dns/bindman"
 	"github.com/go-acme/lego/v4/providers/dns/bluecat"
 	"github.com/go-acme/lego/v4/providers/dns/bookmyname"
@@ -51,6 +54,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/dyndnsfree"
 	"github.com/go-acme/lego/v4/providers/dns/dynu"
 	"github.com/go-acme/lego/v4/providers/dns/easydns"
+	"github.com/go-acme/lego/v4/providers/dns/edgeone"
 	"github.com/go-acme/lego/v4/providers/dns/efficientip"
 	"github.com/go-acme/lego/v4/providers/dns/epik"
 	"github.com/go-acme/lego/v4/providers/dns/f5xc"
@@ -63,6 +67,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/googledomains"
 	"github.com/go-acme/lego/v4/providers/dns/hetzner"
 	"github.com/go-acme/lego/v4/providers/dns/hostingde"
+	"github.com/go-acme/lego/v4/providers/dns/hostinger"
 	"github.com/go-acme/lego/v4/providers/dns/hosttech"
 	"github.com/go-acme/lego/v4/providers/dns/httpnet"
 	"github.com/go-acme/lego/v4/providers/dns/huaweicloud"
@@ -78,6 +83,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/ipv64"
 	"github.com/go-acme/lego/v4/providers/dns/iwantmyname"
 	"github.com/go-acme/lego/v4/providers/dns/joker"
+	"github.com/go-acme/lego/v4/providers/dns/keyhelp"
 	"github.com/go-acme/lego/v4/providers/dns/liara"
 	"github.com/go-acme/lego/v4/providers/dns/lightsail"
 	"github.com/go-acme/lego/v4/providers/dns/limacity"
@@ -104,6 +110,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/njalla"
 	"github.com/go-acme/lego/v4/providers/dns/nodion"
 	"github.com/go-acme/lego/v4/providers/dns/ns1"
+	"github.com/go-acme/lego/v4/providers/dns/octenium"
 	"github.com/go-acme/lego/v4/providers/dns/otc"
 	"github.com/go-acme/lego/v4/providers/dns/ovh"
 	"github.com/go-acme/lego/v4/providers/dns/pdns"
@@ -160,6 +167,13 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 	plInterval := time.Duration(pollingInterval) * time.Second
 	switch name {
 	
+	case "acmedns":
+		cfg := acmedns.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		return acmedns.NewDNSProviderConfig(cfg)
 	case "active24":
 		cfg := active24.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -259,6 +273,24 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return baiducloud.NewDNSProviderConfig(cfg)
+	case "beget":
+		cfg := beget.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return beget.NewDNSProviderConfig(cfg)
+	case "binarylane":
+		cfg := binarylane.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return binarylane.NewDNSProviderConfig(cfg)
 	case "bindman":
 		cfg := bindman.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -538,6 +570,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return easydns.NewDNSProviderConfig(cfg)
+	case "edgeone":
+		cfg := edgeone.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return edgeone.NewDNSProviderConfig(cfg)
 	case "efficientip":
 		cfg := efficientip.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -646,6 +687,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return hostingde.NewDNSProviderConfig(cfg)
+	case "hostinger":
+		cfg := hostinger.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return hostinger.NewDNSProviderConfig(cfg)
 	case "hosttech":
 		cfg := hosttech.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -781,6 +831,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return joker.NewDNSProviderConfig(cfg)
+	case "keyhelp":
+		cfg := keyhelp.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return keyhelp.NewDNSProviderConfig(cfg)
 	case "liara":
 		cfg := liara.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1015,6 +1074,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return ns1.NewDNSProviderConfig(cfg)
+	case "octenium":
+		cfg := octenium.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return octenium.NewDNSProviderConfig(cfg)
 	case "otc":
 		cfg := otc.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)

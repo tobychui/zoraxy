@@ -1,4 +1,27 @@
 {
+ "acmedns": {
+  "Name": "acmedns",
+  "ConfigableFields": [
+   {
+    "Title": "APIBase",
+    "Datatype": "string"
+   },
+   {
+    "Title": "StoragePath",
+    "Datatype": "string"
+   },
+   {
+    "Title": "StorageBaseURL",
+    "Datatype": "string"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "AllowList",
+    "Datatype": "[]string"
+   }
+  ]
+ },
  "active24": {
   "Name": "active24",
   "ConfigableFields": [
@@ -328,6 +351,14 @@
     "Datatype": "string"
    },
    {
+    "Title": "ServiceConnectionID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SystemAccessToken",
+    "Datatype": "string"
+   },
+   {
     "Title": "AuthMethod",
     "Datatype": "string"
    },
@@ -380,6 +411,56 @@
    }
   ],
   "HiddenFields": []
+ },
+ "beget": {
+  "Name": "beget",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "binarylane": {
+  "Name": "binarylane",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "bindman": {
   "Name": "bindman",
@@ -1272,6 +1353,36 @@
    }
   ]
  },
+ "edgeone": {
+  "Name": "edgeone",
+  "ConfigableFields": [
+   {
+    "Title": "SecretID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SecretKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Region",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SessionToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": []
+ },
  "efficientip": {
   "Name": "efficientip",
   "ConfigableFields": [
@@ -1550,6 +1661,10 @@
     "Datatype": "string"
    },
    {
+    "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -1574,6 +1689,29 @@
    },
    {
     "Title": "ZoneName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "hostinger": {
+  "Name": "hostinger",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
     "Datatype": "string"
    },
    {
@@ -2011,6 +2149,33 @@
    },
    {
     "Title": "APIMode",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "keyhelp": {
+  "Name": "keyhelp",
+  "ConfigableFields": [
+   {
+    "Title": "BaseURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
@@ -2711,13 +2876,32 @@
    }
   ]
  },
+ "octenium": {
+  "Name": "octenium",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "otc": {
   "Name": "otc",
   "ConfigableFields": [
-   {
-    "Title": "IdentityEndpoint",
-    "Datatype": "string"
-   },
    {
     "Title": "DomainName",
     "Datatype": "string"
@@ -2735,6 +2919,10 @@
     "Datatype": "string"
    },
    {
+    "Title": "IdentityEndpoint",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -2744,6 +2932,10 @@
    }
   ],
   "HiddenFields": [
+   {
+    "Title": "PrivateZone",
+    "Datatype": "bool"
+   },
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
