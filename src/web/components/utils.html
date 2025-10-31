@@ -320,14 +320,6 @@
             adminAddr: $('input[name=recvAddr]').val()
         };
 
-        /*
-        var inputValid = validateSMTPInputs();
-        if (!inputValid){
-            msgbox("SMTP input not valid", false, 5000);
-            return;
-        }
-        */
-
         $.cjax({
             type: "POST",
             url: "/api/tools/smtp/set",
@@ -553,6 +545,13 @@
             compress: $("#logCompressionEnabled").is(":checked")
         };
 
+        // Validate maxSize format
+        const maxSizeRegex = /^\d+[KMG]?$/i;
+        if (!maxSizeRegex.test(settings.maxSize)) {
+            showLogSettingsError("Max size must be a number optionally followed by K, M, or G (e.g., 200M, 10K, 500)");
+            return;
+        }
+
         // Basic validation
         if (settings.maxSize === "") {
             showLogSettingsError("Max size cannot be empty");
@@ -606,7 +605,7 @@
             } else {
                 showLogSettingsSuccess();
                 // Update success message for rotation
-                $("#logSettingsSuccessMsg").html('<i class="archive icon"></i> Log rotation completed successfully');
+                $("#logSettingsSuccessMsg").html('<i class="archive icon"></i> Log rotation triggered successfully').stop().finish().slideDown("fast").delay(3000).slideUp("fast");
             }
         }).fail(function(xhr, status, error) {
             showLogSettingsError("Failed to rotate log: " + error);
