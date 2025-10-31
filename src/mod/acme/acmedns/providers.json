@@ -110,6 +110,33 @@
    }
   ]
  },
+ "anexia": {
+  "Name": "anexia",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "arvancloud": {
   "Name": "arvancloud",
   "ConfigableFields": [
@@ -602,7 +629,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "checkdomain": {
   "Name": "checkdomain",
@@ -2392,7 +2424,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "manageengine": {
   "Name": "manageengine",
@@ -3403,7 +3440,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "selectel": {
   "Name": "selectel",
@@ -3709,6 +3751,10 @@
    {
     "Title": "TTL",
     "Datatype": "int64"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
    }
   ]
  },
@@ -3785,7 +3831,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "vercel": {
   "Name": "vercel",
@@ -3873,6 +3924,10 @@
    {
     "Title": "QuoteValue",
     "Datatype": "bool"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
    }
   ]
  },
@@ -3967,6 +4022,33 @@
  "webnames": {
   "Name": "webnames",
   "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "webnamesca": {
+  "Name": "webnamesca",
+  "ConfigableFields": [
+   {
+    "Title": "APIUser",
+    "Datatype": "string"
+   },
    {
     "Title": "APIKey",
     "Datatype": "string"

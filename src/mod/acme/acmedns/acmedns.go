@@ -13,6 +13,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/active24"
 	"github.com/go-acme/lego/v4/providers/dns/alidns"
 	"github.com/go-acme/lego/v4/providers/dns/allinkl"
+	"github.com/go-acme/lego/v4/providers/dns/anexia"
 	"github.com/go-acme/lego/v4/providers/dns/arvancloud"
 	"github.com/go-acme/lego/v4/providers/dns/auroradns"
 	"github.com/go-acme/lego/v4/providers/dns/autodns"
@@ -148,6 +149,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/vscale"
 	"github.com/go-acme/lego/v4/providers/dns/vultr"
 	"github.com/go-acme/lego/v4/providers/dns/webnames"
+	"github.com/go-acme/lego/v4/providers/dns/webnamesca"
 	"github.com/go-acme/lego/v4/providers/dns/websupport"
 	"github.com/go-acme/lego/v4/providers/dns/wedos"
 	"github.com/go-acme/lego/v4/providers/dns/westcn"
@@ -201,6 +203,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return allinkl.NewDNSProviderConfig(cfg)
+	case "anexia":
+		cfg := anexia.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return anexia.NewDNSProviderConfig(cfg)
 	case "arvancloud":
 		cfg := arvancloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1416,6 +1427,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return webnames.NewDNSProviderConfig(cfg)
+	case "webnamesca":
+		cfg := webnamesca.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return webnamesca.NewDNSProviderConfig(cfg)
 	case "websupport":
 		cfg := websupport.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
