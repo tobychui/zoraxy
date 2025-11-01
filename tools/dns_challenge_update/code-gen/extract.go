@@ -79,7 +79,6 @@ func getExcludedDNSProviders() []string {
 		"dnshomede",    //Multi-credentials arch
 		"myaddr",    //Multi-credentials arch
 		"oraclecloud",  //Evil company
-		"acmedns",      //Not a DNS provider
 		"selectelv2",   //Not sure why not working with our code generator
 		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
 		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
@@ -297,6 +296,16 @@ func main() {
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return ` + providerName + `.NewDNSProviderConfig(cfg)`
+		if providerName == "acmedns" {
+			codeSegment = `
+	case "` + providerName + `":
+		cfg := ` + providerName + `.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		return ` + providerName + `.NewDNSProviderConfig(cfg)`
+		}
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"
 	}

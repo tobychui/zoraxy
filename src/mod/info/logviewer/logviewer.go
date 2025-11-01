@@ -1,8 +1,11 @@
 package logviewer
 
 import (
+	"archive/zip"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -15,7 +18,6 @@ import (
 
 type ViewerOption struct {
 	RootFolder string //The root folder to scan for log
-	Extension  string //The extension the root files use, include the . in your ext (e.g. .log)
 }
 
 type Viewer struct {
@@ -72,6 +74,11 @@ func (v *Viewer) HandleReadLog(w http.ResponseWriter, r *http.Request) {
 		filter = ""
 	}
 
+	linesParam, err := utils.GetPara(r, "lines")
+	if err != nil {
+		linesParam = "all"
+	}
+
 	content, err := v.LoadLogFile(strings.TrimSpace(filepath.Base(filename)))
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
@@ -105,6 +112,18 @@ func (v *Viewer) HandleReadLog(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		content = strings.Join(filteredLines, "\n")
+	}
+
+	// Apply lines limit after filtering
+	if linesParam != "all" {
+		if lineLimit, err := strconv.Atoi(linesParam); err == nil && lineLimit > 0 {
+			allLines := strings.Split(content, "\n")
+			if len(allLines) > lineLimit {
+				// Keep only the last lineLimit lines
+				allLines = allLines[len(allLines)-lineLimit:]
+				content = strings.Join(allLines, "\n")
+			}
+		}
 	}
 
 	utils.SendTextResponse(w, content)
@@ -158,7 +177,7 @@ func (v *Viewer) HandleLogErrorSummary(w http.ResponseWriter, r *http.Request) {
 			line = line[strings.LastIndex(line, "]")+1:]
 			fields := strings.Fields(strings.TrimSpace(line))
 
-			if len(fields) > 0 {
+			if len(fields) >= 3 {
 				statusStr := fields[2]
 				if len(statusStr) == 3 && (statusStr[0] != '1' && statusStr[0] != '2' && statusStr[0] != '3') {
 					fieldsWithTimestamp := append([]string{timestamp}, strings.Fields(strings.TrimSpace(line))...)
@@ -179,7 +198,7 @@ func (v *Viewer) HandleLogErrorSummary(w http.ResponseWriter, r *http.Request) {
 func (v *Viewer) ListLogFiles(showFullpath bool) map[string][]*LogFile {
 	result := map[string][]*LogFile{}
 	filepath.WalkDir(v.option.RootFolder, func(path string, di fs.DirEntry, err error) error {
-		if filepath.Ext(path) == v.option.Extension {
+		if filepath.Ext(path) == ".log" || strings.HasSuffix(path, ".log.gz") {
 			catergory := filepath.Base(filepath.Dir(path))
 			logList, ok := result[catergory]
 			if !ok {
@@ -197,9 +216,12 @@ func (v *Viewer) ListLogFiles(showFullpath bool) map[string][]*LogFile {
 				return nil
 			}
 
+			filename := filepath.Base(path)
+			filename = strings.TrimSuffix(filename, ".log") //to handle cases where the filename ends of .log.gz
+
 			logList = append(logList, &LogFile{
 				Title:    strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
-				Filename: filepath.Base(path),
+				Filename: filename,
 				Fullpath: fullpath,
 				Filesize: st.Size(),
 			})
@@ -212,13 +234,78 @@ func (v *Viewer) ListLogFiles(showFullpath bool) map[string][]*LogFile {
 	return result
 }
 
-func (v *Viewer) LoadLogFile(filename string) (string, error) {
+// readLogFileContent reads a log file, handling both compressed (.gz) and uncompressed files
+func (v *Viewer) readLogFileContent(filepath string) ([]byte, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	// Check if file is compressed
+	if strings.HasSuffix(filepath, ".gz") {
+		gzipReader, err := gzip.NewReader(file)
+		if err != nil {
+			// Try zip reader for older logs that use zip compression despite .gz extension
+			zipReader, err := zip.OpenReader(filepath)
+			if err != nil {
+				return nil, err
+			}
+			defer zipReader.Close()
+			if len(zipReader.File) == 0 {
+				return nil, errors.New("zip file is empty")
+			}
+			zipFile := zipReader.File[0]
+			rc, err := zipFile.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer rc.Close()
+			return io.ReadAll(rc)
+
+		}
+		defer gzipReader.Close()
+
+		return io.ReadAll(gzipReader)
+	}
+
+	// Regular file
+	return io.ReadAll(file)
+}
+
+func (v *Viewer) senatizeLogFilenameInput(filename string) string {
+	filename = strings.TrimSuffix(filename, ".log.gz")
+	filename = strings.TrimSuffix(filename, ".log")
 	filename = filepath.ToSlash(filename)
 	filename = strings.ReplaceAll(filename, "../", "")
-	logFilepath := filepath.Join(v.option.RootFolder, filename)
+	//Check if .log.gz or .log exists
+	if utils.FileExists(filepath.Join(v.option.RootFolder, filename+".log")) {
+		return filepath.Join(v.option.RootFolder, filename+".log")
+	}
+	if utils.FileExists(filepath.Join(v.option.RootFolder, filename+".log.gz")) {
+		return filepath.Join(v.option.RootFolder, filename+".log.gz")
+	}
+	return filepath.Join(v.option.RootFolder, filename)
+}
+
+func (v *Viewer) LoadLogFile(filename string) (string, error) {
+	// filename might be in (no extension), .log or .log.gz format
+	// so we trim those first before proceeding
+	logFilepath := v.senatizeLogFilenameInput(filename)
 	if utils.FileExists(logFilepath) {
 		//Load it
-		content, err := os.ReadFile(logFilepath)
+		content, err := v.readLogFileContent(logFilepath)
+		if err != nil {
+			return "", err
+		}
+
+		return string(content), nil
+	}
+
+	//Also check .log.gz
+	logFilepathGz := logFilepath + ".gz"
+	if utils.FileExists(logFilepathGz) {
+		content, err := v.readLogFileContent(logFilepathGz)
 		if err != nil {
 			return "", err
 		}
@@ -230,12 +317,10 @@ func (v *Viewer) LoadLogFile(filename string) (string, error) {
 }
 
 func (v *Viewer) LoadLogSummary(filename string) (string, error) {
-	filename = filepath.ToSlash(filename)
-	filename = strings.ReplaceAll(filename, "../", "")
-	logFilepath := filepath.Join(v.option.RootFolder, filename)
+	logFilepath := v.senatizeLogFilenameInput(filename)
 	if utils.FileExists(logFilepath) {
 		//Load it
-		content, err := os.ReadFile(logFilepath)
+		content, err := v.readLogFileContent(logFilepath)
 		if err != nil {
 			return "", err
 		}

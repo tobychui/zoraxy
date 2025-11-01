@@ -208,6 +208,7 @@ type ProxyEndpoint struct {
 
 	//Uptime Monitor
 	DisableUptimeMonitor bool //Disable uptime monitor for this endpoint
+	DisableLogging       bool //Disable logging of reverse proxy requests
 
 	// Chunked Transfer Encoding
 	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint

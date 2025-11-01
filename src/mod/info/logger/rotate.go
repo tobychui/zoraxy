@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"archive/zip"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
@@ -176,17 +176,17 @@ func (l *Logger) RotateLog() error {
 	return nil
 }
 
-// compressFile compresses the given file using zip format and creates a .gz file.
+// compressFile compresses the given file using gzip format and creates a .gz file.
 func compressFile(filename string) error {
-	zipFilename := filename + ".gz"
-	outFile, err := os.Create(zipFilename)
+	gzipFilename := filename + ".gz"
+	outFile, err := os.Create(gzipFilename)
 	if err != nil {
 		return err
 	}
 	defer outFile.Close()
 
-	zipWriter := zip.NewWriter(outFile)
-	defer zipWriter.Close()
+	gzipWriter := gzip.NewWriter(outFile)
+	defer gzipWriter.Close()
 
 	fileToCompress, err := os.Open(filename)
 	if err != nil {
@@ -194,11 +194,6 @@ func compressFile(filename string) error {
 	}
 	defer fileToCompress.Close()
 
-	w, err := zipWriter.Create(filepath.Base(filename))
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(w, fileToCompress)
+	_, err = io.Copy(gzipWriter, fileToCompress)
 	return err
 }

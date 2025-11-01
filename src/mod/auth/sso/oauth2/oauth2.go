@@ -7,23 +7,33 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/oauth2"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+const (
+	// DefaultOAuth2ConfigCacheTime defines the default cache duration for OAuth2 configuration
+	DefaultOAuth2ConfigCacheTime = 60 * time.Second
+)
+
 type OAuth2RouterOptions struct {
-	OAuth2ServerURL    string //The URL of the OAuth 2.0 server server
-	OAuth2TokenURL     string //The URL of the OAuth 2.0 token server
-	OAuth2ClientId     string //The client id for OAuth 2.0 Application
-	OAuth2ClientSecret string //The client secret for OAuth 2.0 Application
-	OAuth2WellKnownUrl string //The well-known url for OAuth 2.0 server
-	OAuth2UserInfoUrl  string //The URL of the OAuth 2.0 user info endpoint
-	OAuth2Scopes       string //The scopes for OAuth 2.0 Application
-	Logger             *logger.Logger
-	Database           *database.Database
+	OAuth2ServerURL              string //The URL of the OAuth 2.0 server server
+	OAuth2TokenURL               string //The URL of the OAuth 2.0 token server
+	OAuth2ClientId               string //The client id for OAuth 2.0 Application
+	OAuth2ClientSecret           string //The client secret for OAuth 2.0 Application
+	OAuth2WellKnownUrl           string //The well-known url for OAuth 2.0 server
+	OAuth2UserInfoUrl            string //The URL of the OAuth 2.0 user info endpoint
+	OAuth2Scopes                 string //The scopes for OAuth 2.0 Application
+	OAuth2CodeChallengeMethod    string //The authorization code challenge method
+	OAuth2ConfigurationCacheTime *time.Duration
+	Logger                       *logger.Logger
+	Database                     *database.Database
+	OAuth2ConfigCache            *ttlcache.Cache[string, *oauth2.Config]
 }
 
 type OIDCDiscoveryDocument struct {
@@ -57,11 +67,26 @@ func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 	options.Database.Read("oauth2", "oauth2ClientId", &options.OAuth2ClientId)
 	options.Database.Read("oauth2", "oauth2ClientSecret", &options.OAuth2ClientSecret)
 	options.Database.Read("oauth2", "oauth2UserInfoUrl", &options.OAuth2UserInfoUrl)
+	options.Database.Read("oauth2", "oauth2CodeChallengeMethod", &options.OAuth2CodeChallengeMethod)
 	options.Database.Read("oauth2", "oauth2Scopes", &options.OAuth2Scopes)
+	options.Database.Read("oauth2", "oauth2ConfigurationCacheTime", &options.OAuth2ConfigurationCacheTime)
 
-	return &OAuth2Router{
+	ar := &OAuth2Router{
 		options: options,
 	}
+
+	if options.OAuth2ConfigurationCacheTime == nil ||
+		options.OAuth2ConfigurationCacheTime.Seconds() == 0 {
+		cacheTime := DefaultOAuth2ConfigCacheTime
+		options.OAuth2ConfigurationCacheTime = &cacheTime
+	}
+
+	options.OAuth2ConfigCache = ttlcache.New[string, *oauth2.Config](
+		ttlcache.WithTTL[string, *oauth2.Config](*options.OAuth2ConfigurationCacheTime),
+	)
+	go options.OAuth2ConfigCache.Start()
+
+	return ar
 }
 
 // HandleSetOAuth2Settings is the internal handler for setting the OAuth URL and HTTPS
@@ -81,13 +106,15 @@ func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.R
 func (ar *OAuth2Router) handleSetOAuthSettingsGET(w http.ResponseWriter, r *http.Request) {
 	//Return the current settings
 	js, _ := json.Marshal(map[string]interface{}{
-		"oauth2WellKnownUrl": ar.options.OAuth2WellKnownUrl,
-		"oauth2ServerUrl":    ar.options.OAuth2ServerURL,
-		"oauth2TokenUrl":     ar.options.OAuth2TokenURL,
-		"oauth2UserInfoUrl":  ar.options.OAuth2UserInfoUrl,
-		"oauth2Scopes":       ar.options.OAuth2Scopes,
-		"oauth2ClientSecret": ar.options.OAuth2ClientSecret,
-		"oauth2ClientId":     ar.options.OAuth2ClientId,
+		"oauth2WellKnownUrl":           ar.options.OAuth2WellKnownUrl,
+		"oauth2ServerUrl":              ar.options.OAuth2ServerURL,
+		"oauth2TokenUrl":               ar.options.OAuth2TokenURL,
+		"oauth2UserInfoUrl":            ar.options.OAuth2UserInfoUrl,
+		"oauth2Scopes":                 ar.options.OAuth2Scopes,
+		"oauth2ClientSecret":           ar.options.OAuth2ClientSecret,
+		"oauth2ClientId":               ar.options.OAuth2ClientId,
+		"oauth2CodeChallengeMethod":    ar.options.OAuth2CodeChallengeMethod,
+		"oauth2ConfigurationCacheTime": ar.options.OAuth2ConfigurationCacheTime.String(),
 	})
 
 	utils.SendJSONResponse(w, string(js))
@@ -95,7 +122,8 @@ func (ar *OAuth2Router) handleSetOAuthSettingsGET(w http.ResponseWriter, r *http
 
 func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *http.Request) {
 	//Update the settings
-	var oauth2ServerUrl, oauth2TokenURL, oauth2Scopes, oauth2UserInfoUrl string
+	var oauth2ServerUrl, oauth2TokenURL, oauth2Scopes, oauth2UserInfoUrl, oauth2CodeChallengeMethod string
+	var oauth2ConfigurationCacheTime *time.Duration
 
 	oauth2ClientId, err := utils.PostPara(r, "oauth2ClientId")
 	if err != nil {
@@ -106,6 +134,18 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	oauth2ClientSecret, err := utils.PostPara(r, "oauth2ClientSecret")
 	if err != nil {
 		utils.SendErrorResponse(w, "oauth2ClientSecret not found")
+		return
+	}
+
+	oauth2CodeChallengeMethod, err = utils.PostPara(r, "oauth2CodeChallengeMethod")
+	if err != nil {
+		utils.SendErrorResponse(w, "oauth2CodeChallengeMethod not found")
+		return
+	}
+
+	oauth2ConfigurationCacheTime, err = utils.PostDuration(r, "oauth2ConfigurationCacheTime")
+	if err != nil {
+		utils.SendErrorResponse(w, "oauth2ConfigurationCacheTime not found")
 		return
 	}
 
@@ -146,6 +186,8 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	ar.options.OAuth2ClientId = oauth2ClientId
 	ar.options.OAuth2ClientSecret = oauth2ClientSecret
 	ar.options.OAuth2Scopes = oauth2Scopes
+	ar.options.OAuth2CodeChallengeMethod = oauth2CodeChallengeMethod
+	ar.options.OAuth2ConfigurationCacheTime = oauth2ConfigurationCacheTime
 
 	//Write changes to database
 	ar.options.Database.Write("oauth2", "oauth2WellKnownUrl", oauth2WellKnownUrl)
@@ -155,6 +197,11 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	ar.options.Database.Write("oauth2", "oauth2ClientId", oauth2ClientId)
 	ar.options.Database.Write("oauth2", "oauth2ClientSecret", oauth2ClientSecret)
 	ar.options.Database.Write("oauth2", "oauth2Scopes", oauth2Scopes)
+	ar.options.Database.Write("oauth2", "oauth2CodeChallengeMethod", oauth2CodeChallengeMethod)
+	ar.options.Database.Write("oauth2", "oauth2ConfigurationCacheTime", oauth2ConfigurationCacheTime)
+
+	// Flush caches
+	ar.options.OAuth2ConfigCache.DeleteAll()
 
 	utils.SendOK(w)
 }
@@ -167,6 +214,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.OAuth2ClientId = ""
 	ar.options.OAuth2ClientSecret = ""
 	ar.options.OAuth2Scopes = ""
+	ar.options.OAuth2CodeChallengeMethod = ""
 
 	ar.options.Database.Delete("oauth2", "oauth2WellKnownUrl")
 	ar.options.Database.Delete("oauth2", "oauth2ServerUrl")
@@ -175,6 +223,8 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.Database.Delete("oauth2", "oauth2ClientId")
 	ar.options.Database.Delete("oauth2", "oauth2ClientSecret")
 	ar.options.Database.Delete("oauth2", "oauth2Scopes")
+	ar.options.Database.Delete("oauth2", "oauth2CodeChallengeMethod")
+	ar.options.Database.Delete("oauth2", "oauth2ConfigurationCacheTime")
 
 	utils.SendOK(w)
 }
@@ -189,12 +239,10 @@ func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2
 		return nil, err
 	} else {
 		defer resp.Body.Close()
-
 		oidcDiscoveryDocument := OIDCDiscoveryDocument{}
 		if err := json.NewDecoder(resp.Body).Decode(&oidcDiscoveryDocument); err != nil {
 			return nil, err
 		}
-
 		if len(config.Scopes) == 0 {
 			config.Scopes = oidcDiscoveryDocument.ScopesSupported
 		}
@@ -241,14 +289,24 @@ func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error
 func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
 	const callbackPrefix = "/internal/oauth2"
 	const tokenCookie = "z-token"
+	const verifierCookie = "z-verifier"
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
+
 	reqUrl := scheme + "://" + r.Host + r.RequestURI
-	oauthConfig, err := ar.newOAuth2Conf(scheme + "://" + r.Host + callbackPrefix)
-	if err != nil {
-		ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
+	oauthConfigCache, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(r.Host, func() *oauth2.Config {
+		oauthConfig, err := ar.newOAuth2Conf(scheme + "://" + r.Host + callbackPrefix)
+		if err != nil {
+			ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
+			return nil
+		}
+		return oauthConfig
+	})
+
+	oauthConfig := oauthConfigCache.Value()
+	if oauthConfig == nil {
 		w.WriteHeader(500)
 		return errors.New("failed to fetch OIDC configuration")
 	}
@@ -263,25 +321,47 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 	state := r.URL.Query().Get("state")
 	if r.Method == http.MethodGet && strings.HasPrefix(r.RequestURI, callbackPrefix) && code != "" && state != "" {
 		ctx := context.Background()
-		token, err := oauthConfig.Exchange(ctx, code)
+		var authCodeOptions []oauth2.AuthCodeOption
+		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
+			verifierCookie, err := r.Cookie(verifierCookie)
+			if err != nil || verifierCookie.Value == "" {
+				ar.options.Logger.PrintAndLog("OAuth2Router", "Read OAuth2 verifier cookie failed", err)
+				w.WriteHeader(401)
+				return errors.New("unauthorized")
+			}
+			authCodeOptions = append(authCodeOptions, oauth2.VerifierOption(verifierCookie.Value))
+		}
+		token, err := oauthConfig.Exchange(ctx, code, authCodeOptions...)
 		if err != nil {
 			ar.options.Logger.PrintAndLog("OAuth2", "Token exchange failed", err)
 			w.WriteHeader(401)
 			return errors.New("unauthorized")
 		}
-
 		if !token.Valid() {
 			ar.options.Logger.PrintAndLog("OAuth2", "Invalid token", err)
 			w.WriteHeader(401)
 			return errors.New("unauthorized")
 		}
 
-		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/"}
+		cookieExpiry := token.Expiry
+		if cookieExpiry.IsZero() || cookieExpiry.Before(time.Now()) {
+			cookieExpiry = time.Now().Add(time.Hour)
+		}
+		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry}
 		if scheme == "https" {
 			cookie.Secure = true
 			cookie.SameSite = http.SameSiteLaxMode
 		}
 		w.Header().Add("Set-Cookie", cookie.String())
+
+		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
+			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1)}
+			if scheme == "https" {
+				cookie.Secure = true
+				cookie.SameSite = http.SameSiteLaxMode
+			}
+			w.Header().Add("Set-Cookie", cookie.String())
+		}
 
 		//Fix for #695
 		location := strings.TrimPrefix(state, "/internal/")
@@ -321,7 +401,25 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 	}
 	if unauthorized {
 		state := url.QueryEscape(reqUrl)
-		url := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+		var url string
+		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
+			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1)}
+			if scheme == "https" {
+				cookie.Secure = true
+				cookie.SameSite = http.SameSiteLaxMode
+			}
+
+			w.Header().Add("Set-Cookie", cookie.String())
+
+			if ar.options.OAuth2CodeChallengeMethod == "PKCE" {
+				url = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", cookie.Value))
+			} else {
+				url = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(cookie.Value))
+			}
+		} else {
+			url = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+		}
+
 		http.Redirect(w, r, url, http.StatusFound)
 
 		return errors.New("unauthorized")

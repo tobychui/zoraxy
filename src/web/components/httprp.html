@@ -284,6 +284,12 @@
                                     <label>Allow plain HTTP access<br>
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
+                                <br>
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="DisableLogging">
+                                    <label>Disable Requests Logging<br>
+                                        <small>Disable logging for all incoming requests for this hostname</small></label>
+                                </div>
                             </div>
                            
                         </div>
@@ -885,6 +891,7 @@
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
+        let disableLogging = $(editor).find(".DisableLogging")[0].checked;
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
@@ -901,6 +908,7 @@
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
+                "dLogging": disableLogging,
                 "ratenum" :rateLimit,
                 "tags": tags,
             };
@@ -1236,6 +1244,12 @@
         editor.find(".BypassGlobalTLS").off('change');
         editor.find(".BypassGlobalTLS").prop("checked", subd.BypassGlobalTLS);
         editor.find(".BypassGlobalTLS").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".DisableLogging").off('change');
+        editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
+        editor.find(".DisableLogging").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
         

@@ -244,6 +244,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		enableUtm = true
 	}
 
+	// Disable logging?
+	disableLog, _ := utils.PostBool(r, "disableLog")
+
 	useBypassGlobalTLS := bypassGlobalTLS == "true"
 
 	//Enable TLS validation?
@@ -416,6 +419,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
+			DisableLogging:       disableLog,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -570,6 +574,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
 
+	// Disable logging
+	disableLogging, _ := utils.PostBool(r, "dLogging")
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -611,6 +618,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
+	newProxyEndpoint.DisableLogging = disableLogging
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule

@@ -51,6 +51,11 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	matchProxyEndpoints := []*ProxyEndpoint{}
 	router.ProxyEndpoints.Range(func(k, v interface{}) bool {
 		ep := v.(*ProxyEndpoint)
+		if ep.Disabled {
+			//Skip disabled endpoint
+			return true
+		}
+
 		match, err := filepath.Match(ep.RootOrMatchingDomain, hostname)
 		if err != nil {
 			//Bad pattern. Skip this rule
@@ -83,12 +88,24 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	})
 
 	if len(matchProxyEndpoints) == 1 {
-		//Only 1 match
 		return matchProxyEndpoints[0]
 	} else if len(matchProxyEndpoints) > 1 {
-		//More than one match. Get the best match one
-		sort.Slice(matchProxyEndpoints, func(i, j int) bool {
-			return matchProxyEndpoints[i].RootOrMatchingDomain < matchProxyEndpoints[j].RootOrMatchingDomain
+		// More than one match, pick one that is:
+		// 1. longer RootOrMatchingDomain (more specific)
+		// 2. fewer wildcard characters (* and ?) (more specific)
+		// 3. fallback to lexicographic order
+		sort.SliceStable(matchProxyEndpoints, func(i, j int) bool {
+			a := matchProxyEndpoints[i].RootOrMatchingDomain
+			b := matchProxyEndpoints[j].RootOrMatchingDomain
+			if len(a) != len(b) {
+				return len(a) > len(b)
+			}
+			aw := strings.Count(a, "*") + strings.Count(a, "?")
+			bw := strings.Count(b, "*") + strings.Count(b, "?")
+			if aw != bw {
+				return aw < bw
+			}
+			return a < b
 		})
 		return matchProxyEndpoints[0]
 	}
@@ -110,13 +127,13 @@ func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 // upstreamHostSwap check if this loopback to one of the proxy rule in the system. If yes, do a shortcut target swap
 // this prevents unnecessary external DNS lookup and connection, return true if swapped and request is already handled
 // by the loopback handler. Only continue if return is false
-func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, selectedUpstream *loadbalance.Upstream) bool {
+func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, selectedUpstream *loadbalance.Upstream, currentTarget *ProxyEndpoint) bool {
 	upstreamHostname := selectedUpstream.OriginIpOrDomain
 	if strings.Contains(upstreamHostname, ":") {
 		upstreamHostname = strings.Split(upstreamHostname, ":")[0]
 	}
 	loopbackProxyEndpoint := h.Parent.GetProxyEndpointFromHostname(upstreamHostname)
-	if loopbackProxyEndpoint != nil {
+	if loopbackProxyEndpoint != nil && loopbackProxyEndpoint != currentTarget {
 		//This is a loopback request. Swap the target to the loopback target
 		//h.Parent.Option.Logger.PrintAndLog("proxy", "Detected a loopback request to self. Swap the target to "+loopbackProxyEndpoint.RootOrMatchingDomain, nil)
 		if loopbackProxyEndpoint.IsEnabled() {
@@ -124,7 +141,7 @@ func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, 
 		} else {
 			//Endpoint disabled, return 503
 			http.ServeFile(w, r, "./web/rperror.html")
-			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname)
+			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname, currentTarget)
 		}
 		return true
 	}
@@ -142,12 +159,12 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
 		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
-		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host)
+		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host, target)
 		return
 	}
 
 	/* Upstream Host Swap (use to detect loopback to self) */
-	if h.upstreamHostSwap(w, r, selectedUpstream) {
+	if h.upstreamHostSwap(w, r, selectedUpstream, target) {
 		//Request handled by the loopback handler
 		return
 	}
@@ -170,7 +187,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		if selectedUpstream.RequireTLS {
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
 		}
-		h.Parent.logRequest(r, true, 101, "host-websocket", reqHostname, selectedUpstream.OriginIpOrDomain)
+		h.Parent.logRequest(r, true, 101, "host-websocket", reqHostname, selectedUpstream.OriginIpOrDomain, target)
 
 		if target.HeaderRewriteRules == nil {
 			target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
@@ -232,18 +249,18 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	if err != nil {
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
-			h.Parent.logRequest(r, false, 404, "host-http", reqHostname, upstreamHostname)
+			h.Parent.logRequest(r, false, 404, "host-http", reqHostname, upstreamHostname, target)
 		} else if errors.Is(err, context.Canceled) {
 			//Request canceled by client, usually due to manual refresh before page load
 			http.Error(w, "Request canceled", http.StatusRequestTimeout)
-			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname)
+			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname, target)
 		} else {
 			http.ServeFile(w, r, "./web/rperror.html")
-			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname)
+			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname, target)
 		}
 	}
 
-	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname)
+	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname, target)
 }
 
 // Handle vdir type request
@@ -269,7 +286,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			target.parent.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
 		}
 
-		h.Parent.logRequest(r, true, 101, "vdir-websocket", r.Host, target.Domain)
+		h.Parent.logRequest(r, true, 101, "vdir-websocket", r.Host, target.Domain, target.parent)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  target.SkipCertValidations,
 			SkipOriginCheck:    true,                                       //You should not use websocket via virtual directory. But keep this to true for compatibility
@@ -325,19 +342,25 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
 			log.Println(err.Error())
-			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain)
+			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain, target.parent)
 		} else {
 			http.ServeFile(w, r, "./web/rperror.html")
 			log.Println(err.Error())
-			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain)
+			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain, target.parent)
 		}
 	}
-	h.Parent.logRequest(r, true, statusCode, "vdir-http", reqHostname, target.Domain)
+	h.Parent.logRequest(r, true, statusCode, "vdir-http", reqHostname, target.Domain, target.parent)
 
 }
 
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
-func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string) {
+func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
+	if endpoint != nil && endpoint.DisableLogging {
+		// Notes: endpoint can be nil if the request has been handled before a host name can be resolved
+		// e.g. Redirection matching rule
+		// in that case we will log it by default and will not enter this routine
+		return
+	}
 	if router.Option.StatisticCollector != nil {
 		go func() {
 			requestInfo := statistic.RequestInfo{

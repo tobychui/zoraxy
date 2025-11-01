@@ -63,10 +63,17 @@
                                         <label>Sticky Session<br><small>Enable stick session on upstream load balancing</small></label>
                                     </div>
                                 </div>
-                                  <div class="field">
+                                <div class="field">
                                     <div class="ui checkbox">
                                         <input type="checkbox" id="enableUtm" checked>
                                         <label>Enable uptime monitor<br><small>Automatically check upstream status and switch to another if offline</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="disableLog">
+                                        <label>Disable Requests Logging<br><small>Disable requests logging for this host, recommended for high traffic sites</small>
                                         </label>
                                     </div>
                                 </div>
@@ -268,6 +275,7 @@
         let useStickySessionLB = $("#useStickySessionLB")[0].checked; 
         let tags = $("#proxyTags").val().trim();
         let enableUtm = $("#enableUtm")[0].checked;
+        let disableLog = $("#disableLog")[0].checked;
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -302,7 +310,8 @@
                 access: accessRuleToUse,
                 stickysess: useStickySessionLB,
                 tags: tags,
-                    enableUtm: enableUtm,
+                enableUtm: enableUtm,
+                disableLog: disableLog,
             },
             success: function(data){
                 if (data.error != undefined){

@@ -12,7 +12,6 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/eventsystem"
-	"imuslab.com/zoraxy/mod/utils"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -77,30 +76,33 @@ func startupSequence() {
 		SystemWideLogger = l
 		SystemWideLogger.Println("System wide logging is disabled, all logs will be printed to STDOUT only")
 	} else {
-		logRotateSize, err := utils.SizeStringToBytes(*logRotate)
+		// Load log configuration from file
+		logConfig, err := logger.LoadLogConfig(CONF_LOG_CONFIG)
 		if err != nil {
-			//Default disable
-			logRotateSize = 0
+			SystemWideLogger.Println("Failed to load log config, using defaults: " + err.Error())
+			logConfig = &logger.LogConfig{
+				Enabled:  false,
+				MaxSize:  "0",
+				Compress: true,
+			}
 		}
-		l.SetRotateOption(&logger.RotateOption{
-			Enabled:    logRotateSize != 0,
-			MaxSize:    int64(logRotateSize),
-			MaxBackups: 10,
-			Compress:   *enableLogCompression,
-			BackupDir:  "",
-		})
+
+		// Apply the configuration
+		if err := l.ApplyLogConfig(logConfig); err != nil {
+			SystemWideLogger.Println("Failed to apply log config: " + err.Error())
+		}
+
 		SystemWideLogger = l
-		if logRotateSize == 0 {
+		if !logConfig.Enabled {
 			SystemWideLogger.Println("Log rotation is disabled")
 		} else {
-			SystemWideLogger.Println("Log rotation is enabled, max log file size " + utils.BytesToHumanReadable(int64(logRotateSize)))
+			SystemWideLogger.Println("Log rotation is enabled, max log file size " + logConfig.MaxSize)
 		}
 		SystemWideLogger.Println("System wide logging is enabled")
 	}
 
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
 		RootFolder: *path_logFile,
-		Extension:  LOG_EXTENSION,
 	})
 
 	//Create database
