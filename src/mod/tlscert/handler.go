@@ -100,9 +100,7 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 					originalPemName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "pem"))
 					originalJSONName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "json"))
 
-					fmt.Println(defaultPubKey, originalPemName)
 					os.Rename(defaultPubKey, originalPemName)
-					fmt.Println(defaultPriKey, originalKeyName)
 					os.Rename(defaultPriKey, originalKeyName)
 					if utils.FileExists(defaultJSON) {
 						os.Rename(defaultJSON, originalJSONName)
