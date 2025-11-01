@@ -88,7 +88,6 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 	defaultPriKey := filepath.Join(m.CertStore, "default.key")
 	defaultJSON := filepath.Join(m.CertStore, "default.json")
 
-	fmt.Println(defaultPubKey, defaultPriKey, defaultJSON)
 	if utils.FileExists(defaultPubKey) && utils.FileExists(defaultPriKey) {
 		//Move the existing default cert to its original name
 		certBytes, err := os.ReadFile(defaultPubKey)
