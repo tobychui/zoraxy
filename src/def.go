@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.9"
+	SYSTEM_VERSION    = "3.3.0"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
@@ -119,9 +119,14 @@ var (
 
 /* Global Variables and Handlers */
 var (
+	/* System */
 	nodeUUID    = "generic" //System uuid in uuidv4 format, load from database on startup
 	bootTime    = time.Now().Unix()
 	requireAuth = true //Require authentication for webmin panel, override from flag
+
+	/* mDNS */
+	previousmdnsScanResults = []*mdns.NetworkHost{}
+	mdnsTickerStop          chan bool
 
 	/*
 		Binary Embedding File System

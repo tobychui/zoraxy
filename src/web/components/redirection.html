@@ -12,6 +12,7 @@
                   <th>Redirection URL</th>
                   <th>Destination URL</th>
                   <th class="no-sort">Copy Pathname</th>
+                  <th class="no-sort">Require Exact Match</th>
                   <th class="no-sort">Status Code</th>
                   <th class="no-sort">Actions</th>
               </tr>
@@ -44,6 +45,12 @@
                   <small>Regular expression redirection check will noticeably slow down page load<br>
                     Support <a href="https://yourbasic.org/golang/regexp-cheat-sheet/" target="_blank">Go style regex</a>. e.g. <code style="background-color: rgb(44, 44, 44); color: white">.\.redirect\.example\.com</code></small></label>
               </div>
+              <br>
+              <div class="ui toggle checkbox" style="margin-top: 0.4em;">
+                <input id="redirectCaseSensitive" type="checkbox">
+                <label>Force Case Sensitive Check<br>
+                <small>If enabled, URL matching will be case sensitive</small></label>
+              </div>
             </div>
           </div>
       </div>
@@ -56,12 +63,20 @@
         <div class="field">
           <label>Redirection URL (From)</label>
           <input type="text" id="rurl" name="redirection-url" placeholder="Redirection URL">
-          <small><i class="ui circle info icon"></i> Any matching prefix of the request URL will be redirected to the destination URL, e.g. redirect.example.com</small>
+          <small> Any matching prefix of the request URL will be redirected to the destination URL, e.g. redirect.example.com</small>
         </div>
         <div class="field">
           <label>Destination URL (To)</label>
           <input type="text" name="destination-url" placeholder="Destination URL">
-          <small><i class="ui circle info icon"></i> The target URL request being redirected to, e.g. dest.example.com/mysite/ or dest.example.com/script.php, <b>sometime you might need to add tailing slash (/) to your URL depending on your use cases</b></small>
+          <small>The target URL request being redirected to, e.g. dest.example.com/mysite/ or dest.example.com/script.php, <b>sometime you might need to add tailing slash (/) to your URL depending on your use cases</b></small>
+        </div>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" name="require-exact-match" tabindex="0" class="hidden">
+            <label>Require Exact Match</label>
+          </div>
+          <br>
+          <small>If enabled, only exact URL matches will be redirected (no prefix matching)</small>
         </div>
         <div class="field">
           <div class="ui checkbox">
@@ -108,12 +123,14 @@
       document.getElementById("rurl").value = "";
       document.getElementsByName("destination-url")[0].value = "";
       document.getElementsByName("forward-childpath")[0].checked = true;
+      document.getElementsByName("require-exact-match")[0].checked = false;
     }
 
     function addRules(){
         let redirectUrl = document.querySelector('input[name="redirection-url"]').value;
         let destUrl = document.querySelector('input[name="destination-url"]').value;
         let forwardChildpath = document.querySelector('input[name="forward-childpath"]').checked;
+        let requireExactMatch = document.querySelector('input[name="require-exact-match"]').checked;
         let redirectType = document.querySelector('input[name="redirect-type"]:checked').value;
 
         $.cjax({
@@ -123,6 +140,7 @@
                 redirectUrl: redirectUrl,
                 destUrl: destUrl,
                 forwardChildpath: forwardChildpath,
+                requireExactMatch: requireExactMatch,
                 redirectType: parseInt(redirectType),
             },
             success: function(data){
@@ -172,6 +190,7 @@
                   <td><a href="${hrefURL}" target="_blank">${entry.RedirectURL}</a></td>
                   <td>${entry.TargetURL}</td>
                   <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
+                  <td>${entry.RequireExactMatch?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                   <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
                   <td>
                     <button onclick="editRule(this);" payload="${encodedEntry}" title="Edit redirection rule" class="ui mini circular icon basic button redirectEditBtn"><i class="edit icon"></i></button>
@@ -181,7 +200,7 @@
             });
             
             if (data.length == 0){
-              $("#redirectionRuleList").append(`<tr><td colspan="5"><i class="green check circle icon"></i> No redirection rule</td></tr>`);
+              $("#redirectionRuleList").append(`<tr><td colspan="6"><i class="green check circle icon"></i> No redirection rule</td></tr>`);
             }
             
         });
@@ -195,6 +214,7 @@
       let redirectUrl = payload.RedirectURL;
       let destUrl = payload.TargetURL;
       let forwardChildpath = payload.ForwardChildpath;
+      let requireExactMatch = payload.RequireExactMatch || false;
       let statusCode = payload.StatusCode;
 
       row.html(`
@@ -209,6 +229,7 @@
           </div>
         </td>
         <td><div class="ui toggle checkbox"><input type="checkbox" ${forwardChildpath ? "checked" : ""} id="editForwardChildpath"><label></label></div></td>
+        <td><div class="ui toggle checkbox"><input type="checkbox" ${requireExactMatch ? "checked" : ""} id="editRequireExactMatch"><label></label></div></td>
         <td>
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="307" ${statusCode == 307 ? "checked" : ""}><label>Temporary Redirect (307)</label></div><br>
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="301" ${statusCode == 301 ? "checked" : ""}><label>Moved Permanently (301)</label></div>
@@ -227,6 +248,7 @@
       let redirectUrl = $("#editRedirectUrl").val();
       let destUrl = $("#editDestUrl").val();
       let forwardChildpath = $("#editForwardChildpath").is(":checked");
+      let requireExactMatch = $("#editRequireExactMatch").is(":checked");
       let statusCode = parseInt($("input[name='editStatusCode']:checked").val());
 
       $.cjax({
@@ -237,6 +259,7 @@
             newRedirectUrl: redirectUrl,
             destUrl: destUrl,
             forwardChildpath: forwardChildpath,
+            requireExactMatch: requireExactMatch,
             redirectType: statusCode,
         },
         success: function(data){
@@ -278,6 +301,35 @@
     }
 
     initRegexpSupportToggle();
+
+    function initCaseSensitivityToggle(){
+      $.get("/api/redirect/case_sensitive", function(data){
+        //Set the checkbox initial state
+        if (data == true){
+          $("#redirectCaseSensitive").parent().checkbox("set checked");
+        }else{
+          $("#redirectCaseSensitive").parent().checkbox("set unchecked");
+        }
+
+        //Bind event to the checkbox
+        $("#redirectCaseSensitive").on("change", function(){
+          $.cjax({
+            url: "/api/redirect/case_sensitive",
+            method: "POST",
+            data: {"enable": $(this)[0].checked},
+            success: function(data){
+              if (data.error != undefined){
+                msgbox(data.error, false);
+              }else{
+                msgbox("Case sensitive redirect setting updated", true);
+              }
+            }
+          });
+        });
+      });
+    }
+
+    initCaseSensitivityToggle();
 
     $("#rurl").on('change', (event) => {
       const value = event.target.value.trim().replace(/^(https?:\/\/)/, '');
