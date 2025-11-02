@@ -1,3 +1,13 @@
+# v3.2.9 2 Nov 2025
+
++ Add PKCE support with SHA256 challenge method for OAuth2 by [kjagosz](https://github.com/kjagosz) fixes [#852](https://github.com/tobychui/zoraxy/issues/852)
++ Update lego to v4.28.0 by [zen8841](https://github.com/zen8841) fixes [778](https://github.com/tobychui/zoraxy/issues/778)
++ Typo in plugins.html by [mlbarrow](mlbarrow)
++ Moved log rotation options to webmin panel
++ Supported opening tar.gz in the new log viewer
++ Added disable logging function to HTTP proxy rule for high traffic sites
++ Fixed other bugs / improvements [#855](https://github.com/tobychui/zoraxy/issues/855) [#866](https://github.com/tobychui/zoraxy/issues/866) [#867](https://github.com/tobychui/zoraxy/issues/867) [#855](https://github.com/tobychui/zoraxy/issues/856)
+
 # v3.2.8 16 Oct 2025
 
 + Fixed wildcard certificate bug [#845](https://github.com/tobychui/zoraxy/issues/845) by [zen8841](https://github.com/zen8841)
