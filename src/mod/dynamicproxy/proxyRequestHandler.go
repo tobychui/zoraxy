@@ -361,7 +361,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		// in that case we will log it by default and will not enter this routine
 		return
 	}
-	if router.Option.StatisticCollector != nil {
+	if router.Option.StatisticCollector != nil && !endpoint.DisableStatisticCollection {
 		go func() {
 			requestInfo := statistic.RequestInfo{
 				IpAddr:                        netutils.GetRequesterIP(r),
@@ -377,6 +377,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 			}
 			router.Option.StatisticCollector.RecordRequest(requestInfo)
 		}()
+
 	}
 	router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
 }

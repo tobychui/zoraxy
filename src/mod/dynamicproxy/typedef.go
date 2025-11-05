@@ -207,8 +207,9 @@ type ProxyEndpoint struct {
 	RateLimit        int64 // Rate limit in requests per second
 
 	//Uptime Monitor
-	DisableUptimeMonitor bool //Disable uptime monitor for this endpoint
-	DisableLogging       bool //Disable logging of reverse proxy requests
+	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
+	DisableLogging             bool //Disable logging of reverse proxy requests
+	DisableStatisticCollection bool //Disable statistic collection for this endpoint
 
 	// Chunked Transfer Encoding
 	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint

@@ -290,6 +290,13 @@
                                     <label>Disable Requests Logging<br>
                                         <small>Disable logging for all incoming requests for this hostname</small></label>
                                 </div>
+                                <br>
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="DisableStatisticCollection">
+                                    <label>Disable Statistic Collection<br>
+                                        <small>Disable collecting statistics for this hostname but keep request logging</small></label>
+                                </div>
+                                <br>
                             </div>
                            
                         </div>
@@ -892,6 +899,7 @@
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let disableLogging = $(editor).find(".DisableLogging")[0].checked;
+        let disableStatisticCollection = $(editor).find(".DisableStatisticCollection")[0].checked;
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
@@ -909,6 +917,7 @@
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
                 "dLogging": disableLogging,
+                "dStatisticCollection": disableStatisticCollection,
                 "ratenum" :rateLimit,
                 "tags": tags,
             };
@@ -1250,8 +1259,25 @@
         editor.find(".DisableLogging").off('change');
         editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
         editor.find(".DisableLogging").on("change", function() {
+            // When logging is disabled, also disable statistic collection
+            if ($(this).is(':checked')) {
+                editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
+            } else {
+                editor.find(".DisableStatisticCollection").prop("disabled", false);
+            }
             saveProxyInlineEdit(uuid);
         });
+
+        editor.find(".DisableStatisticCollection").off('change');
+        editor.find(".DisableStatisticCollection").prop("checked", subd.DisableStatisticCollection);
+        editor.find(".DisableStatisticCollection").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        // Handle initial state: if logging is disabled, disable statistic collection
+        if (subd.DisableLogging) {
+            editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
+        }
         
         //Bind the edit button
         editor.find(".downstream_primary_hostname_edit_btn").off("click").on("click", function(){

@@ -577,6 +577,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Disable logging
 	disableLogging, _ := utils.PostBool(r, "dLogging")
 
+	// Disable statistic collection
+	disableStatisticCollection, _ := utils.PostBool(r, "dStatisticCollection")
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -619,6 +622,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.DisableLogging = disableLogging
+	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
