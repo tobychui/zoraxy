@@ -1,8 +1,9 @@
+---
 name: Build and push Docker image
 
-on:
+"on":
   release:
-    types: [ released, prereleased ]
+    types: [released, prereleased]
 
 env:
   DOCKER_ACCOUNT: zoraxydocker
@@ -12,7 +13,7 @@ env:
 
 permissions:
   contents: read
-  
+
 jobs:
   setup-build-push:
     runs-on: ubuntu-latest
@@ -33,14 +34,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      
+
       - name: Setup building file structure
         run: |
           cp -lr $GITHUB_WORKSPACE/src/ $GITHUB_WORKSPACE/docker/src/
 
       - name: Create tag list for docker image
         id: tags
-        run: |       
+        run: |
           if [ "${{ github.event.release.prerelease }}" = true ]; then
             echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
