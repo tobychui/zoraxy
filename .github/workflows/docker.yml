@@ -4,6 +4,11 @@ on:
   release:
     types: [ released, prereleased ]
 
+env:
+  DOCKER_ACCOUNT: zoraxydocker
+  DOCKER_REPO: zoraxy
+  DOCKER_PLATFORMS: linux/amd64,linux/arm64
+  
 jobs:
   setup-build-push:
     runs-on: ubuntu-latest
@@ -39,10 +44,10 @@ jobs:
         with:
           context: ./docker
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.DOCKER_PLATFORMS }}
           tags: |
-            zoraxydocker/zoraxy:latest
-            zoraxydocker/zoraxy:${{ github.event.release.tag_name }}
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -52,9 +57,9 @@ jobs:
         with:
           context: ./docker
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.DOCKER_PLATFORMS }}
           tags: |
-            zoraxydocker/zoraxy:${{ github.event.release.tag_name }}
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
