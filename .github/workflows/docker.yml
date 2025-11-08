@@ -7,6 +7,7 @@ on:
 env:
   DOCKER_ACCOUNT: zoraxydocker
   DOCKER_REPO: zoraxy
+  DOCKER_REPO_TAG_CACHE_NAME: buildcache
   DOCKER_PLATFORMS: linux/amd64,linux/arm64
   
 jobs:
@@ -29,10 +30,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Pull last image for layer reuse
-        run: |
-          docker pull docker.io/zoraxydocker/zoraxy:latest
       
       - name: Setup building file structure
         run: |
@@ -48,8 +45,8 @@ jobs:
           tags: |
             ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest
             ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }},mode=max
 
       - name: Build and push Docker image (Prerelease)
         if: "github.event.release.prerelease"
@@ -60,6 +57,6 @@ jobs:
           platforms: ${{ env.DOCKER_PLATFORMS }}
           tags: |
             ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }}
+          cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }},mode=max
 
