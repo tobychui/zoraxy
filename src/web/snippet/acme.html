@@ -415,8 +415,10 @@
       } else if (this.value == "ZeroSSL") {
         $("#kidInput").show();
         $("#hmacInput").show();
-        $("#dnsChallenge").hide();
-        $(".dnsChallengeOnly").hide();
+        $("#dnsChallenge").show();
+        if ($("#useDnsChallenge")[0].checked){
+          $(".dnsChallengeOnly").show();
+        }
         $("#skipTLS").hide();
       } else if (this.value == "Buypass") {
         $("#kidInput").show();
