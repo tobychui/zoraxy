@@ -75,6 +75,15 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		/* Exploit Detection */
+		if sep.detector != nil {
+			if sep.detector.CheckIsAttack(w, r) {
+				//Request was handled by exploit detector, log it
+				h.Parent.logRequest(r, false, 403, "exploit-blocked", domainOnly, "blocked", sep)
+				return
+			}
+		}
+
 		// Rate Limit
 		if sep.RequireRateLimit {
 			err := h.handleRateLimitRouting(w, r, sep)

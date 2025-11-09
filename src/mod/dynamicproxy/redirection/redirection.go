@@ -2,7 +2,6 @@ package redirection
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -215,7 +214,6 @@ func (t *RuleTable) MatchRedirectRule(requestedURL string) *RedirectRules {
 		//Check matching based on exact match requirement
 		var matched bool
 		if rule.RequireExactMatch {
-			fmt.Println(requestedURL, keyStr)
 			//Exact match required
 			if t.CaseSensitive {
 				matched = requestedURL == keyStr

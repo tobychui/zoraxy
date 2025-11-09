@@ -343,6 +343,15 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	tags = filteredTags
 
+	// Exploit prevention settings
+	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
+	blockAICrawlers, _ := utils.PostBool(r, "blockAICrawlers")
+	mitigationActionStr, _ := utils.PostPara(r, "mitigationAction")
+	mitigationAction := 0
+	if mitigationActionStr != "" {
+		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
+	}
+
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	switch eptype {
 	case "host":
@@ -420,6 +429,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
 			DisableLogging:       disableLog,
+			BlockCommonExploits:  blockCommonExploits,
+			BlockAICrawlers:      blockAICrawlers,
+			MitigationAction:     mitigationAction,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -580,6 +592,15 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Disable statistic collection
 	disableStatisticCollection, _ := utils.PostBool(r, "dStatisticCollection")
 
+	// Exploit Detection
+	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
+	blockAICrawlers, _ := utils.PostBool(r, "blockAICrawlers")
+	mitigationActionStr, _ := utils.PostPara(r, "mitigationAction")
+	mitigationAction := 0
+	if mitigationActionStr != "" {
+		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
+	}
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -623,6 +644,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.DisableLogging = disableLogging
 	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
+	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
+	newProxyEndpoint.BlockAICrawlers = blockAICrawlers
+	newProxyEndpoint.MitigationAction = mitigationAction
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule

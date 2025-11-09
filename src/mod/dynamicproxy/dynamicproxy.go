@@ -391,6 +391,8 @@ func CopyEndpoint(endpoint *ProxyEndpoint) *ProxyEndpoint {
 	if err != nil {
 		return nil
 	}
+	// Initialize the exploit detector for the copied endpoint
+	newProxyEndpoint.InitializeExploitDetector()
 	return &newProxyEndpoint
 }
 
