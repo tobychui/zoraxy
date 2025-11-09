@@ -47,7 +47,6 @@ jobs:
           else
             echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest, ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           fi
-          cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }},mode=max
 
       - name: Build and push Docker image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83  # v6.18.0
