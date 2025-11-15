@@ -26,8 +26,8 @@ docker run -d \
   -v /path/to/zoraxy/config/:/opt/zoraxy/config/ \
   -v /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/ \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /etc/localtime:/etc/localtime \
   -e FASTGEOIP="true" \
+  -e TZ="America/New_York" \
   zoraxydocker/zoraxy:latest
 ```
 
@@ -47,11 +47,11 @@ services:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
       - /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/
       - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/localtime:/etc/localtime
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       FASTGEOIP: "true"
+      TZ: "Europe/London"
 ```
 
 ### Ports
@@ -95,6 +95,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `PLUGIN` | `/opt/zoraxy/plugin/` (String) | Set the path for Zoraxy plugins. Only change this if you know what you are doing. |
 | `PORT` | `8000` (Integer) | Management web interface listening port |
 | `SSHLB` | `false` (Boolean) | Allow loopback web ssh connection (DANGER). |
+| `TZ` | `Etc/UTC` (String) | Define timezone using [standard tzdata values](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). |
 | `UPDATE_GEOIP` | `false` (Boolean) | Download the latest GeoIP data and exit. |
 | `VERSION` | `false` (Boolean) | Show version of this server. |
 | `WEBFM` | `true` (Boolean) | Enable web file manager for static web server root folder. |
