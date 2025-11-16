@@ -73,6 +73,7 @@ type ResponseRewriteRuleSet struct {
 	/* Advance Usecase Options */
 	HostHeaderOverwrite            string //Force overwrite of request "Host" header (advanced usecase)
 	NoRemoveHopByHop               bool   //Do not remove hop-by-hop headers (advanced usecase)
+	NoRemoveUserAgentHeader        bool   //Do not remove User-Agent header from server response (advanced usecase)
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 
 	/* System Information Payload */
@@ -331,7 +332,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	//Remove the User-Agent header if exists
-	if _, ok := res.Header["User-Agent"]; ok {
+	if _, ok := res.Header["User-Agent"]; ok && !rrr.NoRemoveUserAgentHeader {
 		//Server to client request should not contains a User-Agent header
 		res.Header.Del("User-Agent")
 	}

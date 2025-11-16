@@ -138,12 +138,13 @@ type VirtualDirectoryEndpoint struct {
 
 // Rules and settings for header rewriting
 type HeaderRewriteRules struct {
-	UserDefinedHeaders           []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
-	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
-	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
-	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
-	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
-	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
+	UserDefinedHeaders            []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
+	RequestHostOverwrite          string                              //If not empty, this domain will be used to overwrite the Host field in request header
+	HSTSMaxAge                    int64                               //HSTS max age, set to 0 for disable HSTS headers
+	EnablePermissionPolicyHeader  bool                                //Enable injection of permission policy header
+	PermissionPolicy              *permissionpolicy.PermissionsPolicy //Permission policy header
+	DisableHopByHopHeaderRemoval  bool                                //Do not remove hop-by-hop headers
+	DisableUserAgentHeaderRemoval bool                                //Do not remove User-Agent header from server response
 
 }
 

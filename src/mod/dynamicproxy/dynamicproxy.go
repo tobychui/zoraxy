@@ -165,14 +165,15 @@ func (router *Router) StartProxyService() error {
 						}
 
 						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-							ProxyDomain:         selectedUpstream.OriginIpOrDomain,
-							OriginalHost:        originalHostHeader,
-							UseTLS:              selectedUpstream.RequireTLS,
-							HostHeaderOverwrite: endpointProxyRewriteRules.RequestHostOverwrite,
-							NoRemoveHopByHop:    endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
-							PathPrefix:          "",
-							Version:             sep.parent.Option.HostVersion,
-							DevelopmentMode:     sep.parent.Option.DevelopmentMode,
+							ProxyDomain:             selectedUpstream.OriginIpOrDomain,
+							OriginalHost:            originalHostHeader,
+							UseTLS:                  selectedUpstream.RequireTLS,
+							HostHeaderOverwrite:     endpointProxyRewriteRules.RequestHostOverwrite,
+							NoRemoveHopByHop:        endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
+							NoRemoveUserAgentHeader: endpointProxyRewriteRules.DisableUserAgentHeaderRemoval,
+							PathPrefix:              "",
+							Version:                 sep.parent.Option.HostVersion,
+							DevelopmentMode:         sep.parent.Option.DevelopmentMode,
 						})
 						return
 					}

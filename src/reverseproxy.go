@@ -1826,6 +1826,80 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleUserAgent get and set the user agent header remover state
+// note that it shows the ENABLE STATE of user-agent remover, not the disable state
+func HandleUserAgent(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Get the current user agent header state
+		js, _ := json.Marshal(!targetProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval)
+		utils.SendJSONResponse(w, string(js))
+	} else if r.Method == http.MethodPost {
+		//Set the user agent header state
+		enableUserAgentRemover, _ := utils.PostBool(r, "removeUserAgent")
+
+		//As this will require change in the proxy instance we are running
+		//we need to clone and respawn this proxy endpoint
+		newProxyEndpoint := targetProxyEndpoint.Clone()
+		//Storage file use false as default, so disable removal = not enable remover
+		newProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval = !enableUserAgentRemover
+
+		//Save proxy endpoint
+		err = SaveReverseProxyConfig(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Spawn a new endpoint with updated dpcore
+		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Remove the old endpoint
+		err = targetProxyEndpoint.Remove()
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Add the newly prepared endpoint to runtime
+		err = dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Print log message
+		if enableUserAgentRemover {
+			SystemWideLogger.Println("Enabled user-agent header removal on " + domain)
+		} else {
+			SystemWideLogger.Println("Disabled user-agent header removal on " + domain)
+		}
+
+		utils.SendOK(w)
+
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // Handle view or edit HSTS states
 func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 	domain, err := utils.PostPara(r, "domain")
