@@ -316,6 +316,12 @@
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
                             <br>
+                            <!-- <div class="ui checkbox" style="margin-top: 0.4em; margin-left: 2em;">
+                                <input type="checkbox" class="DisableAutoFallback">
+                                <label>Disable Auto Fallback<br>
+                                    <small>Continue monitoring but don't automatically disable upstreams when offline</small></label>
+                            </div>
+                            <br> -->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -924,6 +930,7 @@
         let epttype = "host";
         let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
         let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
+        let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
@@ -946,6 +953,7 @@
                 "rootname": uuid,
                 "ss":useStickySession,
                 "dutm": DisableUptimeMonitor,
+                "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
@@ -1408,6 +1416,19 @@
         editor.find(".EnableUptimeMonitor").off("change");
         editor.find(".EnableUptimeMonitor").prop("checked", !subd.DisableUptimeMonitor);
         editor.find(".EnableUptimeMonitor").on("change", function() {
+            // Enable/disable the auto fallback option based on uptime monitor state
+            var isUptimeMonitorEnabled = $(this).is(":checked");
+            editor.find(".DisableAutoFallback").prop("disabled", !isUptimeMonitorEnabled);
+            if (!isUptimeMonitorEnabled) {
+                editor.find(".DisableAutoFallback").prop("checked", false);
+            }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".DisableAutoFallback").off("change");
+        editor.find(".DisableAutoFallback").prop("checked", subd.DisableAutoFallback);
+        editor.find(".DisableAutoFallback").prop("disabled", subd.DisableUptimeMonitor);
+        editor.find(".DisableAutoFallback").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

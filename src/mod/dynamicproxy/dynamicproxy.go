@@ -152,7 +152,7 @@ func (router *Router) StartProxyService() error {
 							}
 						}
 
-						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession)
+						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession, sep.DisableAutoFallback)
 						if err != nil {
 							http.ServeFile(w, r, "./web/hosterror.html")
 							router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)

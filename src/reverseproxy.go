@@ -428,6 +428,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
+			DisableAutoFallback:  false, // Default to false for new endpoints
 			DisableLogging:       disableLog,
 			BlockCommonExploits:  blockCommonExploits,
 			BlockAICrawlers:      blockAICrawlers,
@@ -627,20 +628,24 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 		}
 	}
-	if authProviderType == 1 {
+	switch authProviderType {
+	case 1:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
-	} else if authProviderType == 2 {
+	case 2:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
-	} else if authProviderType == 3 {
+	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
-	} else {
+	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}
+
+	disableAutoFallback, _ := utils.PostBool(r, "dAutoFallback")
 
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.DisableLogging = disableLogging
 	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection

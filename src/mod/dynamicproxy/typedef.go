@@ -210,6 +210,7 @@ type ProxyEndpoint struct {
 
 	//Uptime Monitor
 	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
+	DisableAutoFallback        bool //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
 	DisableLogging             bool //Disable logging of reverse proxy requests
 	DisableStatisticCollection bool //Disable statistic collection for this endpoint
 
