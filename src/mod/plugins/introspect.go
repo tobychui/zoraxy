@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	zoraxyPlugin "imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
 )
 
-// LoadPlugin loads a plugin from the plugin directory
-func (m *Manager) IsValidPluginFolder(path string) bool {
-	_, err := m.GetPluginEntryPoint(path)
-	return err == nil
+// checkSupportHotRebuild checks if a Makefile or main.go exists in the given directory
+func checkSupportHotRebuild(dir string) bool {
+	_, errMakefile := os.Stat(filepath.Join(dir, "Makefile"))
+	_, errMainGo := os.Stat(filepath.Join(dir, "main.go"))
+	return !os.IsNotExist(errMakefile) || !os.IsNotExist(errMainGo)
 }
 
 /*
@@ -38,8 +41,10 @@ func (m *Manager) LoadPluginSpec(pluginPath string) (*Plugin, error) {
 	}
 
 	return &Plugin{
-		Spec:    pluginSpec,
-		Enabled: false,
+		RootDir:           pluginPath,
+		Spec:              pluginSpec,
+		Enabled:           false,
+		SupportHotRebuild: checkSupportHotRebuild(pluginPath),
 	}, nil
 }
 
