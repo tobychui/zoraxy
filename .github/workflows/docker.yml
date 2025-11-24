@@ -44,6 +44,8 @@ jobs:
         run: |
           if [ "${{ github.event.release.prerelease }}" = true ]; then
             echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.release.tag_name }}" == *"-rc"* ]]; then
+            echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
             echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest, ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           fi
@@ -57,3 +59,4 @@ jobs:
           tags: ${{ steps.tags.outputs.docker }}
           cache-from: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }}
           cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }},mode=max
+
