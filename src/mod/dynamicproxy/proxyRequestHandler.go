@@ -363,23 +363,34 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		// in that case we will log it by default and will not enter this routine
 		return
 	}
-	if router.Option.StatisticCollector != nil && !endpoint.DisableStatisticCollection {
-		go func() {
-			requestInfo := statistic.RequestInfo{
-				IpAddr:                        netutils.GetRequesterIP(r),
-				RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
-				Succ:                          succ,
-				StatusCode:                    statusCode,
-				ForwardType:                   forwardType,
-				Referer:                       r.Referer(),
-				UserAgent:                     r.UserAgent(),
-				RequestURL:                    r.Host + r.RequestURI,
-				Target:                        originalHostname,
-				Upstream:                      upstreamHostname,
-			}
-			router.Option.StatisticCollector.RecordRequest(requestInfo)
-		}()
 
-	}
 	router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
+
+	if router.Option.StatisticCollector == nil {
+		// Statistic collection not yet initialized
+		return
+	}
+
+	if endpoint != nil && !endpoint.DisableStatisticCollection {
+		// Endpoint level statistic collection disabled
+		return
+	}
+
+	// Proceed to record the request info
+	go func() {
+		requestInfo := statistic.RequestInfo{
+			IpAddr:                        netutils.GetRequesterIP(r),
+			RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
+			Succ:                          succ,
+			StatusCode:                    statusCode,
+			ForwardType:                   forwardType,
+			Referer:                       r.Referer(),
+			UserAgent:                     r.UserAgent(),
+			RequestURL:                    r.Host + r.RequestURI,
+			Target:                        originalHostname,
+			Upstream:                      upstreamHostname,
+		}
+		router.Option.StatisticCollector.RecordRequest(requestInfo)
+	}()
+
 }
