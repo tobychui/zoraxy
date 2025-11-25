@@ -455,7 +455,9 @@ func ShutdownSeq() {
 
 	//Close the plugin manager
 	SystemWideLogger.Println("Shutting down plugin manager")
-	pluginManager.Close()
+	if pluginManager != nil {
+		pluginManager.Close()
+	}
 
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
