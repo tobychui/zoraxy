@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	dynamicProxyRouter *dynamicproxy.Router
+	dynamicProxyRouter      *dynamicproxy.Router
+	dynamicProxyRouterReady = make(chan bool, 1)
 )
 
 // Add user customizable reverse proxy
@@ -128,6 +129,12 @@ func ReverseProxyInit() {
 	}
 
 	dynamicProxyRouter = dprouter
+	// Signal that the router is ready
+	select {
+	case dynamicProxyRouterReady <- true:
+	default:
+		// Channel already has a value, skip
+	}
 
 	/*
 
