@@ -9,11 +9,15 @@ for dir in */; do
         
         # Detect platform and set executable name
         platform=$(uname)
-        if [ "$platform" = "Linux" ]; then
-            exe_name="${dir%/}"
-        else
-            exe_name="${dir%/}.exe"
-        fi
+        # Detect Windows environments (MINGW*, MSYS*, CYGWIN*)
+        case "$platform" in
+            MINGW*|MSYS*|CYGWIN*)
+                exe_name="${dir%/}.exe"
+                ;;
+            *)
+                exe_name="${dir%/}"
+                ;;
+        esac
         
         # Remove the executable
         if [ -f "$exe_name" ]; then
