@@ -371,7 +371,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		return
 	}
 
-	if endpoint != nil && !endpoint.DisableStatisticCollection {
+	if endpoint != nil && endpoint.DisableStatisticCollection {
 		// Endpoint level statistic collection disabled
 		return
 	}
