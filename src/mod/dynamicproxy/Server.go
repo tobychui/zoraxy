@@ -78,8 +78,11 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		/* Exploit Detection */
 		if sep.detector != nil {
 			if sep.detector.CheckIsAttack(w, r) {
-				//Request was handled by exploit detector, log it
-				h.Parent.logRequest(r, false, 403, "exploit-blocked", domainOnly, "blocked", sep)
+				statusCode := 403
+				if sep.detector != nil {
+					statusCode = sep.detector.GetResponseStatusCode()
+				}
+				h.Parent.logRequest(r, false, statusCode, "exploit-blocked", domainOnly, "blocked", sep)
 				return
 			}
 		}
