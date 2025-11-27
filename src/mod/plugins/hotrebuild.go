@@ -51,11 +51,7 @@ func (m *Manager) RebuildPlugin(pluginID string) error {
 	if hasMakefile {
 		// Use make to build
 		m.Log("Building plugin "+plugin.Spec.Name+" using Makefile", nil)
-		if runtime.GOOS == "windows" {
-			cmd = exec.Command("make")
-		} else {
-			cmd = exec.Command("make")
-		}
+		cmd = exec.Command("make")
 		cmd.Dir = plugin.RootDir
 	} else {
 		// Check if go is installed
