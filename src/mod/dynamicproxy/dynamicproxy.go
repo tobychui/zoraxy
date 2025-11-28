@@ -152,7 +152,7 @@ func (router *Router) StartProxyService() error {
 							}
 						}
 
-						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession)
+						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession, sep.DisableAutoFallback)
 						if err != nil {
 							http.ServeFile(w, r, "./web/hosterror.html")
 							router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
@@ -165,14 +165,15 @@ func (router *Router) StartProxyService() error {
 						}
 
 						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-							ProxyDomain:         selectedUpstream.OriginIpOrDomain,
-							OriginalHost:        originalHostHeader,
-							UseTLS:              selectedUpstream.RequireTLS,
-							HostHeaderOverwrite: endpointProxyRewriteRules.RequestHostOverwrite,
-							NoRemoveHopByHop:    endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
-							PathPrefix:          "",
-							Version:             sep.parent.Option.HostVersion,
-							DevelopmentMode:     sep.parent.Option.DevelopmentMode,
+							ProxyDomain:             selectedUpstream.OriginIpOrDomain,
+							OriginalHost:            originalHostHeader,
+							UseTLS:                  selectedUpstream.RequireTLS,
+							HostHeaderOverwrite:     endpointProxyRewriteRules.RequestHostOverwrite,
+							NoRemoveHopByHop:        endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
+							NoRemoveUserAgentHeader: endpointProxyRewriteRules.DisableUserAgentHeaderRemoval,
+							PathPrefix:              "",
+							Version:                 sep.parent.Option.HostVersion,
+							DevelopmentMode:         sep.parent.Option.DevelopmentMode,
 						})
 						return
 					}
@@ -391,6 +392,8 @@ func CopyEndpoint(endpoint *ProxyEndpoint) *ProxyEndpoint {
 	if err != nil {
 		return nil
 	}
+	// Initialize the exploit detector for the copied endpoint
+	newProxyEndpoint.InitializeExploitDetector()
 	return &newProxyEndpoint
 }
 

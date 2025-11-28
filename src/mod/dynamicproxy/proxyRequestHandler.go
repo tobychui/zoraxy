@@ -155,7 +155,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	reqHostname := r.Host
 
 	/* Load balancing */
-	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession)
+	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession, target.DisableAutoFallback)
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
 		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
@@ -237,6 +237,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
 		DisableChunkedTransferEncoding: target.DisableChunkedTransferEncoding,
+		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		Version:                        target.parent.Option.HostVersion,
@@ -332,6 +333,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
 		DisableChunkedTransferEncoding: target.parent.DisableChunkedTransferEncoding,
+		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		Version:                        target.parent.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
@@ -361,22 +363,34 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		// in that case we will log it by default and will not enter this routine
 		return
 	}
-	if router.Option.StatisticCollector != nil {
-		go func() {
-			requestInfo := statistic.RequestInfo{
-				IpAddr:                        netutils.GetRequesterIP(r),
-				RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
-				Succ:                          succ,
-				StatusCode:                    statusCode,
-				ForwardType:                   forwardType,
-				Referer:                       r.Referer(),
-				UserAgent:                     r.UserAgent(),
-				RequestURL:                    r.Host + r.RequestURI,
-				Target:                        originalHostname,
-				Upstream:                      upstreamHostname,
-			}
-			router.Option.StatisticCollector.RecordRequest(requestInfo)
-		}()
-	}
+
 	router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
+
+	if router.Option.StatisticCollector == nil {
+		// Statistic collection not yet initialized
+		return
+	}
+
+	if endpoint != nil && endpoint.DisableStatisticCollection {
+		// Endpoint level statistic collection disabled
+		return
+	}
+
+	// Proceed to record the request info
+	go func() {
+		requestInfo := statistic.RequestInfo{
+			IpAddr:                        netutils.GetRequesterIP(r),
+			RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
+			Succ:                          succ,
+			StatusCode:                    statusCode,
+			ForwardType:                   forwardType,
+			Referer:                       r.Referer(),
+			UserAgent:                     r.UserAgent(),
+			RequestURL:                    r.Host + r.RequestURI,
+			Target:                        originalHostname,
+			Upstream:                      upstreamHostname,
+		}
+		router.Option.StatisticCollector.RecordRequest(requestInfo)
+	}()
+
 }

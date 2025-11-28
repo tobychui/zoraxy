@@ -18,6 +18,7 @@ import (
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
@@ -137,12 +138,13 @@ type VirtualDirectoryEndpoint struct {
 
 // Rules and settings for header rewriting
 type HeaderRewriteRules struct {
-	UserDefinedHeaders           []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
-	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
-	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
-	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
-	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
-	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
+	UserDefinedHeaders            []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
+	RequestHostOverwrite          string                              //If not empty, this domain will be used to overwrite the Host field in request header
+	HSTSMaxAge                    int64                               //HSTS max age, set to 0 for disable HSTS headers
+	EnablePermissionPolicyHeader  bool                                //Enable injection of permission policy header
+	PermissionPolicy              *permissionpolicy.PermissionsPolicy //Permission policy header
+	DisableHopByHopHeaderRemoval  bool                                //Do not remove hop-by-hop headers
+	DisableUserAgentHeaderRemoval bool                                //Do not remove User-Agent header from server response
 
 }
 
@@ -207,8 +209,15 @@ type ProxyEndpoint struct {
 	RateLimit        int64 // Rate limit in requests per second
 
 	//Uptime Monitor
-	DisableUptimeMonitor bool //Disable uptime monitor for this endpoint
-	DisableLogging       bool //Disable logging of reverse proxy requests
+	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
+	DisableAutoFallback        bool //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
+	DisableLogging             bool //Disable logging of reverse proxy requests
+	DisableStatisticCollection bool //Disable statistic collection for this endpoint
+
+	//Exploit Detection
+	BlockCommonExploits bool //Enable blocking of common exploits (SQLi, XSS, etc.)
+	BlockAICrawlers     bool //Enable blocking of AI crawlers and bots
+	MitigationAction    int  //Action to take when exploit/crawler detected (0=404, 1=403, 2=400, 3=Drop, 4=Delay, 5=Captcha)
 
 	// Chunked Transfer Encoding
 	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint
@@ -221,8 +230,9 @@ type ProxyEndpoint struct {
 	DefaultSiteValue  string //Fallback routing target, optional
 
 	//Internal Logic Elements
-	parent *Router  `json:"-"`
-	Tags   []string // Tags for the proxy endpoint
+	parent   *Router            `json:"-"` //Parent router, excluded from JSON
+	detector *exploits.Detector `json:"-"` //Exploit detector instance, excluded from JSON
+	Tags     []string           // Tags for the proxy endpoint
 }
 
 /*

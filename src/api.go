@@ -61,6 +61,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/header/remove", HandleCustomHeaderRemove)
 	authRouter.HandleFunc("/api/proxy/header/handleHSTS", HandleHSTSState)
 	authRouter.HandleFunc("/api/proxy/header/handleHopByHop", HandleHopByHop)
+	authRouter.HandleFunc("/api/proxy/header/handleUserAgent", HandleUserAgent)
 	authRouter.HandleFunc("/api/proxy/header/handleHostOverwrite", HandleHostOverwrite)
 	authRouter.HandleFunc("/api/proxy/header/handlePermissionPolicy", HandlePermissionPolicy)
 	authRouter.HandleFunc("/api/proxy/header/handleWsHeaderBehavior", HandleWsHeaderBehavior)
@@ -103,6 +104,7 @@ func RegisterRedirectionAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/edit", handleEditRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
+	authRouter.HandleFunc("/api/redirect/case_sensitive", handleToggleRedirectCaseSensitivity)
 }
 
 // Register the APIs for access rules management functions
@@ -153,6 +155,7 @@ func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/analytic/loadRange", AnalyticLoader.HandleLoadTargetRangeSummary)
 	authRouter.HandleFunc("/api/analytic/exportRange", AnalyticLoader.HandleRangeExport)
 	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
+	authRouter.HandleFunc("/api/analytic/resetAll", AnalyticLoader.HandleResetAllStats)
 	/* UpTime Monitor */
 	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)
 }
@@ -238,6 +241,7 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/list", pluginManager.HandleListPlugins)
 	authRouter.HandleFunc("/api/plugins/enable", pluginManager.HandleEnablePlugin)
 	authRouter.HandleFunc("/api/plugins/disable", pluginManager.HandleDisablePlugin)
+	authRouter.HandleFunc("/api/plugins/rebuild", pluginManager.HandleRebuildPlugin)
 	authRouter.HandleFunc("/api/plugins/icon", pluginManager.HandleLoadPluginIcon)
 	authRouter.HandleFunc("/api/plugins/info", pluginManager.HandlePluginInfo)
 

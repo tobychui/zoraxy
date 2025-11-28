@@ -41,6 +41,12 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		forwardChildpath = "true"
 	}
 
+	requireExactMatch, err := utils.PostPara(r, "requireExactMatch")
+	if err != nil {
+		//Assume false
+		requireExactMatch = "false"
+	}
+
 	redirectTypeString, err := utils.PostPara(r, "redirectType")
 	if err != nil {
 		redirectTypeString = "307"
@@ -52,7 +58,7 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode)
+	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true")
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -101,6 +107,12 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		forwardChildpath = "true"
 	}
 
+	requireExactMatch, err := utils.PostPara(r, "requireExactMatch")
+	if err != nil {
+		//Assume false
+		requireExactMatch = "false"
+	}
+
 	redirectTypeString, err := utils.PostPara(r, "redirectType")
 	if err != nil {
 		redirectTypeString = "307"
@@ -112,7 +124,7 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode)
+	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true")
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -140,6 +152,33 @@ func handleToggleRedirectRegexpSupport(w http.ResponseWriter, r *http.Request) {
 		SystemWideLogger.PrintAndLog("redirect", "Regex redirect rule enabled", nil)
 	} else {
 		SystemWideLogger.PrintAndLog("redirect", "Regex redirect rule disabled", nil)
+	}
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to save settings")
+		return
+	}
+	utils.SendOK(w)
+}
+
+// Toggle redirection case sensitivity. Note that this affects all redirection rules
+func handleToggleRedirectCaseSensitivity(w http.ResponseWriter, r *http.Request) {
+	enabled, err := utils.PostPara(r, "enable")
+	if err != nil {
+		//Return the current state of the case sensitivity
+		js, _ := json.Marshal(redirectTable.CaseSensitive)
+		utils.SendJSONResponse(w, string(js))
+		return
+	}
+
+	//Update the current case sensitivity rule enable state
+	enableCaseSensitivity := strings.EqualFold(strings.TrimSpace(enabled), "true")
+	redirectTable.CaseSensitive = enableCaseSensitivity
+	err = sysdb.Write("redirect", "case_sensitive", enableCaseSensitivity)
+
+	if enableCaseSensitivity {
+		SystemWideLogger.PrintAndLog("redirect", "Case sensitive redirect rule enabled", nil)
+	} else {
+		SystemWideLogger.PrintAndLog("redirect", "Case sensitive redirect rule disabled", nil)
 	}
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to save settings")

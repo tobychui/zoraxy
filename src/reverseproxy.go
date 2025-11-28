@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	dynamicProxyRouter *dynamicproxy.Router
+	dynamicProxyRouter      *dynamicproxy.Router
+	dynamicProxyRouterReady = make(chan bool, 1)
 )
 
 // Add user customizable reverse proxy
@@ -128,6 +129,12 @@ func ReverseProxyInit() {
 	}
 
 	dynamicProxyRouter = dprouter
+	// Signal that the router is ready
+	select {
+	case dynamicProxyRouterReady <- true:
+	default:
+		// Channel already has a value, skip
+	}
 
 	/*
 
@@ -343,6 +350,15 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	tags = filteredTags
 
+	// Exploit prevention settings
+	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
+	blockAICrawlers, _ := utils.PostBool(r, "blockAICrawlers")
+	mitigationActionStr, _ := utils.PostPara(r, "mitigationAction")
+	mitigationAction := 0
+	if mitigationActionStr != "" {
+		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
+	}
+
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	switch eptype {
 	case "host":
@@ -419,7 +435,11 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
+			DisableAutoFallback:  false, // Default to false for new endpoints
 			DisableLogging:       disableLog,
+			BlockCommonExploits:  blockCommonExploits,
+			BlockAICrawlers:      blockAICrawlers,
+			MitigationAction:     mitigationAction,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -577,6 +597,18 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Disable logging
 	disableLogging, _ := utils.PostBool(r, "dLogging")
 
+	// Disable statistic collection
+	disableStatisticCollection, _ := utils.PostBool(r, "dStatisticCollection")
+
+	// Exploit Detection
+	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
+	blockAICrawlers, _ := utils.PostBool(r, "blockAICrawlers")
+	mitigationActionStr, _ := utils.PostPara(r, "mitigationAction")
+	mitigationAction := 0
+	if mitigationActionStr != "" {
+		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
+	}
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -603,22 +635,30 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 		}
 	}
-	if authProviderType == 1 {
+	switch authProviderType {
+	case 1:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
-	} else if authProviderType == 2 {
+	case 2:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
-	} else if authProviderType == 3 {
+	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
-	} else {
+	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}
+
+	disableAutoFallback, _ := utils.PostBool(r, "dAutoFallback")
 
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.DisableLogging = disableLogging
+	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
+	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
+	newProxyEndpoint.BlockAICrawlers = blockAICrawlers
+	newProxyEndpoint.MitigationAction = mitigationAction
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
@@ -1789,6 +1829,80 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 			SystemWideLogger.Println("Enabled hop-by-hop headers removal on " + domain)
 		} else {
 			SystemWideLogger.Println("Disabled hop-by-hop headers removal on " + domain)
+		}
+
+		utils.SendOK(w)
+
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleUserAgent get and set the user agent header remover state
+// note that it shows the ENABLE STATE of user-agent remover, not the disable state
+func HandleUserAgent(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Get the current user agent header state
+		js, _ := json.Marshal(!targetProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval)
+		utils.SendJSONResponse(w, string(js))
+	} else if r.Method == http.MethodPost {
+		//Set the user agent header state
+		enableUserAgentRemover, _ := utils.PostBool(r, "removeUserAgent")
+
+		//As this will require change in the proxy instance we are running
+		//we need to clone and respawn this proxy endpoint
+		newProxyEndpoint := targetProxyEndpoint.Clone()
+		//Storage file use false as default, so disable removal = not enable remover
+		newProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval = !enableUserAgentRemover
+
+		//Save proxy endpoint
+		err = SaveReverseProxyConfig(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Spawn a new endpoint with updated dpcore
+		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Remove the old endpoint
+		err = targetProxyEndpoint.Remove()
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Add the newly prepared endpoint to runtime
+		err = dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Print log message
+		if enableUserAgentRemover {
+			SystemWideLogger.Println("Enabled user-agent header removal on " + domain)
+		} else {
+			SystemWideLogger.Println("Disabled user-agent header removal on " + domain)
 		}
 
 		utils.SendOK(w)

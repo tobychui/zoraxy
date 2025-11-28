@@ -32,12 +32,13 @@ func GetDefaultAuthenticationProvider() *AuthenticationProvider {
 // GetDefaultHeaderRewriteRules return a default header rewrite rules
 func GetDefaultHeaderRewriteRules() *HeaderRewriteRules {
 	return &HeaderRewriteRules{
-		UserDefinedHeaders:           []*rewrite.UserDefinedHeader{},
-		RequestHostOverwrite:         "",
-		HSTSMaxAge:                   0,
-		EnablePermissionPolicyHeader: false,
-		PermissionPolicy:             nil,
-		DisableHopByHopHeaderRemoval: false,
+		UserDefinedHeaders:            []*rewrite.UserDefinedHeader{},
+		RequestHostOverwrite:          "",
+		HSTSMaxAge:                    0,
+		EnablePermissionPolicyHeader:  false,
+		PermissionPolicy:              nil,
+		DisableHopByHopHeaderRemoval:  false,
+		DisableUserAgentHeaderRemoval: false,
 	}
 }
 
@@ -61,6 +62,7 @@ func GetDefaultProxyEndpoint() ProxyEndpoint {
 		RequireRateLimit:             false,
 		RateLimit:                    0,
 		DisableUptimeMonitor:         false,
+		DisableAutoFallback:          false,
 		AccessFilterUUID:             "default",
 		DefaultSiteOption:            DefaultSite_InternalStaticWebServer,
 		DefaultSiteValue:             "",

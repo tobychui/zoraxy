@@ -75,7 +75,7 @@
                     <th>Expire At</th>
                     <th>Fallback</th>
                     <th>DNS Challenge</th>
-                    <th class="no-sort">Actions</th>
+                    <th class="no-sort" tourstep="defaultCertificate">Actions</th>
                 </tr></thead>
             <tbody id="certifiedDomainList">
     
@@ -84,7 +84,13 @@
         </div>
         <br>
         <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
+        <br>
+        <div class="ui blue message">
+            <h4>What is a Fallback Certificate?</h4>
+            <p>A fallback certificate is used when the reverse proxy cannot find a matching certificate for the requested server name. If you are using CloudFlare full strict mode, you can also upload the CloudFlare certificate as fallback certificate.</p>
+        </div>
     </div>
+    <!-- 
     <div class="ui divider"></div>
     <div tourstep="defaultCertificate">
         <h3>Fallback Certificate</h3>
@@ -113,6 +119,7 @@
          <div class="ui yellow message"><i class="exclamation triangle icon"></i> We will be removing the fallback certificate section soon. <br>
             Please use "<i class="ui blue home icon"></i>Set Fallback" button in the certificate list above to set the fallback certificate.</div>
     </div>
+    -->
     <div class="ui divider"></div>
     <div tourstep="acmeSettings">
         <h3>Certificate Authority (CA) and Auto Renew (ACME)</h3>
@@ -128,7 +135,7 @@
                     <div class="default text">Let's Encrypt</div>
                     <div class="menu">
                     <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
-                    <div class="item" data-value="Buypass">Buypass</div>
+                    <!-- <div class="item" data-value="Buypass">Buypass</div> -->
                     <div class="item" data-value="ZeroSSL">ZeroSSL</div>
                     </div>
                 </div>

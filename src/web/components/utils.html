@@ -178,7 +178,13 @@
         <button class="ui basic button" onclick="showSideWrapper('snippet/configTools.html');"><i class="ui green undo icon icon"></i> Open Config Tools</button>
         <div class="ui divider"></div>
         
-        <!-- System Information -->
+        <!-- Statistic Reset or Export -->
+        <h3>Advanced Statistics Operations</h3>
+        <p>Export or reset the statistics collected by Zoraxy within a selected time range</p>
+        <button class="ui basic red button" onclick="handleResetAllStats();"><i class="trash icon"></i> RESET ALL STATISTICS</button>
+        <div class="ui divider"></div>
+        
+            <!-- System Information -->
         <div id="zoraxyinfo">
             <h3 class="ui header">
                 System Information
@@ -623,4 +629,22 @@
         e.preventDefault();
         saveLogSettings();
     });
-</script>
+
+    /*
+        Statistics Operations
+    */
+    function handleResetAllStats(){
+        if (confirm("Confirm remove ALL statistics from the system? This action is irreversible.")){
+            $.cjax({
+                url: "/api/analytic/resetAll",
+                method: "POST",
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 5000);
+                    }else{
+                        msgbox("All Statistics Cleared");
+                    }
+                }
+            })
+        }
+    }

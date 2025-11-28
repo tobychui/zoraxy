@@ -28,6 +28,7 @@ type Plugin struct {
 	staticRouteProxy  map[string]*dpcore.ReverseProxy //Storing longest prefix => dpcore map for static route
 	dynamicRouteProxy *dpcore.ReverseProxy            //The reverse proxy for the dynamic route
 	process           *exec.Cmd                       //The process of the plugin
+	SupportHotRebuild bool                            //Whether the plugin source code exists in the plugin folder tree
 }
 
 type ManagerOptions struct {
@@ -52,8 +53,9 @@ type ManagerOptions struct {
 	APIKeyManager *auth.APIKeyManager `json:"-"` //The API key manager for the plugins
 
 	/* Development */
-	EnableHotReload   bool //Check if the plugin file is changed and reload the plugin automatically
-	HotReloadInterval int  //The interval for checking the plugin file change, in seconds
+	EnableHotReload       bool //Check if the plugin file is changed and reload the plugin automatically
+	EnablePluginAutoBuild bool //Enable automatic build for the plugin when the plugin is started
+	HotReloadInterval     int  //The interval for checking the plugin file change, in seconds
 }
 
 type Manager struct {

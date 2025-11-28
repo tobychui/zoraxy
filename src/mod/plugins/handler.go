@@ -250,4 +250,27 @@ func (m *Manager) HandleDisablePlugin(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
+func (m *Manager) HandleRebuildPlugin(w http.ResponseWriter, r *http.Request) {
+	pluginID, err := utils.PostPara(r, "plugin_id")
+	if err != nil {
+		utils.SendErrorResponse(w, "plugin_id not found")
+		return
+	}
+
+	err = m.RebuildPlugin(pluginID)
+	if err != nil {
+		// Send detailed error with build output
+		response := map[string]interface{}{
+			"error":        err.Error(),
+			"build_output": err.Error(), // The error already contains the build output
+		}
+		js, _ := json.Marshal(response)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+		return
+	}
+
+	utils.SendOK(w)
+}
+
 /* Plugin Store */

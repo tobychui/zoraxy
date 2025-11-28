@@ -50,14 +50,6 @@ import (
 	Don't touch this function unless you know what you are doing
 */
 
-var (
-	/*
-		MDNS related
-	*/
-	previousmdnsScanResults = []*mdns.NetworkHost{}
-	mdnsTickerStop          chan bool
-)
-
 func startupSequence() {
 	//Start a system wide logger and log viewer
 	l, err := logger.NewLogger(LOG_PREFIX, *path_logFile)
@@ -149,7 +141,9 @@ func startupSequence() {
 	db.NewTable("redirect")
 	redirectAllowRegexp := false
 	db.Read("redirect", "regex", &redirectAllowRegexp)
-	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, SystemWideLogger)
+	redirectCaseSensitive := false
+	db.Read("redirect", "case_sensitive", &redirectCaseSensitive)
+	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, redirectCaseSensitive, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -461,7 +455,9 @@ func ShutdownSeq() {
 
 	//Close the plugin manager
 	SystemWideLogger.Println("Shutting down plugin manager")
-	pluginManager.Close()
+	if pluginManager != nil {
+		pluginManager.Close()
+	}
 
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")

@@ -290,6 +290,13 @@
                                     <label>Disable Requests Logging<br>
                                         <small>Disable logging for all incoming requests for this hostname</small></label>
                                 </div>
+                                <br>
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="DisableStatisticCollection">
+                                    <label>Disable Statistic Collection<br>
+                                        <small>Disable collecting statistics for this hostname but keep request logging</small></label>
+                                </div>
+                                <br>
                             </div>
                            
                         </div>
@@ -309,6 +316,12 @@
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
                             <br>
+                            <!-- <div class="ui checkbox" style="margin-top: 0.4em; margin-left: 2em;">
+                                <input type="checkbox" class="DisableAutoFallback">
+                                <label>Disable Auto Fallback<br>
+                                    <small>Continue monitoring but don't automatically disable upstreams when offline</small></label>
+                            </div>
+                            <br> -->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -430,7 +443,38 @@
                             </div>
                             <br>
                             <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
-                            
+                            <div class="ui divider"></div>
+                            <!-- Block Common Exploits -->
+                            <label><b>Exploits Prevention</b></label>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="BlockCommonExploits">
+                                <label>Block Common Exploits (Experimental)<br>
+                                    <small>Detect and block common exploit payloads (SQLi, XSS, path traversal, etc.)</small>
+                                </label>
+                            </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="BlockAICrawlers">
+                                <label>Block AI and Crawlers (Experimental)<br>
+                                    <small>Block known crawlers and large-scale automated agents</small>
+                                </label>
+                            </div>
+                            <br>
+                            <label>Mitigation Action</label>
+                            <div class="ui fluid selection dropdown mitigationActionDropdown" style="margin-top: 0.4em;">
+                                <input type="hidden" value="0" name="mitigationAction">
+                                <i class="dropdown icon"></i>
+                                <div class="default text">Choose action when exploit / crawler detected</div>
+                                <div class="menu">
+                                    <div class="item" data-value="0">404 Not Found</div>
+                                    <div class="item" data-value="1">403 Forbidden</div>
+                                    <div class="item" data-value="2">400 Bad Request</div>
+                                    <div class="item" data-value="3">Drop Connection</div>
+                                    <div class="disabled item" data-value="4">Captcha Challenge</div> <!-- Work in progress -->
+                                </div>
+                            </div>
+                             <small style="opacity:0.7;">Select how the system should respond when malicious or automated traffic is detected.</small>
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
@@ -886,12 +930,17 @@
         let epttype = "host";
         let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
         let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
+        let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let disableLogging = $(editor).find(".DisableLogging")[0].checked;
+        let disableStatisticCollection = $(editor).find(".DisableStatisticCollection")[0].checked;
+        let blockCommonExploits = $(editor).find(".BlockCommonExploits")[0].checked;
+        let blockAICrawlers = $(editor).find(".BlockAICrawlers")[0].checked;
+        let mitigationAction = $(editor).find(".mitigationActionDropdown").dropdown("get value");
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
@@ -904,11 +953,16 @@
                 "rootname": uuid,
                 "ss":useStickySession,
                 "dutm": DisableUptimeMonitor,
+                "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
                 "dLogging": disableLogging,
+                "dStatisticCollection": disableStatisticCollection,
+                "blockCommonExploits": blockCommonExploits,
+                "blockAICrawlers": blockAICrawlers,
+                "mitigationAction": mitigationAction,
                 "ratenum" :rateLimit,
                 "tags": tags,
             };
@@ -1250,8 +1304,49 @@
         editor.find(".DisableLogging").off('change');
         editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
         editor.find(".DisableLogging").on("change", function() {
+            // When logging is disabled, also disable statistic collection
+            if ($(this).is(':checked')) {
+                editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
+            } else {
+                editor.find(".DisableStatisticCollection").prop("disabled", false);
+            }
             saveProxyInlineEdit(uuid);
         });
+
+        editor.find(".DisableStatisticCollection").off('change');
+        editor.find(".DisableStatisticCollection").prop("checked", subd.DisableStatisticCollection);
+        editor.find(".DisableStatisticCollection").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        // Handle initial state: if logging is disabled, disable statistic collection
+        if (subd.DisableLogging) {
+            editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
+        }
+
+        // Exploit Detection
+        editor.find(".BlockCommonExploits").off('change');
+        editor.find(".BlockCommonExploits").prop("checked", subd.BlockCommonExploits || false);
+        editor.find(".BlockCommonExploits").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".BlockAICrawlers").off('change');
+        editor.find(".BlockAICrawlers").prop("checked", subd.BlockAICrawlers || false);
+        editor.find(".BlockAICrawlers").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".mitigationActionDropdown").off('change');
+        editor.find(".mitigationActionDropdown input[type='hidden']").val((subd.MitigationAction || 0).toString());
+        setTimeout(function(){
+              editor.find(".mitigationActionDropdown").dropdown({
+                onChange: function(value) {
+                    saveProxyInlineEdit(uuid);
+                }
+            });
+        }, 100);
+      
         
         //Bind the edit button
         editor.find(".downstream_primary_hostname_edit_btn").off("click").on("click", function(){
@@ -1321,6 +1416,19 @@
         editor.find(".EnableUptimeMonitor").off("change");
         editor.find(".EnableUptimeMonitor").prop("checked", !subd.DisableUptimeMonitor);
         editor.find(".EnableUptimeMonitor").on("change", function() {
+            // Enable/disable the auto fallback option based on uptime monitor state
+            var isUptimeMonitorEnabled = $(this).is(":checked");
+            editor.find(".DisableAutoFallback").prop("disabled", !isUptimeMonitorEnabled);
+            if (!isUptimeMonitorEnabled) {
+                editor.find(".DisableAutoFallback").prop("checked", false);
+            }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".DisableAutoFallback").off("change");
+        editor.find(".DisableAutoFallback").prop("checked", subd.DisableAutoFallback);
+        editor.find(".DisableAutoFallback").prop("disabled", subd.DisableUptimeMonitor);
+        editor.find(".DisableAutoFallback").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 
