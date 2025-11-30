@@ -51,7 +51,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       FASTGEOIP: "true"
-      TZ: "Europe/London"
+      TZ: "America/New_York"
 ```
 
 ### Ports
@@ -69,7 +69,6 @@ services:
 | `/opt/zoraxy/config/` | Zoraxy configuration. |
 | `/opt/zoraxy/plugin/` | Zoraxy plugins. |
 | `/var/run/docker.sock` | Docker socket. Used for additional functionality with Zoraxy. |
-| `/etc/localtime` | Localtime. Set to ensure the host and container are synchronized. |
 
 ### Extra Hosts
 | Host | Details |
