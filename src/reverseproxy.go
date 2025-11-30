@@ -231,6 +231,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	endpoint = strings.TrimSpace(endpoint)
+
 	tls, _ := utils.PostPara(r, "tls")
 	if tls == "" {
 		tls = "false"
