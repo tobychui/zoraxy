@@ -55,31 +55,12 @@ func (t *trie) insert(ipAddr string, cc string) {
 	}
 }
 
-// isReservedIP check if the given ip address is NOT a public ip address
-func isReservedIP(ip string) bool {
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
-		return false
-	}
-	// Check if the IP address is a loopback address
-	if parsedIP.IsLoopback() {
-		return true
-	}
-	// Check if the IP address is in the link-local address range
-	if parsedIP.IsLinkLocalUnicast() || parsedIP.IsLinkLocalMulticast() {
-		return true
-	}
-	//Check if the IP is in the reserved private range
-	if parsedIP.IsPrivate() {
-		return true
-	}
-	return false
-}
-
 // Initializing the search for word in node
 func (t *trie) search(ipAddr string) string {
-	if isReservedIP(ipAddr) {
-		return ""
+	// Check reserved IP zones first
+	reservedZone := getReservedIPZone(ipAddr)
+	if reservedZone != "" {
+		return reservedZone
 	}
 
 	ipBytes := ipToBytes(ipAddr)
