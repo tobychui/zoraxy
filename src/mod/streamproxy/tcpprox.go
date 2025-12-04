@@ -178,7 +178,7 @@ func (c *ProxyRelayInstance) Port2host(allowPort string, targetAddress string, s
 				}
 			}
 
-			c.forward(target, conn, &c.aTobAccumulatedByteTransfer, &c.bToaAccumulatedByteTransfer)
+			c.forward(target, conn, c.aTobAccumulatedByteTransfer, c.bToaAccumulatedByteTransfer)
 		}(targetAddress)
 	}
 }
