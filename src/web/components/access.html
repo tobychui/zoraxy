@@ -834,9 +834,10 @@
     
     //Load all the black white lists
     function initBlackWhitelistTables(){
-        //Remove event listener on both toggle buttons
+        //Remove event listener on toggle buttons
         $("#enableWhitelist").off("change");
         $("#enableBlacklist").off("change");
+        $("#enableWhitelistLoopback").off("change");
 
         //Initialize the button states
         initBlacklistEnableState();
