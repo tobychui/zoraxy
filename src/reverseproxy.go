@@ -2071,3 +2071,130 @@ func HandleWsHeaderBehavior(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+// HandleGetListeningPorts gets the listening ports for a specific proxy endpoint
+func HandleGetListeningPorts(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.GetPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain not specified")
+		return
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	listeningPorts := targetProxyEndpoint.ListeningPorts
+	if listeningPorts == nil {
+		listeningPorts = []string{}
+	}
+
+	js, _ := json.Marshal(listeningPorts)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// HandleSetListeningPorts sets the listening ports for a specific proxy endpoint
+func HandleSetListeningPorts(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain not specified")
+		return
+	}
+
+	portsJSON, err := utils.PostPara(r, "ports")
+	if err != nil {
+		utils.SendErrorResponse(w, "ports not specified")
+		return
+	}
+
+	// Parse the ports JSON
+	var newPorts []string
+	err = json.Unmarshal([]byte(portsJSON), &newPorts)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid ports JSON: "+err.Error())
+		return
+	}
+
+	// Validate each port entry
+	for _, port := range newPorts {
+		port = strings.TrimSpace(port)
+		if port == "" {
+			continue
+		}
+
+		// Check if it's a valid format (":port" or "ip:port")
+		if !strings.Contains(port, ":") {
+			utils.SendErrorResponse(w, "invalid port format: "+port+" (must be :port or ip:port)")
+			return
+		}
+
+		// Try to parse the address
+		_, portStr, err := net.SplitHostPort(port)
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid address format: "+port)
+			return
+		}
+
+		// Validate port number
+		portNum, err := strconv.Atoi(portStr)
+		if err != nil || portNum < 1 || portNum > 65535 {
+			utils.SendErrorResponse(w, "invalid port number: "+portStr)
+			return
+		}
+	}
+
+	// Load the target proxy endpoint
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	// Update the listening ports
+	targetProxyEndpoint.ListeningPorts = newPorts
+
+	// Save to file
+	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to save config: "+err.Error())
+		return
+	}
+
+	// Update the runtime configuration without restart
+	targetProxyEndpoint.UpdateToRuntime()
+
+	// Update secondary listeners dynamically
+	dynamicProxyRouter.UpdateSecondaryListeners()
+
+	SystemWideLogger.Println("Updated listening ports for " + domain)
+	utils.SendOK(w)
+}
+
+// HandleListSecondaryListeners lists all secondary listening ports and their associated domains
+func HandleListSecondaryListeners(w http.ResponseWriter, r *http.Request) {
+	type ListenerInfo struct {
+		Address string   `json:"address"`
+		Domains []string `json:"domains"`
+	}
+
+	commonPorts := dynamicProxyRouter.GetCommonListeningPorts()
+
+	// Convert map to sorted array for better display
+	var listeners []ListenerInfo
+	for addr, domains := range commonPorts {
+		listeners = append(listeners, ListenerInfo{
+			Address: addr,
+			Domains: domains,
+		})
+	}
+
+	// Sort by address for consistent display
+	sort.Slice(listeners, func(i, j int) bool {
+		return listeners[i].Address < listeners[j].Address
+	})
+
+	js, _ := json.Marshal(listeners)
+	utils.SendJSONResponse(w, string(js))
+}

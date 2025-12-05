@@ -93,6 +93,11 @@ type Router struct {
 
 	rateLimterStop   chan bool              //Stop channel for rate limiter
 	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
+
+	// Secondary listening ports and their servers
+	secondaryServers     map[string]*http.Server //Map of secondary listening servers, key is the listening address (ip:port or :port)
+	secondaryStopChans   map[string]chan bool    //Stop channels for secondary listening servers
+	secondaryServerMutex sync.RWMutex            //Mutex for accessing secondary server maps
 }
 
 /* Basic Auth Related Data structure*/
@@ -189,6 +194,7 @@ type ProxyEndpoint struct {
 	UseStickySession     bool                    //Use stick session for load balancing
 	UseActiveLoadBalance bool                    //Use active loadbalancing, default passive
 	Disabled             bool                    //If the rule is disabled
+	ListeningPorts       []string                //Alternative listening ports in format "ip:port" or ":port" (e.g., ":8080", "192.168.1.1:8080")
 
 	//Inbound TLS/SSL Related
 	BypassGlobalTLS bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
