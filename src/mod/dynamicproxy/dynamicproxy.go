@@ -12,7 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-
+	"net"
+    proxyproto "github.com/c0va23/go-proxyprotocol"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
 
@@ -249,9 +250,18 @@ func (router *Router) StartProxyService() error {
 		//Start the TLS server
 		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (TLS mode)", nil)
 		go func() {
-			if err := router.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+			ln, err := net.Listen("tcp", router.server.Addr)
+			if err != nil {
+				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server (listen failed)", err)
+				return
+			}		
+			// Wrapper Proxy Protocol v1/v2
+			ppListener := proxyproto.NewDefaultListener(ln)
+		
+			if err := router.server.ServeTLS(ppListener, "", ""); err != nil && err != http.ErrServerClosed {
 				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
 			}
+			
 		}()
 	} else {
 		//Serve with non TLS mode
