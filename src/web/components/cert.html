@@ -40,11 +40,9 @@
             </div>
         </div>
         <button id="certUploadBtn" class="ui basic button showOnlyInCertUploadMode" onclick="handleDomainUploadByKeypress();"><i class="ui teal upload icon"></i> Upload</button>
-        <button id="certPasteBtn" class="ui basic button showOnlyInCertUploadMode" onclick="togglePasteCertInterface();"><i class="ui yellow paste icon"></i> Paste Cert Directly</button><br>
+        <button id="certPasteBtn" class="ui basic button showOnlyInCertUploadMode" onclick="togglePasteCertInterface();"><i class="ui yellow paste icon"></i> Paste Cert Directly</button>
+        <br class="showOnlyInCertUploadMode">
         <small class="showOnlyInCertUploadMode">You have intermediate certificate? <a style="cursor:pointer;" onclick="showSideWrapper('snippet/intermediateCertConv.html');">Open Conversion Tool</a></small>
-    </div>
-    <div id="certUploadSuccMsg" class="ui green message" style="display:none;">
-        <i class="ui checkmark icon"></i> Certificate for domain <span id="certUploadingDomain"></span> uploaded.
     </div>
     <div id="certPasteArea" style="display:none;">
         <!-- Paste cert function implementation -->
@@ -62,6 +60,9 @@
             <button class="ui basic button" onclick="handlePasteInBrowserAndUpload();"><i class="ui teal upload icon"></i> Upload from Pasted Content</button>
             <button class="ui basic button" onclick="togglePasteCertInterface();"><i class="ui grey cancel icon"></i> Cancel</button>
         </div>
+    </div>
+    <div id="certUploadSuccMsg" class="ui green message" style="display:none;">
+        <i class="ui checkmark icon"></i> Certificate for domain <span id="certUploadingDomain"></span> uploaded.
     </div>
     <div class="ui message">
         <h4>Tips about Server Names & SNI</h4>
