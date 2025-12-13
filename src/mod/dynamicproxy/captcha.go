@@ -413,78 +413,189 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
 
+	// Extract domain from request
+	domain := r.Host
+	if domain == "" {
+		domain = pe.RootOrMatchingDomain
+	}
+
 	var captchaHTML bytes.Buffer
 	if pe.CaptchaConfig.Provider == CaptchaProviderCloudflare {
 		// Cloudflare Turnstile
 		captchaHTML.WriteString(fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Check Required</title>
+    <title>Just a moment...</title>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        * {
+            box-sizing: border-box;
             margin: 0;
-            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+            padding: 0;
         }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
+
+        html {
+            line-height: 1.15;
+            -webkit-text-size-adjust: 100%%;
+            color: #313131;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 24px;
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #fff;
         }
-        p {
-            color: #666;
-            margin-bottom: 30px;
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        .captcha-container {
+
+        .main-content {
+            margin: 8rem auto;
+            max-width: 60rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            width: 100%%;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .h1 {
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #313131;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            font-weight: 450;
+            color: #313131;
+        }
+
+        .challenge-container {
+            margin: 2rem 0;
             display: flex;
             justify-content: center;
-            margin: 20px 0;
         }
+
+        .security-message {
+            margin-top: 2rem;
+            font-size: 1.5rem;
+            color: #555;
+        }
+
         #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 5px;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.25rem;
             display: none;
+            text-align: center;
         }
+
         .error {
             background-color: #fee;
             color: #c33;
             border: 1px solid #fcc;
         }
+
         .success {
             background-color: #efe;
             color: #3c3;
             border: 1px solid #cfc;
         }
+
+        .footer {
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #888;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .footer a {
+            color: #2c7cb0;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 720px) {
+            .h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #222;
+                color: #d9d9d9;
+            }
+
+            .h1, .subtitle {
+                color: #d9d9d9;
+            }
+
+            .security-message {
+                color: #aaa;
+            }
+
+            .footer {
+                border-top-color: #444;
+                color: #aaa;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🛡️ Security Check Required</h1>
-        <p>Please complete the security check below to access this page.</p>
+    <div class="main-wrapper" role="main">
+        <div class="main-content">
+            <div class="header">
+                <h1 class="h1">%s</h1>
+                <p class="subtitle">Verify you are human by completing the action below.</p>
+            </div>
 
-        <form id="captchaForm">
-            <div class="captcha-container">
+            <div class="challenge-container">
                 <div class="cf-turnstile" data-sitekey="%s" data-callback="onCaptchaSuccess"></div>
             </div>
+
             <div id="status"></div>
-        </form>
+
+            <div class="security-message">
+                %s needs to review the security of your connection before proceeding.
+            </div>
+        </div>
     </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div>Performance & security by <a href="https://zoraxy.arozos.com" target="_blank">Zoraxy</a></div>
+        </div>
+    </footer>
 
     <script>
         function onCaptchaSuccess(token) {
@@ -521,7 +632,7 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
         }
     </script>
 </body>
-</html>`, pe.CaptchaConfig.SiteKey, CaptchaVerifyPath))
+</html>`, domain, pe.CaptchaConfig.SiteKey, domain, CaptchaVerifyPath))
 	} else {
 		// Google reCAPTCHA
 		version := pe.CaptchaConfig.RecaptchaVersion
@@ -531,74 +642,179 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
 
 		if version == "v2" {
 			captchaHTML.WriteString(fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Check Required</title>
+    <title>Just a moment...</title>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        * {
+            box-sizing: border-box;
             margin: 0;
-            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+            padding: 0;
         }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
+
+        html {
+            line-height: 1.15;
+            -webkit-text-size-adjust: 100%%;
+            color: #313131;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 24px;
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #fff;
         }
-        p {
-            color: #666;
-            margin-bottom: 30px;
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        .captcha-container {
+
+        .main-content {
+            margin: 8rem auto;
+            max-width: 60rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            width: 100%%;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .h1 {
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #313131;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            font-weight: 450;
+            color: #313131;
+        }
+
+        .challenge-container {
+            margin: 2rem 0;
             display: flex;
             justify-content: center;
-            margin: 20px 0;
         }
+
+        .security-message {
+            margin-top: 2rem;
+            font-size: 1.5rem;
+            color: #555;
+        }
+
         #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 5px;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.25rem;
             display: none;
+            text-align: center;
         }
+
         .error {
             background-color: #fee;
             color: #c33;
             border: 1px solid #fcc;
         }
+
         .success {
             background-color: #efe;
             color: #3c3;
             border: 1px solid #cfc;
         }
+
+        .footer {
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #888;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .footer a {
+            color: #2c7cb0;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 720px) {
+            .h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #222;
+                color: #d9d9d9;
+            }
+
+            .h1, .subtitle {
+                color: #d9d9d9;
+            }
+
+            .security-message {
+                color: #aaa;
+            }
+
+            .footer {
+                border-top-color: #444;
+                color: #aaa;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🛡️ Security Check Required</h1>
-        <p>Please complete the security check below to access this page.</p>
+    <div class="main-wrapper" role="main">
+        <div class="main-content">
+            <div class="header">
+                <h1 class="h1">%s</h1>
+                <p class="subtitle">Verify you are human by completing the action below.</p>
+            </div>
 
-        <form id="captchaForm" onsubmit="return handleSubmit(event)">
-            <div class="captcha-container">
+            <div class="challenge-container">
                 <div class="g-recaptcha" data-sitekey="%s" data-callback="onCaptchaSuccess"></div>
             </div>
+
             <div id="status"></div>
-        </form>
+
+            <div class="security-message">
+                %s needs to review the security of your connection before proceeding.
+            </div>
+        </div>
     </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div>Performance & security by <a href="https://zoraxy.arozos.com" target="_blank">Zoraxy</a></div>
+        </div>
+    </footer>
 
     <script>
         function onCaptchaSuccess(token) {
@@ -635,87 +851,206 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
                 grecaptcha.reset();
             });
         }
-
-        function handleSubmit(e) {
-            e.preventDefault();
-            return false;
-        }
     </script>
 </body>
-</html>`, pe.CaptchaConfig.SiteKey, CaptchaVerifyPath))
+</html>`, domain, pe.CaptchaConfig.SiteKey, domain, CaptchaVerifyPath))
 		} else {
 			// reCAPTCHA v3
 			captchaHTML.WriteString(fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Check Required</title>
+    <title>Just a moment...</title>
     <script src="https://www.google.com/recaptcha/api.js?render=%s"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            line-height: 1.15;
+            -webkit-text-size-adjust: 100%%;
+            color: #313131;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #fff;
+        }
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            margin: 8rem auto;
+            max-width: 60rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            width: 100%%;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .h1 {
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #313131;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            font-weight: 450;
+            color: #313131;
+        }
+
+        .challenge-container {
+            margin: 2rem 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);
+            flex-direction: column;
         }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 24px;
-        }
-        p {
-            color: #666;
-            margin-bottom: 30px;
-        }
+
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 4px solid #e5e5e5;
+            border-top: 4px solid #2c7cb0;
             border-radius: 50%%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
         }
+
         @keyframes spin {
             0%% { transform: rotate(0deg); }
             100%% { transform: rotate(360deg); }
         }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 5px;
+
+        .security-message {
+            margin-top: 2rem;
+            font-size: 1.5rem;
+            color: #555;
         }
+
+        #status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            display: none;
+            text-align: center;
+        }
+
         .error {
             background-color: #fee;
             color: #c33;
             border: 1px solid #fcc;
         }
+
         .success {
             background-color: #efe;
             color: #3c3;
             border: 1px solid #cfc;
         }
+
+        .footer {
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #888;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .footer a {
+            color: #2c7cb0;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 720px) {
+            .h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #222;
+                color: #d9d9d9;
+            }
+
+            .h1, .subtitle {
+                color: #d9d9d9;
+            }
+
+            .loader {
+                border-color: #444;
+                border-top-color: #2c7cb0;
+            }
+
+            .security-message {
+                color: #aaa;
+            }
+
+            .footer {
+                border-top-color: #444;
+                color: #aaa;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🛡️ Security Check</h1>
-        <p>Verifying your connection...</p>
-        <div class="loader"></div>
-        <div id="status"></div>
+    <div class="main-wrapper" role="main">
+        <div class="main-content">
+            <div class="header">
+                <h1 class="h1">%s</h1>
+                <p class="subtitle">Verifying your connection...</p>
+            </div>
+
+            <div class="challenge-container">
+                <div class="loader"></div>
+            </div>
+
+            <div id="status"></div>
+
+            <div class="security-message">
+                %s needs to review the security of your connection before proceeding.
+            </div>
+        </div>
     </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div>Performance & security by <a href="https://zoraxy.arozos.com" target="_blank">Zoraxy</a></div>
+        </div>
+    </footer>
 
     <script>
         grecaptcha.ready(function() {
@@ -730,6 +1065,7 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
                 .then(response => response.json())
                 .then(data => {
                     const status = document.getElementById('status');
+                    status.style.display = 'block';
                     if (data.success) {
                         status.textContent = 'Verification successful! Redirecting...';
                         status.className = 'success';
@@ -743,6 +1079,7 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
                 })
                 .catch(error => {
                     const status = document.getElementById('status');
+                    status.style.display = 'block';
                     status.textContent = 'An error occurred. Please refresh the page.';
                     status.className = 'error';
                 });
@@ -750,7 +1087,7 @@ func (h *ProxyHandler) serveCaptchaChallenge(w http.ResponseWriter, r *http.Requ
         });
     </script>
 </body>
-</html>`, pe.CaptchaConfig.SiteKey, pe.CaptchaConfig.SiteKey, CaptchaVerifyPath))
+</html>`, pe.CaptchaConfig.SiteKey, domain, domain, pe.CaptchaConfig.SiteKey, CaptchaVerifyPath))
 		}
 	}
 
