@@ -98,6 +98,15 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// CAPTCHA Gating
+		if sep.RequireCaptcha && sep.CaptchaConfig != nil {
+			err := h.handleCaptchaRouting(w, r, sep, h.Parent.captchaSessionStore)
+			if err != nil {
+				h.Parent.logRequest(r, false, 403, "captcha-required", domainOnly, "captcha", sep)
+				return
+			}
+		}
+
 		//Validate auth (basic auth or SSO auth)
 		respWritten := handleAuthProviderRouting(sep, w, r, h)
 		if respWritten {
