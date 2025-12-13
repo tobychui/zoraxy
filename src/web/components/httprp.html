@@ -117,6 +117,7 @@
             }
 
             #httprpEditModalContentWindow{
+                height: 100% !important;
                 width: 84% !important;
             }
 
@@ -257,7 +258,7 @@
                 <button class="ui basic fluid button httpProxyEditClosePC" onclick="closeHttpRuleEditor();">Close</button>
                 <button class="ui basic icon circular button httpProxyEditCloseMobile"  onclick="closeHttpRuleEditor();"><i class="ui times icon"></i></button>
             </div>
-            <div id="httprpEditModalContentWindow" class="twelve wide column">
+            <div id="httprpEditModalContentWindow" class="twelve wide column" style="height: 100%">
                 <div style="height:100%;">
                     <!-- Host -->
                     <div class="rpconfig_content" rpcfg="downstream">
@@ -493,7 +494,6 @@
                             </div>
                             <div class="ui divider"></div>
                             <!-- CAPTCHA Gating -->
-                            <label><b>CAPTCHA Gating</b></label>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="RequireCaptcha">
                                 <label>Require CAPTCHA Challenge<br>
@@ -506,7 +506,7 @@
                                     <i class="dropdown icon"></i>
                                     <div class="default text">Select CAPTCHA Provider</div>
                                     <div class="menu">
-                                        <div class="item" data-value="0"><i class="cloudflare icon"></i> Cloudflare Turnstile</div>
+                                        <div class="item" data-value="0"><i class="cloud icon"></i> Cloudflare Turnstile</div>
                                         <div class="item" data-value="1"><i class="google icon"></i> Google reCAPTCHA</div>
                                     </div>
                                 </div>
