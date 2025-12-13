@@ -149,6 +149,7 @@ func (router *Router) StartProxyService() error {
 						if sep.RequireCaptcha && sep.CaptchaConfig != nil {
 							ph := &ProxyHandler{Parent: router}
 							if err := ph.handleCaptchaRouting(w, r, sep, router.captchaSessionStore); err != nil {
+								// Request handled by CAPTCHA middleware (either challenge or verification)
 								return
 							}
 						}

@@ -399,11 +399,13 @@ func (h *ProxyHandler) handleCaptchaVerification(w http.ResponseWriter, r *http.
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 	})
 
-	return nil
+	// Return error to stop request chain (response already written)
+	return errors.New("captcha verification completed")
 }
 
 // serveCaptchaChallenge serves the CAPTCHA challenge page

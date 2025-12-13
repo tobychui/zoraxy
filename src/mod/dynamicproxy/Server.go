@@ -102,7 +102,10 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireCaptcha && sep.CaptchaConfig != nil {
 			err := h.handleCaptchaRouting(w, r, sep, h.Parent.captchaSessionStore)
 			if err != nil {
-				h.Parent.logRequest(r, false, 403, "captcha-required", domainOnly, "captcha", sep)
+				// Don't log verification endpoint as an error (it writes its own response)
+				if r.URL.Path != "/__zoraxy_captcha_verify" {
+					h.Parent.logRequest(r, false, 403, "captcha-required", domainOnly, "captcha", sep)
+				}
 				return
 			}
 		}
