@@ -297,18 +297,41 @@ func (h *ProxyHandler) handleCaptchaVerification(w http.ResponseWriter, r *http.
 		return errors.New("invalid method")
 	}
 
-	// Parse form data
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return err
+	// Parse form data - handle both regular forms and multipart forms
+	contentType := r.Header.Get("Content-Type")
+	if strings.Contains(contentType, "multipart/form-data") {
+		if err := r.ParseMultipartForm(32 << 20); err != nil { // 32 MB max
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return err
+		}
 	}
 
-	token := r.FormValue("cf-turnstile-response")
+	// Try to get token from POST form first, then from regular form
+	token := r.PostFormValue("cf-turnstile-response")
+	if token == "" {
+		token = r.PostFormValue("g-recaptcha-response")
+	}
+	if token == "" {
+		token = r.FormValue("cf-turnstile-response")
+	}
 	if token == "" {
 		token = r.FormValue("g-recaptcha-response")
 	}
+
 	if token == "" {
-		http.Error(w, "CAPTCHA token missing", http.StatusBadRequest)
+		// Debug: log what we received
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "CAPTCHA token missing - no cf-turnstile-response or g-recaptcha-response field found",
+			"debug":   "Content-Type: " + contentType,
+		})
 		return errors.New("token missing")
 	}
 
@@ -338,11 +361,15 @@ func (h *ProxyHandler) handleCaptchaVerification(w http.ResponseWriter, r *http.
 		// Verification failed
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
+		errorMsg := "CAPTCHA verification failed"
+		if verifyErr != nil {
+			errorMsg = verifyErr.Error()
+		}
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
-			"error":   "CAPTCHA verification failed",
+			"error":   errorMsg,
 		})
-		return errors.New("verification failed")
+		return fmt.Errorf("verification failed: %v", errorMsg)
 	}
 
 	// Create session
