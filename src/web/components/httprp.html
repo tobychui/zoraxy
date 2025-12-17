@@ -1764,33 +1764,33 @@
         }
 
         // Initialize CAPTCHA dropdowns
-        setTimeout(function() {
-            editor.find(".captchaProviderDropdown").dropdown({
-                onChange: function(value) {
-                    if (value == "1") { // Google reCAPTCHA
-                        editor.find(".googleRecaptchaSettings").show();
-                        let version = editor.find(".recaptchaVersionDropdown").dropdown("get value");
-                        if (version == "v3") {
-                            editor.find(".recaptchaV3Settings").show();
-                        }
-                    } else { // Cloudflare Turnstile
-                        editor.find(".googleRecaptchaSettings").hide();
-                    }
-                    saveProxyInlineEdit(uuid);
-                }
-            });
-
-            editor.find(".recaptchaVersionDropdown").dropdown({
-                onChange: function(value) {
-                    if (value == "v3") {
+        editor.find(".captchaProviderDropdown").dropdown('destroy');
+        editor.find(".captchaProviderDropdown").dropdown({
+            onChange: function(value) {
+                if (value == "1") { // Google reCAPTCHA
+                    editor.find(".googleRecaptchaSettings").show();
+                    let version = editor.find(".recaptchaVersionDropdown").dropdown("get value");
+                    if (version == "v3") {
                         editor.find(".recaptchaV3Settings").show();
-                    } else {
-                        editor.find(".recaptchaV3Settings").hide();
                     }
-                    saveProxyInlineEdit(uuid);
+                } else { // Cloudflare Turnstile
+                    editor.find(".googleRecaptchaSettings").hide();
                 }
-            });
-        }, 100);
+                saveProxyInlineEdit(uuid);
+            }
+        });
+
+        editor.find(".recaptchaVersionDropdown").dropdown('destroy');
+        editor.find(".recaptchaVersionDropdown").dropdown({
+            onChange: function(value) {
+                if (value == "v3") {
+                    editor.find(".recaptchaV3Settings").show();
+                } else {
+                    editor.find(".recaptchaV3Settings").hide();
+                }
+                saveProxyInlineEdit(uuid);
+            }
+        });
 
         // Bind CAPTCHA checkbox change event
         editor.find(".RequireCaptcha").off("change").on("change", function() {

@@ -26,6 +26,49 @@ var (
 	dynamicProxyRouterReady = make(chan bool, 1)
 )
 
+// parseCaptchaConfigFromRequest extracts and parses CAPTCHA configuration from POST request parameters
+func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig, error) {
+	requireCaptcha, _ := utils.PostBool(r, "captcha")
+	if !requireCaptcha {
+		return nil, nil
+	}
+
+	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
+	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
+	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
+	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
+	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
+	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
+
+	captchaProvider := 0
+	if captchaProviderStr != "" {
+		captchaProvider, _ = strconv.Atoi(captchaProviderStr)
+	}
+
+	captchaSessionDuration := 3600
+	if captchaSessionDurationStr != "" {
+		captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
+	}
+
+	captchaRecaptchaScore := 0.5
+	if captchaRecaptchaScoreStr != "" {
+		captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
+	}
+
+	if captchaRecaptchaVersion == "" {
+		captchaRecaptchaVersion = "v2"
+	}
+
+	return &dynamicproxy.CaptchaConfig{
+		Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
+		SiteKey:          captchaSiteKey,
+		SecretKey:        captchaSecretKey,
+		SessionDuration:  captchaSessionDuration,
+		RecaptchaVersion: captchaRecaptchaVersion,
+		RecaptchaScore:   captchaRecaptchaScore,
+	}, nil
+}
+
 // Add user customizable reverse proxy
 func ReverseProxyInit() {
 	/*
@@ -301,44 +344,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CAPTCHA Gating
-	requireCaptcha, _ := utils.PostBool(r, "captcha")
-	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
-	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
-	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
-	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
-	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
-	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
-
-	var captchaConfig *dynamicproxy.CaptchaConfig
-	if requireCaptcha {
-		captchaProvider := 0
-		if captchaProviderStr != "" {
-			captchaProvider, _ = strconv.Atoi(captchaProviderStr)
-		}
-
-		captchaSessionDuration := 3600
-		if captchaSessionDurationStr != "" {
-			captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
-		}
-
-		captchaRecaptchaScore := 0.5
-		if captchaRecaptchaScoreStr != "" {
-			captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
-		}
-
-		if captchaRecaptchaVersion == "" {
-			captchaRecaptchaVersion = "v2"
-		}
-
-		captchaConfig = &dynamicproxy.CaptchaConfig{
-			Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
-			SiteKey:          captchaSiteKey,
-			SecretKey:        captchaSecretKey,
-			SessionDuration:  captchaSessionDuration,
-			RecaptchaVersion: captchaRecaptchaVersion,
-			RecaptchaScore:   captchaRecaptchaScore,
-		}
+	captchaConfig, err := parseCaptchaConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse CAPTCHA config: "+err.Error())
+		return
 	}
+	requireCaptcha := captchaConfig != nil
 
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
@@ -639,44 +650,12 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CAPTCHA Gating
-	requireCaptcha, _ := utils.PostBool(r, "captcha")
-	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
-	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
-	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
-	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
-	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
-	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
-
-	var captchaConfig *dynamicproxy.CaptchaConfig
-	if requireCaptcha {
-		captchaProvider := 0
-		if captchaProviderStr != "" {
-			captchaProvider, _ = strconv.Atoi(captchaProviderStr)
-		}
-
-		captchaSessionDuration := 3600
-		if captchaSessionDurationStr != "" {
-			captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
-		}
-
-		captchaRecaptchaScore := 0.5
-		if captchaRecaptchaScoreStr != "" {
-			captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
-		}
-
-		if captchaRecaptchaVersion == "" {
-			captchaRecaptchaVersion = "v2"
-		}
-
-		captchaConfig = &dynamicproxy.CaptchaConfig{
-			Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
-			SiteKey:          captchaSiteKey,
-			SecretKey:        captchaSecretKey,
-			SessionDuration:  captchaSessionDuration,
-			RecaptchaVersion: captchaRecaptchaVersion,
-			RecaptchaScore:   captchaRecaptchaScore,
-		}
+	captchaConfig, err := parseCaptchaConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse CAPTCHA config: "+err.Error())
+		return
 	}
+	requireCaptcha := captchaConfig != nil
 
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")

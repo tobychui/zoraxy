@@ -17,6 +17,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -94,8 +95,7 @@ type Router struct {
 	rateLimterStop   chan bool              //Stop channel for rate limiter
 	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
 
-
-	captchaSessionStore *CaptchaSessionStore //CAPTCHA session store for tracking verified sessions
+	captchaSessionStore *captcha.SessionStore //CAPTCHA session store for tracking verified sessions
 
 	// Secondary listening ports and their servers
 	secondaryServers     map[string]*http.Server //Map of secondary listening servers, key is the listening address (ip:port or :port)
@@ -189,36 +189,19 @@ type AuthenticationProvider struct {
 }
 
 /* CAPTCHA Provider Configuration */
-
-type CaptchaProvider int
-
-const (
-	CaptchaProviderCloudflare CaptchaProvider = iota // Cloudflare Turnstile
-	CaptchaProviderGoogle                            // Google reCAPTCHA v2/v3
-)
-
-type CaptchaConfig struct {
-	Provider         CaptchaProvider           // CAPTCHA provider type
-	SiteKey          string                    // Site key / public key
-	SecretKey        string                    // Secret key / private key
-	ExceptionRules   []*CaptchaExceptionRule   // Paths or IPs to exclude from CAPTCHA
-	SessionDuration  int                       // Duration in seconds for which a successful CAPTCHA is valid (default: 3600)
-	RecaptchaVersion string                    // For Google reCAPTCHA: "v2" or "v3" (default: "v2")
-	RecaptchaScore   float64                   // For Google reCAPTCHA v3: minimum score threshold (0.0-1.0, default: 0.5)
-}
-
-type CaptchaExceptionType int
+// Type aliases for backward compatibility
+type CaptchaProvider = captcha.Provider
+type CaptchaConfig = captcha.Config
+type CaptchaExceptionType = captcha.ExceptionType
+type CaptchaExceptionRule = captcha.ExceptionRule
 
 const (
-	CaptchaExceptionType_Paths CaptchaExceptionType = iota // Path exception, match by path prefix
-	CaptchaExceptionType_CIDR                               // CIDR exception, match by CIDR
-)
+	CaptchaProviderCloudflare = captcha.ProviderCloudflare
+	CaptchaProviderGoogle     = captcha.ProviderGoogle
 
-type CaptchaExceptionRule struct {
-	RuleType   CaptchaExceptionType // The type of the exception rule
-	PathPrefix string               // Path prefix to match, e.g. /api/v1/
-	CIDR       string               // CIDR to match, e.g. 192.168.1.0/24 or IP address
-}
+	CaptchaExceptionType_Paths = captcha.ExceptionTypePaths
+	CaptchaExceptionType_CIDR  = captcha.ExceptionTypeCIDR
+)
 
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
@@ -251,7 +234,7 @@ type ProxyEndpoint struct {
 	RateLimit        int64 // Rate limit in requests per second
 
 	// CAPTCHA Gating
-	RequireCaptcha bool          // Enable CAPTCHA gating for this endpoint
+	RequireCaptcha bool           // Enable CAPTCHA gating for this endpoint
 	CaptchaConfig  *CaptchaConfig // CAPTCHA provider configuration
 
 	//Uptime Monitor

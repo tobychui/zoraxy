@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
 
@@ -30,9 +31,9 @@ func NewDynamicProxy(option RouterOption) (*Router, error) {
 		routingRules:        []*RoutingRule{},
 		loadBalancer:        option.LoadBalancer,
 		rateLimitCounter:    RequestCountPerIpTable{},
-		captchaSessionStore: NewCaptchaSessionStore(),
-		secondaryServers:   make(map[string]*http.Server),
-		secondaryStopChans: make(map[string]chan bool),
+		captchaSessionStore: captcha.NewSessionStore(),
+		secondaryServers:    make(map[string]*http.Server),
+		secondaryStopChans:  make(map[string]chan bool),
 	}
 
 	thisRouter.mux = &ProxyHandler{
@@ -148,10 +149,23 @@ func (router *Router) StartProxyService() error {
 						}
 
 						// CAPTCHA Gating
-						if sep.RequireCaptcha && sep.CaptchaConfig != nil {
-							ph := &ProxyHandler{Parent: router}
-							if err := ph.handleCaptchaRouting(w, r, sep, router.captchaSessionStore); err != nil {
-								// Request handled by CAPTCHA middleware (either challenge or verification)
+						if sep.RequireCaptcha && sep.CaptchaConfig.IsConfigured() {
+							// Check if CAPTCHA verification endpoint
+							if r.URL.Path == captcha.VerifyPath {
+								captcha.HandleVerification(w, r, sep.CaptchaConfig, router.captchaSessionStore)
+								return
+							}
+
+							// Check for exception rules
+							if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
+								// Allow passthrough
+							} else if !captcha.CheckSession(r, router.captchaSessionStore) {
+								// No valid session, serve CAPTCHA challenge
+								domain := r.Host
+								if domain == "" {
+									domain = sep.RootOrMatchingDomain
+								}
+								captcha.RenderChallenge(w, r, sep.CaptchaConfig, domain, router.Option.WebDirectory)
 								return
 							}
 						}
