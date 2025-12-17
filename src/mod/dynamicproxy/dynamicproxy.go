@@ -23,14 +23,13 @@ import (
 func NewDynamicProxy(option RouterOption) (*Router, error) {
 	proxyMap := sync.Map{}
 	thisRouter := Router{
-		Option:              &option,
-		ProxyEndpoints:      &proxyMap,
-		Running:             false,
-		server:              nil,
-		routingRules:        []*RoutingRule{},
-		loadBalancer:        option.LoadBalancer,
-		rateLimitCounter:    RequestCountPerIpTable{},
-		captchaSessionStore: NewCaptchaSessionStore(),
+		Option:           &option,
+		ProxyEndpoints:   &proxyMap,
+		Running:          false,
+		server:           nil,
+		routingRules:     []*RoutingRule{},
+		loadBalancer:     option.LoadBalancer,
+		rateLimitCounter: RequestCountPerIpTable{},
 	}
 
 	thisRouter.mux = &ProxyHandler{
@@ -141,15 +140,6 @@ func (router *Router) StartProxyService() error {
 						// Rate Limit
 						if sep.RequireRateLimit {
 							if err := router.handleRateLimit(w, r, sep); err != nil {
-								return
-							}
-						}
-
-						// CAPTCHA Gating
-						if sep.RequireCaptcha && sep.CaptchaConfig != nil {
-							ph := &ProxyHandler{Parent: router}
-							if err := ph.handleCaptchaRouting(w, r, sep, router.captchaSessionStore); err != nil {
-								// Request handled by CAPTCHA middleware (either challenge or verification)
 								return
 							}
 						}
