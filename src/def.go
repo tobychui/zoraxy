@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.3.0"
+	SYSTEM_VERSION    = "3.3.1"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
@@ -97,8 +97,6 @@ var (
 
 	/* Logging Configuration Flags */
 	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
-	//enableLogCompression = flag.Bool("enablelogcompress", true, "Enable log compression for rotated log files")
-	//logRotate            = flag.String("logrotate", "0", "Enable log rotation and set the maximum log file size in KB, also support K, M, G suffix (e.g. 200M), set to 0 to disable")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")

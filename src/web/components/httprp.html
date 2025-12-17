@@ -302,6 +302,18 @@
                                 </div>
                                 <br>
                             </div>
+                            <div class="ui divider"></div>
+                            <b>Alternative Listening Ports</b>
+                            <p style="margin-top: 0.4em;"><small>Define additional ports this proxy rule should listen on (e.g., :8080, 192.168.1.1:8080)</small></p>
+                            <div class="listening_ports_list" style="margin-top:0.4em;">
+                                <!-- Listening ports will be populated here -->
+                            </div>
+                            <div class="ui action small fluid input" style="margin-top: 0.4em;">
+                                <input type="text" class="new_listening_port_input" placeholder=":8080 or 192.168.1.1:8080">
+                                <button class="ui green basic icon button addListeningPortBtn">
+                                    <i class="ui plus icon"></i>
+                                </button>
+                            </div>
                            
                         </div>
                     </div>
@@ -1178,6 +1190,62 @@
         });
     }
 
+    /* Listening Ports Management */
+    function renderListeningPorts(uuid, ports){
+        let editor = $("#httprpEditModalWrapper");
+        let html = "";
+        if (ports.length == 0) {
+            html = '<small style="opacity: 0.3;">No alternative listening ports configured</small>';
+        } else {
+            html = '<div class="ui list">';
+            ports.forEach(function(port, index){
+                html += `<div class="item">
+                    <i class="ui blue server icon"></i>
+                    <div class="content">
+                        <div class="description">
+                            ${port}
+                            <button class="ui mini red basic icon button removeListeningPortBtn" style="float: right; margin-left: 0.5em;" data-port="${port}">
+                                <i class="trash icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+        }
+        editor.find(".listening_ports_list").html(html);
+        
+        // Bind remove button events
+        editor.find(".removeListeningPortBtn").off("click").on("click", function(){
+            let portToRemove = $(this).attr("data-port");
+            if (confirm("Remove listening port " + portToRemove + "?")) {
+                let newPorts = ports.filter(p => p !== portToRemove);
+                saveListeningPorts(uuid, newPorts, function(){
+                    renderListeningPorts(uuid, newPorts);
+                    msgbox("Listening port removed");
+                });
+            }
+        });
+    }
+    
+    function saveListeningPorts(uuid, ports, callback){
+        $.cjax({
+            url: "/api/proxy/listeningPorts/set",
+            method: "POST",
+            data: {
+                "domain": uuid,
+                "ports": JSON.stringify(ports)
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false);
+                }else{
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
     /* Tags & Search */
     function handleSearchInput(event){
         if (event.key == "Escape"){
@@ -1479,6 +1547,42 @@
             
         });
         editor.find(".downstream_alias_hostname").html(aliasHTML);
+
+        /* ------------ Listening Ports ------------ */
+        // Populate listening ports
+        let listeningPorts = subd.ListeningPorts || [];
+        renderListeningPorts(uuid, listeningPorts);
+        
+        // Bind add listening port button
+        editor.find(".addListeningPortBtn").off("click").on("click", function(){
+            let newPort = editor.find(".new_listening_port_input").val().trim();
+            if (newPort == "") {
+                msgbox("Please enter a valid port", false);
+                return;
+            }
+            
+            // Validate format
+            if (!newPort.includes(":")) {
+                msgbox("Port format must be :port or ip:port (e.g., :8080 or 192.168.1.1:8080)", false);
+                return;
+            }
+            
+            // Check if already exists
+            if (listeningPorts.includes(newPort)) {
+                msgbox("This port is already added", false);
+                return;
+            }
+            
+            // Add to array
+            listeningPorts.push(newPort);
+            
+            // Save to server
+            saveListeningPorts(uuid, listeningPorts, function(){
+                renderListeningPorts(uuid, listeningPorts);
+                editor.find(".new_listening_port_input").val("");
+                msgbox("Listening port added");
+            });
+        });
 
         /* ------------ Upstreams ------------ */
         editor.find(".upstream_list").html(renderUpstreamList(subd));
