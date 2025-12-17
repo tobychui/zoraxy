@@ -231,6 +231,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	endpoint = strings.TrimSpace(endpoint)
+
 	tls, _ := utils.PostPara(r, "tls")
 	if tls == "" {
 		tls = "false"
@@ -295,6 +297,46 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		if proxyRateLimit <= 0 {
 			utils.SendErrorResponse(w, "rate limit number must be greater than 0")
 			return
+		}
+	}
+
+	// CAPTCHA Gating
+	requireCaptcha, _ := utils.PostBool(r, "captcha")
+	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
+	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
+	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
+	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
+	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
+	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
+
+	var captchaConfig *dynamicproxy.CaptchaConfig
+	if requireCaptcha {
+		captchaProvider := 0
+		if captchaProviderStr != "" {
+			captchaProvider, _ = strconv.Atoi(captchaProviderStr)
+		}
+
+		captchaSessionDuration := 3600
+		if captchaSessionDurationStr != "" {
+			captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
+		}
+
+		captchaRecaptchaScore := 0.5
+		if captchaRecaptchaScoreStr != "" {
+			captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
+		}
+
+		if captchaRecaptchaVersion == "" {
+			captchaRecaptchaVersion = "v2"
+		}
+
+		captchaConfig = &dynamicproxy.CaptchaConfig{
+			Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
+			SiteKey:          captchaSiteKey,
+			SecretKey:        captchaSecretKey,
+			SessionDuration:  captchaSessionDuration,
+			RecaptchaVersion: captchaRecaptchaVersion,
+			RecaptchaScore:   captchaRecaptchaScore,
 		}
 	}
 
@@ -432,6 +474,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
+			// CAPTCHA Gating
+			RequireCaptcha: requireCaptcha,
+			CaptchaConfig:  captchaConfig,
 
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
@@ -491,6 +536,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BypassGlobalTLS:   false,
 			DefaultSiteOption: defaultSiteOption,
 			DefaultSiteValue:  dsVal,
+			RequireCaptcha:    requireCaptcha,
+			CaptchaConfig:     captchaConfig,
 		}
 		preparedRootProxyRoute, err := dynamicProxyRouter.PrepareProxyRoute(&rootRoutingEndpoint)
 		if err != nil {
@@ -591,6 +638,46 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		proxyRateLimit = 1000
 	}
 
+	// CAPTCHA Gating
+	requireCaptcha, _ := utils.PostBool(r, "captcha")
+	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
+	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
+	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
+	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
+	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
+	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
+
+	var captchaConfig *dynamicproxy.CaptchaConfig
+	if requireCaptcha {
+		captchaProvider := 0
+		if captchaProviderStr != "" {
+			captchaProvider, _ = strconv.Atoi(captchaProviderStr)
+		}
+
+		captchaSessionDuration := 3600
+		if captchaSessionDurationStr != "" {
+			captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
+		}
+
+		captchaRecaptchaScore := 0.5
+		if captchaRecaptchaScoreStr != "" {
+			captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
+		}
+
+		if captchaRecaptchaVersion == "" {
+			captchaRecaptchaVersion = "v2"
+		}
+
+		captchaConfig = &dynamicproxy.CaptchaConfig{
+			Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
+			SiteKey:          captchaSiteKey,
+			SecretKey:        captchaSecretKey,
+			SessionDuration:  captchaSessionDuration,
+			RecaptchaVersion: captchaRecaptchaVersion,
+			RecaptchaScore:   captchaRecaptchaScore,
+		}
+	}
+
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
 
@@ -650,6 +737,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
+	newProxyEndpoint.RequireCaptcha = requireCaptcha
+	newProxyEndpoint.CaptchaConfig = captchaConfig
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
