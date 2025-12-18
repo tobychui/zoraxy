@@ -105,7 +105,7 @@ func main() {
 		[]byte(nodeUUID),
 		csrf.CookieName(CSRF_COOKIENAME),
 		csrf.Secure(false),
-		csrf.Path("/"),
+		csrf.Path("/api/"),
 		csrf.SameSite(csrf.SameSiteLaxMode),
 	)
 
