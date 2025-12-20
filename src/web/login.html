@@ -158,8 +158,7 @@
                 let requireTokenMethod = ["POST", "PUT", "DELETE"];
                 if (requireTokenMethod.includes(payload.method) || requireTokenMethod.includes(payload.type)){
                     //csrf token is required
-                    let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
-                    payload.headers = {
+                    let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");                    payload.headers = {
                         "X-CSRF-Token": csrfToken,
                     }
                 }
@@ -313,7 +312,7 @@
             let username = $("#username").val();
             let magic = $("#magic").val();
             let repeatMagic = $("#repeatMagic").val();
-            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+            let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
             if (magic !== repeatMagic) {
                 alert("Password does not match");
                 return;
@@ -363,7 +362,7 @@
             let username = $("#username").val();
             let magic = $("#magic").val();
             let rmbme = document.getElementById("rmbme").checked;
-            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+            let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
             $("#errmsg").stop().finish().slideUp("fast");
             $("input").addClass('disabled');
             $.cjax({
