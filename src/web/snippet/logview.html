@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../script/semantic/semantic.min.css">
     <script type="text/javascript" src="../script/jquery-3.6.0.min.js"></script>
     <script type="text/javascript" src="../script/semantic/semantic.min.js"></script>
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="../main.css">
     <style>
         .clickable{
             cursor: pointer;
@@ -149,6 +149,20 @@
                     <!-- Log files will be populated here -->
                 </div>
             </div>
+
+            <!-- Lines Dropdown -->
+            <div class="ui selection dropdown" id="linesDropdown" style="margin-left: 0.4em; margin-top: 0.4em; height: 2.8em;">
+                <div class="text">Last 100 Lines</div>
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                    <div class="item selected" data-value="100">Last 100 Lines</div>
+                    <div class="item" data-value="300">Last 300 Lines</div>
+                    <div class="item" data-value="500">Last 500 Lines</div>
+                    <div class="item" data-value="1000">Last 1000 Lines</div>
+                    <div class="item" data-value="2000">Last 2000 Lines</div>
+                    <div class="item" data-value="all">All Lines</div>
+                </div>
+            </div>
             
             <!-- Download Button -->
             <button class="ui icon basic button logfile_menu_btn" id="downloadLogBtn" title="Download Current Log File">
@@ -263,11 +277,13 @@ Pick a log file from the menu to start debugging
 <script>
     //LogView Implementation
     var currentFilter = "all";
+    var currentLines = "100";
     var currentOpenedLogURL = "";
     var currentLogFile = "";
     var autoscroll = false;
 
     $(".checkbox").checkbox();
+    $(".dropdown").dropdown();
 
     /* Menu Subpanel Switch */
     $(".subpanel").hide();
@@ -289,7 +305,7 @@ Pick a log file from the menu to start debugging
     /* Refresh Button */
     $("#refreshLogBtn").on("click", function() {
         if (currentLogFile) {
-            openLog(null, null, currentLogFile, currentFilter);
+            openLog(null, null, currentLogFile, currentFilter, currentLines);
             loadLogSummary(currentLogFile);
         } else {
             alert('Please select a log file first.');
@@ -299,6 +315,7 @@ Pick a log file from the menu to start debugging
     /* Log file dropdown */
     function populateLogfileDropdown() {
         $.get("/api/log/list", function(data){
+            console.log(data);
             let $menu = $("#logfileDropdownMenu");
             $menu.html("");
             for (let [key, value] of Object.entries(data)) {
@@ -310,17 +327,12 @@ Pick a log file from the menu to start debugging
                 });
             }
             $('#logfileDropdown').dropdown('refresh');
-
-            //let firstItem = $menu.find('.item').first();
-            //if (firstItem.length) {
-            //    $('#logfileDropdown').dropdown('set selected', firstItem.data('value'));
-            //}
         });
     }
     $('#logfileDropdown').dropdown({
         onChange: function(value, text, $choice) {
             if (value) {
-                openLog(null, $choice.data('category'), value, currentFilter || "all");
+                openLog(null, $choice.data('category'), value, currentFilter, currentLines);
                 loadLogSummary(value);
             }
         }
@@ -336,7 +348,7 @@ Pick a log file from the menu to start debugging
             }
             $(".filterbtn.active").removeClass("active");
             $(`.filterbtn[filter="${value}"]`).addClass("active");
-            openLog(null, null, currentLogFile, currentFilter);
+            openLog(null, null, currentLogFile, currentFilter, currentLines);
         }
     });
 
@@ -344,17 +356,30 @@ Pick a log file from the menu to start debugging
     $('#filterDropdown').dropdown('set selected', 'all');
     currentFilter = "all";
 
+    /* Lines dropdown */
+    $('#linesDropdown').dropdown({
+        onChange: function(value) {
+            currentLines = value;
+            if (!currentLogFile) {
+                return;
+            }
+            openLog(null, null, currentLogFile, currentFilter, currentLines);
+        }
+    });
+
+    // Set default lines to 100
+    $('#linesDropdown').dropdown('set selected', '100');
+    currentLines = "100";
+
     /* Log download button */
     $("#downloadLogBtn").on("click", function() {
         if (!currentLogFile) {
             alert("Please select a log file first.");
             return;
         }
-        if (!currentOpenedLogURL) {
-            alert("No log file is currently opened.");
-            return;
-        }
-        $.get(currentOpenedLogURL, function(data) {
+        // Always download the full log file, regardless of current line limit
+        let downloadURL = "/api/log/read?file=" + currentLogFile + "&filter=" + currentFilter + "&lines=all";
+        $.get(downloadURL, function(data) {
             if (data.error !== undefined) {
                 alert(data.error);
                 return;
@@ -566,11 +591,11 @@ Pick a log file from the menu to start debugging
     }
 
 
-    function openLog(object, catergory, filename, filter="all"){
+    function openLog(object, catergory, filename, filter="all", lines="100"){
         $(".logfile.active").removeClass('active');
         $(object).addClass("active");
         currentLogFile = filename;
-        currentOpenedLogURL = "/api/log/read?file=" + filename + "&filter=" + filter;
+        currentOpenedLogURL = "/api/log/read?file=" + filename + "&filter=" + filter + "&lines=" + lines;
         $.get(currentOpenedLogURL, function(data){
             if (data.error !== undefined){
                 alert(data.error);

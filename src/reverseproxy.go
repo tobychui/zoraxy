@@ -22,8 +22,52 @@ import (
 )
 
 var (
-	dynamicProxyRouter *dynamicproxy.Router
+	dynamicProxyRouter      *dynamicproxy.Router
+	dynamicProxyRouterReady = make(chan bool, 1)
 )
+
+// parseCaptchaConfigFromRequest extracts and parses CAPTCHA configuration from POST request parameters
+func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig, error) {
+	requireCaptcha, _ := utils.PostBool(r, "captcha")
+	if !requireCaptcha {
+		return nil, nil
+	}
+
+	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
+	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
+	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
+	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
+	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
+	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
+
+	captchaProvider := 0
+	if captchaProviderStr != "" {
+		captchaProvider, _ = strconv.Atoi(captchaProviderStr)
+	}
+
+	captchaSessionDuration := 3600
+	if captchaSessionDurationStr != "" {
+		captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
+	}
+
+	captchaRecaptchaScore := 0.5
+	if captchaRecaptchaScoreStr != "" {
+		captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
+	}
+
+	if captchaRecaptchaVersion == "" {
+		captchaRecaptchaVersion = "v2"
+	}
+
+	return &dynamicproxy.CaptchaConfig{
+		Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
+		SiteKey:          captchaSiteKey,
+		SecretKey:        captchaSecretKey,
+		SessionDuration:  captchaSessionDuration,
+		RecaptchaVersion: captchaRecaptchaVersion,
+		RecaptchaScore:   captchaRecaptchaScore,
+	}, nil
+}
 
 // Add user customizable reverse proxy
 func ReverseProxyInit() {
@@ -128,6 +172,12 @@ func ReverseProxyInit() {
 	}
 
 	dynamicProxyRouter = dprouter
+	// Signal that the router is ready
+	select {
+	case dynamicProxyRouterReady <- true:
+	default:
+		// Channel already has a value, skip
+	}
 
 	/*
 
@@ -224,6 +274,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	endpoint = strings.TrimSpace(endpoint)
+
 	tls, _ := utils.PostPara(r, "tls")
 	if tls == "" {
 		tls = "false"
@@ -243,6 +295,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		enableUtm = true
 	}
+
+	// Disable logging?
+	disableLog, _ := utils.PostBool(r, "disableLog")
 
 	useBypassGlobalTLS := bypassGlobalTLS == "true"
 
@@ -287,6 +342,14 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// CAPTCHA Gating
+	captchaConfig, err := parseCaptchaConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse CAPTCHA config: "+err.Error())
+		return
+	}
+	requireCaptcha := captchaConfig != nil
 
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
@@ -339,6 +402,15 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	tags = filteredTags
+
+	// Exploit prevention settings
+	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
+	blockAICrawlers, _ := utils.PostBool(r, "blockAICrawlers")
+	mitigationActionStr, _ := utils.PostPara(r, "mitigationAction")
+	mitigationAction := 0
+	if mitigationActionStr != "" {
+		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
+	}
 
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	switch eptype {
@@ -413,9 +485,17 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
+			// CAPTCHA Gating
+			RequireCaptcha: requireCaptcha,
+			CaptchaConfig:  captchaConfig,
 
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
+			DisableAutoFallback:  false, // Default to false for new endpoints
+			DisableLogging:       disableLog,
+			BlockCommonExploits:  blockCommonExploits,
+			BlockAICrawlers:      blockAICrawlers,
+			MitigationAction:     mitigationAction,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -467,6 +547,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BypassGlobalTLS:   false,
 			DefaultSiteOption: defaultSiteOption,
 			DefaultSiteValue:  dsVal,
+			RequireCaptcha:    requireCaptcha,
+			CaptchaConfig:     captchaConfig,
 		}
 		preparedRootProxyRoute, err := dynamicProxyRouter.PrepareProxyRoute(&rootRoutingEndpoint)
 		if err != nil {
@@ -567,8 +649,31 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		proxyRateLimit = 1000
 	}
 
+	// CAPTCHA Gating
+	captchaConfig, err := parseCaptchaConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse CAPTCHA config: "+err.Error())
+		return
+	}
+	requireCaptcha := captchaConfig != nil
+
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
+
+	// Disable logging
+	disableLogging, _ := utils.PostBool(r, "dLogging")
+
+	// Disable statistic collection
+	disableStatisticCollection, _ := utils.PostBool(r, "dStatisticCollection")
+
+	// Exploit Detection
+	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
+	blockAICrawlers, _ := utils.PostBool(r, "blockAICrawlers")
+	mitigationActionStr, _ := utils.PostPara(r, "mitigationAction")
+	mitigationAction := 0
+	if mitigationActionStr != "" {
+		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
+	}
 
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
@@ -596,21 +701,32 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
 		}
 	}
-	if authProviderType == 1 {
+	switch authProviderType {
+	case 1:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
-	} else if authProviderType == 2 {
+	case 2:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
-	} else if authProviderType == 3 {
+	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
-	} else {
+	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}
 
+	disableAutoFallback, _ := utils.PostBool(r, "dAutoFallback")
+
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
+	newProxyEndpoint.RequireCaptcha = requireCaptcha
+	newProxyEndpoint.CaptchaConfig = captchaConfig
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
+	newProxyEndpoint.DisableLogging = disableLogging
+	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
+	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
+	newProxyEndpoint.BlockAICrawlers = blockAICrawlers
+	newProxyEndpoint.MitigationAction = mitigationAction
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
@@ -1790,6 +1906,80 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleUserAgent get and set the user agent header remover state
+// note that it shows the ENABLE STATE of user-agent remover, not the disable state
+func HandleUserAgent(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		domain, err = utils.GetPara(r, "domain")
+		if err != nil {
+			utils.SendErrorResponse(w, "domain or matching rule not defined")
+			return
+		}
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		//Get the current user agent header state
+		js, _ := json.Marshal(!targetProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval)
+		utils.SendJSONResponse(w, string(js))
+	} else if r.Method == http.MethodPost {
+		//Set the user agent header state
+		enableUserAgentRemover, _ := utils.PostBool(r, "removeUserAgent")
+
+		//As this will require change in the proxy instance we are running
+		//we need to clone and respawn this proxy endpoint
+		newProxyEndpoint := targetProxyEndpoint.Clone()
+		//Storage file use false as default, so disable removal = not enable remover
+		newProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval = !enableUserAgentRemover
+
+		//Save proxy endpoint
+		err = SaveReverseProxyConfig(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Spawn a new endpoint with updated dpcore
+		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Remove the old endpoint
+		err = targetProxyEndpoint.Remove()
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Add the newly prepared endpoint to runtime
+		err = dynamicProxyRouter.AddProxyRouteToRuntime(preparedEndpoint)
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+
+		//Print log message
+		if enableUserAgentRemover {
+			SystemWideLogger.Println("Enabled user-agent header removal on " + domain)
+		} else {
+			SystemWideLogger.Println("Disabled user-agent header removal on " + domain)
+		}
+
+		utils.SendOK(w)
+
+	} else {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // Handle view or edit HSTS states
 func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 	domain, err := utils.PostPara(r, "domain")
@@ -1948,4 +2138,131 @@ func HandleWsHeaderBehavior(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// HandleGetListeningPorts gets the listening ports for a specific proxy endpoint
+func HandleGetListeningPorts(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.GetPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain not specified")
+		return
+	}
+
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	listeningPorts := targetProxyEndpoint.ListeningPorts
+	if listeningPorts == nil {
+		listeningPorts = []string{}
+	}
+
+	js, _ := json.Marshal(listeningPorts)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// HandleSetListeningPorts sets the listening ports for a specific proxy endpoint
+func HandleSetListeningPorts(w http.ResponseWriter, r *http.Request) {
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil {
+		utils.SendErrorResponse(w, "domain not specified")
+		return
+	}
+
+	portsJSON, err := utils.PostPara(r, "ports")
+	if err != nil {
+		utils.SendErrorResponse(w, "ports not specified")
+		return
+	}
+
+	// Parse the ports JSON
+	var newPorts []string
+	err = json.Unmarshal([]byte(portsJSON), &newPorts)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid ports JSON: "+err.Error())
+		return
+	}
+
+	// Validate each port entry
+	for _, port := range newPorts {
+		port = strings.TrimSpace(port)
+		if port == "" {
+			continue
+		}
+
+		// Check if it's a valid format (":port" or "ip:port")
+		if !strings.Contains(port, ":") {
+			utils.SendErrorResponse(w, "invalid port format: "+port+" (must be :port or ip:port)")
+			return
+		}
+
+		// Try to parse the address
+		_, portStr, err := net.SplitHostPort(port)
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid address format: "+port)
+			return
+		}
+
+		// Validate port number
+		portNum, err := strconv.Atoi(portStr)
+		if err != nil || portNum < 1 || portNum > 65535 {
+			utils.SendErrorResponse(w, "invalid port number: "+portStr)
+			return
+		}
+	}
+
+	// Load the target proxy endpoint
+	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "target endpoint not exists")
+		return
+	}
+
+	// Update the listening ports
+	targetProxyEndpoint.ListeningPorts = newPorts
+
+	// Save to file
+	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to save config: "+err.Error())
+		return
+	}
+
+	// Update the runtime configuration without restart
+	targetProxyEndpoint.UpdateToRuntime()
+
+	// Update secondary listeners dynamically
+	dynamicProxyRouter.UpdateSecondaryListeners()
+
+	SystemWideLogger.Println("Updated listening ports for " + domain)
+	utils.SendOK(w)
+}
+
+// HandleListSecondaryListeners lists all secondary listening ports and their associated domains
+func HandleListSecondaryListeners(w http.ResponseWriter, r *http.Request) {
+	type ListenerInfo struct {
+		Address string   `json:"address"`
+		Domains []string `json:"domains"`
+	}
+
+	commonPorts := dynamicProxyRouter.GetCommonListeningPorts()
+
+	// Convert map to sorted array for better display
+	var listeners []ListenerInfo
+	for addr, domains := range commonPorts {
+		listeners = append(listeners, ListenerInfo{
+			Address: addr,
+			Domains: domains,
+		})
+	}
+
+	// Sort by address for consistent display
+	sort.Slice(listeners, func(i, j int) bool {
+		return listeners[i].Address < listeners[j].Address
+	})
+
+	js, _ := json.Marshal(listeners)
+	utils.SendJSONResponse(w, string(js))
 }

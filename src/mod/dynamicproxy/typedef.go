@@ -17,7 +17,9 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
@@ -92,6 +94,14 @@ type Router struct {
 
 	rateLimterStop   chan bool              //Stop channel for rate limiter
 	rateLimitCounter RequestCountPerIpTable //Request counter for rate limter
+
+	captchaSessionStore *captcha.SessionStore //CAPTCHA session store for tracking verified sessions
+
+	// Secondary listening ports and their servers
+	secondaryServers     map[string]*http.Server //Map of secondary listening servers, key is the listening address (ip:port or :port)
+	secondaryStopChans   map[string]chan bool    //Stop channels for secondary listening servers
+	secondaryServerMutex sync.RWMutex            //Mutex for accessing secondary server maps
+
 }
 
 /* Basic Auth Related Data structure*/
@@ -137,12 +147,13 @@ type VirtualDirectoryEndpoint struct {
 
 // Rules and settings for header rewriting
 type HeaderRewriteRules struct {
-	UserDefinedHeaders           []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
-	RequestHostOverwrite         string                              //If not empty, this domain will be used to overwrite the Host field in request header
-	HSTSMaxAge                   int64                               //HSTS max age, set to 0 for disable HSTS headers
-	EnablePermissionPolicyHeader bool                                //Enable injection of permission policy header
-	PermissionPolicy             *permissionpolicy.PermissionsPolicy //Permission policy header
-	DisableHopByHopHeaderRemoval bool                                //Do not remove hop-by-hop headers
+	UserDefinedHeaders            []*rewrite.UserDefinedHeader        //Custom headers to append when proxying requests from this endpoint
+	RequestHostOverwrite          string                              //If not empty, this domain will be used to overwrite the Host field in request header
+	HSTSMaxAge                    int64                               //HSTS max age, set to 0 for disable HSTS headers
+	EnablePermissionPolicyHeader  bool                                //Enable injection of permission policy header
+	PermissionPolicy              *permissionpolicy.PermissionsPolicy //Permission policy header
+	DisableHopByHopHeaderRemoval  bool                                //Do not remove hop-by-hop headers
+	DisableUserAgentHeaderRemoval bool                                //Do not remove User-Agent header from server response
 
 }
 
@@ -177,6 +188,21 @@ type AuthenticationProvider struct {
 	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
 }
 
+/* CAPTCHA Provider Configuration */
+// Type aliases for backward compatibility
+type CaptchaProvider = captcha.Provider
+type CaptchaConfig = captcha.Config
+type CaptchaExceptionType = captcha.ExceptionType
+type CaptchaExceptionRule = captcha.ExceptionRule
+
+const (
+	CaptchaProviderCloudflare = captcha.ProviderCloudflare
+	CaptchaProviderGoogle     = captcha.ProviderGoogle
+
+	CaptchaExceptionType_Paths = captcha.ExceptionTypePaths
+	CaptchaExceptionType_CIDR  = captcha.ExceptionTypeCIDR
+)
+
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
 	ProxyType            ProxyType               //The type of this proxy, see const def
@@ -187,6 +213,7 @@ type ProxyEndpoint struct {
 	UseStickySession     bool                    //Use stick session for load balancing
 	UseActiveLoadBalance bool                    //Use active loadbalancing, default passive
 	Disabled             bool                    //If the rule is disabled
+	ListeningPorts       []string                //Alternative listening ports in format "ip:port" or ":port" (e.g., ":8080", "192.168.1.1:8080")
 
 	//Inbound TLS/SSL Related
 	BypassGlobalTLS bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
@@ -206,8 +233,20 @@ type ProxyEndpoint struct {
 	RequireRateLimit bool
 	RateLimit        int64 // Rate limit in requests per second
 
+	// CAPTCHA Gating
+	RequireCaptcha bool           // Enable CAPTCHA gating for this endpoint
+	CaptchaConfig  *CaptchaConfig // CAPTCHA provider configuration
+
 	//Uptime Monitor
-	DisableUptimeMonitor bool //Disable uptime monitor for this endpoint
+	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
+	DisableAutoFallback        bool //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
+	DisableLogging             bool //Disable logging of reverse proxy requests
+	DisableStatisticCollection bool //Disable statistic collection for this endpoint
+
+	//Exploit Detection
+	BlockCommonExploits bool //Enable blocking of common exploits (SQLi, XSS, etc.)
+	BlockAICrawlers     bool //Enable blocking of AI crawlers and bots
+	MitigationAction    int  //Action to take when exploit/crawler detected (0=404, 1=403, 2=400, 3=Drop, 4=Delay, 5=Captcha)
 
 	// Chunked Transfer Encoding
 	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint
@@ -220,8 +259,9 @@ type ProxyEndpoint struct {
 	DefaultSiteValue  string //Fallback routing target, optional
 
 	//Internal Logic Elements
-	parent *Router  `json:"-"`
-	Tags   []string // Tags for the proxy endpoint
+	parent   *Router            `json:"-"` //Parent router, excluded from JSON
+	detector *exploits.Detector `json:"-"` //Exploit detector instance, excluded from JSON
+	Tags     []string           // Tags for the proxy endpoint
 }
 
 /*

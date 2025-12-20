@@ -150,7 +150,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	}
 
 	oauth2WellKnownUrl, err := utils.PostPara(r, "oauth2WellKnownUrl")
-	if err != nil || oauth2WellKnownUrl == "" {
+	if err != nil {
 		oauth2ServerUrl, err = utils.PostPara(r, "oauth2ServerUrl")
 		if err != nil {
 			utils.SendErrorResponse(w, "oauth2ServerUrl not found")

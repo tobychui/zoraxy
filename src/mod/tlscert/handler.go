@@ -84,12 +84,13 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Check if the previous default cert exists. If yes, get its hostname from cert contents
-	defaultPubKey := filepath.Join(m.CertStore, "default.key")
-	defaultPriKey := filepath.Join(m.CertStore, "default.pem")
+	defaultPubKey := filepath.Join(m.CertStore, "default.pem")
+	defaultPriKey := filepath.Join(m.CertStore, "default.key")
 	defaultJSON := filepath.Join(m.CertStore, "default.json")
+
 	if utils.FileExists(defaultPubKey) && utils.FileExists(defaultPriKey) {
 		//Move the existing default cert to its original name
-		certBytes, err := os.ReadFile(defaultPriKey)
+		certBytes, err := os.ReadFile(defaultPubKey)
 		if err == nil {
 			block, _ := pem.Decode(certBytes)
 			if block != nil {
@@ -99,8 +100,8 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 					originalPemName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "pem"))
 					originalJSONName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "json"))
 
-					os.Rename(defaultPubKey, originalKeyName)
-					os.Rename(defaultPriKey, originalPemName)
+					os.Rename(defaultPubKey, originalPemName)
+					os.Rename(defaultPriKey, originalKeyName)
 					if utils.FileExists(defaultJSON) {
 						os.Rename(defaultJSON, originalJSONName)
 					}
@@ -111,12 +112,12 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 
 	//Check if the cert exists
 	certname = filepath.Base(certname) //prevent path escape
-	pubKey := filepath.Join(filepath.Join(m.CertStore), certname+".key")
-	priKey := filepath.Join(filepath.Join(m.CertStore), certname+".pem")
+	pubKey := filepath.Join(filepath.Join(m.CertStore), certname+".pem")
+	priKey := filepath.Join(filepath.Join(m.CertStore), certname+".key")
 	certJSON := filepath.Join(filepath.Join(m.CertStore), certname+".json")
 	if utils.FileExists(pubKey) && utils.FileExists(priKey) {
-		os.Rename(pubKey, filepath.Join(m.CertStore, "default.key"))
-		os.Rename(priKey, filepath.Join(m.CertStore, "default.pem"))
+		os.Rename(pubKey, filepath.Join(m.CertStore, "default.pem"))
+		os.Rename(priKey, filepath.Join(m.CertStore, "default.key"))
 		if utils.FileExists(certJSON) {
 			os.Rename(certJSON, filepath.Join(m.CertStore, "default.json"))
 		}

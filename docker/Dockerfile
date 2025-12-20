@@ -37,7 +37,7 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
 ## Main
 FROM docker.io/alpine:latest
 
-RUN apk add --update --no-cache python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
+RUN apk add --update --no-cache tzdata python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
     rm -rf /var/cache/apk/* /tmp/*
 
 COPY --chmod=700 ./entrypoint.py /opt/zoraxy/
@@ -50,6 +50,7 @@ RUN mkdir -p /opt/zoraxy/plugin/ &&\
 
 WORKDIR /opt/zoraxy/config/
 
+ENV TZ="Etc/UTC"
 ENV ZEROTIER="false"
 
 ENV AUTORENEW="86400"
@@ -58,9 +59,7 @@ ENV DB="auto"
 ENV DOCKER="true"
 ENV EARLYRENEW="30"
 ENV ENABLELOG="true"
-ENV ENABLELOGCOMPRESS="true"
 ENV FASTGEOIP="false"
-ENV LOGROTATE="0"
 ENV MDNS="true"
 ENV MDNSNAME="''"
 ENV NOAUTH="false"

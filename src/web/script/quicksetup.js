@@ -444,14 +444,6 @@ var tourSteps = {
             pos: "center",
         }),
         tourStepFactory({
-            title: "📤 Uploading Fallback (Default) Certificate",
-            desc: `If you are using Cloudflare, you can upload the Cloudflare (full) strict mode certificate in the "Fallback Certificate" section and let Cloudflare handle all the remaining certificate dispatch. <br><br>
-            Public key usually use a file extension of .pub or .pem, and private key usually ends with .key.`,
-            element: "#cert div[tourstep='defaultCertificate']",
-            scrollto: "#cert div[tourstep='defaultCertificate']",
-            pos: "bottomright",
-        }),
-        tourStepFactory({
             title: "⚙️ Setup ACME",
             desc: `If you didn't want to pay for a certificate, there are free CA where you can use to obtain a certificate. By default, Let's Encrypt is used and in order to use their service, you will need to fill in your webmin contact email in the "ACME EMAIL" field.
             <br><br> After you are done, click "Save Settings" and continue.`,

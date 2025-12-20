@@ -15,26 +15,28 @@ import (
 )
 
 type RuleTable struct {
-	AllowRegex bool //Allow regular expression to be used in rule matching. Require up to O(n^m) time complexity
-	Logger     *logger.Logger
-	configPath string   //The location where the redirection rules is stored
-	rules      sync.Map //Store the redirection rules for this reverse proxy instance
-
+	AllowRegex    bool     //Allow regular expression to be used in rule matching. Require up to O(n^m) time complexity
+	CaseSensitive bool     //Force case sensitive URL matching
+	configPath    string   //The location where the redirection rules is stored
+	rules         sync.Map //Store map[string]*RedirectRules for this reverse proxy instance
+	Logger        *logger.Logger
 }
 
 type RedirectRules struct {
-	RedirectURL      string //The matching URL to redirect
-	TargetURL        string //The destination redirection url
-	ForwardChildpath bool   //Also redirect the pathname
-	StatusCode       int    //Status Code for redirection
+	RedirectURL       string //The matching URL to redirect
+	TargetURL         string //The destination redirection url
+	ForwardChildpath  bool   //Also redirect the pathname
+	StatusCode        int    //Status Code for redirection
+	RequireExactMatch bool   //Require exact URL match instead of prefix matching
 }
 
-func NewRuleTable(configPath string, allowRegex bool, logger *logger.Logger) (*RuleTable, error) {
+func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger *logger.Logger) (*RuleTable, error) {
 	thisRuleTable := RuleTable{
-		rules:      sync.Map{},
-		configPath: configPath,
-		AllowRegex: allowRegex,
-		Logger:     logger,
+		rules:         sync.Map{},
+		configPath:    configPath,
+		AllowRegex:    allowRegex,
+		CaseSensitive: caseSensitive,
+		Logger:        logger,
 	}
 	//Load all the rules from the config path
 	if !utils.FileExists(configPath) {
@@ -74,13 +76,14 @@ func NewRuleTable(configPath string, allowRegex bool, logger *logger.Logger) (*R
 	return &thisRuleTable, nil
 }
 
-func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int) error {
+func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool) error {
 	// Create a new RedirectRules object with the given parameters
 	newRule := &RedirectRules{
-		RedirectURL:      redirectURL,
-		TargetURL:        destURL,
-		ForwardChildpath: forwardPathname,
-		StatusCode:       statusCode,
+		RedirectURL:       redirectURL,
+		TargetURL:         destURL,
+		ForwardChildpath:  forwardPathname,
+		StatusCode:        statusCode,
+		RequireExactMatch: requireExactMatch,
 	}
 
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
@@ -111,12 +114,13 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 }
 
 // Edit an existing redirection rule, the oldRedirectURL is used to find the rule to be edited
-func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int) error {
+func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool) error {
 	newRule := &RedirectRules{
-		RedirectURL:      newRedirectURL,
-		TargetURL:        destURL,
-		ForwardChildpath: forwardPathname,
-		StatusCode:       statusCode,
+		RedirectURL:       newRedirectURL,
+		TargetURL:         destURL,
+		ForwardChildpath:  forwardPathname,
+		StatusCode:        statusCode,
+		RequireExactMatch: requireExactMatch,
 	}
 
 	//Remove the old rule
@@ -189,28 +193,55 @@ func (t *RuleTable) MatchRedirectRule(requestedURL string) *RedirectRules {
 	var targetRedirectionRule *RedirectRules = nil
 	var maxMatch int = 0
 	t.rules.Range(func(key interface{}, value interface{}) bool {
-		// Check if the requested URL starts with the key as a prefix
+		rule := value.(*RedirectRules)
+		keyStr := key.(string)
+
 		if t.AllowRegex {
 			//Regexp matching rule
-			matched, err := regexp.MatchString(key.(string), requestedURL)
+			matched, err := regexp.MatchString(keyStr, requestedURL)
 			if err != nil {
 				//Something wrong with the regex?
 				t.log("Unable to match regex", err)
 				return true
 			}
 			if matched {
-				maxMatch = len(key.(string))
-				targetRedirectionRule = value.(*RedirectRules)
+				maxMatch = len(keyStr)
+				targetRedirectionRule = rule
 			}
+			return true
+		}
 
+		//Check matching based on exact match requirement
+		var matched bool
+		if rule.RequireExactMatch {
+			//Exact match required
+			if t.CaseSensitive {
+				matched = requestedURL == keyStr
+			} else {
+				matched = strings.EqualFold(requestedURL, keyStr)
+			}
+			if !matched {
+				//Also check for trailing slash case
+				if t.CaseSensitive {
+					matched = requestedURL == keyStr+"/"
+				} else {
+					matched = strings.EqualFold(requestedURL, keyStr+"/")
+				}
+			}
 		} else {
 			//Default: prefix matching redirect
-			if strings.HasPrefix(requestedURL, key.(string)) {
-				// This request URL matched the domain
-				if len(key.(string)) > maxMatch {
-					maxMatch = len(key.(string))
-					targetRedirectionRule = value.(*RedirectRules)
-				}
+			if t.CaseSensitive {
+				matched = strings.HasPrefix(requestedURL, keyStr)
+			} else {
+				matched = strings.HasPrefix(strings.ToLower(requestedURL), strings.ToLower(keyStr))
+			}
+		}
+
+		if matched {
+			// This request URL matched the rule
+			if len(keyStr) > maxMatch {
+				maxMatch = len(keyStr)
+				targetRedirectionRule = rule
 			}
 		}
 

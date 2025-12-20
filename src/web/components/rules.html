@@ -63,13 +63,14 @@
                                         <label>Sticky Session<br><small>Enable stick session on upstream load balancing</small></label>
                                     </div>
                                 </div>
-                                  <div class="field">
+                                <div class="field">
                                     <div class="ui checkbox">
                                         <input type="checkbox" id="enableUtm" checked>
                                         <label>Enable uptime monitor<br><small>Automatically check upstream status and switch to another if offline</small>
                                         </label>
                                     </div>
                                 </div>
+
                                 <div class="field">
                                     <label>Tags</label>
                                     <input type="text" id="proxyTags" placeholder="e.g. mediaserver, management">
@@ -97,6 +98,39 @@
                                         <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
                                     </div>
                                 </div>
+                                <br>
+                                <div class="field">
+                                    <label><b>Exploits Prevention</b></label>
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="blockCommonExploits">
+                                        <label>Block Common Exploits<br>
+                                            <small>Detect and block common exploit payloads (SQLi, XSS, path traversal, etc.)</small>
+                                        </label>
+                                    </div>
+                                    <br><br>
+                                    <div class="ui checkbox" >
+                                        <input type="checkbox" id="blockAICrawlers">
+                                        <label>Block AI and Crawlers<br>
+                                            <small>Block known crawlers and large-scale automated agents</small>
+                                        </label>
+                                    </div>
+                                    <br><br>
+                                    <label>Mitigation Action</label >
+                                    <div class="ui fluid selection dropdown">
+                                        <input type="hidden" id="mitigationAction" value="0">
+                                        <i class="dropdown icon"></i>
+                                        <div class="default text">Choose action when exploit / crawler detected</div>
+                                        <div class="menu">
+                                            <div class="item" data-value="0">404 Not Found</div>
+                                            <div class="item" data-value="1">403 Forbidden</div>
+                                            <div class="item" data-value="2">400 Bad Request</div>
+                                            <div class="item" data-value="3">Drop Connection</div>
+                                            <div class="disabled item" data-value="4">Captcha Challenge</div> <!-- Work in progress -->
+                                        </div>
+                                    </div>
+                                    <small style="opacity:0.7;">Select how the system should respond when malicious or automated traffic is detected.</small>
+                                </div>
+
                                 <div class="ui horizontal divider">
                                     <i class="ui red ban icon"></i>
                                     Access Control
@@ -161,6 +195,24 @@
                                         </div>
                                     </div>
                                     <small>Return a 429 error code if request rate exceed the rate limit.</small>
+                                </div>
+                                <div class="ui horizontal divider">
+                                    <i class="ui text file icon"></i>
+                                    Logging
+                                </div>
+                                 <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="disableLog">
+                                        <label>Disable Requests Logging<br><small>Disable requests logging for this host, recommended for high traffic sites</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="disableStatisticCollection">
+                                        <label>Disable Statistic Collection<br><small>Disable collecting statistics for this hostname but keep request logging</small>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -268,6 +320,11 @@
         let useStickySessionLB = $("#useStickySessionLB")[0].checked; 
         let tags = $("#proxyTags").val().trim();
         let enableUtm = $("#enableUtm")[0].checked;
+        let disableLog = $("#disableLog")[0].checked;
+        let disableStatisticCollection = $("#disableStatisticCollection")[0].checked;
+        let blockCommonExploits = $("#blockCommonExploits")[0].checked;
+        let blockAICrawlers = $("#blockAICrawlers")[0].checked;
+        let mitigationAction = $("#mitigationAction").val();
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -302,7 +359,12 @@
                 access: accessRuleToUse,
                 stickysess: useStickySessionLB,
                 tags: tags,
-                    enableUtm: enableUtm,
+                enableUtm: enableUtm,
+                disableLog: disableLog,
+                dStatisticCollection: disableStatisticCollection,
+                blockCommonExploits: blockCommonExploits,
+                blockAICrawlers: blockAICrawlers,
+                mitigationAction: mitigationAction,
             },
             success: function(data){
                 if (data.error != undefined){
@@ -312,6 +374,10 @@
                     $("#rootname").val("");
                     $("#proxyDomain").val("");
                     $("#proxyTags").val("");
+                    $("#blockCommonExploits").prop("checked", false);
+                    $("#blockAICrawlers").prop("checked", false);
+                    $("#mitigationAction").parent().dropdown("set selected", "0");
+                    $("#disableStatisticCollection").prop("checked", false);
                     credentials = [];
                     updateTable();
                     reloadUptimeList();
@@ -413,6 +479,17 @@
     }
     $("#requireRateLimit").on('change', toggleRateLimit);
     toggleRateLimit();
+
+    function toggleStatisticCollection() {
+        if ($("#disableLog").parent().checkbox("is checked")) {
+            $("#disableStatisticCollection").parent().checkbox("set checked");
+            $("#disableStatisticCollection").parent().addClass("disabled");
+        } else {
+            $("#disableStatisticCollection").parent().removeClass("disabled");
+        }
+    }
+    $("#disableLog").on('change', toggleStatisticCollection);
+    toggleStatisticCollection();
 
 
     /*
@@ -575,12 +652,14 @@
             return events && events.click && events.click.length > 0;
         }
 
+         $("#advanceProxyRules").accordion();
         if (!hasClickEvent($("#advanceProxyRules"))){
             // Not sure why sometime the accordion events are not binding
             // to the DOM element. This makes sure the element is binded
             // correctly by checking it again after 300ms
             $("#advanceProxyRules").accordion();
             $("#newProxyRuleAccessFilter").parent().dropdown();
+            $("#mitigationAction").parent().dropdown();
             setTimeout(function(){
                 initAdvanceSettingsAccordion();
             }, 300);

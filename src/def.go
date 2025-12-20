@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.9"
+	SYSTEM_VERSION    = "3.3.1"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
@@ -76,6 +76,7 @@ const (
 	CONF_PATH_RULE     = CONF_FOLDER + "/rules/pathrules"
 	CONF_PLUGIN_GROUPS = CONF_FOLDER + "/plugin_groups.json"
 	CONF_GEODB_PATH    = CONF_FOLDER + "/geodb"
+	CONF_LOG_CONFIG    = CONF_FOLDER + "/log_conf.json"
 )
 
 /* System Startup Flags */
@@ -95,9 +96,7 @@ var (
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
 	/* Logging Configuration Flags */
-	enableLog            = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
-	enableLogCompression = flag.Bool("enablelogcompress", true, "Enable log compression for rotated log files")
-	logRotate            = flag.String("logrotate", "0", "Enable log rotation and set the maximum log file size in KB, also support K, M, G suffix (e.g. 200M), set to 0 to disable")
+	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
@@ -118,9 +117,14 @@ var (
 
 /* Global Variables and Handlers */
 var (
+	/* System */
 	nodeUUID    = "generic" //System uuid in uuidv4 format, load from database on startup
 	bootTime    = time.Now().Unix()
 	requireAuth = true //Require authentication for webmin panel, override from flag
+
+	/* mDNS */
+	previousmdnsScanResults = []*mdns.NetworkHost{}
+	mdnsTickerStop          chan bool
 
 	/*
 		Binary Embedding File System

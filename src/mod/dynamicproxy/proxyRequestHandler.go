@@ -141,7 +141,7 @@ func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, 
 		} else {
 			//Endpoint disabled, return 503
 			http.ServeFile(w, r, "./web/rperror.html")
-			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname)
+			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname, currentTarget)
 		}
 		return true
 	}
@@ -155,11 +155,11 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	reqHostname := r.Host
 
 	/* Load balancing */
-	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession)
+	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession, target.DisableAutoFallback)
 	if err != nil {
 		http.ServeFile(w, r, "./web/rperror.html")
 		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
-		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host)
+		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host, target)
 		return
 	}
 
@@ -187,7 +187,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		if selectedUpstream.RequireTLS {
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
 		}
-		h.Parent.logRequest(r, true, 101, "host-websocket", reqHostname, selectedUpstream.OriginIpOrDomain)
+		h.Parent.logRequest(r, true, 101, "host-websocket", reqHostname, selectedUpstream.OriginIpOrDomain, target)
 
 		if target.HeaderRewriteRules == nil {
 			target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
@@ -237,6 +237,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
 		DisableChunkedTransferEncoding: target.DisableChunkedTransferEncoding,
+		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		Version:                        target.parent.Option.HostVersion,
@@ -249,18 +250,18 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	if err != nil {
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
-			h.Parent.logRequest(r, false, 404, "host-http", reqHostname, upstreamHostname)
+			h.Parent.logRequest(r, false, 404, "host-http", reqHostname, upstreamHostname, target)
 		} else if errors.Is(err, context.Canceled) {
 			//Request canceled by client, usually due to manual refresh before page load
 			http.Error(w, "Request canceled", http.StatusRequestTimeout)
-			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname)
+			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname, target)
 		} else {
 			http.ServeFile(w, r, "./web/rperror.html")
-			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname)
+			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname, target)
 		}
 	}
 
-	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname)
+	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname, target)
 }
 
 // Handle vdir type request
@@ -286,7 +287,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			target.parent.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
 		}
 
-		h.Parent.logRequest(r, true, 101, "vdir-websocket", r.Host, target.Domain)
+		h.Parent.logRequest(r, true, 101, "vdir-websocket", r.Host, target.Domain, target.parent)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
 			SkipTLSValidation:  target.SkipCertValidations,
 			SkipOriginCheck:    true,                                       //You should not use websocket via virtual directory. But keep this to true for compatibility
@@ -332,6 +333,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
 		DisableChunkedTransferEncoding: target.parent.DisableChunkedTransferEncoding,
+		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		Version:                        target.parent.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
@@ -342,35 +344,53 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		if errors.As(err, &dnsError) {
 			http.ServeFile(w, r, "./web/hosterror.html")
 			log.Println(err.Error())
-			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain)
+			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain, target.parent)
 		} else {
 			http.ServeFile(w, r, "./web/rperror.html")
 			log.Println(err.Error())
-			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain)
+			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain, target.parent)
 		}
 	}
-	h.Parent.logRequest(r, true, statusCode, "vdir-http", reqHostname, target.Domain)
+	h.Parent.logRequest(r, true, statusCode, "vdir-http", reqHostname, target.Domain, target.parent)
 
 }
 
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
-func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string) {
-	if router.Option.StatisticCollector != nil {
-		go func() {
-			requestInfo := statistic.RequestInfo{
-				IpAddr:                        netutils.GetRequesterIP(r),
-				RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
-				Succ:                          succ,
-				StatusCode:                    statusCode,
-				ForwardType:                   forwardType,
-				Referer:                       r.Referer(),
-				UserAgent:                     r.UserAgent(),
-				RequestURL:                    r.Host + r.RequestURI,
-				Target:                        originalHostname,
-				Upstream:                      upstreamHostname,
-			}
-			router.Option.StatisticCollector.RecordRequest(requestInfo)
-		}()
+func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
+	if endpoint != nil && endpoint.DisableLogging {
+		// Notes: endpoint can be nil if the request has been handled before a host name can be resolved
+		// e.g. Redirection matching rule
+		// in that case we will log it by default and will not enter this routine
+		return
 	}
+
 	router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
+
+	if router.Option.StatisticCollector == nil {
+		// Statistic collection not yet initialized
+		return
+	}
+
+	if endpoint != nil && endpoint.DisableStatisticCollection {
+		// Endpoint level statistic collection disabled
+		return
+	}
+
+	// Proceed to record the request info
+	go func() {
+		requestInfo := statistic.RequestInfo{
+			IpAddr:                        netutils.GetRequesterIP(r),
+			RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
+			Succ:                          succ,
+			StatusCode:                    statusCode,
+			ForwardType:                   forwardType,
+			Referer:                       r.Referer(),
+			UserAgent:                     r.UserAgent(),
+			RequestURL:                    r.Host + r.RequestURI,
+			Target:                        originalHostname,
+			Upstream:                      upstreamHostname,
+		}
+		router.Option.StatisticCollector.RecordRequest(requestInfo)
+	}()
+
 }

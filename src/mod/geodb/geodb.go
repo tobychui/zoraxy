@@ -141,10 +141,6 @@ func (s *Store) GetRequesterCountryISOCode(r *http.Request) string {
 		return ""
 	}
 
-	if netutils.IsPrivateIP(ipAddr) {
-		return "LAN"
-	}
-
 	countryCode, err := s.ResolveCountryCodeFromIP(ipAddr)
 	if err != nil {
 		return ""

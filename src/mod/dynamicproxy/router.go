@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -65,6 +66,9 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 		vdir.proxy = proxy
 		vdir.parent = endpoint
 	}
+
+	// Initialize the exploit detector for this endpoint
+	endpoint.InitializeExploitDetector()
 
 	return endpoint, nil
 }
@@ -151,4 +155,14 @@ func (h *Router) GetProxyEndpointByAlias(alias string) (*ProxyEndpoint, error) {
 		return found, nil
 	}
 	return nil, errors.New("proxy rule with given alias not found")
+}
+
+// InitializeExploitDetector initializes or updates the exploit detector for this proxy endpoint
+func (pe *ProxyEndpoint) InitializeExploitDetector() {
+	if pe.BlockCommonExploits || pe.BlockAICrawlers {
+		exploitRespType := exploits.ExploitsRequestResponseType(pe.MitigationAction)
+		pe.detector = exploits.NewExploitDetector(pe.BlockCommonExploits, pe.BlockAICrawlers, exploitRespType)
+	} else {
+		pe.detector = nil
+	}
 }

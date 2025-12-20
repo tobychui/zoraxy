@@ -178,7 +178,7 @@
           <tr>
             <th>Plugin Name</th>
             <th>Descriptions</th>
-            <th>Catergory</th>
+            <th>Category</th>
             <th>Action</th>
         </tr></thead>
         <tbody id="pluginTable">
@@ -197,17 +197,18 @@
                   <p>These functions are intended for developers only. Enabling them may add latency to plugin loading & routing. Proceed with caution.<br>
                   <b>Tips: You can start zoraxy with -dev=true to enable auto-reload when start</b></p>
                 </div>
-                  <div id="enablePluginAutoReload" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
-                      <input id="enable_plugin_auto_reload" type="checkbox">
-                      <label>Enable Plugin Auto Reload<br>
-                      <small>Automatic reload plugin when the plugin binary changed</small></label>
-                  </div>
-                  <br><br>
-                  <div class="field" style="max-width: 50%;margin-bottom: 0px;">
-                    <label>Check Interval</label>
-                    <input type="number" id="autoreload-interval" placeholder="Check Interval" min="1" max="60" step="1" value="1">
-                  </div>
-                  <small>Specify the interval (in seconds) for checking plugin changes. <br>Minimum is 1 second, maximum is 60 seconds.</small>
+                <br>
+                <div id="enablePluginAutoReload" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
+                    <input id="enable_plugin_auto_reload" type="checkbox">
+                    <label>Enable Plugin Auto Reload<br>
+                    <small>Automatic reload plugin when the plugin binary changed</small></label>
+                </div>
+                <br><br>
+                <div class="field" style="max-width: 50%;margin-bottom: 0px;">
+                  <label>Check Interval</label>
+                  <input type="number" id="autoreload-interval" placeholder="Check Interval" min="1" max="60" step="1" value="1">
+                </div>
+                <small>Specify the interval (in seconds) for checking plugin changes. <br>Minimum is 1 second, maximum is 60 seconds.</small>
               </div>
           </div>
       </div>
@@ -523,6 +524,9 @@ function initiatePluginList(){
             <button onclick="startPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginDisableButton" pluginid="${plugin.Spec.id}" ${plugin.Enabled ? 'style="display:none;"' : ''}>
               <i class="green play circle icon"></i> Start
             </button>
+            ${plugin.SupportHotRebuild ? `<button onclick="rebuildPlugin('${plugin.Spec.id}', this);" class="ui basic button pluginRebuildButton" pluginid="${plugin.Spec.id}">
+              <i class="wrench icon"></i> Rebuild
+            </button>` : ''}
           </td>
         </tr>
       `;
@@ -567,7 +571,7 @@ function startPlugin(pluginId, btn=undefined){
   });
 }
 
-function stopPlugin(pluginId, btn=undefined){
+function stopPlugin(pluginId, btn=undefined) {
   if (btn) {
     $(btn).html('<i class="spinner loading icon"></i> Stopping');
     $(btn).addClass('disabled');
@@ -586,6 +590,59 @@ function stopPlugin(pluginId, btn=undefined){
       initPluginSideMenu();
     }
   });
+}
+
+function rebuildPlugin(pluginId, btn=undefined) {
+  if (btn) {
+    $(btn).html('<i class="spinner loading icon"></i> Rebuilding');
+    $(btn).addClass('disabled');
+  }
+  $.cjax({
+    url: '/api/plugins/rebuild',
+    type: 'POST',
+    data: {plugin_id: pluginId},
+    success: function(data){
+      if (data.error != undefined){
+        // Show build error with detailed output
+        showBuildErrorDialog(data.error);
+      }else{
+        msgbox("Plugin rebuilt successfully", true);
+      }
+      initiatePluginList();
+      initPluginSideMenu();
+    }
+  });
+}
+
+function showBuildErrorDialog(errorMessage) {
+  // Create a modal dialog to show build errors
+  let modalHtml = `
+    <div id="buildErrorModal" class="ui modal">
+      <div class="header">
+        <i class="exclamation triangle icon"></i> Plugin Build Failed
+      </div>
+      <div class="content">
+        <div class="description">
+          <p>The plugin build process encountered an error. Please review the build output below:</p>
+          <div class="ui form">
+            <div class="field">
+              <textarea id="buildErrorOutput" readonly style="background-color: #000000; color: #ffffff; font-family: monospace; min-height: 300px; resize: vertical;">${errorMessage}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="ui button" onclick="$('#buildErrorModal').modal('hide');">Close</div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing modal if any
+  $('#buildErrorModal').remove();
+  
+  // Append and show the modal
+  $('body').append(modalHtml);
+  $('#buildErrorModal').modal('show');
 }
 
 /* Plugin information */
@@ -708,6 +765,9 @@ function uninstallPlugin(pluginId, pluginName, btn=undefined) {
         }
       });
     });
+
+    
+
   }
 
   initDeveloperSettings();

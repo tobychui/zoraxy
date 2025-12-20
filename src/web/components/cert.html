@@ -39,8 +39,27 @@
                 <input type="file" id="prikeySelector" onchange="handleFileSelect(event, 'pri')">
             </div>
         </div>
-        <button class="ui basic button" onclick="handleDomainUploadByKeypress();"><i class="ui teal upload icon"></i> Upload</button><br>
-        <small>You have intermediate certificate? <a style="cursor:pointer;" onclick="showSideWrapper('snippet/intermediateCertConv.html');">Open Conversion Tool</a></small>
+        <button id="certUploadBtn" class="ui basic button showOnlyInCertUploadMode" onclick="handleDomainUploadByKeypress();"><i class="ui teal upload icon"></i> Upload</button>
+        <button id="certPasteBtn" class="ui basic button showOnlyInCertUploadMode" onclick="togglePasteCertInterface();"><i class="ui yellow paste icon"></i> Paste Cert Directly</button>
+        <br class="showOnlyInCertUploadMode">
+        <small class="showOnlyInCertUploadMode">You have intermediate certificate? <a style="cursor:pointer;" onclick="showSideWrapper('snippet/intermediateCertConv.html');">Open Conversion Tool</a></small>
+    </div>
+    <div id="certPasteArea" style="display:none;">
+        <!-- Paste cert function implementation -->
+        <div class="ui fluid form" style="margin-top: 1em;">
+            <div class="two fields">
+                <div class="field">
+                    <label>Public Key Content (.pem / .crt)</label>
+                    <textarea id="pubkeyPasteContent" rows="8" placeholder="Paste your public key / certificate content here..." oninput="extractCommonNameFromPastedCert();"></textarea>
+                </div>
+                <div class="field">
+                    <label>Private Key Content (.key)</label>
+                    <textarea id="prikeyPasteContent" rows="8" placeholder="Paste your private key content here..."></textarea>
+                </div>
+            </div>
+            <button class="ui basic button" onclick="handlePasteInBrowserAndUpload();"><i class="ui teal upload icon"></i> Upload from Pasted Content</button>
+            <button class="ui basic button" onclick="togglePasteCertInterface();"><i class="ui grey cancel icon"></i> Cancel</button>
+        </div>
     </div>
     <div id="certUploadSuccMsg" class="ui green message" style="display:none;">
         <i class="ui checkmark icon"></i> Certificate for domain <span id="certUploadingDomain"></span> uploaded.
@@ -75,7 +94,7 @@
                     <th>Expire At</th>
                     <th>Fallback</th>
                     <th>DNS Challenge</th>
-                    <th class="no-sort">Actions</th>
+                    <th class="no-sort" tourstep="defaultCertificate">Actions</th>
                 </tr></thead>
             <tbody id="certifiedDomainList">
     
@@ -84,34 +103,11 @@
         </div>
         <br>
         <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
-    </div>
-    <div class="ui divider"></div>
-    <div tourstep="defaultCertificate">
-        <h3>Fallback Certificate</h3>
-        <p>When there are no matching certificate for the requested server name, reverse proxy router will always fallback to this one.<br>Note that you need both of them uploaded for it to fallback properly</p>
-        <table class="ui very basic unstackable celled table">
-            <thead>
-                <tr><th class="no-sort">Key Type</th>
-                <th  class="no-sort">Found</th>
-            </tr></thead>
-            <tbody>
-                <tr>
-                    <td><i class="globe icon"></i> Fallback Public Key</td>
-                    <td id="pubkeyExists"></td>
-                </tr>
-                <tr>
-                    <td><i class="lock icon"></i> Fallback Private Key</td>
-                    <td id="prikeyExists"></td>
-                </tr>
-            </tbody>
-        </table>
-        <p style="margin-bottom: 0.4em;"><i class="ui upload icon"></i> Upload Default Keypairs</p>
-        <div class="ui buttons">
-            <button class="ui basic grey button" onclick="uploadPublicKey();"><i class="globe icon"></i> Public Key</button>
-            <button class="ui basic button" onclick="uploadPrivateKey();"><i class="grey lock icon"></i> Private Key</button>
+        <br>
+        <div class="ui blue message">
+            <h4>What is a Fallback Certificate?</h4>
+            <p>A fallback certificate is used when the reverse proxy cannot find a matching certificate for the requested server name. If you are using CloudFlare full strict mode, you can also upload the CloudFlare certificate as fallback certificate.</p>
         </div>
-         <div class="ui yellow message"><i class="exclamation triangle icon"></i> We will be removing the fallback certificate section soon. <br>
-            Please use "<i class="ui blue home icon"></i>Set Fallback" button in the certificate list above to set the fallback certificate.</div>
     </div>
     <div class="ui divider"></div>
     <div tourstep="acmeSettings">
@@ -128,7 +124,7 @@
                     <div class="default text">Let's Encrypt</div>
                     <div class="menu">
                     <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
-                    <div class="item" data-value="Buypass">Buypass</div>
+                    <!-- <div class="item" data-value="Buypass">Buypass</div> -->
                     <div class="item" data-value="ZeroSSL">ZeroSSL</div>
                     </div>
                 </div>
@@ -176,12 +172,12 @@
                 success: function(data) {
                     if (data.error !== undefined) {
                         //Ignore error
-                        $("#certdomain").attr("placeholder", "");
+                        $("#certdomain").attr("value", "");
                     } else if (data) {
                         if (typeof data === "string" && data.startsWith("*.")) {
                             data = data.substring(2);
                         }
-                        $("#certdomain").attr("placeholder", data);
+                        $("#certdomain").attr("value", data);
                     }
                 },
                 error: function(xhr) {
@@ -671,5 +667,128 @@
         
         // click file input to open file selector
         input.click();
+    }
+
+    // Toggle the paste certificate interface visibility
+    function togglePasteCertInterface() {
+        const pasteArea = $("#certPasteArea");
+        const uploadFields = $("#pubkeySelector, #prikeySelector").closest('.field');
+
+        if (pasteArea.is(':visible')) {
+            // Hide paste area and show upload fields
+            pasteArea.slideUp("fast");
+            uploadFields.show();
+            $(".showOnlyInCertUploadMode").show();
+            // Clear paste textareas
+            $("#pubkeyPasteContent").val('');
+            $("#prikeyPasteContent").val('');
+        } else {
+            // Show paste area and hide upload fields
+            pasteArea.slideDown("fast");
+            uploadFields.hide();
+            $(".showOnlyInCertUploadMode").hide();
+        }
+    }
+
+    // Extract common name from pasted certificate using backend API
+    function extractCommonNameFromPastedCert() {
+        const certContent = $("#pubkeyPasteContent").val().trim();
+        
+        if (certContent === '') {
+            return;
+        }
+        
+        // Send certificate content to backend for parsing
+        $.cjax({
+            url: '/api/cert/getCommonName',
+            method: 'POST',
+            data: { cert: certContent },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    // Silently ignore error - user might still be pasting
+                    console.log('Error parsing certificate:', data.error);
+                } else if (data && typeof data === 'string') {
+                    let commonName = data.trim();
+                    
+                    // If common name is empty, the backend might return empty string
+                    // In that case, don't set anything
+                    if (commonName === '') {
+                        return;
+                    }
+                    
+                    // Handle wildcard certificates: trim off the wildcard subdomain part
+                    // e.g., *.example.com -> example.com, *.b.c.com -> b.c.com
+                    if (commonName.startsWith('*.')) {
+                        commonName = commonName.substring(2);
+                    }
+                    
+                    // Set the domain field with the processed common name
+                    $("#certdomain").val(commonName);
+                }
+            },
+            error: function(xhr) {
+                // Silently ignore error - user might still be pasting or invalid cert format
+                console.log('Error parsing certificate');
+            }
+        });
+    }
+
+    // Handle certificate upload from pasted content
+    function handlePasteInBrowserAndUpload() {
+        const pubkeyContent = $("#pubkeyPasteContent").val().trim();
+        const prikeyContent = $("#prikeyPasteContent").val().trim();
+        
+        // Validate inputs
+        if (pubkeyContent === '' || prikeyContent === '') {
+            msgbox('Please paste both public key and private key content', false, 5000);
+            return;
+        }
+        
+        // Get domain from input
+        let domain = $("#certdomain").val().trim();
+        if (domain === '') {
+            // Check if placeholder has value
+            if ($("#certdomain").attr("placeholder").trim() !== '') {
+                domain = $("#certdomain").attr("placeholder").trim();
+            } else {
+                msgbox("Missing domain", false, 5000);
+                return;
+            }
+        }
+        
+        // Convert text content to File objects
+        const publicKeyBlob = new Blob([pubkeyContent], { type: 'text/plain' });
+        const privateKeyBlob = new Blob([prikeyContent], { type: 'text/plain' });
+        
+        const publicKeyFile = new File([publicKeyBlob], 'publicKey.pem', { type: 'text/plain' });
+        const privateKeyFile = new File([privateKeyBlob], 'privateKey.key', { type: 'text/plain' });
+        
+        // Set the pending upload files
+        uploadPendingPublicKey = publicKeyFile;
+        uploadPendingPrivateKey = privateKeyFile;
+        
+        // Reuse the existing upload logic
+        handleDomainKeysUpload(function() {
+            $("#certUploadingDomain").text(domain);
+            
+            // Clear the paste textareas
+            $("#pubkeyPasteContent").val('');
+            $("#prikeyPasteContent").val('');
+            $("#certdomain").val('');
+            $("#certdomain").attr("placeholder", "");
+            
+            // Reset pending uploads
+            uploadPendingPublicKey = undefined;
+            uploadPendingPrivateKey = undefined;
+            
+            // Hide paste area and show upload fields again
+            togglePasteCertInterface();
+            
+            // Show success message
+            $("#certUploadSuccMsg").stop().finish().slideDown("fast").delay(3000).slideUp("fast");
+            
+            // Refresh certificate list
+            initManagedDomainCertificateList();
+        });
     }
 </script>

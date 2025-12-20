@@ -1,9 +1,8 @@
-package geodb_test
+package geodb
 
 import (
 	"testing"
 
-	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 )
 
@@ -42,7 +41,7 @@ func TestTrieConstruct(t *testing.T) {
 
 func TestResolveCountryCodeFromIP(t *testing.T) {
 	// Create a new store
-	store, err := geodb.NewGeoDb(nil, &geodb.StoreOptions{
+	store, err := NewGeoDb(nil, &StoreOptions{
 		true,
 		true,
 		&logger.Logger{},
@@ -75,16 +74,31 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 		}
 	}
 
-	// Test an IP address that should return an empty country code
-	ip := "127.0.0.1"
-	expected := ""
-	info, err := store.ResolveCountryCodeFromIP(ip)
-	if err != nil {
-		t.Errorf("error resolving country code for IP %s: %v", ip, err)
-		return
+	// Test reserved IP addresses that should return zone names
+	reservedIpZoneMap := [][]string{
+		{"127.0.0.1", "Loopback"},
+		{"10.0.0.1", "Private"},
+		{"192.168.1.1", "Private"},
+		{"172.16.0.1", "Private"},
+		{"169.254.1.1", "LinkLocal"},
+		{"224.0.0.1", "Multicast"},
+		{"::1", "Loopback"},
+		{"fe80::1", "LinkLocal"},
+		{"fc00::1", "UniqueLocal"},
+		{"ff00::1", "Multicast"},
 	}
-	if info.CountryIsoCode != expected {
-		t.Errorf("expected country code %s, but got %s for IP %s", expected, info.CountryIsoCode, ip)
+
+	for _, testcase := range reservedIpZoneMap {
+		ip := testcase[0]
+		expected := testcase[1]
+		info, err := store.ResolveCountryCodeFromIP(ip)
+		if err != nil {
+			t.Errorf("error resolving zone for reserved IP %s: %v", ip, err)
+			return
+		}
+		if info.CountryIsoCode != expected {
+			t.Errorf("expected zone %s, but got %s for reserved IP %s", expected, info.CountryIsoCode, ip)
+		}
 	}
 
 	// Test for issue #401

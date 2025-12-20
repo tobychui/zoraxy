@@ -1,3 +1,28 @@
+# v3.3.0 06 Dec 2025
+
++ Added "Block common exploits"
++ Added "Block AI and Crawlers"
++ Added option to disable statistics
++ Added option to remove user agent
++ Show checkbox for dns challenge in zerossl by [zen8841](https://github.com/tobychui/zoraxy/commits?author=zen8841)
++ Fixed Redirection: include sub-paths checkbox [#874](https://github.com/tobychui/zoraxy/issues/874)
++ Fixed Disable load balance and do not pause upstream for 60s [#896](https://github.com/tobychui/zoraxy/issues/896)
++ Fixed ACME bug [#903](https://github.com/tobychui/zoraxy/issues/903)
++ Fixed redirection bug [#900](https://github.com/tobychui/zoraxy/issues/900)
++ smaller bugfixes
++ updated dependecies
+
+
+# v3.2.9 2 Nov 2025
+
++ Add PKCE support with SHA256 challenge method for OAuth2 by [kjagosz](https://github.com/kjagosz) fixes [#852](https://github.com/tobychui/zoraxy/issues/852)
++ Update lego to v4.28.0 by [zen8841](https://github.com/zen8841) fixes [778](https://github.com/tobychui/zoraxy/issues/778)
++ Typo in plugins.html by [mlbarrow](mlbarrow)
++ Moved log rotation options to webmin panel
++ Supported opening tar.gz in the new log viewer
++ Added disable logging function to HTTP proxy rule for high traffic sites
++ Fixed other bugs / improvements [#855](https://github.com/tobychui/zoraxy/issues/855) [#866](https://github.com/tobychui/zoraxy/issues/866) [#867](https://github.com/tobychui/zoraxy/issues/867) [#855](https://github.com/tobychui/zoraxy/issues/856)
+
 # v3.2.8 16 Oct 2025
 
 + Fixed wildcard certificate bug [#845](https://github.com/tobychui/zoraxy/issues/845) by [zen8841](https://github.com/zen8841)

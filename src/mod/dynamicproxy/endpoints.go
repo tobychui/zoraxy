@@ -134,12 +134,13 @@ func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint)
 		return nil, err
 	}
 
-	if ep.ProxyType == ProxyTypeRoot {
+	switch ep.ProxyType {
+	case ProxyTypeRoot:
 		parentRouter.Root = readyRoutingRule
-	} else if ep.ProxyType == ProxyTypeHost {
+	case ProxyTypeHost:
 		ep.Remove()
 		parentRouter.AddProxyRouteToRuntime(readyRoutingRule)
-	} else {
+	default:
 		return nil, errors.New("unsupported proxy type")
 	}
 

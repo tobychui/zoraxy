@@ -12,7 +12,6 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/eventsystem"
-	"imuslab.com/zoraxy/mod/utils"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
@@ -51,14 +50,6 @@ import (
 	Don't touch this function unless you know what you are doing
 */
 
-var (
-	/*
-		MDNS related
-	*/
-	previousmdnsScanResults = []*mdns.NetworkHost{}
-	mdnsTickerStop          chan bool
-)
-
 func startupSequence() {
 	//Start a system wide logger and log viewer
 	l, err := logger.NewLogger(LOG_PREFIX, *path_logFile)
@@ -77,30 +68,33 @@ func startupSequence() {
 		SystemWideLogger = l
 		SystemWideLogger.Println("System wide logging is disabled, all logs will be printed to STDOUT only")
 	} else {
-		logRotateSize, err := utils.SizeStringToBytes(*logRotate)
+		// Load log configuration from file
+		logConfig, err := logger.LoadLogConfig(CONF_LOG_CONFIG)
 		if err != nil {
-			//Default disable
-			logRotateSize = 0
+			SystemWideLogger.Println("Failed to load log config, using defaults: " + err.Error())
+			logConfig = &logger.LogConfig{
+				Enabled:  false,
+				MaxSize:  "0",
+				Compress: true,
+			}
 		}
-		l.SetRotateOption(&logger.RotateOption{
-			Enabled:    logRotateSize != 0,
-			MaxSize:    int64(logRotateSize),
-			MaxBackups: 10,
-			Compress:   *enableLogCompression,
-			BackupDir:  "",
-		})
+
+		// Apply the configuration
+		if err := l.ApplyLogConfig(logConfig); err != nil {
+			SystemWideLogger.Println("Failed to apply log config: " + err.Error())
+		}
+
 		SystemWideLogger = l
-		if logRotateSize == 0 {
+		if !logConfig.Enabled {
 			SystemWideLogger.Println("Log rotation is disabled")
 		} else {
-			SystemWideLogger.Println("Log rotation is enabled, max log file size " + utils.BytesToHumanReadable(int64(logRotateSize)))
+			SystemWideLogger.Println("Log rotation is enabled, max log file size " + logConfig.MaxSize)
 		}
 		SystemWideLogger.Println("System wide logging is enabled")
 	}
 
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
 		RootFolder: *path_logFile,
-		Extension:  LOG_EXTENSION,
 	})
 
 	//Create database
@@ -147,7 +141,9 @@ func startupSequence() {
 	db.NewTable("redirect")
 	redirectAllowRegexp := false
 	db.Read("redirect", "regex", &redirectAllowRegexp)
-	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, SystemWideLogger)
+	redirectCaseSensitive := false
+	db.Read("redirect", "case_sensitive", &redirectCaseSensitive)
+	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, redirectCaseSensitive, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -459,7 +455,9 @@ func ShutdownSeq() {
 
 	//Close the plugin manager
 	SystemWideLogger.Println("Shutting down plugin manager")
-	pluginManager.Close()
+	if pluginManager != nil {
+		pluginManager.Close()
+	}
 
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")

@@ -140,6 +140,28 @@
         <small>This management interface is a loopback proxied service. <br>If you want to shutdown the reverse proxy server, please remove the proxy rule for the management interface and refresh.</small>
     </div>
     <div class="ui divider"></div>
+    <h4>Secondary Listening Ports</h4>
+    <p>Additional ports configured for specific proxy rules</p>
+    <div id="secondaryListenersContainer">
+        <table class="ui unstackable basic celled table">
+            <thead>
+                <tr>
+                    <th>Listening Address</th>
+                    <th>Domains / Hostnames</th>
+                </tr>
+            </thead>
+            <tbody id="secondaryListenersTable">
+                <tr>
+                    <td colspan="2" style="text-align: center;">
+                        <i class="ui loading circle notch icon"></i> Loading...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <button class="ui right floated basic button" onclick="loadSecondaryListeners();"><i class="green refresh icon"></i> Refresh</button>
+    <br><br>
+    <div class="ui divider"></div>
     <div class="">
     <h4>Statistic Overview</h4>
     <div class="ui two column stackable grid">
@@ -334,6 +356,47 @@
         getDailySummary();
     }, 10000);
     getDailySummary();
+
+    function loadSecondaryListeners(){
+        $.get("/api/proxy/listeningPorts/list", function(data){
+            $("#secondaryListenersTable").html("");
+            if (!data || data.length === 0){
+                $("#secondaryListenersTable").append(`<tr>
+                    <td colspan="2" style="text-align: center;">
+                        <i class="ui grey info circle icon"></i> No secondary listening ports configured
+                    </td>
+                </tr>`);
+            } else {
+                data.forEach(function(listener){
+                    let domainsHTML = "";
+                    if (listener.domains && listener.domains.length > 0){
+                        domainsHTML = listener.domains.map(domain => 
+                            `<span class="ui tiny label">${domain}</span>`
+                        ).join(" ");
+                    } else {
+                        domainsHTML = '<i style="opacity: 0.5;">No domains</i>';
+                    }
+                    
+                    $("#secondaryListenersTable").append(`<tr>
+                        <td style="white-space: nowrap;">
+                            <i class="ui blue server icon"></i> <b>${listener.address}</b>
+                        </td>
+                        <td>${domainsHTML}</td>
+                    </tr>`);
+                });
+            }
+        }).fail(function(){
+            $("#secondaryListenersTable").html(`<tr>
+                <td colspan="2" style="text-align: center;">
+                    <i class="ui red exclamation triangle icon"></i> Failed to load secondary listeners
+                </td>
+            </tr>`);
+        });
+    }
+    
+    // Load secondary listeners on page load and refresh periodically
+    loadSecondaryListeners();
+    setInterval(loadSecondaryListeners, 10000);
 
     //Start and stop service button
     function startService(){

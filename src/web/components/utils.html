@@ -5,8 +5,9 @@
     </div>
     <div class="ui top attached tabular menu">
         <a class="utils item active" data-tab="utiltab1"><i class="ui user circle blue icon"></i> Accounts</a>
-        <a class="utils item" data-tab="utiltab2">Toolbox</a>
-        <a class="utils item" data-tab="utiltab3">System</a>
+        <a class="utils item" data-tab="utiltab2"><i class="ui grey file alternate outline icon"></i> Logger</a>
+        <a class="utils item" data-tab="utiltab3">Toolbox</a>
+        <a class="utils item" data-tab="utiltab4">System</a>
     </div>
 
     <div class="ui bottom attached tab segment utilitiesTabs active" data-tab="utiltab1">
@@ -88,6 +89,61 @@
         </div>
     </div>
     <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab2">
+        <!-- Log Settings -->
+        <h3>Log Settings</h3>
+        <p>Configure log rotation settings for the system logger</p>
+        <div class="ui basic segment">
+            <form id="log-settings-form" class="ui form">
+                <div class="field">
+                    <div class="ui toggle checkbox">
+                        <input type="checkbox" id="logRotationEnabled" name="enabled">
+                        <label>Enable Log Rotation</label>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Maximum Log File Size</label>
+                    <div class="ui right labeled input">
+                        <input type="text" id="logMaxSize" name="maxSize" placeholder="e.g. 200M, 10K, 500" value="0">
+                        <div class="ui basic label">bytes</div>
+                    </div>
+                    <small>Enter size with suffix (K, M, G) or plain number. Set to 0 to disable.</small>
+                </div>
+                <div class="field">
+                    <label>Maximum Backup Files</label>
+                    <input type="number" id="logMaxBackups" name="maxBackups" placeholder="10" min="1" value="16">
+                    <small>Maximum number of rotated log files to keep.</small>
+                </div>
+                <div class="field">
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="logCompressionEnabled" name="compress">
+                        <label>Enable Log Compression</label>
+                    </div>
+                    <br>
+                    <small>When enabled, rotated log files will be compressed using ZIP format.</small>
+                </div>
+                <button class="ui basic button" type="submit">
+                    <i class="green save icon"></i> Save Settings
+                </button>
+                <button class="ui basic button" id="rotateLogBtn" onclick="triggerLogRotation(event)">
+                    <i class="yellow archive icon" ></i> Rotate Log Now
+                </button>
+                <div id="logSettingsSuccessMsg" class="ui green message" style="display:none;">
+                    <i class="checkmark icon"></i> Log settings updated successfully
+                </div>
+                <div id="logSettingsErrorMsg" class="ui red message" style="display:none;">
+                    <i class="exclamation triangle icon"></i> <span id="logSettingsErrorText"></span>
+                </div>
+            </form>
+        </div>
+        <div class="ui divider"></div>
+
+        <!-- Log Viewer -->
+        <h3>System Log Viewer</h3>
+        <p>View and download Zoraxy log</p>
+        <a class="ui basic button" href="snippet/logview.html" target="_blank"><i class="ui blue file icon"></i> Open Log Viewer</a>
+        <div class="ui divider"></div>
+    </div>
+    <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab3">
         <h3> IP Address to CIDR</h3>
         <p>No experience with CIDR notations? Here are some tools you can use to make setting up easier.</p>
         <div class="ui basic segment">
@@ -116,18 +172,20 @@
         </div>
         <div class="ui divider"></div>
     </div>
-    <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab3">
+    <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab4">
         <!-- Config Tools -->
         <h3>System Backup & Restore</h3>
         <p>Options related to system backup, migrate and restore.</p>
         <button class="ui basic button" onclick="showSideWrapper('snippet/configTools.html');"><i class="ui green undo icon icon"></i> Open Config Tools</button>
         <div class="ui divider"></div>
-        <!-- Log Viewer -->
-        <h3>System Log Viewer</h3>
-        <p>View and download Zoraxy log</p>
-        <a class="ui basic button" href="snippet/logview.html" target="_blank"><i class="ui blue file icon"></i> Open Log Viewer</a>
+        
+        <!-- Statistic Reset or Export -->
+        <h3>Advanced Statistics Operations</h3>
+        <p>Export or reset the statistics collected by Zoraxy within a selected time range</p>
+        <button class="ui basic red button" onclick="handleResetAllStats();"><i class="trash icon"></i> RESET ALL STATISTICS</button>
         <div class="ui divider"></div>
-        <!-- System Information -->
+        
+            <!-- System Information -->
         <div id="zoraxyinfo">
             <h3 class="ui header">
                 System Information
@@ -269,14 +327,6 @@
             adminAddr: $('input[name=recvAddr]').val()
         };
 
-        /*
-        var inputValid = validateSMTPInputs();
-        if (!inputValid){
-            msgbox("SMTP input not valid", false, 5000);
-            return;
-        }
-        */
-
         $.cjax({
             type: "POST",
             url: "/api/tools/smtp/set",
@@ -307,6 +357,7 @@
         });
     }
     initSMTPSettings();
+    loadLogSettings();
 
     function sendTestEmail(btn){
         $(btn).addClass("loading").addClass("disabled");
@@ -472,4 +523,129 @@
         }
         return [ip >>> 24 & 0xFF, ip >>> 16 & 0xFF, ip >>> 8 & 0xFF, ip & 0xFF].join('.')
     }
-</script>
+
+    /*
+        Log Settings
+    */
+    function loadLogSettings() {
+        $.get("/api/logger/config", function(data) {
+            if (data.error) {
+                console.error("Failed to load log settings:", data.error);
+                return;
+            }
+            $("#logRotationEnabled").prop("checked", data.enabled);
+            $("#logMaxSize").val(data.maxSize);
+            $("#logMaxBackups").val(data.maxBackups || 16);
+            $("#logCompressionEnabled").prop("checked", data.compress);
+            // Re-initialize checkboxes after setting values
+            $('.ui.checkbox').checkbox();
+        }).fail(function(xhr, status, error) {
+            console.error("Failed to load log settings:", error);
+        });
+    }
+
+    function saveLogSettings() {
+        const settings = {
+            enabled: $("#logRotationEnabled").is(":checked"),
+            maxSize: $("#logMaxSize").val().trim(),
+            maxBackups: parseInt($("#logMaxBackups").val()) || 16,
+            compress: $("#logCompressionEnabled").is(":checked")
+        };
+
+        // Validate maxSize format
+        const maxSizeRegex = /^\d+[KMG]?$/i;
+        if (!maxSizeRegex.test(settings.maxSize)) {
+            showLogSettingsError("Max size must be a number optionally followed by K, M, or G (e.g., 200M, 10K, 500)");
+            return;
+        }
+
+        // Basic validation
+        if (settings.maxSize === "") {
+            showLogSettingsError("Max size cannot be empty");
+            return;
+        }
+
+        if (settings.maxBackups < 1) {
+            showLogSettingsError("Max backups must be at least 1");
+            return;
+        }
+
+        $.cjax({
+            type: "POST",
+            url: "/api/logger/config",
+            data: JSON.stringify(settings),
+            success: function(data) {
+                if (data.error) {
+                    showLogSettingsError(data.error);
+                } else {
+                    showLogSettingsSuccess();
+                }
+            },
+            error: function(xhr, status, error) {
+                showLogSettingsError("Failed to save settings: " + error);
+            }
+        });
+    }
+
+    function showLogSettingsSuccess() {
+        $("#logSettingsErrorMsg").hide();
+        $("#logSettingsSuccessMsg").stop().finish().slideDown("fast").delay(3000).slideUp("fast");
+    }
+
+    function showLogSettingsError(message) {
+        $("#logSettingsSuccessMsg").hide();
+        $("#logSettingsErrorText").text(message);
+        $("#logSettingsErrorMsg").stop().finish().slideDown("fast").delay(5000).slideUp("fast");
+    }
+
+    function triggerLogRotation(event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        // Show loading state on button
+        const rotateBtn = $('#rotateLogBtn');
+        const originalText = rotateBtn.html();
+        rotateBtn.html('<i class="spinner loading icon"></i> Rotating...').addClass('loading disabled');
+
+        $.get("/api/log/rotate/trigger", function(data) {
+            if (data.error) {
+                showLogSettingsError("Failed to rotate log: " + data.error);
+            } else {
+                showLogSettingsSuccess();
+                // Update success message for rotation
+                $("#logSettingsSuccessMsg").html('<i class="archive icon"></i> Log rotation triggered successfully').stop().finish().slideDown("fast").delay(3000).slideUp("fast");
+            }
+        }).fail(function(xhr, status, error) {
+            showLogSettingsError("Failed to rotate log: " + error);
+        }).always(function() {
+            // Restore button state
+            rotateBtn.html(originalText).removeClass('loading disabled');
+        });
+    }
+
+    // Initialize Semantic UI checkboxes
+    $('.ui.checkbox').checkbox();
+
+    // Bind form submission
+    $("#log-settings-form").submit(function(e) {
+        e.preventDefault();
+        saveLogSettings();
+    });
+
+    /*
+        Statistics Operations
+    */
+    function handleResetAllStats(){
+        if (confirm("Confirm remove ALL statistics from the system? This action is irreversible.")){
+            $.cjax({
+                url: "/api/analytic/resetAll",
+                method: "POST",
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 5000);
+                    }else{
+                        msgbox("All Statistics Cleared");
+                    }
+                }
+            })
+        }
+    }

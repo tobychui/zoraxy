@@ -15,6 +15,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -365,4 +366,14 @@ func ImportConfigFromZip(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+}
+
+func handleLoggerConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		logger.HandleGetLogConfig(CONF_LOG_CONFIG)(w, r)
+	} else if r.Method == http.MethodPost {
+		logger.HandleUpdateLogConfig(CONF_LOG_CONFIG, SystemWideLogger)(w, r)
+	} else {
+		utils.SendErrorResponse(w, "Method not allowed")
+	}
 }

@@ -18,7 +18,7 @@ func TestSizeStringToBytes(t *testing.T) {
 		{"1k", 1024, false},
 		{"1K", 1024, false},
 		{"2kb", 2 * 1024, false},
-		{"1m", 1024 * 1024, false},
+		{"1M", 1024 * 1024, false},
 		{"3mb", 3 * 1024 * 1024, false},
 		{"1g", 1024 * 1024 * 1024, false},
 		{"2gb", 2 * 1024 * 1024 * 1024, false},

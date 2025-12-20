@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 )
 
 /*
@@ -48,7 +50,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//Check if this is a redirection url
 	if h.Parent.Option.RedirectRuleTable.IsRedirectable(r) {
 		statusCode := h.Parent.Option.RedirectRuleTable.HandleRedirect(w, r)
-		h.Parent.logRequest(r, statusCode != 500, statusCode, "redirect", r.Host, "")
+		h.Parent.logRequest(r, statusCode != 500, statusCode, "redirect", r.Host, "", nil)
 		return
 	}
 
@@ -70,16 +72,53 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			//Use default rule
 			ruleID = "default"
 		}
-		if h.handleAccessRouting(ruleID, w, r) {
+		if h.handleAccessRouting(ruleID, w, r, sep) {
 			//Request handled by subroute
 			return
+		}
+
+		/* Exploit Detection */
+		if sep.detector != nil {
+			if sep.detector.CheckIsAttack(w, r) {
+				statusCode := 403
+				if sep.detector != nil {
+					statusCode = sep.detector.GetResponseStatusCode()
+				}
+				h.Parent.logRequest(r, false, statusCode, "exploit-blocked", domainOnly, "blocked", sep)
+				return
+			}
 		}
 
 		// Rate Limit
 		if sep.RequireRateLimit {
 			err := h.handleRateLimitRouting(w, r, sep)
 			if err != nil {
-				h.Parent.Option.Logger.LogHTTPRequest(r, "host", 307, r.Host, "")
+				if !sep.DisableLogging {
+					h.Parent.Option.Logger.LogHTTPRequest(r, "host", 307, r.Host, "")
+				}
+				return
+			}
+		}
+
+		// CAPTCHA Gating
+		if sep.RequireCaptcha && sep.CaptchaConfig.IsConfigured() {
+			// Check if CAPTCHA verification endpoint
+			if r.URL.Path == captcha.VerifyPath {
+				captcha.HandleVerification(w, r, sep.CaptchaConfig, h.Parent.captchaSessionStore)
+				return
+			}
+
+			// Check for exception rules
+			if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
+				// Allow passthrough
+			} else if !captcha.CheckSession(r, h.Parent.captchaSessionStore) {
+				// No valid session, serve CAPTCHA challenge
+				domain := r.Host
+				if domain == "" {
+					domain = sep.RootOrMatchingDomain
+				}
+				captcha.RenderChallenge(w, r, sep.CaptchaConfig, domain, h.Parent.Option.WebDirectory)
+				h.Parent.logRequest(r, false, 403, "captcha-required", domainOnly, "captcha", sep)
 				return
 			}
 		}
@@ -109,7 +148,9 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
 				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
-				h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
+				if !sep.DisableLogging {
+					h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
+				}
 				return
 			}
 		}
@@ -124,7 +165,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	*/
 
 	//Root access control based on default rule
-	blocked := h.handleAccessRouting("default", w, r)
+	blocked := h.handleAccessRouting("default", w, r, h.Parent.Root)
 	if blocked {
 		return
 	}
@@ -210,19 +251,19 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		}
 		hostname := parsedURL.Hostname()
 		if hostname == domainOnly {
-			h.Parent.logRequest(r, false, 500, "root-redirect", domainOnly, "")
+			h.Parent.logRequest(r, false, 500, "root-redirect", domainOnly, "", h.Parent.Root)
 			http.Error(w, "Loopback redirects due to invalid settings", 500)
 			return
 		}
 
-		h.Parent.logRequest(r, false, 307, "root-redirect", domainOnly, "")
+		h.Parent.logRequest(r, false, 307, "root-redirect", domainOnly, "", h.Parent.Root)
 		http.Redirect(w, r, redirectTarget, http.StatusTemporaryRedirect)
 	case DefaultSite_NotFoundPage:
 		//Serve the not found page, use template if exists
 		h.serve404PageWithTemplate(w, r)
 	case DefaultSite_NoResponse:
 		//No response. Just close the connection
-		h.Parent.logRequest(r, false, 444, "root-no_resp", domainOnly, "")
+		h.Parent.logRequest(r, false, 444, "root-no_resp", domainOnly, "", h.Parent.Root)
 		hijacker, ok := w.(http.Hijacker)
 		if !ok {
 			w.WriteHeader(http.StatusNoContent)
@@ -236,11 +277,11 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 		conn.Close()
 	case DefaultSite_TeaPot:
 		//I'm a teapot
-		h.Parent.logRequest(r, false, 418, "root-teapot", domainOnly, "")
+		h.Parent.logRequest(r, false, 418, "root-teapot", domainOnly, "", h.Parent.Root)
 		http.Error(w, "I'm a teapot", http.StatusTeapot)
 	default:
 		//Unknown routing option. Send empty response
-		h.Parent.logRequest(r, false, 544, "root-unknown", domainOnly, "")
+		h.Parent.logRequest(r, false, 544, "root-unknown", domainOnly, "", h.Parent.Root)
 		http.Error(w, "544 - No Route Defined", 544)
 	}
 }

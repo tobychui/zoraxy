@@ -26,8 +26,8 @@ docker run -d \
   -v /path/to/zoraxy/config/:/opt/zoraxy/config/ \
   -v /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/ \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /etc/localtime:/etc/localtime \
   -e FASTGEOIP="true" \
+  -e TZ="America/New_York" \
   zoraxydocker/zoraxy:latest
 ```
 
@@ -47,11 +47,11 @@ services:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
       - /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/
       - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/localtime:/etc/localtime
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       FASTGEOIP: "true"
+      TZ: "America/New_York"
 ```
 
 ### Ports
@@ -69,7 +69,6 @@ services:
 | `/opt/zoraxy/config/` | Zoraxy configuration. |
 | `/opt/zoraxy/plugin/` | Zoraxy plugins. |
 | `/var/run/docker.sock` | Docker socket. Used for additional functionality with Zoraxy. |
-| `/etc/localtime` | Localtime. Set to ensure the host and container are synchronized. |
 
 ### Extra Hosts
 | Host | Details |
@@ -88,15 +87,14 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `DOCKER` | `true` (Boolean) | Run Zoraxy in docker compatibility mode. |
 | `EARLYRENEW` | `30` (Integer) | Number of days to early renew a soon expiring certificate. |
 | `ENABLELOG` | `true` (Boolean) | Enable system wide logging, set to false for writing log to STDOUT only. |
-| `ENABLELOGCOMPRESS` | `true` (Boolean) | Enable log compression for rotated log files. |
 | `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices). |
-| `LOGROTATE` | `0` (String) | Enable log rotation and set the maximum log file size (Supports K, M, G suffixes). Set to 0 to disable. |
 | `MDNS` | `true` (Boolean) | Enable mDNS scanner and transponder. |
 | `MDNSNAME` | `''` (String) | mDNS name, leave empty to use default (zoraxy_{node-uuid}.local). |
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |
 | `PLUGIN` | `/opt/zoraxy/plugin/` (String) | Set the path for Zoraxy plugins. Only change this if you know what you are doing. |
 | `PORT` | `8000` (Integer) | Management web interface listening port |
 | `SSHLB` | `false` (Boolean) | Allow loopback web ssh connection (DANGER). |
+| `TZ` | `Etc/UTC` (String) | Define timezone using [standard tzdata values](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). |
 | `UPDATE_GEOIP` | `false` (Boolean) | Download the latest GeoIP data and exit. |
 | `VERSION` | `false` (Boolean) | Show version of this server. |
 | `WEBFM` | `true` (Boolean) | Enable web file manager for static web server root folder. |

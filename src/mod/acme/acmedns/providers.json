@@ -1,4 +1,27 @@
 {
+ "acmedns": {
+  "Name": "acmedns",
+  "ConfigableFields": [
+   {
+    "Title": "APIBase",
+    "Datatype": "string"
+   },
+   {
+    "Title": "StoragePath",
+    "Datatype": "string"
+   },
+   {
+    "Title": "StorageBaseURL",
+    "Datatype": "string"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "AllowList",
+    "Datatype": "[]string"
+   }
+  ]
+ },
  "active24": {
   "Name": "active24",
   "ConfigableFields": [
@@ -69,6 +92,33 @@
    },
    {
     "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "anexia": {
+  "Name": "anexia",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIURL",
     "Datatype": "string"
    },
    {
@@ -328,6 +378,14 @@
     "Datatype": "string"
    },
    {
+    "Title": "ServiceConnectionID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SystemAccessToken",
+    "Datatype": "string"
+   },
+   {
     "Title": "AuthMethod",
     "Datatype": "string"
    },
@@ -380,6 +438,56 @@
    }
   ],
   "HiddenFields": []
+ },
+ "beget": {
+  "Name": "beget",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "binarylane": {
+  "Name": "binarylane",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "bindman": {
   "Name": "bindman",
@@ -521,7 +629,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "checkdomain": {
   "Name": "checkdomain",
@@ -1272,6 +1385,36 @@
    }
   ]
  },
+ "edgeone": {
+  "Name": "edgeone",
+  "ConfigableFields": [
+   {
+    "Title": "SecretID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SecretKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Region",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SessionToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": []
+ },
  "efficientip": {
   "Name": "efficientip",
   "ConfigableFields": [
@@ -1550,6 +1693,10 @@
     "Datatype": "string"
    },
    {
+    "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -1574,6 +1721,29 @@
    },
    {
     "Title": "ZoneName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "hostinger": {
+  "Name": "hostinger",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
     "Datatype": "string"
    },
    {
@@ -2029,6 +2199,33 @@
    }
   ]
  },
+ "keyhelp": {
+  "Name": "keyhelp",
+  "ConfigableFields": [
+   {
+    "Title": "BaseURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "liara": {
   "Name": "liara",
   "ConfigableFields": [
@@ -2227,7 +2424,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "manageengine": {
   "Name": "manageengine",
@@ -2711,13 +2913,32 @@
    }
   ]
  },
+ "octenium": {
+  "Name": "octenium",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "otc": {
   "Name": "otc",
   "ConfigableFields": [
-   {
-    "Title": "IdentityEndpoint",
-    "Datatype": "string"
-   },
    {
     "Title": "DomainName",
     "Datatype": "string"
@@ -2735,6 +2956,10 @@
     "Datatype": "string"
    },
    {
+    "Title": "IdentityEndpoint",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -2744,6 +2969,10 @@
    }
   ],
   "HiddenFields": [
+   {
+    "Title": "PrivateZone",
+    "Datatype": "bool"
+   },
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
@@ -3211,7 +3440,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "selectel": {
   "Name": "selectel",
@@ -3517,6 +3751,10 @@
    {
     "Title": "TTL",
     "Datatype": "int64"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
    }
   ]
  },
@@ -3593,7 +3831,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "vercel": {
   "Name": "vercel",
@@ -3681,6 +3924,10 @@
    {
     "Title": "QuoteValue",
     "Datatype": "bool"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
    }
   ]
  },
@@ -3775,6 +4022,33 @@
  "webnames": {
   "Name": "webnames",
   "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "webnamesca": {
+  "Name": "webnamesca",
+  "ConfigableFields": [
+   {
+    "Title": "APIUser",
+    "Datatype": "string"
+   },
    {
     "Title": "APIKey",
     "Datatype": "string"

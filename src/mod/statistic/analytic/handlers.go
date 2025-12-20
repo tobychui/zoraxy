@@ -216,3 +216,29 @@ func (d *DataLoader) HandleRangeReset(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendOK(w)
 }
+
+// Reset all statistics from the system
+func (d *DataLoader) HandleResetAllStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	entries, err := d.Database.ListTable("stats")
+	if err != nil {
+		utils.SendErrorResponse(w, "unable to load data from database")
+		return
+	}
+
+	for _, keypairs := range entries {
+		key := string(keypairs[0])
+		log.Println("DELETING statistics " + key)
+		d.Database.Delete("stats", key)
+	}
+
+	//Also reset the in-memory statistic collector
+	log.Println("RESETING in-memory statistics")
+	d.StatisticCollector.ResetSummaryOfDay()
+
+	utils.SendOK(w)
+}

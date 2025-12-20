@@ -834,9 +834,10 @@
     
     //Load all the black white lists
     function initBlackWhitelistTables(){
-        //Remove event listener on both toggle buttons
+        //Remove event listener on toggle buttons
         $("#enableWhitelist").off("change");
         $("#enableBlacklist").off("change");
+        $("#enableWhitelistLoopback").off("change");
 
         //Initialize the button states
         initBlacklistEnableState();
@@ -1568,6 +1569,15 @@
     var access_ip_country_map = {};
 
     function initIpAccessTable(ipAccessCounts){
+        // Filter out IPs with less than 100 requests
+        var filteredCounts = {};
+        for (var ip in ipAccessCounts) {
+            if (ipAccessCounts[ip] >= 100) {
+                filteredCounts[ip] = ipAccessCounts[ip];
+            }
+        }
+        ipAccessCounts = filteredCounts;
+        blacklist_currentPage = 1; // Reset to first page
         blacklist_totalPages = Math.ceil(Object.keys(ipAccessCounts).length / blacklist_entriesPerPage);
 
         function sortkv(obj) {

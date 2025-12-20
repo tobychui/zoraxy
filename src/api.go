@@ -38,6 +38,9 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/setHostname", ReverseProxyHandleSetHostname)
 	authRouter.HandleFunc("/api/proxy/del", DeleteProxyEndpoint)
 	authRouter.HandleFunc("/api/proxy/updateCredentials", UpdateProxyBasicAuthCredentials)
+	authRouter.HandleFunc("/api/proxy/listeningPorts/get", HandleGetListeningPorts)
+	authRouter.HandleFunc("/api/proxy/listeningPorts/set", HandleSetListeningPorts)
+	authRouter.HandleFunc("/api/proxy/listeningPorts/list", HandleListSecondaryListeners)
 	authRouter.HandleFunc("/api/proxy/tlscheck", domainsniff.HandleCheckSiteSupportTLS)
 	authRouter.HandleFunc("/api/proxy/setIncoming", HandleIncomingPortSet)
 	authRouter.HandleFunc("/api/proxy/useHttpsRedirect", HandleUpdateHttpsRedirect)
@@ -61,6 +64,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/header/remove", HandleCustomHeaderRemove)
 	authRouter.HandleFunc("/api/proxy/header/handleHSTS", HandleHSTSState)
 	authRouter.HandleFunc("/api/proxy/header/handleHopByHop", HandleHopByHop)
+	authRouter.HandleFunc("/api/proxy/header/handleUserAgent", HandleUserAgent)
 	authRouter.HandleFunc("/api/proxy/header/handleHostOverwrite", HandleHostOverwrite)
 	authRouter.HandleFunc("/api/proxy/header/handlePermissionPolicy", HandlePermissionPolicy)
 	authRouter.HandleFunc("/api/proxy/header/handleWsHeaderBehavior", HandleWsHeaderBehavior)
@@ -103,6 +107,7 @@ func RegisterRedirectionAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/edit", handleEditRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
+	authRouter.HandleFunc("/api/redirect/case_sensitive", handleToggleRedirectCaseSensitivity)
 }
 
 // Register the APIs for access rules management functions
@@ -153,6 +158,7 @@ func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/analytic/loadRange", AnalyticLoader.HandleLoadTargetRangeSummary)
 	authRouter.HandleFunc("/api/analytic/exportRange", AnalyticLoader.HandleRangeExport)
 	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
+	authRouter.HandleFunc("/api/analytic/resetAll", AnalyticLoader.HandleResetAllStats)
 	/* UpTime Monitor */
 	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)
 }
@@ -238,6 +244,7 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/list", pluginManager.HandleListPlugins)
 	authRouter.HandleFunc("/api/plugins/enable", pluginManager.HandleEnablePlugin)
 	authRouter.HandleFunc("/api/plugins/disable", pluginManager.HandleDisablePlugin)
+	authRouter.HandleFunc("/api/plugins/rebuild", pluginManager.HandleRebuildPlugin)
 	authRouter.HandleFunc("/api/plugins/icon", pluginManager.HandleLoadPluginIcon)
 	authRouter.HandleFunc("/api/plugins/info", pluginManager.HandlePluginInfo)
 
@@ -386,7 +393,9 @@ func initAPIs(targetMux *http.ServeMux) {
 	authRouter.HandleFunc("/api/log/read", LogViewer.HandleReadLog)
 	authRouter.HandleFunc("/api/log/summary", LogViewer.HandleReadLogSummary)
 	authRouter.HandleFunc("/api/log/errors", LogViewer.HandleLogErrorSummary)
-	authRouter.HandleFunc("/api/log/rotate/debug.trigger", SystemWideLogger.HandleDebugTriggerLogRotation)
+	authRouter.HandleFunc("/api/log/rotate/trigger", SystemWideLogger.HandleDebugTriggerLogRotation)
+	authRouter.HandleFunc("/api/logger/config", handleLoggerConfig)
+
 	//Debug
 	authRouter.HandleFunc("/api/info/pprof", pprof.Index)
 }

@@ -39,7 +39,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
@@ -128,7 +127,9 @@ func main() {
 		ReverseProxyInit()
 	}()
 
-	time.Sleep(500 * time.Millisecond)
+	// Wait for dynamicProxyRouter to be initialized before proceeding
+	// See ReverseProxyInit() in reverseproxy.go
+	<-dynamicProxyRouterReady
 
 	//Start the finalize sequences
 	finalSequence()
