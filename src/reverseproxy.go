@@ -660,6 +660,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
 
+	// Force HTTP/1.1
+	forceHTTP11, _ := utils.PostBool(r, "forceHTTP11")
+
 	// Disable logging
 	disableLogging, _ := utils.PostBool(r, "dLogging")
 
@@ -722,6 +725,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
+	newProxyEndpoint.ForceHTTP11 = forceHTTP11
 	newProxyEndpoint.DisableLogging = disableLogging
 	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
 	newProxyEndpoint.BlockCommonExploits = blockCommonExploits

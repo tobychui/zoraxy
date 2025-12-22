@@ -250,6 +250,7 @@ type ProxyEndpoint struct {
 
 	// Chunked Transfer Encoding
 	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint
+	ForceHTTP11                    bool //Force use HTTP/1.1 for upstream connection
 
 	//Access Control
 	AccessFilterUUID string //Access filter ID

@@ -7,6 +7,7 @@ toolchain go1.24.6
 require (
 	github.com/armon/go-radix v1.0.0
 	github.com/boltdb/bolt v1.3.1
+	github.com/c0va23/go-proxyprotocol v0.9.1
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/go-acme/lego/v4 v4.28.0
 	github.com/go-ping/ping v1.1.0

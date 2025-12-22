@@ -332,12 +332,6 @@
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
                             <br>
-                            <!-- <div class="ui checkbox" style="margin-top: 0.4em; margin-left: 2em;">
-                                <input type="checkbox" class="DisableAutoFallback">
-                                <label>Disable Auto Fallback<br>
-                                    <small>Continue monitoring but don't automatically disable upstreams when offline</small></label>
-                            </div>
-                            <br> -->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -348,7 +342,13 @@
                                 <input type="checkbox" class="DisableChunkedTransferEncoding">
                                 <label>Disable Chunked Transfer Encoding<br>
                                     <small>Enable this option if your upstream uses a legacy HTTP server implementation (e.g. Proxmox / opencloud)</small></label>
-                            </div>    
+                            </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="ForceHTTP11">
+                                <label>Force HTTP/1.1<br>
+                                    <small>Force the proxy to use HTTP/1.1 for upstream connections, disabling HTTP/2</small></label>
+                            </div>
                         </div>
                     </div>
                     <!-- Virtual Directories-->
@@ -1004,6 +1004,7 @@
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
+        let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
         let disableLogging = $(editor).find(".DisableLogging")[0].checked;
         let disableStatisticCollection = $(editor).find(".DisableStatisticCollection")[0].checked;
         let blockCommonExploits = $(editor).find(".BlockCommonExploits")[0].checked;
@@ -1036,6 +1037,7 @@
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
+                "forceHTTP11": forceHTTP11,
                 "dLogging": disableLogging,
                 "dStatisticCollection": disableStatisticCollection,
                 "blockCommonExploits": blockCommonExploits,
@@ -1618,6 +1620,12 @@
         editor.find(".DisableChunkedTransferEncoding").off("change");
         editor.find(".DisableChunkedTransferEncoding").prop("checked", subd.DisableChunkedTransferEncoding);
         editor.find(".DisableChunkedTransferEncoding").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".ForceHTTP11").off("change");
+        editor.find(".ForceHTTP11").prop("checked", subd.ForceHTTP11);
+        editor.find(".ForceHTTP11").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 
