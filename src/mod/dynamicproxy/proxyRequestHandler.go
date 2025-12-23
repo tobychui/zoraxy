@@ -140,7 +140,7 @@ func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, 
 			h.hostRequest(w, r, loopbackProxyEndpoint)
 		} else {
 			//Endpoint disabled, return 503
-			http.ServeFile(w, r, "./web/rperror.html")
+			serveError(w, 521, page_rperror)
 			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname, currentTarget)
 		}
 		return true
@@ -157,7 +157,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	/* Load balancing */
 	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession, target.DisableAutoFallback)
 	if err != nil {
-		http.ServeFile(w, r, "./web/rperror.html")
+		serveError(w, 521, page_rperror)
 		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
 		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host, target)
 		return
@@ -250,14 +250,14 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	upstreamHostname := selectedUpstream.OriginIpOrDomain
 	if err != nil {
 		if errors.As(err, &dnsError) {
-			http.ServeFile(w, r, "./web/hosterror.html")
+			serveError(w, 404, page_hosterror)
 			h.Parent.logRequest(r, false, 404, "host-http", reqHostname, upstreamHostname, target)
 		} else if errors.Is(err, context.Canceled) {
 			//Request canceled by client, usually due to manual refresh before page load
 			http.Error(w, "Request canceled", http.StatusRequestTimeout)
 			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname, target)
 		} else {
-			http.ServeFile(w, r, "./web/rperror.html")
+			serveError(w, 521, page_rperror)
 			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname, target)
 		}
 	}
@@ -344,11 +344,11 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	var dnsError *net.DNSError
 	if err != nil {
 		if errors.As(err, &dnsError) {
-			http.ServeFile(w, r, "./web/hosterror.html")
+			serveError(w, 404, page_hosterror)
 			log.Println(err.Error())
 			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain, target.parent)
 		} else {
-			http.ServeFile(w, r, "./web/rperror.html")
+			serveError(w, 521, page_rperror)
 			log.Println(err.Error())
 			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain, target.parent)
 		}
@@ -395,4 +395,11 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		router.Option.StatisticCollector.RecordRequest(requestInfo)
 	}()
 
+}
+
+// Serve error page with status code
+func serveError(w http.ResponseWriter, statusCode int, content []byte) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(statusCode)
+	w.Write(content)
 }

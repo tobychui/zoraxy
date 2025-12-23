@@ -311,7 +311,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 
 	selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession, sep.DisableAutoFallback)
 	if err != nil {
-		http.ServeFile(w, r, "./web/hosterror.html")
+		serveError(w, 404, page_hosterror)
 		router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
 		router.logRequest(r, false, 404, "vdir-http", r.Host, "", sep)
 		return
