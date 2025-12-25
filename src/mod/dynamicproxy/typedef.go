@@ -294,3 +294,26 @@ var (
 	//go:embed templates/rperror.html
 	page_rperror []byte
 )
+
+// ErrorTemplateType defines the type of error template to serve
+type ErrorTemplateType int
+
+const (
+	ErrorTemplateForbidden ErrorTemplateType = iota
+	ErrorTemplateHostError
+	ErrorTemplateRPError
+)
+
+// getTemplateContent returns the embedded content and filename for a given template type
+func (e ErrorTemplateType) getTemplateContent() ([]byte, string) {
+	switch e {
+	case ErrorTemplateForbidden:
+		return page_forbidden, "forbidden.html"
+	case ErrorTemplateHostError:
+		return page_hosterror, "hosterror.html"
+	case ErrorTemplateRPError:
+		return page_rperror, "rperror.html"
+	default:
+		return page_rperror, "rperror.html"
+	}
+}
