@@ -291,4 +291,6 @@ var (
 	page_forbidden []byte
 	//go:embed templates/hosterror.html
 	page_hosterror []byte
+	//go:embed templates/rperror.html
+	page_rperror []byte
 )
