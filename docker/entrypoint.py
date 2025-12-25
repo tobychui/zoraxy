@@ -100,7 +100,6 @@ def start_zoraxy():
     f"-plugin={ getenv('PLUGIN', '/opt/zoraxy/plugin/') }",
     f"-port=:{ getenv('PORT', '8000') }",
     f"-sshlb={ getenv('SSHLB', 'false') }",
-    f"-update_geoip={ getenv('UPDATE_GEOIP', 'false') }",
     f"-version={ getenv('VERSION', 'false') }",
     f"-webfm={ getenv('WEBFM', 'true') }",
     f"-webroot={ getenv('WEBROOT', './www') }",
@@ -115,8 +114,9 @@ def main():
   print("Updating CA certificates...")
   run(["update-ca-certificates"])
 
-  print("Updating GeoIP data...")
-  run(["zoraxy", "-update_geoip=true"])
+  if getenv("UPDATE_GEOIP", "false").lower() == "true":
+    print("Updating GeoIP data...")
+    run(["zoraxy", "-update_geoip=true"])
 
   os.chdir("/opt/zoraxy/config/")
 
