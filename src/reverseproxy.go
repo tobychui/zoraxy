@@ -72,12 +72,20 @@ func ReverseProxyInit() {
 	}
 
 	listenOnPort80 := true
+	port80Available := true
 	if netutils.CheckIfPortOccupied(80) {
 		listenOnPort80 = false
+		port80Available = false
 	}
+
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if listenOnPort80 {
-		SystemWideLogger.Println("Port 80 listener enabled")
+		if port80Available {
+			SystemWideLogger.Println("Port 80 listener enabled")
+		} else {
+			SystemWideLogger.Println("Cannot enable port 80 listener - port is occupied!")
+			listenOnPort80 = false
+		}
 	} else {
 		SystemWideLogger.Println("Port 80 listener disabled")
 	}
@@ -85,9 +93,15 @@ func ReverseProxyInit() {
 	forceHttpsRedirect := true
 	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
 	if forceHttpsRedirect {
-		SystemWideLogger.Println("Force HTTPS mode enabled")
-		//Port 80 listener must be enabled to perform http -> https redirect
-		listenOnPort80 = true
+		if port80Available {
+			SystemWideLogger.Println("Force HTTPS mode enabled")
+			//Port 80 listener must be enabled to perform http -> https redirect
+			listenOnPort80 = true
+		} else {
+			SystemWideLogger.Println("Port 80 occupied - cannot force HTTP->HTTPS mode!")
+			listenOnPort80 = false
+			forceHttpsRedirect = false
+		}
 	} else {
 		SystemWideLogger.Println("Force HTTPS mode disabled")
 	}
