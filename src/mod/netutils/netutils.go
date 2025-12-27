@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/likexian/whois"
@@ -163,12 +164,15 @@ func resolveIpFromDomain(targetIpOrDomain string) string {
 
 // Check if the given port is already used by another process
 func CheckIfPortOccupied(portNumber int) bool {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(portNumber))
+	// Try to connect to the port to see if something is listening
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+strconv.Itoa(portNumber), time.Second)
 	if err != nil {
-		return true
+		// Could not connect, port is not occupied
+		return false
 	}
-	listener.Close()
-	return false
+	conn.Close()
+	// Successfully connected, port is occupied
+	return true
 }
 
 // NormalizeDomain cleans and validates a domain string.
