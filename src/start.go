@@ -363,7 +363,7 @@ func startupSequence() {
 	if err == nil && ZoraxyAddrPort.IsValid() && ZoraxyAddrPort.Port() > 0 {
 		ZoraxyPort = int(ZoraxyAddrPort.Port())
 	} else {
-		SystemWideLogger.PrintAndLog("plugin-manager", fmt.Sprintf("Could not set port for plugin communication (webUI/-port); fallback to default port '%d' ", ZoraxyPort), err)
+		SystemWideLogger.PrintAndLog("plugin-manager", fmt.Sprintf("Could not set port for plugin communication (webUI/-port); fallback to default port '%d'", ZoraxyPort), err)
 	}
 
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
