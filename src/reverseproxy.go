@@ -115,10 +115,10 @@ func ReverseProxyInit() {
 	}
 
 	listenOnPort80 := true
+	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if netutils.CheckIfPortOccupied(80) {
 		listenOnPort80 = false
 	}
-	sysdb.Read("settings", "listenP80", &listenOnPort80)
 	if listenOnPort80 {
 		SystemWideLogger.Println("Port 80 listener enabled")
 	} else {
