@@ -354,7 +354,6 @@ func startupSequence() {
 
 	if err != nil {
 		// check for ":<port>" parameter
-		var hadPrefix bool = false
 		webUIPortNoPrefix, hadPrefix := strings.CutPrefix(*webUIPort, ":")
 		if hadPrefix {
 			ZoraxyAddrPort, err = netip.ParseAddrPort("0.0.0.0:" + webUIPortNoPrefix)
