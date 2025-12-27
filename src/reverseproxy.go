@@ -1453,35 +1453,51 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 
 // Handle port 80 incoming traffics
 func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		//Load the current status
+	switch r.Method {
+	case http.MethodGet:
+		//Load the current status from database and runtime
 		currentEnabled := false
 		err := sysdb.Read("settings", "listenP80", &currentEnabled)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
 		}
-		js, _ := json.Marshal(currentEnabled)
+
+		// Get the runtime status
+		runtimeEnabled := dynamicProxyRouter.GetPort80ListenerState()
+
+		// Return both config and runtime status
+		result := map[string]bool{
+			"config":  currentEnabled,
+			"runtime": runtimeEnabled,
+		}
+		js, _ := json.Marshal(result)
 		utils.SendJSONResponse(w, string(js))
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		enabled, err := utils.PostPara(r, "enable")
 		if err != nil {
 			utils.SendErrorResponse(w, "enable state not set")
 			return
 		}
-		if enabled == "true" {
+		switch enabled {
+		case "true":
+			//Check if port 80 is already used by other services
+			if netutils.CheckIfPortOccupied(80) {
+				utils.SendErrorResponse(w, "Port 80 is already used by other services")
+				return
+			}
 			sysdb.Write("settings", "listenP80", true)
 			SystemWideLogger.Println("Enabling port 80 listener")
 			dynamicProxyRouter.UpdatePort80ListenerState(true)
-		} else if enabled == "false" {
+		case "false":
 			sysdb.Write("settings", "listenP80", false)
 			SystemWideLogger.Println("Disabling port 80 listener")
 			dynamicProxyRouter.UpdatePort80ListenerState(false)
-		} else {
+		default:
 			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
 		}
 		utils.SendOK(w)
-	} else {
+	default:
 		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
 

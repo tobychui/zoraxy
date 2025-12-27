@@ -95,6 +95,10 @@
         <label>Enable HTTP server on port 80<br>
         <small>Accept HTTP requests even if you are using HTTPS mode</small></label>
     </div>
+    <div id="port80Warning" class="ui tiny yellow message" style="display: none; margin-top: 0.5em; margin-bottom: 0.5em;">
+        <i class="warning icon"></i>
+        Port 80 is occupied by another service and might not be working properly
+    </div>
     <br>
     <div tourstep="forceHttpsRedirect" style="display: inline-block;">
         <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;">
@@ -438,6 +442,8 @@
             success: function(data){
                 if (data.error != undefined){
                     console.log(data.error);
+                    msgbox(data.error, false, 3000);
+                    initPort80ListenerSetting();
                     return;
                 }
                 if (enabled){
@@ -449,6 +455,7 @@
                     $("#redirect").addClass("disabled");
                     msgbox("Port 80 listener disabled");
                 }
+                initPort80ListenerSetting();
             }
         });
        
@@ -481,8 +488,12 @@
     }
 
     function initPort80ListenerSetting(){
+        $("#listenP80").find("input").off("change");
         $.get("/api/proxy/listenPort80", function(data){
-            if (data){
+            let configEnabled = data.config || false;
+            let runtimeEnabled = data.runtime || false;
+            
+            if (configEnabled){
                 $("#listenP80").checkbox("set checked");
                 $("#redirect").removeClass("disabled");
                 //$("#redirect").show();
@@ -490,6 +501,13 @@
                 $("#listenP80").checkbox("set unchecked");
                 $("#redirect").addClass("disabled");
                 //$("#redirect").hide();
+            }
+            
+            // Show warning if config is enabled but runtime is disabled
+            if (configEnabled && !runtimeEnabled) {
+                $("#port80Warning").show();
+            } else {
+                $("#port80Warning").hide();
             }
 
             $("#listenP80").find("input").on("change", function(){

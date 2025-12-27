@@ -18,6 +18,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/netutils"
 )
 
 /*
@@ -66,6 +67,15 @@ func (router *Router) UpdatePort80ListenerState(useRedirect bool) {
 	router.Restart()
 }
 
+// Get the current port 80 listener state (whether it's actually running)
+func (router *Router) GetPort80ListenerState() bool {
+	if !router.Running {
+		return false
+	}
+	// Check if port 80 listener is enabled in config and actually running
+	return router.Option.ListenOnPort80 && router.tlsRedirectStop != nil
+}
+
 // Update https redirect, which will require updates
 func (router *Router) UpdateHttpToHttpsRedirectSetting(useRedirect bool) {
 	router.Option.ForceHttpsRedirect = useRedirect
@@ -108,7 +118,7 @@ func (router *Router) StartProxyService() error {
 		}
 		router.Running = true
 
-		if router.Option.Port != 80 && router.Option.ListenOnPort80 {
+		if router.Option.Port != 80 && router.Option.ListenOnPort80 && !netutils.CheckIfPortOccupied(80) {
 			//Add a 80 to 443 redirector
 			httpServer := &http.Server{
 				Addr: ":80",
