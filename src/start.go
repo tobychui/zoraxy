@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/netip"
@@ -347,11 +348,24 @@ func startupSequence() {
 	*/
 	pluginFolder := *path_plugin
 	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
-	ZoraxyAddrPort, err := netip.ParseAddrPort(*webUIPort)
+
 	ZoraxyPort := 8000
+	ZoraxyAddrPort, err := netip.ParseAddrPort(*webUIPort)
+
+	if err != nil {
+		// check for ":<port>" parameter
+		webUIPortNoPrefix, hadPrefix := strings.CutPrefix(*webUIPort, ":")
+		if hadPrefix {
+			ZoraxyAddrPort, err = netip.ParseAddrPort("0.0.0.0:" + webUIPortNoPrefix)
+		}
+	}
+
 	if err == nil && ZoraxyAddrPort.IsValid() && ZoraxyAddrPort.Port() > 0 {
 		ZoraxyPort = int(ZoraxyAddrPort.Port())
+	} else {
+		SystemWideLogger.PrintAndLog("plugin-manager", fmt.Sprintf("Could not set port for plugin communication (webUI/-port); fallback to default port '%d'", ZoraxyPort), err)
 	}
+
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir:          pluginFolder,
 		Database:           sysdb,
