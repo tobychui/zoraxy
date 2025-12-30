@@ -216,6 +216,11 @@
 
         // iterate over all containers
         containers.forEach((container) => {
+          // normalize Ports: Docker may return null
+          const portsArr = Array.isArray(container.Ports)
+            ? container.Ports
+            : [];
+
           // skip containers in network mode "none"
           if (container.HostConfig.NetworkMode === "none") {
             return;
@@ -254,7 +259,7 @@
               (network) => network.IPAddress
             );
 
-            const ports = container.Ports.map((portObject) => {
+            const ports = portsArr.map((portObject) => {
               return portObject.PublicPort || portObject.PrivatePort;
             });
 
@@ -267,7 +272,7 @@
           }
 
           // add the container to the networked list, using it's name as address
-          container.Ports.forEach((portObject) => {
+          portsArr.forEach((portObject) => {
             const port = portObject.PublicPort || portObject.PrivatePort;
             const key = `${containerName}:${port}`;
 
