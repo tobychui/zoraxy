@@ -248,13 +248,11 @@ func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		donchan := make(chan bool)
-		err := dynamicProxyRouter.StopProxyService(donchan)
+		err := dynamicProxyRouter.StopProxyService(nil)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
 		}
-		<-donchan
 	}
 
 	utils.SendOK(w)
