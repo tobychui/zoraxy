@@ -248,11 +248,13 @@ func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err := dynamicProxyRouter.StopProxyService()
+		donchan := make(chan bool)
+		err := dynamicProxyRouter.StopProxyService(donchan)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
 		}
+		<-donchan
 	}
 
 	utils.SendOK(w)
@@ -1345,15 +1347,13 @@ func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enableStr, err := utils.PostPara(r, "enable")
+	isEnabled, err := utils.PostBool(r, "enable")
 	if err != nil {
-		enableStr = "true"
+		isEnabled = true
 	}
 
 	//Flip the enable and disabled tag state
-	ruleDisabled := enableStr == "false"
-
-	targetProxyRule.Disabled = ruleDisabled
+	targetProxyRule.Disabled = !isEnabled
 	err = SaveReverseProxyConfig(targetProxyRule)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to save updated rule")
@@ -1611,10 +1611,9 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 
 	//Stop and change the setting of the reverse proxy service
 	if dynamicProxyRouter.Running {
-		dynamicProxyRouter.StopProxyService()
 		dynamicProxyRouter.Option.Port = newIncomingPortInt
-		time.Sleep(1 * time.Second) //Fixed start fail issue
-		dynamicProxyRouter.StartProxyService()
+		time.Sleep(300 * time.Millisecond) //Fixed start fail issue
+		dynamicProxyRouter.Restart()
 	} else {
 		//Only change setting but not starting the proxy service
 		dynamicProxyRouter.Option.Port = newIncomingPortInt

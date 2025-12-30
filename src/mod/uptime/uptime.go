@@ -55,6 +55,15 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 }
 
 func (m *Monitor) ExecuteUptimeCheck() {
+	if m.runningUptimeChecks {
+		//Prevent overlapping uptime checks
+		m.Config.Logger.PrintAndLog(logModuleName, "Another uptime check is running in the background. Skipped", nil)
+		return
+	}
+	m.runningUptimeChecks = true
+	defer func() {
+		m.runningUptimeChecks = false
+	}()
 	for _, target := range m.Config.Targets {
 		//For each target to check online, do the following
 		var thisRecord Record

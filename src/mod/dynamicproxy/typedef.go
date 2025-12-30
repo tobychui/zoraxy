@@ -87,6 +87,7 @@ type Router struct {
 	server       *http.Server              //HTTP server
 	loadBalancer *loadbalance.RouteManager //Load balancer routing manager
 	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
+	restarting   bool                      //If the router is restarting
 
 	tlsListener      net.Listener //TLS listener, handle SNI routing
 	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map

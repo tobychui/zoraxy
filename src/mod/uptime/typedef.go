@@ -41,8 +41,9 @@ type Config struct {
 }
 
 type Monitor struct {
-	Config          *Config
-	OnlineStatusLog map[string][]*Record
+	Config              *Config
+	OnlineStatusLog     map[string][]*Record
+	runningUptimeChecks bool //To prevent overlapping uptime checks
 }
 
 // Default configs

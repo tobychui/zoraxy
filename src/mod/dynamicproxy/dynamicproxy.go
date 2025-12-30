@@ -479,11 +479,15 @@ func (router *Router) UpdateSecondaryListeners() {
 }
 
 // StopProxyService stops the proxy server and waits for all listeners to close
-func (router *Router) StopProxyService() error {
+func (router *Router) StopProxyService(donechan chan bool) error {
 	if router.server == nil && router.tlsListener == nil && router.tlsRedirectStop == nil && len(router.secondaryServers) == 0 {
 		return errors.New("reverse proxy server already stopped")
 	}
-
+	defer func() {
+		if donechan != nil {
+			donechan <- true
+		}
+	}()
 	var wg sync.WaitGroup
 
 	// Stop main TLS/HTTP server
@@ -552,11 +556,22 @@ func (router *Router) StopProxyService() error {
 
 // Restart safely restarts the proxy server
 func (router *Router) Restart() error {
+	if router.restarting {
+		//Already restarting
+		return errors.New("proxy server is restarting in progress")
+	}
+	router.restarting = true
+	defer func() {
+		router.restarting = false
+	}()
 	if router.Running {
+
 		router.Option.Logger.PrintAndLog("dprouter", "Restarting proxy server...", nil)
-		if err := router.StopProxyService(); err != nil {
+		doneChan := make(chan bool)
+		if err := router.StopProxyService(doneChan); err != nil {
 			return err
 		}
+		<-doneChan
 		// Ensure ports are released
 		time.Sleep(200 * time.Millisecond)
 	}

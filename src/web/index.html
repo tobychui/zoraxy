@@ -441,7 +441,7 @@
                     icon = `<i class="ui red circle times icon"></i>`;
                 }
                 $("#messageBox").html(`${icon} ${message}`);
-                $("#messageBox").stop().finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
+                $("#messageBox").finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
             }
 
             function confirmBox(question_to_confirm, callback, delaytime=15) {
