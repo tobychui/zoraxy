@@ -13,7 +13,7 @@ func TestUpdateDownloadablePluginList(t *testing.T) {
 	}
 
 	//Inject a mock URL for testing
-	mockManager.Options.PluginStoreURLs = []string{"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json"}
+	mockManager.Options.PluginStoreURLs = []string{"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json"}
 
 	err := mockManager.UpdateDownloadablePluginList()
 	if err != nil {
@@ -37,7 +37,7 @@ func TestGetPluginListFromURL(t *testing.T) {
 		},
 	}
 
-	pluginList, err := mockManager.getPluginListFromURL("https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json")
+	pluginList, err := mockManager.getPluginListFromURL("https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

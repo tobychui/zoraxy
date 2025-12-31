@@ -383,7 +383,7 @@ func startupSequence() {
 		},
 		/* Plugin Store URLs */
 		PluginStoreURLs: []string{
-			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",
+			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json",
 			//TO BE ADDED
 		},
 		/* Developer Options */

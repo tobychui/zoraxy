@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,23 +21,12 @@ import (
 	Plugin Store
 */
 
-// See https://github.com/aroz-online/zoraxy-official-plugins/blob/main/directories/index.json for the standard format
-
-type Checksums struct {
-	LinuxAmd64   string `json:"linux_amd64"`
-	Linux386     string `json:"linux_386"`
-	LinuxArm     string `json:"linux_arm"`
-	LinuxArm64   string `json:"linux_arm64"`
-	LinuxMipsle  string `json:"linux_mipsle"`
-	LinuxRiscv64 string `json:"linux_riscv64"`
-	WindowsAmd64 string `json:"windows_amd64"`
-}
+// See https://github.com/aroz-online/zoraxy-official-plugins/blob/main/directories/index2.json for the standard format
 
 type DownloadablePlugin struct {
-	IconPath         string
-	PluginIntroSpect zoraxy_plugin.IntroSpect //Plugin introspect information
-	ChecksumsSHA256  Checksums                //Checksums for the plugin binary
-	DownloadURLs     map[string]string        //Download URLs for different platforms
+	IconPath         string                   `json:"IconPath"`         //Icon path or URL for the plugin
+	PluginIntroSpect zoraxy_plugin.IntroSpect `json:"PluginIntroSpect"` //Plugin introspect information
+	DownloadURLs     map[string]string        `json:"DownloadURLs"`     //Download URLs for different platforms
 }
 
 /* Plugin Store Index List Sync */
@@ -82,6 +70,13 @@ func (m *Manager) getPluginListFromURL(url string) ([]*DownloadablePlugin, error
 	err = json.Unmarshal(content, &pluginList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plugin list from %s: %w", url, err)
+	}
+
+	// Filter out if IconPath is empty string, set it to "/img/plugin_icon.png"
+	for _, plugin := range pluginList {
+		if strings.TrimSpace(plugin.IconPath) == "" {
+			plugin.IconPath = "/img/plugin_icon.png"
+		}
 	}
 
 	return pluginList, nil
@@ -150,15 +145,6 @@ func (m *Manager) InstallPlugin(plugin *DownloadablePlugin) error {
 		return fmt.Errorf("failed to set executable permissions: %w", err)
 	}
 
-	// Verify the checksum of the downloaded plugin binary
-	checksums, err := plugin.ChecksumsSHA256.GetCurrentPlatformChecksum()
-	if err == nil {
-		if !verifyChecksumForFile(pluginPath, checksums) {
-			out.Close()
-			return fmt.Errorf("checksum verification failed for plugin binary")
-		}
-	}
-
 	//Ok, also download the icon if exists
 	if plugin.IconPath != "" {
 		iconURL := strings.TrimSpace(plugin.IconPath)
@@ -218,55 +204,6 @@ func (m *Manager) UninstallPlugin(pluginID string) error {
 	//Reload the plugin list
 	m.ReloadPluginFromDisk()
 	return nil
-}
-
-// GetCurrentPlatformChecksum returns the checksum for the current platform
-func (c *Checksums) GetCurrentPlatformChecksum() (string, error) {
-	switch runtime.GOOS {
-	case "linux":
-		switch runtime.GOARCH {
-		case "amd64":
-			return c.LinuxAmd64, nil
-		case "386":
-			return c.Linux386, nil
-		case "arm":
-			return c.LinuxArm, nil
-		case "arm64":
-			return c.LinuxArm64, nil
-		case "mipsle":
-			return c.LinuxMipsle, nil
-		case "riscv64":
-			return c.LinuxRiscv64, nil
-		default:
-			return "", fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
-		}
-	case "windows":
-		switch runtime.GOARCH {
-		case "amd64":
-			return c.WindowsAmd64, nil
-		default:
-			return "", fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
-		}
-	default:
-		return "", fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
-	}
-}
-
-// VerifyChecksum verifies the checksum of the downloaded plugin binary.
-func verifyChecksumForFile(filePath string, checksum string) bool {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return false
-	}
-	calculatedChecksum := fmt.Sprintf("%x", hash.Sum(nil))
-
-	return calculatedChecksum == checksum
 }
 
 /*
