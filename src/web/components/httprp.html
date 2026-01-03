@@ -205,6 +205,7 @@
                     <th></th>
                     <th>Host</th>
                     <th>Destination</th>
+                    <th>Authentication</th>
                     <th>Virtual Directory</th>
                     <th class="no-sort">Tags</th>
                     <th class="no-sort" style="width:100px; cursor: default !important;"></th>
@@ -729,6 +730,19 @@
                     let tagList = renderTagList(subd);
                     let tagListEmpty = (subd.Tags.length == 0);
                     
+                    //Build authentication display
+                    let authDisplay = "";
+                    if (subd.AuthenticationProvider.AuthMethod == 0x1) {
+                        authDisplay = `<i class="ui grey key icon"></i> Basic Auth`;
+                    } else if (subd.AuthenticationProvider.AuthMethod == 0x2) {
+                        authDisplay = `<i class="ui blue key icon"></i> Forward Auth`;
+                    } else if (subd.AuthenticationProvider.AuthMethod == 0x3) {
+                        authDisplay = `<i class="ui yellow key icon"></i> OAuth2`;
+                    } else {
+                        authDisplay = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">None</small>`;
+                    }
+                    let authDisplayEmpty = (subd.AuthenticationProvider.AuthMethod == 0x0);
+                    
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td class="collapsing ignoremw" datatype="enable">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
@@ -745,6 +759,9 @@
                             <div class="upstreamList">
                                 ${upstreams}        
                             </div>
+                        </td>
+                        <td data-label="auth" datatype="auth" style="${authDisplayEmpty?"text-align: center;":""}">
+                            ${authDisplay}
                         </td>
                         <td data-label="" editable="true" datatype="vdir" style="${vdIsEmpty?"text-align: center;":""}">${vdList}</td>
                         <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags" style="${tagListEmpty?"text-align: center;":""}">
