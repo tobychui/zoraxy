@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -199,7 +198,11 @@ func (router *Router) StartProxyService() error {
 				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					//Unable to startup port 80 listener. Handle shutdown process gracefully
 					stopChan <- true
-					log.Fatalf("Could not start redirection server: %v\n", err)
+					// Disable port 80 listening to avoid terminating the whole process
+					router.Option.ListenOnPort80 = false
+					router.tlsRedirectStop = nil
+					router.Option.Logger.PrintAndLog("dprouter", "Could not start HTTP-to-HTTPS redirector (port 80); disabling port 80 listener", err)
+					return
 				}
 			}()
 			router.tlsRedirectStop = stopChan
