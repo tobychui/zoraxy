@@ -232,7 +232,6 @@
                     <th>Destination</th>
                     <th class="details-view">Authentication</th>
                     <th>Virtual Directory</th>
-                    <th class="details-view">Access Rule</th>
                     <th class="no-sort">Tags</th>
                     <th class="no-sort" style="width:100px; cursor: default !important;"></th>
                 </tr>
@@ -822,9 +821,6 @@
                             ${authDisplay}
                         </td>
                         <td data-label="" editable="true" datatype="vdir" style="${vdIsEmpty?"text-align: center;":""}">${vdList}</td>
-                        <td data-label="access-rule" datatype="access-rule" class="details-view">
-                            ${accessRuleDisplay}
-                        </td>
                         <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags" style="${tagListEmpty?"text-align: center;":""}">
                             <div class="tags-list">
                             ${tagList}
