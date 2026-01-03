@@ -70,12 +70,12 @@ type ProxyRelayInstance struct {
 	Timeout              int                  //Timeout for connection in sec
 
 	/* Internal */
-	tcpStopChan                 chan bool    //Stop channel for TCP listener
-	udpStopChan                 chan bool    //Stop channel for UDP listener
-	aTobAccumulatedByteTransfer atomic.Int64 //Accumulated byte transfer from A to B
-	bToaAccumulatedByteTransfer atomic.Int64 //Accumulated byte transfer from B to A
-	udpClientMap                sync.Map     //map storing the UDP client-server connections
-	parent                      *Manager     `json:"-"`
+	tcpStopChan                 chan bool     //Stop channel for TCP listener
+	udpStopChan                 chan bool     //Stop channel for UDP listener
+	aTobAccumulatedByteTransfer *atomic.Int64 //Accumulated byte transfer from A to B
+	bToaAccumulatedByteTransfer *atomic.Int64 //Accumulated byte transfer from B to A
+	udpClientMap                sync.Map      //map storing the UDP client-server connections
+	parent                      *Manager      `json:"-"`
 }
 
 type Options struct {
@@ -192,8 +192,8 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		Timeout:                     config.Timeout,
 		tcpStopChan:                 nil,
 		udpStopChan:                 nil,
-		aTobAccumulatedByteTransfer: aAcc,
-		bToaAccumulatedByteTransfer: bAcc,
+		aTobAccumulatedByteTransfer: &aAcc,
+		bToaAccumulatedByteTransfer: &bAcc,
 		udpClientMap:                sync.Map{},
 		parent:                      m,
 	}
