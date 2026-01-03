@@ -83,6 +83,40 @@
   ],
   "HiddenFields": []
  },
+ "aliesa": {
+  "Name": "aliesa",
+  "ConfigableFields": [
+   {
+    "Title": "RAMRole",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SecretKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SecurityToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "RegionID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": []
+ },
  "allinkl": {
   "Name": "allinkl",
   "ConfigableFields": [
@@ -1385,6 +1419,29 @@
    }
   ]
  },
+ "edgecenter": {
+  "Name": "edgecenter",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "edgeone": {
   "Name": "edgeone",
   "ConfigableFields": [
@@ -1413,7 +1470,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "ZonesMapping",
+    "Datatype": "map[string]string"
+   }
+  ]
  },
  "efficientip": {
   "Name": "efficientip",
@@ -1608,6 +1670,37 @@
    }
   ]
  },
+ "gigahostno": {
+  "Name": "gigahostno",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Secret",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "glesys": {
   "Name": "glesys",
   "ConfigableFields": [
@@ -1685,6 +1778,37 @@
    }
   ]
  },
+ "gravity": {
+  "Name": "gravity",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ServerURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "hetzner": {
   "Name": "hetzner",
   "ConfigableFields": [
@@ -1744,6 +1868,29 @@
   "ConfigableFields": [
    {
     "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "hostingnl": {
+  "Name": "hostingnl",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
@@ -2092,6 +2239,29 @@
   "ConfigableFields": [
    {
     "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "ionoscloud": {
+  "Name": "ionoscloud",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
     "Datatype": "string"
    },
    {
@@ -2668,6 +2838,29 @@
    },
    {
     "Title": "Login",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "neodigit": {
+  "Name": "neodigit",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
     "Datatype": "string"
    },
    {
@@ -3451,10 +3644,6 @@
   "Name": "selectel",
   "ConfigableFields": [
    {
-    "Title": "BaseURL",
-    "Datatype": "string"
-   },
-   {
     "Title": "Token",
     "Datatype": "string"
    },
@@ -3465,6 +3654,10 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
+   },
+   {
+    "Title": "BaseURL",
+    "Datatype": "string"
    }
   ],
   "HiddenFields": [
@@ -3670,6 +3863,29 @@
   ],
   "HiddenFields": []
  },
+ "syse": {
+  "Name": "syse",
+  "ConfigableFields": [
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "Credentials",
+    "Datatype": "map[string]string"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "technitium": {
   "Name": "technitium",
   "ConfigableFields": [
@@ -3783,6 +3999,29 @@
    }
   ],
   "HiddenFields": []
+ },
+ "uniteddomains": {
+  "Name": "uniteddomains",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "variomedia": {
   "Name": "variomedia",
@@ -3931,6 +4170,29 @@
    }
   ]
  },
+ "virtualname": {
+  "Name": "virtualname",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "vkcloud": {
   "Name": "vkcloud",
   "ConfigableFields": [
@@ -3973,10 +4235,6 @@
   "Name": "vscale",
   "ConfigableFields": [
    {
-    "Title": "BaseURL",
-    "Datatype": "string"
-   },
-   {
     "Title": "Token",
     "Datatype": "string"
    },
@@ -3987,6 +4245,10 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
+   },
+   {
+    "Title": "BaseURL",
+    "Datatype": "string"
    }
   ],
   "HiddenFields": [

@@ -236,6 +236,11 @@ func ReverseProxyUpstreamSetPriority(w http.ResponseWriter, r *http.Request) {
 	originIP = strings.TrimSpace(originIP)
 
 	editingUpstream, err := targetEndpoint.GetUpstreamOriginByMatchingIP(originIP)
+	if err != nil {
+		SystemWideLogger.PrintAndLog("INFO", "Unable to update upstream weight", err)
+		utils.SendErrorResponse(w, "Failed to update upstream weight! (wrong origin?)")
+		return
+	}
 	editingUpstream.Weight = weight
 	// The editing upstream is a pointer to the runtime object
 	// and the change of weight do not requre a respawn of the proxy object

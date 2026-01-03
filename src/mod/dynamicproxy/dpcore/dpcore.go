@@ -75,6 +75,7 @@ type ResponseRewriteRuleSet struct {
 	NoRemoveHopByHop               bool   //Do not remove hop-by-hop headers (advanced usecase)
 	NoRemoveUserAgentHeader        bool   //Do not remove User-Agent header from server response (advanced usecase)
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
+	ForceHTTP11                    bool   //Force use HTTP/1.1 for upstream connection
 
 	/* System Information Payload */
 	DevelopmentMode bool   //Inject dev mode information to requests
@@ -295,6 +296,17 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
+	//Force HTTP/1.1 if requested
+	if rrr.ForceHTTP11 {
+		if tr, ok := transport.(*http.Transport); ok {
+			trc := tr.Clone()
+			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
+			trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
+			tr.ForceAttemptHTTP2 = false
+			transport = tr
+		}
+	}
+
 	//Fix for issue #821
 	if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
 		if tr, ok := transport.(*http.Transport); ok {
@@ -313,6 +325,13 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 				}
 				cfg.ServerName = serverName
 				trc.TLSClientConfig = cfg
+
+				// Preserve ForceHTTP11 settings if it was set
+				if rrr.ForceHTTP11 {
+					trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
+					trc.ForceAttemptHTTP2 = false
+				}
+
 				transport = trc
 			}
 		}

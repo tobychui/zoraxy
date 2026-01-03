@@ -26,6 +26,49 @@ var (
 	dynamicProxyRouterReady = make(chan bool, 1)
 )
 
+// parseCaptchaConfigFromRequest extracts and parses CAPTCHA configuration from POST request parameters
+func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig, error) {
+	requireCaptcha, _ := utils.PostBool(r, "captcha")
+	if !requireCaptcha {
+		return nil, nil
+	}
+
+	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
+	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
+	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
+	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
+	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
+	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
+
+	captchaProvider := 0
+	if captchaProviderStr != "" {
+		captchaProvider, _ = strconv.Atoi(captchaProviderStr)
+	}
+
+	captchaSessionDuration := 3600
+	if captchaSessionDurationStr != "" {
+		captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
+	}
+
+	captchaRecaptchaScore := 0.5
+	if captchaRecaptchaScoreStr != "" {
+		captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
+	}
+
+	if captchaRecaptchaVersion == "" {
+		captchaRecaptchaVersion = "v2"
+	}
+
+	return &dynamicproxy.CaptchaConfig{
+		Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
+		SiteKey:          captchaSiteKey,
+		SecretKey:        captchaSecretKey,
+		SessionDuration:  captchaSessionDuration,
+		RecaptchaVersion: captchaRecaptchaVersion,
+		RecaptchaScore:   captchaRecaptchaScore,
+	}, nil
+}
+
 // Add user customizable reverse proxy
 func ReverseProxyInit() {
 	/*
@@ -72,24 +115,21 @@ func ReverseProxyInit() {
 	}
 
 	listenOnPort80 := true
-	if netutils.CheckIfPortOccupied(80) {
-		listenOnPort80 = false
-	}
+	forceHttpsRedirect := true
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
+	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
+
+	listenOnPort80 = listenOnPort80 && !netutils.CheckIfPortOccupied(80)
+
 	if listenOnPort80 {
 		SystemWideLogger.Println("Port 80 listener enabled")
+		if forceHttpsRedirect {
+			SystemWideLogger.Println("Force HTTPS mode enabled")
+		} else {
+			SystemWideLogger.Println("Force HTTPS mode disabled")
+		}
 	} else {
 		SystemWideLogger.Println("Port 80 listener disabled")
-	}
-
-	forceHttpsRedirect := true
-	sysdb.Read("settings", "redirect", &forceHttpsRedirect)
-	if forceHttpsRedirect {
-		SystemWideLogger.Println("Force HTTPS mode enabled")
-		//Port 80 listener must be enabled to perform http -> https redirect
-		listenOnPort80 = true
-	} else {
-		SystemWideLogger.Println("Force HTTPS mode disabled")
 	}
 
 	/*
@@ -208,7 +248,7 @@ func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err := dynamicProxyRouter.StopProxyService()
+		err := dynamicProxyRouter.StopProxyService(nil)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -301,44 +341,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CAPTCHA Gating
-	requireCaptcha, _ := utils.PostBool(r, "captcha")
-	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
-	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
-	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
-	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
-	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
-	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
-
-	var captchaConfig *dynamicproxy.CaptchaConfig
-	if requireCaptcha {
-		captchaProvider := 0
-		if captchaProviderStr != "" {
-			captchaProvider, _ = strconv.Atoi(captchaProviderStr)
-		}
-
-		captchaSessionDuration := 3600
-		if captchaSessionDurationStr != "" {
-			captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
-		}
-
-		captchaRecaptchaScore := 0.5
-		if captchaRecaptchaScoreStr != "" {
-			captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
-		}
-
-		if captchaRecaptchaVersion == "" {
-			captchaRecaptchaVersion = "v2"
-		}
-
-		captchaConfig = &dynamicproxy.CaptchaConfig{
-			Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
-			SiteKey:          captchaSiteKey,
-			SecretKey:        captchaSecretKey,
-			SessionDuration:  captchaSessionDuration,
-			RecaptchaVersion: captchaRecaptchaVersion,
-			RecaptchaScore:   captchaRecaptchaScore,
-		}
+	captchaConfig, err := parseCaptchaConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse CAPTCHA config: "+err.Error())
+		return
 	}
+	requireCaptcha := captchaConfig != nil
 
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
@@ -639,47 +647,18 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CAPTCHA Gating
-	requireCaptcha, _ := utils.PostBool(r, "captcha")
-	captchaProviderStr, _ := utils.PostPara(r, "captchaProvider")
-	captchaSiteKey, _ := utils.PostPara(r, "captchaSiteKey")
-	captchaSecretKey, _ := utils.PostPara(r, "captchaSecretKey")
-	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
-	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
-	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
-
-	var captchaConfig *dynamicproxy.CaptchaConfig
-	if requireCaptcha {
-		captchaProvider := 0
-		if captchaProviderStr != "" {
-			captchaProvider, _ = strconv.Atoi(captchaProviderStr)
-		}
-
-		captchaSessionDuration := 3600
-		if captchaSessionDurationStr != "" {
-			captchaSessionDuration, _ = strconv.Atoi(captchaSessionDurationStr)
-		}
-
-		captchaRecaptchaScore := 0.5
-		if captchaRecaptchaScoreStr != "" {
-			captchaRecaptchaScore, _ = strconv.ParseFloat(captchaRecaptchaScoreStr, 64)
-		}
-
-		if captchaRecaptchaVersion == "" {
-			captchaRecaptchaVersion = "v2"
-		}
-
-		captchaConfig = &dynamicproxy.CaptchaConfig{
-			Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
-			SiteKey:          captchaSiteKey,
-			SecretKey:        captchaSecretKey,
-			SessionDuration:  captchaSessionDuration,
-			RecaptchaVersion: captchaRecaptchaVersion,
-			RecaptchaScore:   captchaRecaptchaScore,
-		}
+	captchaConfig, err := parseCaptchaConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse CAPTCHA config: "+err.Error())
+		return
 	}
+	requireCaptcha := captchaConfig != nil
 
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
+
+	// Force HTTP/1.1
+	forceHTTP11, _ := utils.PostBool(r, "forceHTTP11")
 
 	// Disable logging
 	disableLogging, _ := utils.PostBool(r, "dLogging")
@@ -743,6 +722,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
+	newProxyEndpoint.ForceHTTP11 = forceHTTP11
 	newProxyEndpoint.DisableLogging = disableLogging
 	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
 	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
@@ -1365,15 +1345,13 @@ func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enableStr, err := utils.PostPara(r, "enable")
+	isEnabled, err := utils.PostBool(r, "enable")
 	if err != nil {
-		enableStr = "true"
+		isEnabled = true
 	}
 
 	//Flip the enable and disabled tag state
-	ruleDisabled := enableStr == "false"
-
-	targetProxyRule.Disabled = ruleDisabled
+	targetProxyRule.Disabled = !isEnabled
 	err = SaveReverseProxyConfig(targetProxyRule)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to save updated rule")
@@ -1473,35 +1451,51 @@ func ReverseProxyList(w http.ResponseWriter, r *http.Request) {
 
 // Handle port 80 incoming traffics
 func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		//Load the current status
+	switch r.Method {
+	case http.MethodGet:
+		//Load the current status from database and runtime
 		currentEnabled := false
 		err := sysdb.Read("settings", "listenP80", &currentEnabled)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
 		}
-		js, _ := json.Marshal(currentEnabled)
+
+		// Get the runtime status
+		runtimeEnabled := dynamicProxyRouter.GetPort80ListenerState()
+
+		// Return both config and runtime status
+		result := map[string]bool{
+			"config":  currentEnabled,
+			"runtime": runtimeEnabled,
+		}
+		js, _ := json.Marshal(result)
 		utils.SendJSONResponse(w, string(js))
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		enabled, err := utils.PostPara(r, "enable")
 		if err != nil {
 			utils.SendErrorResponse(w, "enable state not set")
 			return
 		}
-		if enabled == "true" {
+		switch enabled {
+		case "true":
+			//Check if port 80 is already used by other services
+			if netutils.CheckIfPortOccupied(80) {
+				utils.SendErrorResponse(w, "Port 80 is already used by other services")
+				return
+			}
 			sysdb.Write("settings", "listenP80", true)
 			SystemWideLogger.Println("Enabling port 80 listener")
 			dynamicProxyRouter.UpdatePort80ListenerState(true)
-		} else if enabled == "false" {
+		case "false":
 			sysdb.Write("settings", "listenP80", false)
 			SystemWideLogger.Println("Disabling port 80 listener")
 			dynamicProxyRouter.UpdatePort80ListenerState(false)
-		} else {
+		default:
 			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
 		}
 		utils.SendOK(w)
-	} else {
+	default:
 		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
 	}
 
@@ -1615,10 +1609,9 @@ func HandleIncomingPortSet(w http.ResponseWriter, r *http.Request) {
 
 	//Stop and change the setting of the reverse proxy service
 	if dynamicProxyRouter.Running {
-		dynamicProxyRouter.StopProxyService()
 		dynamicProxyRouter.Option.Port = newIncomingPortInt
-		time.Sleep(1 * time.Second) //Fixed start fail issue
-		dynamicProxyRouter.StartProxyService()
+		time.Sleep(300 * time.Millisecond) //Fixed start fail issue
+		dynamicProxyRouter.Restart()
 	} else {
 		//Only change setting but not starting the proxy service
 		dynamicProxyRouter.Option.Port = newIncomingPortInt

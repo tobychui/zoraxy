@@ -39,6 +39,27 @@
             border: 0px solid transparent !important;
         }
 
+        /* Detail view toggle - hide by default */
+        th.details-view,
+        td.details-view {
+            display: none;
+        }
+
+        /* Table wrapper styling for detail view */
+        #httpProxyTableWrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        #httpProxyTableWrapper.detail-view-enabled {
+            width: calc(100vw - 280px); /* Account for sidebar width */
+            max-width: none;
+        }
+
+        #httpProxyTableWrapper.detail-view-enabled table {
+            min-width: 1400px; /* Ensure table expands to accommodate all detail columns */
+        }
+
         /* Custom, non overlaying modal for proxy rule editing */
         #httprpEditModal{
             position: fixed;
@@ -196,16 +217,20 @@
             <input type="password"  autocomplete="off" hidden/>
             <input type="text" id="searchInput"  placeholder="Quick Search" onkeydown="handleSearchInput(event);" onchange="handleSearchInput(event);" onblur="handleSearchInput(event);">
         </div>
+        <button class="ui basic button" id="detailViewToggle" onclick="toggleDetailViewButton();" style="float: right;">
+            Basics View
+        </button>
     </div>
     
-    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
+    <div id="httpProxyTableWrapper" style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui unstackable sortable compact celled definition table">
             <thead>
                 <tr>
                     <th></th>
                     <th>Host</th>
+                    <th class="details-view">Alt. Listening Addr</th>
                     <th>Destination</th>
-                    <th>Authentication</th>
+                    <th class="details-view">Authentication</th>
                     <th>Virtual Directory</th>
                     <th class="no-sort">Tags</th>
                     <th class="no-sort" style="width:100px; cursor: default !important;"></th>
@@ -333,12 +358,6 @@
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
                             <br>
-                            <!-- <div class="ui checkbox" style="margin-top: 0.4em; margin-left: 2em;">
-                                <input type="checkbox" class="DisableAutoFallback">
-                                <label>Disable Auto Fallback<br>
-                                    <small>Continue monitoring but don't automatically disable upstreams when offline</small></label>
-                            </div>
-                            <br> -->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -349,7 +368,13 @@
                                 <input type="checkbox" class="DisableChunkedTransferEncoding">
                                 <label>Disable Chunked Transfer Encoding<br>
                                     <small>Enable this option if your upstream uses a legacy HTTP server implementation (e.g. Proxmox / opencloud)</small></label>
-                            </div>    
+                            </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="ForceHTTP11">
+                                <label>Force HTTP/1.1<br>
+                                    <small>Force the proxy to use HTTP/1.1 for upstream connections, disabling HTTP/2 (Experimental)</small></label>
+                            </div>
                         </div>
                     </div>
                     <!-- Virtual Directories-->
@@ -466,7 +491,7 @@
                             <br>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="BlockCommonExploits">
-                                <label>Block Common Exploits (Experimental)<br>
+                                <label>Block Common Exploits<br>
                                     <small>Detect and block common exploit payloads (SQLi, XSS, path traversal, etc.)</small>
                                 </label>
                             </div>
@@ -488,7 +513,6 @@
                                     <div class="item" data-value="1">403 Forbidden</div>
                                     <div class="item" data-value="2">400 Bad Request</div>
                                     <div class="item" data-value="3">Drop Connection</div>
-                                    <div class="disabled item" data-value="4">Captcha Challenge</div> <!-- Work in progress -->
                                 </div>
                             </div>
                              <small style="opacity:0.7;">Select how the system should respond when malicious or automated traffic is detected.</small>
@@ -638,17 +662,40 @@
         return tagList;
     }
 
+    function renderListeningPortsList(subd){
+        let portsList = "";
+        let ports = [];
+        
+        // Only show alternative listening ports (not primary or redirect ports)
+        if (subd.ListeningPorts && subd.ListeningPorts.length > 0) {
+            subd.ListeningPorts.forEach(port => {
+                ports.push(port);
+            });
+            portsList = ports.join("<br>");
+        } else {
+            portsList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">None</small>`;
+        }
+        
+        return portsList;
+    }
+
+    function renderAccessRuleName(subd){
+        // Return a placeholder that will be filled by resolveAccessRuleNameOnHostRPlist
+        let accessRuleID = subd.AccessFilterUUID || "default";
+        return `<span class="accessRuleNameInTable" ruleid="${accessRuleID}"></span>`;
+    }
+
     /* List all proxy endpoints */
     function listProxyEndpoints(){
         $.get("/api/proxy/list?type=host", function(data){
             $("#httpProxyList").html(``);
             if (data.error !== undefined){
                     $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="5"><i class="remove icon"></i> ${data.error}</td>
+                    <td data-label="" colspan="9"><i class="remove icon"></i> ${data.error}</td>
                 </tr>`);
             }else if (data.length == 0){
                 $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="5"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
+                    <td data-label="" colspan="9"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
                 </tr>`);
             }else{
                 //Sort by RootOrMatchingDomain field
@@ -731,6 +778,12 @@
                     let tagList = renderTagList(subd);
                     let tagListEmpty = (subd.Tags.length == 0);
                     
+                    //Build listening ports list
+                    let listeningPortsList = renderListeningPortsList(subd);
+                    
+                    //Build access rule display (will be populated later)
+                    let accessRuleDisplay = renderAccessRuleName(subd);
+                    
                     //Build authentication display
                     let authDisplay = "";
                     if (subd.AuthenticationProvider.AuthMethod == 0x1) {
@@ -756,12 +809,15 @@
                             ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
+                        <td data-label="listening-ports" datatype="ports" class="details-view">
+                            ${listeningPortsList}
+                        </td>
                         <td data-label="" editable="true" datatype="domain" data-sort-value="${destSortValue}" style="word-break: break-all;">
                             <div class="upstreamList">
                                 ${upstreams}        
                             </div>
                         </td>
-                        <td data-label="auth" datatype="auth" style="${authDisplayEmpty?"text-align: center;":""}">
+                        <td data-label="auth" datatype="auth" class="details-view" style="${authDisplayEmpty?"text-align: center;":""}">
                             ${authDisplay}
                         </td>
                         <td data-label="" editable="true" datatype="vdir" style="${vdIsEmpty?"text-align: center;":""}">${vdList}</td>
@@ -788,6 +844,7 @@
             }
 
             resolveAccessRuleNameOnHostRPlist();
+            initDetailView();
         });
     }
 
@@ -825,16 +882,23 @@
                     accessRuleMap[data[i].ID] = data[i];
                 }
                 
-                
-                $(".accessRuleNameUnderHost").each(function(){
+                // Update both the under-host display and the details-view column
+                $(".accessRuleNameUnderHost, .accessRuleNameInTable").each(function(){
                     let thisAccessRuleID = $(this).attr("ruleid");
                     if (thisAccessRuleID== ""){
                         thisAccessRuleID = "default"
                     }
 
+                    // Check if this is in the details-view column
+                    let isDetailsColumn = $(this).hasClass("accessRuleNameInTable");
+
                     if (thisAccessRuleID == "default"){
-                        //No need to label default access rules
-                        $(this).html("");
+                        // Show "default" in details-view column, hide in under-host display
+                        if (isDetailsColumn) {
+                            $(this).html("default");
+                        } else {
+                            $(this).html("");
+                        }
                         return;
                     }
 
@@ -869,6 +933,7 @@
     //Update the access rule name on given epuuid, call by hostAccessEditor.html
     function updateAccessRuleNameUnderHost(epuuid, newruleUID){
         $(`tr[eptuuid='${epuuid}'].subdEntry`).find(".accessRuleNameUnderHost").attr("ruleid", newruleUID);
+        $(`tr[eptuuid='${epuuid}'].subdEntry`).find(".accessRuleNameInTable").attr("ruleid", newruleUID);
         resolveAccessRuleNameOnHostRPlist();
     }
 
@@ -1021,6 +1086,7 @@
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
+        let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
         let disableLogging = $(editor).find(".DisableLogging")[0].checked;
         let disableStatisticCollection = $(editor).find(".DisableStatisticCollection")[0].checked;
         let blockCommonExploits = $(editor).find(".BlockCommonExploits")[0].checked;
@@ -1053,6 +1119,7 @@
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
+                "forceHTTP11": forceHTTP11,
                 "dLogging": disableLogging,
                 "dStatisticCollection": disableStatisticCollection,
                 "blockCommonExploits": blockCommonExploits,
@@ -1264,6 +1331,59 @@
     }
 
     /* Tags & Search */
+    function toggleDetailViewButton() {
+        // Check current state
+        let currentState = localStorage.getItem("httprp_detailView");
+        let isDetailsView = currentState === "true";
+        
+        // Toggle the state
+        if (isDetailsView) {
+            // Switch to Basics view
+            $(".standardContainer th.details-view, .standardContainer td.details-view").hide();
+            $("#httpProxyTableWrapper").removeClass("detail-view-enabled");
+            localStorage.setItem("httprp_detailView", "false");
+            $("#detailViewToggle").text("Basics View");
+        } else {
+            // Switch to Details view
+            $(".standardContainer th.details-view, .standardContainer td.details-view").show();
+            $("#httpProxyTableWrapper").addClass("detail-view-enabled");
+            localStorage.setItem("httprp_detailView", "true");
+            $("#detailViewToggle").text("Details View");
+        }
+    }
+
+    function toggleDetailView(isChecked) {
+        if (isChecked) {
+            // Show detail view columns (only in the proxy list table, not in the editor)
+            $(".standardContainer th.details-view, .standardContainer td.details-view").show();
+            $("#httpProxyTableWrapper").addClass("detail-view-enabled");
+            // Save to localStorage
+            localStorage.setItem("httprp_detailView", "true");
+        } else {
+            // Hide detail view columns
+            $(".standardContainer th.details-view, .standardContainer td.details-view").hide();
+            $("#httpProxyTableWrapper").removeClass("detail-view-enabled");
+            // Save to localStorage
+            localStorage.setItem("httprp_detailView", "false");
+        }
+    }
+
+    function initDetailView() {
+        // Load detail view preference from localStorage
+        let detailViewEnabled = localStorage.getItem("httprp_detailView");
+        if (detailViewEnabled === "true") {
+            // Show details view
+            $(".standardContainer th.details-view, .standardContainer td.details-view").show();
+            $("#httpProxyTableWrapper").addClass("detail-view-enabled");
+            $("#detailViewToggle").text("Details View");
+        } else {
+            // Show basics view (default)
+            $(".standardContainer th.details-view, .standardContainer td.details-view").hide();
+            $("#httpProxyTableWrapper").removeClass("detail-view-enabled");
+            $("#detailViewToggle").text("Basics View");
+        }
+    }
+
     function handleSearchInput(event){
         if (event.key == "Escape"){
             $("#searchInput").val("");
@@ -1638,6 +1758,12 @@
             saveProxyInlineEdit(uuid);
         });
 
+        editor.find(".ForceHTTP11").off("change");
+        editor.find(".ForceHTTP11").prop("checked", subd.ForceHTTP11);
+        editor.find(".ForceHTTP11").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
         /* ------------ Vdirs ------------ */
         editor.find(".vdir_list").html(renderVirtualDirectoryList(subd));
         editor.find(".editVdirBtn").off("click").on("click", function(){
@@ -1781,33 +1907,33 @@
         }
 
         // Initialize CAPTCHA dropdowns
-        setTimeout(function() {
-            editor.find(".captchaProviderDropdown").dropdown({
-                onChange: function(value) {
-                    if (value == "1") { // Google reCAPTCHA
-                        editor.find(".googleRecaptchaSettings").show();
-                        let version = editor.find(".recaptchaVersionDropdown").dropdown("get value");
-                        if (version == "v3") {
-                            editor.find(".recaptchaV3Settings").show();
-                        }
-                    } else { // Cloudflare Turnstile
-                        editor.find(".googleRecaptchaSettings").hide();
-                    }
-                    saveProxyInlineEdit(uuid);
-                }
-            });
-
-            editor.find(".recaptchaVersionDropdown").dropdown({
-                onChange: function(value) {
-                    if (value == "v3") {
+        editor.find(".captchaProviderDropdown").dropdown('destroy');
+        editor.find(".captchaProviderDropdown").dropdown({
+            onChange: function(value) {
+                if (value == "1") { // Google reCAPTCHA
+                    editor.find(".googleRecaptchaSettings").show();
+                    let version = editor.find(".recaptchaVersionDropdown").dropdown("get value");
+                    if (version == "v3") {
                         editor.find(".recaptchaV3Settings").show();
-                    } else {
-                        editor.find(".recaptchaV3Settings").hide();
                     }
-                    saveProxyInlineEdit(uuid);
+                } else { // Cloudflare Turnstile
+                    editor.find(".googleRecaptchaSettings").hide();
                 }
-            });
-        }, 100);
+                saveProxyInlineEdit(uuid);
+            }
+        });
+
+        editor.find(".recaptchaVersionDropdown").dropdown('destroy');
+        editor.find(".recaptchaVersionDropdown").dropdown({
+            onChange: function(value) {
+                if (value == "v3") {
+                    editor.find(".recaptchaV3Settings").show();
+                } else {
+                    editor.find(".recaptchaV3Settings").hide();
+                }
+                saveProxyInlineEdit(uuid);
+            }
+        });
 
         // Bind CAPTCHA checkbox change event
         editor.find(".RequireCaptcha").off("change").on("change", function() {

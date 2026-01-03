@@ -3,10 +3,10 @@ package dynamicproxy
 import (
 	"context"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -139,8 +139,8 @@ func (h *ProxyHandler) upstreamHostSwap(w http.ResponseWriter, r *http.Request, 
 		if loopbackProxyEndpoint.IsEnabled() {
 			h.hostRequest(w, r, loopbackProxyEndpoint)
 		} else {
-			//Endpoint disabled, return 503
-			http.ServeFile(w, r, "./web/rperror.html")
+			//Endpoint disabled, return 521
+			serveProxyRequestError(w, 521, h.Parent, ErrorTemplateRPError)
 			h.Parent.logRequest(r, false, 521, "host-http", r.Host, upstreamHostname, currentTarget)
 		}
 		return true
@@ -157,7 +157,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	/* Load balancing */
 	selectedUpstream, err := h.Parent.loadBalancer.GetRequestUpstreamTarget(w, r, target.ActiveOrigins, target.UseStickySession, target.DisableAutoFallback)
 	if err != nil {
-		http.ServeFile(w, r, "./web/rperror.html")
+		serveProxyRequestError(w, 521, h.Parent, ErrorTemplateRPError)
 		h.Parent.Option.Logger.PrintAndLog("proxy", "Failed to assign an upstream for this request", err)
 		h.Parent.logRequest(r, false, 521, "subdomain-http", r.URL.Hostname(), r.Host, target)
 		return
@@ -237,6 +237,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
 		DisableChunkedTransferEncoding: target.DisableChunkedTransferEncoding,
+		ForceHTTP11:                    target.ForceHTTP11,
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
@@ -249,14 +250,14 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	upstreamHostname := selectedUpstream.OriginIpOrDomain
 	if err != nil {
 		if errors.As(err, &dnsError) {
-			http.ServeFile(w, r, "./web/hosterror.html")
+			serveProxyRequestError(w, 404, h.Parent, ErrorTemplateHostError)
 			h.Parent.logRequest(r, false, 404, "host-http", reqHostname, upstreamHostname, target)
 		} else if errors.Is(err, context.Canceled) {
 			//Request canceled by client, usually due to manual refresh before page load
 			http.Error(w, "Request canceled", http.StatusRequestTimeout)
 			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname, target)
 		} else {
-			http.ServeFile(w, r, "./web/rperror.html")
+			serveProxyRequestError(w, 521, h.Parent, ErrorTemplateRPError)
 			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname, target)
 		}
 	}
@@ -333,6 +334,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
 		DisableChunkedTransferEncoding: target.parent.DisableChunkedTransferEncoding,
+		ForceHTTP11:                    target.parent.ForceHTTP11,
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		Version:                        target.parent.parent.Option.HostVersion,
@@ -342,12 +344,12 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	var dnsError *net.DNSError
 	if err != nil {
 		if errors.As(err, &dnsError) {
-			http.ServeFile(w, r, "./web/hosterror.html")
-			log.Println(err.Error())
+			serveProxyRequestError(w, 404, h.Parent, ErrorTemplateHostError)
+			//log.Println(err.Error())
 			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain, target.parent)
 		} else {
-			http.ServeFile(w, r, "./web/rperror.html")
-			log.Println(err.Error())
+			serveProxyRequestError(w, 521, h.Parent, ErrorTemplateRPError)
+			//log.Println(err.Error())
 			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain, target.parent)
 		}
 	}
@@ -393,4 +395,27 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		router.Option.StatisticCollector.RecordRequest(requestInfo)
 	}()
 
+}
+
+// Serve error page with status code
+// Checks for custom templates in web directory before falling back to embedded content
+func serveProxyRequestError(w http.ResponseWriter, statusCode int, router *Router, templateType ErrorTemplateType) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(statusCode)
+
+	// Get the embedded template and filename for this template type
+	embeddedContent, templateName := templateType.getTemplateContent()
+
+	// Try to load custom template from web directory
+	if router != nil && router.Option.WebDirectory != "" {
+		customTemplate, err := os.ReadFile(filepath.Join(router.Option.WebDirectory, "templates", templateName))
+		if err == nil {
+			// Custom template found, use it
+			w.Write(customTemplate)
+			return
+		}
+	}
+
+	// Fall back to embedded template
+	w.Write(embeddedContent)
 }
