@@ -21,6 +21,12 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+const (
+	//Todo: Move to dedicated module and def files
+	EXCEPTION_TYPE_PATH = 0x00
+	EXCEPTION_TYPE_IP   = 0x01
+)
+
 var (
 	dynamicProxyRouter      *dynamicproxy.Router
 	dynamicProxyRouterReady = make(chan bool, 1)
@@ -1131,7 +1137,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch exceptionType {
-	case 0x00:
+	case EXCEPTION_TYPE_PATH:
 		matchingPrefix, err := utils.PostPara(r, "prefix")
 		if err != nil {
 			utils.SendErrorResponse(w, "Invalid matching prefix given")
@@ -1160,7 +1166,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 			PathPrefix: strings.TrimSpace(matchingPrefix),
 		})
 
-	case 0x01:
+	case EXCEPTION_TYPE_IP:
 		matchingCIDR, err := utils.PostPara(r, "cidr")
 		if err != nil {
 			utils.SendErrorResponse(w, "Invalid matching CIDR given")
@@ -1242,7 +1248,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 	exceptionType, err := utils.PostInt(r, "type")
 	if err != nil {
-		exceptionType = 0x00 //Default to paths
+		exceptionType = EXCEPTION_TYPE_PATH //Default to paths
 	}
 
 	matchingPrefix, err := utils.PostPara(r, "prefix")
@@ -1257,14 +1263,14 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 	var typeToCheck dynamicproxy.AuthExceptionType
 	switch exceptionType {
-	case 0x01:
+	case EXCEPTION_TYPE_IP:
 		typeToCheck = dynamicproxy.AuthExceptionType_CIDR
 		//Check if the CIDR is valid
 		if matchingCIDR == "" {
 			utils.SendErrorResponse(w, "Invalid matching CIDR given")
 			return
 		}
-	case 0x00:
+	case EXCEPTION_TYPE_PATH:
 		fallthrough //For backward compatibility
 	default:
 		typeToCheck = dynamicproxy.AuthExceptionType_Paths
@@ -1273,7 +1279,6 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 			utils.SendErrorResponse(w, "Invalid matching prefix given")
 			return
 		}
-		return
 	}
 
 	// Load the target proxy object from router

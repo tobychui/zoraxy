@@ -503,8 +503,10 @@ Pick a log file from the menu to start debugging
         function getDateRangeLabels(hitPerDay) {
             let dates = Object.keys(hitPerDay).sort();
             if (dates.length === 0) return [];
-            let start = new Date(dates[0]);
-            let end = new Date(dates[dates.length - 1]);
+            // Normalize date format: replace slashes with dashes
+            let normalizedDates = dates.map(d => d.replace(/\//g, '-'));
+            let start = new Date(normalizedDates[0]);
+            let end = new Date(normalizedDates[normalizedDates.length - 1]);
             let labels = [];
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                 let y = d.getFullYear(), m = (d.getMonth() + 1).toString().padStart(2, "0"), day = d.getDate().toString().padStart(2, "0");
@@ -533,7 +535,13 @@ Pick a log file from the menu to start debugging
             // 2. Histogram for hit_per_day
             let hitPerDay = data.hit_per_day || {};
             let dayLabels = getDateRangeLabels(hitPerDay);
-            let dayCounts = dayLabels.map(d => hitPerDay[d] || 0);
+            // Normalize hitPerDay keys to match dayLabels format (with dashes)
+            let normalizedHitPerDay = {};
+            for (let [key, value] of Object.entries(hitPerDay)) {
+                // Add support for new log formats
+                normalizedHitPerDay[key.replace(/\//g, '-')] = value;
+            }
+            let dayCounts = dayLabels.map(d => normalizedHitPerDay[d] || 0);
             new Chart(document.getElementById("hitsPerDayChart"), {
                 type: "bar",
                 data: {
@@ -563,16 +571,27 @@ Pick a log file from the menu to start debugging
                         <canvas id="${canvasId}" height="100"></canvas>
                     </div>
                 `);
-                // If counts length doesn't match dayLabels, pad left with zeros
-                let paddedCounts = counts.slice(-dayLabels.length);
-                while (paddedCounts.length < dayLabels.length) paddedCounts.unshift(0);
+                // Map dayLabels to the correct indices in counts array
+                // counts array appears to be indexed where day N is at index N-1
+                // e.g., day 3 (2026/01/03) is at counts[2]
+                let mappedCounts = dayLabels.map(dateLabel => {
+                    // Extract day of month from dateLabel (format: YYYY-MM-DD)
+                    let day = parseInt(dateLabel.split('-')[2], 10);
+                    // Try day-1 first (standard 0-indexed array)
+                    let value = counts[day - 1];
+                    // If undefined or 0, also try day index (in case it's 1-indexed with 0 unused)
+                    if (value === undefined || value === 0) {
+                        value = counts[day] || 0;
+                    }
+                    return value;
+                });
                 new Chart(document.getElementById(canvasId), {
                     type: "line",
                     data: {
                         labels: dayLabels,
                         datasets: [{
                             label: "Hits",
-                            data: paddedCounts,
+                            data: mappedCounts,
                             fill: false,
                             borderColor: "#21ba45",
                             backgroundColor: "#21ba45",
