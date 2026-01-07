@@ -113,6 +113,7 @@ var (
 	/* Maintaince & Development Function Flags */
 	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
 	development_build = flag.Bool("dev", false, "Use external web folder for UI development")
+	reset_account     = flag.Bool("reset_ac", false, "Reset admin account username and password to default and exit")
 )
 
 /* Global Variables and Handlers */
