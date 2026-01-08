@@ -85,6 +85,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 			continue
 		}
 
+		m.logMutex.Lock()
 		thisRecords, ok := m.OnlineStatusLog[target.ID]
 		if !ok {
 			//First record. Create the array
@@ -100,6 +101,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 
 			m.OnlineStatusLog[target.ID] = thisRecords
 		}
+		m.logMutex.Unlock()
 	}
 }
 
@@ -108,7 +110,9 @@ func (m *Monitor) AddTargetToMonitor(target *Target) {
 	m.Config.Targets = append(m.Config.Targets, target)
 
 	// Add target to OnlineStatusLog
+	m.logMutex.Lock()
 	m.OnlineStatusLog[target.ID] = []*Record{}
+	m.logMutex.Unlock()
 }
 
 func (m *Monitor) RemoveTargetFromMonitor(targetId string) {
@@ -121,7 +125,9 @@ func (m *Monitor) RemoveTargetFromMonitor(targetId string) {
 	}
 
 	// Remove target from OnlineStatusLog
+	m.logMutex.Lock()
 	delete(m.OnlineStatusLog, targetId)
+	m.logMutex.Unlock()
 }
 
 // Scan the config target. If a target exists in m.OnlineStatusLog no longer
@@ -135,15 +141,14 @@ func (m *Monitor) CleanRecords() {
 
 	// Iterate over all log entries and remove any that have a target ID that
 	// is not in the set of current target IDs
-	newStatusLog := m.OnlineStatusLog
-	for id, _ := range m.OnlineStatusLog {
+	m.logMutex.Lock()
+	for id := range m.OnlineStatusLog {
 		_, idExistsInTargets := targetIDs[id]
 		if !idExistsInTargets {
-			delete(newStatusLog, id)
+			delete(m.OnlineStatusLog, id)
 		}
 	}
-
-	m.OnlineStatusLog = newStatusLog
+	m.logMutex.Unlock()
 }
 
 /*
@@ -153,12 +158,16 @@ func (m *Monitor) CleanRecords() {
 func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 	id, _ := utils.GetPara(r, "id")
 	if id == "" {
+		m.logMutex.RLock()
 		js, _ := json.Marshal(m.OnlineStatusLog)
+		m.logMutex.RUnlock()
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(js)
 	} else {
 		//Check if that id exists
+		m.logMutex.RLock()
 		log, ok := m.OnlineStatusLog[id]
+		m.logMutex.RUnlock()
 		if !ok {
 			http.NotFound(w, r)
 			return
@@ -186,7 +195,9 @@ func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int)
 		// Check if this is the first record
 		// sometime after startup the first check may fail due to network issues
 		// we will log it as failed but not notify dynamic proxy to take down the upstream
+		m.logMutex.RLock()
 		records, ok := m.OnlineStatusLog[target.ID]
+		m.logMutex.RUnlock()
 		if !ok || len(records) == 0 {
 			return false, 0, 0
 		}

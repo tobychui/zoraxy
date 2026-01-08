@@ -1,6 +1,10 @@
 package uptime
 
-import "imuslab.com/zoraxy/mod/info/logger"
+import (
+	"sync"
+
+	"imuslab.com/zoraxy/mod/info/logger"
+)
 
 const (
 	logModuleName = "uptime-monitor"
@@ -43,7 +47,8 @@ type Config struct {
 type Monitor struct {
 	Config              *Config
 	OnlineStatusLog     map[string][]*Record
-	runningUptimeChecks bool //To prevent overlapping uptime checks
+	logMutex            sync.RWMutex         //Mutex for OnlineStatusLog map access
+	runningUptimeChecks bool                 //To prevent overlapping uptime checks
 }
 
 // Default configs
