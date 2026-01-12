@@ -6,11 +6,11 @@ name: Build and push Docker image
     types: [released, prereleased]
 
 env:
-  DOCKER_ACCOUNT: zoraxydocker
-  DOCKER_REPO: zoraxy
-  DOCKER_REPO_TAG_CACHE_NAME: buildcache
-  DOCKER_PLATFORMS: linux/amd64,linux/arm64
-  RUNNER_LABEL: ubuntu-latest
+  DOCKER_ACCOUNT: ${{ vars.DOCKER_ACCOUNT || 'zoraxydocker' }}
+  DOCKER_REPO: ${{ vars.DOCKER_REPO || 'zoraxy' }}
+  DOCKER_REPO_TAG_CACHE_NAME: ${{ vars.DOCKER_REPO_TAG_CACHE_NAME || 'buildcache' }}
+  DOCKER_PLATFORMS: ${{ vars.DOCKER_PLATFORMS || 'linux/amd64,linux/arm64' }}
+  RUNNER_LABEL: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
 
 permissions:
   contents: read
