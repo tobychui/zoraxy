@@ -10,13 +10,14 @@ env:
   DOCKER_REPO: zoraxy
   DOCKER_REPO_TAG_CACHE_NAME: buildcache
   DOCKER_PLATFORMS: linux/amd64,linux/arm64
+  RUNNER_LABEL: ubuntu-latest
 
 permissions:
   contents: read
 
 jobs:
   setup-build-push:
-    runs-on: ubuntu-latest
+    runs-on: ${{ env.RUNNER_LABEL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
