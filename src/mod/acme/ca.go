@@ -36,13 +36,23 @@ func init() {
 }
 
 // Get the CA ACME server endpoint and error if not found
-func loadCAApiServerFromName(caName string) (string, error) {
+func loadCAApiServerFromName(caName string, acmeTestMode bool) (string, error) {
 	// handle BuyPass cert org section (Buypass AS-983163327)
 	if strings.HasPrefix(caName, "Buypass AS") {
 		caName = "Buypass"
 	}
 
-	val, ok := caDef.Production[caName]
+	var (
+		 val string
+		 ok  bool
+		)
+
+	if acmeTestMode {
+		val, ok = caDef.Test[caName]
+	}else{
+		val, ok = caDef.Production[caName]
+	}
+
 	if !ok {
 		return "", errors.New("This CA is not supported")
 	}
@@ -50,7 +60,7 @@ func loadCAApiServerFromName(caName string) (string, error) {
 	return val, nil
 }
 
-func IsSupportedCA(caName string) bool {
-	_, err := loadCAApiServerFromName(caName)
+func IsSupportedCA(caName string, acmeTestMode bool) bool {
+	_, err := loadCAApiServerFromName(caName, acmeTestMode)
 	return err == nil
 }
