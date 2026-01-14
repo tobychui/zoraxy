@@ -38,7 +38,7 @@ func initACME() *acme.ACMEHandler {
 		port = getRandomPort(30000)
 	}
 
-	return acme.NewACME("https://acme-v02.api.letsencrypt.org/directory", strconv.Itoa(port), sysdb, SystemWideLogger)
+	return acme.NewACME(strconv.Itoa(port), sysdb, SystemWideLogger, *acmeTestMode)
 }
 
 // Restart ACME handler and auto renewer
@@ -172,7 +172,7 @@ func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSONResponse(w, string(js))
 	} else {
 		//Check if the CA is supported
-		acme.IsSupportedCA(ca)
+		acme.IsSupportedCA(ca, *acmeTestMode)
 		//Set the new config
 		sysdb.Write("acmepref", "prefca", ca)
 		SystemWideLogger.Println("Updating prefered ACME CA to " + ca)

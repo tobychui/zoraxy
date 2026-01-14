@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -316,6 +317,17 @@ func (v *Viewer) LoadLogFile(filename string) (string, error) {
 	}
 }
 
+func (v *Viewer) isMethodKeyword(part string) bool {
+	part = strings.TrimSpace(part)
+	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+	for _, method := range methods {
+		if strings.HasPrefix(part, method+" ") {
+			return true
+		}
+	}
+	return false
+}
+
 func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 	logFilepath := v.senatizeLogFilenameInput(filename)
 	if utils.FileExists(logFilepath) {
@@ -354,8 +366,13 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 				continue // Skip malformed lines
 			}
 
-			datePart := strings.TrimSpace(parts[0][1:]) // Remove the leading '['
-			date := datePart[:10]                       // Get the date part (YYYY-MM-DD)
+			//Check for new log format or older one
+			datePart := strings.TrimSpace(parts[0][1:]) // old format, start with [
+			if parts[0] != "" && !strings.HasPrefix(parts[0], "[") {
+				datePart = strings.TrimSpace(parts[0])     // new format, no starting [
+				datePart = strings.Split(datePart, " ")[0] // Get only the date part
+			}
+			date := datePart[:10] // Get the date part (YYYY-MM-DD)
 
 			// Increment hit count for the day
 			summary.HitPerDay[date]++
@@ -374,16 +391,25 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 				} else if strings.HasPrefix(part, "[useragent:") {
 					userAgent = strings.TrimPrefix(part, "[useragent:")
 					userAgent = strings.TrimSuffix(userAgent, "]")
-				} else if !strings.HasPrefix(part, "[") && !strings.HasSuffix(part, "]") && method == "" {
+					userAgent = strings.TrimSpace(userAgent)
+				} else if v.isMethodKeyword(part) {
 					// This is likely the HTTP method (GET, POST, etc.)
 					fields := strings.Fields(part)
-					if len(fields) > 0 {
-						method = fields[0]
-						summary.RequestMethods[method]++
-						if len(fields) > 1 {
-							path = fields[1] // The path is the second field
-						}
-					}
+					method = fields[0]
+				}
+			}
+
+			// Track origin hits for TopOrigins
+			if origin != "" {
+				summary.TopOrigins[origin]++
+			}
+
+			// Extract path, usually at the last part after ]
+			fields := strings.Fields(line)
+			if len(fields) > 1 {
+				lastPart := fields[len(fields)-2]
+				if strings.HasPrefix(lastPart, "/") {
+					path = lastPart
 				}
 			}
 
@@ -418,6 +444,10 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 				summary.TopPaths[path]++
 			}
 
+			if method != "" {
+				summary.RequestMethods[method]++
+			}
+
 			// Increment unique IPs (assuming IP is the first part of the line)
 			ipPart := strings.Split(line, "[client:")[1]
 			if ipPart != "" {
@@ -442,13 +472,35 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 			}
 		}
 
+		// Sort and limit TopOrigins to top 20 by hit count
+		type originHit struct {
+			origin string
+			hits   int64
+		}
+		originList := make([]originHit, 0, len(summary.TopOrigins))
+		for origin, hits := range summary.TopOrigins {
+			originList = append(originList, originHit{origin, hits})
+		}
+		sort.Slice(originList, func(i, j int) bool {
+			return originList[i].hits > originList[j].hits
+		})
+
+		// Keep only top 20 origins
+		summary.TopOrigins = make(map[string]int64)
+		limit := 20
+		if len(originList) < limit {
+			limit = len(originList)
+		}
+		for i := 0; i < limit; i++ {
+			summary.TopOrigins[originList[i].origin] = originList[i].hits
+		}
+
 		js, err := json.Marshal(summary)
 		if err != nil {
 			return "", err
 		}
 
 		return string(js), nil
-
 	} else {
 		return "", errors.New("log file not found")
 	}

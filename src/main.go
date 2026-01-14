@@ -42,6 +42,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
+	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/update"
 	"imuslab.com/zoraxy/mod/utils"
@@ -69,6 +70,11 @@ func main() {
 	}
 	if *geoDbUpdate {
 		geodb.DownloadGeoDBUpdate(CONF_GEODB_PATH)
+		os.Exit(0)
+	}
+	if *reset_account {
+		//Reset admin account by removing all users from the system
+		auth.ResetAccount(databaseBackend)
 		os.Exit(0)
 	}
 

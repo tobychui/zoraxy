@@ -76,19 +76,21 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 
 // ACMEHandler handles ACME-related operations.
 type ACMEHandler struct {
-	DefaultAcmeServer string
 	Port              string
 	Database          *database.Database
 	Logger            *logger.Logger
+	TestMode          bool
 }
 
 // NewACME creates a new ACMEHandler instance.
-func NewACME(defaultAcmeServer string, port string, database *database.Database, logger *logger.Logger) *ACMEHandler {
+func NewACME(
+			port string, database *database.Database,
+			logger *logger.Logger, testMode bool) *ACMEHandler {
 	return &ACMEHandler{
-		DefaultAcmeServer: defaultAcmeServer,
 		Port:              port,
 		Database:          database,
 		Logger:            logger,
+		TestMode:          testMode,
 	}
 }
 
@@ -155,14 +157,14 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	if caName == "custom" {
 		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
 	} else {
-		caLinkOverwrite, err := loadCAApiServerFromName(caName)
+		caLinkOverwrite, err := loadCAApiServerFromName(caName, a.TestMode)
 		if err == nil {
 			config.CADirURL = caLinkOverwrite
 			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
 		} else {
-			// (caName == "" || caUrl == "") will use default acme
-			config.CADirURL = a.DefaultAcmeServer
-			a.Logf("Using Default ACME "+a.DefaultAcmeServer+" for CA Directory URL", nil)
+			// wrong caName => use default acme
+			config.CADirURL, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
+			a.Logf("Using Default ACME " + config.CADirURL + " for CA Directory URL", nil)
 		}
 	}
 
