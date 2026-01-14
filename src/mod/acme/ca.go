@@ -49,7 +49,7 @@ func loadCAApiServerFromName(caName string, acmeTestMode bool) (string, error) {
 
 	if acmeTestMode {
 		val, ok = caDef.Test[caName]
-	}else{
+	} else {
 		val, ok = caDef.Production[caName]
 	}
 
