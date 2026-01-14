@@ -32,11 +32,11 @@ func ScanIpRange(start, end string) ([]*DiscoveredHost, error) {
 	ipStart := net.ParseIP(start)
 	ipEnd := net.ParseIP(end)
 	if ipStart == nil || ipEnd == nil {
-		return nil, fmt.Errorf("Invalid IP address")
+		return nil, fmt.Errorf("invalid IP address")
 	}
 
 	if bytes.Compare(ipStart, ipEnd) > 0 {
-		return nil, fmt.Errorf("Invalid IP range")
+		return nil, fmt.Errorf("invalid IP range")
 	}
 
 	var wg sync.WaitGroup
@@ -108,7 +108,7 @@ func (host *DiscoveredHost) CheckPing() error {
 	pinger.Run()
 	stats := pinger.Statistics()
 	if stats.PacketsRecv == 0 {
-		return fmt.Errorf("Host unreachable for " + host.IP)
+		return fmt.Errorf("host unreachable for %s", host.IP)
 	}
 	host.Ping = int(stats.AvgRtt.Milliseconds())
 	return nil
@@ -136,7 +136,7 @@ func (host *DiscoveredHost) ScanPorts(startPort, endPort int) []int {
 	var openPorts []int
 
 	for port := startPort; port <= endPort; port++ {
-		target := fmt.Sprintf("%s:%d", host.IP, port)
+		target := net.JoinHostPort(host.IP, fmt.Sprintf("%d", port))
 		conn, err := net.DialTimeout("tcp", target, time.Millisecond*500)
 		if err == nil {
 			conn.Close()
