@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.3.1"
+	SYSTEM_VERSION    = "3.3.2"
 	DEVELOPMENT_BUILD = false
 
 	/* System Constants */
@@ -94,9 +94,9 @@ var (
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
 	/* Acme Configuration Flags */
-	acmeAutoRenewInterval      = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
-	acmeCertAutoRenewDays      = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
-	acmeTestMode               = flag.Bool("acmetestmode", false, "Run ACME in test/staging mode")
+	acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+	acmeCertAutoRenewDays = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
+	acmeTestMode          = flag.Bool("acmetestmode", false, "Run ACME in test/staging mode")
 
 	/* Logging Configuration Flags */
 	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
