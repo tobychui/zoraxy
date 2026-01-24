@@ -42,15 +42,9 @@ func loadCAApiServerFromName(caName string, acmeTestMode bool) (string, error) {
 		caName = "Buypass"
 	}
 
-	var (
-		 val string
-		 ok  bool
-		)
-
+	val, ok := caDef.Production[caName]
 	if acmeTestMode {
 		val, ok = caDef.Test[caName]
-	} else {
-		val, ok = caDef.Production[caName]
 	}
 
 	if !ok {

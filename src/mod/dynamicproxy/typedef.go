@@ -55,6 +55,7 @@ type RouterOption struct {
 	NoCache            bool   //Force set Cache-Control: no-store
 	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
+	UseProxyProtocol   bool   //Enable PROXY protocol v1/v2 support for TLS listener
 
 	/* Routing Service Managers */
 	TlsManager         *tlscert.Manager          //TLS manager for serving SAN certificates
