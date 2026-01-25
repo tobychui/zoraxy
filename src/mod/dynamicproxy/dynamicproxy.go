@@ -216,10 +216,19 @@ func (router *Router) StartProxyService() error {
 				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server (listen failed)", err)
 				return
 			}
-			// Wrapper Proxy Protocol v1/v2
-			ppListener := proxyproto.NewDefaultListener(ln)
 
-			if err := router.server.ServeTLS(ppListener, "", ""); err != nil && err != http.ErrServerClosed {
+			// Conditionally use PROXY protocol based on the experimental flag
+			var finalListener net.Listener
+			if router.Option.UseProxyProtocol {
+				// Wrapper Proxy Protocol v1/v2
+				finalListener = proxyproto.NewDefaultListener(ln)
+				router.Option.Logger.PrintAndLog("dprouter", "PROXY protocol v1/v2 enabled for TLS listener", nil)
+			} else {
+				// Use direct TCP listener without PROXY protocol
+				finalListener = ln
+			}
+
+			if err := router.server.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
 				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
 			}
 
