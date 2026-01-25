@@ -197,6 +197,7 @@ Some section of Zoraxy are contributed by our amazing community and if you have 
 
   - (Legacy) Authentik Support added by [@JokerQyou](https://github.com/JokerQyou)
 
+- Oauth2 [@kjagosz](https://github.com/kjagosz)
 
 - ACME
 
@@ -212,7 +213,8 @@ Some section of Zoraxy are contributed by our amazing community and if you have 
 
 ### Looking for Maintainer
 
-- ACME DNS Challenge Module
+- ACME integration (Auto-renew & Zoraxy integration)
+
 - Logging (including analysis & attack prevention) Module
 
 Thank you so much for your contributions!
