@@ -209,17 +209,11 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/setPort", HandleStaticWebServerPortChange)
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
 	authRouter.HandleFunc("/api/webserv/disableListenAllInterface", staticWebServer.SetDisableListenToAllInterface)
-	/* File Manager */
-	if *allowWebFileManager {
-		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
-		authRouter.HandleFunc("/api/fs/upload", staticWebServer.FileManager.HandleUpload)
-		authRouter.HandleFunc("/api/fs/download", staticWebServer.FileManager.HandleDownload)
-		authRouter.HandleFunc("/api/fs/newFolder", staticWebServer.FileManager.HandleNewFolder)
-		authRouter.HandleFunc("/api/fs/copy", staticWebServer.FileManager.HandleFileCopy)
-		authRouter.HandleFunc("/api/fs/move", staticWebServer.FileManager.HandleFileMove)
-		authRouter.HandleFunc("/api/fs/properties", staticWebServer.FileManager.HandleFileProperties)
-		authRouter.HandleFunc("/api/fs/del", staticWebServer.FileManager.HandleFileDelete)
-	}
+
+	/* WebDAV Server Controls */
+	authRouter.HandleFunc("/api/webserv/webdav/start", staticWebServer.HandleStartWebDAV)
+	authRouter.HandleFunc("/api/webserv/webdav/stop", staticWebServer.HandleStopWebDAV)
+	authRouter.HandleFunc("/api/webserv/webdav/setPort", staticWebServer.HandleWebDAVPortChange)
 }
 
 // Register the APIs for Network Utilities functions

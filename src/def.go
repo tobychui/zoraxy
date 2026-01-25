@@ -73,7 +73,6 @@ var (
 	mdnsName                   = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
 	runningInDocker            = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
 	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
-	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
 	/* Acme Configuration Flags */

@@ -204,8 +204,10 @@ func startupSequence() {
 		Port:                   strconv.Itoa(WEBSERV_DEFAULT_PORT), //Default Port
 		WebRoot:                *path_webserver,
 		EnableDirectoryListing: true,
-		EnableWebDirManager:    *allowWebFileManager,
+		EnableWebDAV:           false,  //WebDAV disabled by default, can be enabled via UI
+		WebDAVPort:             "5488", //Default WebDAV port
 		Logger:                 SystemWideLogger,
+		AuthAgent:              authAgent,
 	})
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()

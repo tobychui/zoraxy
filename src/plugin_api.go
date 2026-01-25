@@ -100,10 +100,7 @@ func RegisterStaticWebServerRestAPI(authRouter *auth.PluginAuthMiddleware) {
 	/* Static Web Server Controls */
 	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
 
-	/* File Manager */
-	if *allowWebFileManager {
-		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
-	}
+	// File manager list api removed due to WebDAV implementation
 }
 
 func RegisterPluginRestAPI(authRouter *auth.PluginAuthMiddleware) {
