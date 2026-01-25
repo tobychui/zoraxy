@@ -107,7 +107,7 @@ func startupSequence() {
 		backendType = dbinc.BackendBoltDB
 	}
 	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)
-	db, err := database.NewDatabase("./sys.db", backendType)
+	db, err := database.NewDatabase(*path_database, backendType)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -475,7 +475,7 @@ func ShutdownSeq() {
 
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
-	os.RemoveAll("./tmp")
+	os.RemoveAll(TMP_FOLDER)
 
 	//Close database
 	SystemWideLogger.Println("Stopping system database")
