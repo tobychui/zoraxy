@@ -1,3 +1,29 @@
+# v3.3.1 28 Jan 2026
+
++ Add captcha gating by [yeungalan](https://github.com/yeungalan)
++ Address some Docker CVEs by [PassiveLemon](https://github.com/PassiveLemon)
++ Add Proxy Protocol v1/v2 support behind reverse proxies by [jimmyGALLAND](https://github.com/jimmyGALLAND)
++ [docs] Fix typo in SniffResult constant by [kuhnchris](https://github.com/kuhnchris)
++ Fix incorrect status codes and missing error pages in production by [Restorn](https://github.com/kuhnchris)
++ UPDATE_GEOIP should only update if true by [kuhnchris](https://github.com/kuhnchris)
++ allow plugin API to modify proxy upstreams by [kuhnchris](https://github.com/kuhnchris
++ fix: error checking origin to avoid goroutine panic by [kuhnchris](https://github.com/kuhnchris)
++ Error message & ":" parsing by [kuhnchris](https://github.com/kuhnchris)
++ fix: ui error on null container ports by [eyerrock](https://github.com/eyerrock)
++ Add authentication display to HTTP proxy list by [xaxy55](https://github.com/xaxy55)
++ Update lego to v4.30.1 by [zen8841](https://github.com/zen8841)
++ Fixed Tailscale network marked as country [#918](https://github.com/tobychui/zoraxy/issues/918)
++ Added multiport support
++ Added support for pasting certificates [#928](https://github.com/tobychui/zoraxy/issues/928)
++ Reworked block AI crawler feature [#916](https://github.com/tobychui/zoraxy/issues/916)
++ Fixed empty response on virtual directories on http while tls is enabled [#941](https://github.com/tobychui/zoraxy/issues/941)
++ Fixed high speed toggling cause system panic [#952](https://github.com/tobychui/zoraxy/issues/952)
++ support acme test/staging mode from flags by [jimmyGALLAND](https://github.com/jimmyGALLAND)
++ fix: Unable to remove path prefix authentication exclusions [#972](https://github.com/tobychui/zoraxy/issues/972)
++ fix: Zoraxy docker crash [#967](https://github.com/tobychui/zoraxy/issues/967)
++ fix: web Directory Loader not visible [#980](https://github.com/tobychui/zoraxy/issues/980)
+
+
 # v3.3.0 06 Dec 2025
 
 + Added "Block common exploits"
