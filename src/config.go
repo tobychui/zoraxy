@@ -239,7 +239,7 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Open the file on disk
-		file, err := os.Open("./sys.db")
+		file, err := os.Open(*path_database)
 		if err != nil {
 			SystemWideLogger.PrintAndLog("Backup", "Unable to open sysdb", err)
 			return

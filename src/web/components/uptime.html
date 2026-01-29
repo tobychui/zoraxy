@@ -144,6 +144,7 @@
             return
         }
 
+        console.log(key, value);
         let id = value[0].ID;
         let name = value[0].Name;
         let url = value[value.length - 1].URL;
@@ -205,34 +206,34 @@
         let onlineStatusCss = ``;
         let reminderEle = ``;
         if (value[value.length - 1].Online){
-            currentOnlineStatus = `<i class="circle icon"></i> Online`;
+            currentOnlineStatus = `Online`;
             onlineStatusCss = `color: #3bd671;`;
         }else{
             if (value[value.length - 1].StatusCode >= 500 && value[value.length - 1].StatusCode < 600){
                 var latestStatusCode = value[value.length - 1].StatusCode
-                currentOnlineStatus = `<i class="exclamation circle icon"></i>${latestStatusCode} - ${resolveUptime5xxErrorMessage(latestStatusCode)}`;
+                currentOnlineStatus = `${latestStatusCode} - ${resolveUptime5xxErrorMessage(latestStatusCode)}`;
                 onlineStatusCss = `color: #f38020;`;
                 reminderEle = `<small style="${onlineStatusCss}">Downstream proxy server is responsive but returning server error</small>`;
             }else if (value[value.length - 1].StatusCode >= 400 && value[value.length - 1].StatusCode <= 405){
                 let latestStatusCode = value[value.length - 1].StatusCode;
                 switch(latestStatusCode){
                     case 400:
-                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Bad Request`;
+                        currentOnlineStatus = `Bad Request`;
                         break;
                     case 401:
-                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Unauthorized`;
+                        currentOnlineStatus = `Unauthorized`;
                         break;
                     case 403:
-                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Forbidden`;
+                        currentOnlineStatus = `Forbidden`;
                         break;
                     case 404: 
-                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Not Found`;
+                        currentOnlineStatus = ` Not Found`;
                         break; 
                     case 405: 
-                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Method Not Allowed`;
+                        currentOnlineStatus = `Method Not Allowed`;
                         break;
                     default:
-                        currentOnlineStatus = `<i class="exclamation circle icon"></i> Status Code: ${latestStatusCode}`;
+                        currentOnlineStatus = `Status Code: ${latestStatusCode}`;
                         break;
                 }
                 
@@ -240,28 +241,41 @@
                 reminderEle = `<small style="${onlineStatusCss}">Target online but not accessible</small>`;
                 
             }else{
-                currentOnlineStatus = `<i class="circle icon"></i> Offline`;
+                currentOnlineStatus = `Unreachable`;
                 onlineStatusCss = `color: #df484a;`;
             }
            
         }
 
+        let notOnlineDetail = '';
+        let latency = 0;
+        if (!value[value.length - 1].Online) {
+            notOnlineDetail = `<div class="detail" style="background-color: transparent;">${currentOnlineStatus}</div>`;
+        }else{
+            latency = value[value.length - 1].Latency;
+        }
+
+        
+
         //Generate the html
         $("#utmrender").append(`<div class="ui basic segment statusbar">
             <div class="domain">
-                <div style="position: absolute; top: 0; right: 0.4em;">
-                    <p class="onlineStatus" style="display: inline-block; font-size: 1.2em; padding-right: 0.5em; padding-left: 0.3em; ${onlineStatusCss}">${currentOnlineStatus}</p>
-                </div>
                 <div>
                     <h3 class="ui header" style="margin-bottom: 0.2em;">${name}</h3>
-                    <a href="${url}" target="_blank">${url}</a> | <span style="color: ${ontimeColor};">${(ontimeRate).toFixed(2)}%<span>
+                    <a href="${url}" target="_blank">${url}</a>
                 </div>
-                <div class="ui basic label protocol" style="position: absolute; bottom: 0; right: 0.2em; margin-bottom: -0.6em;">
-                    proto: ${protocol}
+                <div style="position: absolute; bottom: 0; right: 0.2em; margin-bottom: -0.6em;">
+                    <div class="ui basic label protocol">
+                        ${latency} ms
+                    </div>
+                    <div class="ui label protocol" style="margin-left: 0.5em; background-color: ${ontimeColor}; color: #ffffff;">
+                        ${(ontimeRate).toFixed(2)}%
+                        ${notOnlineDetail}
+                    </div>
                 </div>
             </div>
             <div class="status" style="marign-top: 1em;">
-                ${statusDotList}
+                    ${statusDotList}
             </div>
             ${reminderEle}
             <div class="ui basic segment selectedDotInfo" style="display:none; border: 0.4em;">

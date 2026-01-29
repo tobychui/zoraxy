@@ -114,10 +114,18 @@ func ReverseProxyInit() {
 
 	developmentMode := false
 	sysdb.Read("settings", "devMode", &developmentMode)
-	if useTls {
+	if developmentMode {
 		SystemWideLogger.Println("Development mode enabled. Using no-store Cache Control policy")
 	} else {
 		SystemWideLogger.Println("Development mode disabled. Proxying with default Cache Control policy")
+	}
+
+	useProxyProtocol := false
+	sysdb.Read("settings", "useProxyProtocol", &useProxyProtocol)
+	if useProxyProtocol {
+		SystemWideLogger.Println("PROXY protocol support enabled (experimental)")
+	} else {
+		SystemWideLogger.Println("PROXY protocol support disabled")
 	}
 
 	listenOnPort80 := true
@@ -153,7 +161,8 @@ func ReverseProxyInit() {
 		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
-		UseProxyProtocol:   *enableProxyProtocolSupport,
+		UseProxyProtocol:   useProxyProtocol,
+
 		/* Routing Service Managers */
 		TlsManager:         tlsCertManager,
 		RedirectRuleTable:  redirectTable,
@@ -255,7 +264,7 @@ func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err := dynamicProxyRouter.StopProxyService(nil)
+		err := dynamicProxyRouter.StopProxyService()
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -1576,6 +1585,40 @@ func HandleDevelopmentModeChange(w http.ResponseWriter, r *http.Request) {
 		utils.SendOK(w)
 	}
 
+}
+
+// HandleProxyProtocolChange handles the PROXY protocol v1/v2 toggle
+// This requires a listener restart to take effect
+func HandleProxyProtocolChange(w http.ResponseWriter, r *http.Request) {
+	enableProxyProtocolStr, err := utils.GetPara(r, "enable")
+	if err != nil {
+		//Load the current proxy protocol toggle state
+		js, _ := json.Marshal(dynamicProxyRouter.Option.UseProxyProtocol)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Write changes to runtime
+		enableProxyProtocol := false
+		if enableProxyProtocolStr == "true" {
+			enableProxyProtocol = true
+		}
+
+		//Update the option value
+		dynamicProxyRouter.Option.UseProxyProtocol = enableProxyProtocol
+
+		//Write changes to database
+		sysdb.Write("settings", "useProxyProtocol", enableProxyProtocol)
+
+		//Restart the proxy to apply the changes if running
+		if dynamicProxyRouter.Running {
+			SystemWideLogger.Println("PROXY protocol setting changed, restarting proxy server...")
+			err := dynamicProxyRouter.Restart()
+			if err != nil {
+				utils.SendErrorResponse(w, "Failed to restart proxy: "+err.Error())
+				return
+			}
+		}
+		utils.SendOK(w)
+	}
 }
 
 // Handle incoming port set. Change the current proxy incoming port

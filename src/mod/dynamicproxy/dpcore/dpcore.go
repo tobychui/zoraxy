@@ -91,6 +91,7 @@ type DpcoreOptions struct {
 	FlushInterval           time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
 	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
 	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
+	DevelopmentMode         bool          //Enable development mode for this proxy core
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -136,7 +137,7 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		Director:      director,
 		Prepender:     prepender,
 		FlushInterval: dpcOptions.FlushInterval,
-		Verbal:        false,
+		Verbal:        dpcOptions.DevelopmentMode,
 		Transport:     thisTransporter,
 	}
 }

@@ -42,8 +42,8 @@ func TestTrieConstruct(t *testing.T) {
 func TestResolveCountryCodeFromIP(t *testing.T) {
 	// Create a new store
 	store, err := NewGeoDb(nil, &StoreOptions{
-		true,
-		true,
+		false, //false to use fast geodb mode for ipv4 lookup
+		false, //false to use fast geodb mode for ipv6 lookup
 		&logger.Logger{},
 		0,
 	})
@@ -59,6 +59,12 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 		{"65.21.233.213", "FI"},
 		{"94.23.207.193", "FR"},
 		{"77.131.21.232", "FR"},
+		{"1.64.26.128", "HK"},
+		{"1.66.46.73", "JP"},
+		{"1.68.12.37", "CN"},
+		{"1.74.243.23", "JP"},
+		{"2a01:4f9:3070:124a:1234:5678:9abc:def0", "DE"},
+		{"2a01:4f9:3070:124b:dead:beef:cafe:1", "FI"},
 	}
 
 	for _, testcase := range knownIpCountryMap {

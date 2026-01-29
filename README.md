@@ -31,6 +31,11 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
   - Debug Forward Proxy
   - IP Scanner
   - Port Scanner
+- Community Contributed Features
+  - Forward-Auth Support (e.g. Authelia, Authentik)
+  - Oauth2 Support 
+  - reCAPTCHA 
+
 - Others
   - Basic single-admin management mode
   - External permission management system for easy system integration
@@ -99,12 +104,18 @@ See the [/docker](https://github.com/tobychui/zoraxy/tree/main/docker) folder fo
 
 ```
 Usage of zoraxy:
+  -acmetestmode
+        Run ACME in test/staging mode
   -autorenew int
         ACME auto TLS/SSL certificate renew check interval (seconds) (default 86400)
   -cfgupgrade
         Enable auto config upgrade if breaking change is detected (default true)
+  -conf string
+        Configuration folder path (default "./conf")
   -db string
         Database backend to use (leveldb, boltdb, auto) Note that fsdb will be used on unsupported platforms like RISCV (default "auto")
+  -dbpath string
+        Database path (default "./sys.db")
   -default_inbound_enabled
         If web server is enabled by default (default true)
   -default_inbound_port int
@@ -115,6 +126,10 @@ Usage of zoraxy:
         Run Zoraxy in docker compatibility mode
   -earlyrenew int
         Number of days to early renew a soon expiring certificate (days) (default 30)
+  -enablelog
+        Enable system wide logging, set to false for writing log to STDOUT only (default true)
+  -experimental_proxy_protocol
+        Enable PROXY protocol v1/v2 support for TLS listener (experimental)
   -fastgeoip
         Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)
   -log string
@@ -129,16 +144,18 @@ Usage of zoraxy:
         Plugin folder path (default "./plugins")
   -port string
         Management web interface listening port (default ":8000")
+  -reset_ac
+        Reset admin account username and password to default and exit
   -sshlb
         Allow loopback web ssh connection (DANGER)
+  -tmp string
+        Temporary folder path (default "./tmp")
   -update_geoip
         Download the latest GeoIP data and exit
   -uuid string
         sys.uuid file path (default "./sys.uuid")
   -version
         Show version of this server
-  -webfm
-        Enable web file manager for static web server root folder (default true)
   -webroot string
         Static web server root folder. Only allow change in start paramters (default "./www")
 ```
