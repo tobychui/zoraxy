@@ -108,7 +108,6 @@ func (router *Router) StartProxyService() error {
 	if err != nil {
 		return err
 	}
-
 	if router.Option.UseTls {
 		router.server = &http.Server{
 			Addr:      ":" + strconv.Itoa(router.Option.Port),
@@ -116,7 +115,6 @@ func (router *Router) StartProxyService() error {
 			TLSConfig: config,
 		}
 		router.Running = true
-
 		if router.Option.Port != 80 && router.Option.ListenOnPort80 && !netutils.CheckIfPortOccupied(80) {
 			//Add a 80 to 443 redirector
 			httpServer := &http.Server{
@@ -491,15 +489,11 @@ func (router *Router) UpdateSecondaryListeners() {
 }
 
 // StopProxyService stops the proxy server and waits for all listeners to close
-func (router *Router) StopProxyService(donechan chan bool) error {
+func (router *Router) StopProxyService() error {
 	if router.server == nil && router.tlsListener == nil && router.tlsRedirectStop == nil && len(router.secondaryServers) == 0 {
 		return errors.New("reverse proxy server already stopped")
 	}
-	defer func() {
-		if donechan != nil {
-			donechan <- true
-		}
-	}()
+
 	var wg sync.WaitGroup
 
 	// Stop main TLS/HTTP server
@@ -550,7 +544,6 @@ func (router *Router) StopProxyService(donechan chan bool) error {
 
 	// Wait for all shutdown goroutines to finish
 	wg.Wait()
-
 	// Clear server references
 	router.server = nil
 	router.tlsListener = nil
@@ -565,6 +558,7 @@ func (router *Router) StopProxyService(donechan chan bool) error {
 	router.Running = false
 
 	router.Option.Logger.PrintAndLog("dprouter", "Proxy service stopped successfully", nil)
+
 	return nil
 }
 
@@ -581,11 +575,9 @@ func (router *Router) Restart() error {
 	if router.Running {
 
 		router.Option.Logger.PrintAndLog("dprouter", "Restarting proxy server...", nil)
-		doneChan := make(chan bool)
-		if err := router.StopProxyService(doneChan); err != nil {
+		if err := router.StopProxyService(); err != nil {
 			return err
 		}
-		<-doneChan
 		// Ensure ports are released
 		time.Sleep(200 * time.Millisecond)
 	}
