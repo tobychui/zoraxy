@@ -507,11 +507,13 @@ func (router *Router) StopProxyService(donechan chan bool) error {
 		wg.Add(1)
 		go func(srv *http.Server) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			err := srv.Shutdown(ctx)
 			if err != nil {
-				router.Option.Logger.PrintAndLog("dprouter", "Error shutting down main server", err)
+				router.Option.Logger.PrintAndLog("dprouter", "Graceful shutdown timeout, forcing close", err)
+				// Force close if graceful shutdown times out
+				srv.Close()
 			}
 		}(router.server)
 	}
