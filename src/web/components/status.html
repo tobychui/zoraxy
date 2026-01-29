@@ -716,15 +716,28 @@
     let txValues = [];
     let dataCount = 300;
     let timestamps = [];
+    let isFetchingData = false;  // Prevent overlapping requests
+    let chartInitialized = false; // Track chart initialization state
 
     for(var i = 0; i < dataCount; i++){
         timestamps.push(new Date(Date.now() + i * 1000).toLocaleString().replace(',', ''));
     }
 
     function fetchData() {
+        // Prevent overlapping requests and ensure chart is initialized
+        if (isFetchingData || !chartInitialized) {
+            return;
+        }
+        isFetchingData = true;
+        
         $.ajax({
             url: '/api/stats/netstatgraph?array=true',
+            timeout: 5000, // 5 second timeout to prevent hanging requests
             success: function(data){
+                if (!data || !data.Rx || !data.Tx) {
+                    return;
+                }
+                
                 if (rxValues.length == 0){
                     rxValues.push(...data.Rx);
                 }else{
@@ -742,8 +755,15 @@
                 timestamps.push(new Date(Date.now()).toLocaleString().replace(',', ''));
                 timestamps.shift();
                 updateChart();
+            },
+            error: function() {
+                // Silently handle errors, will retry on next interval
+            },
+            complete: function() {
+                // Always release the lock when request completes
+                isFetchingData = false;
             }
-        })
+        });
     }
 
     function formatBandwidth(bps) {
@@ -765,7 +785,7 @@
     var networkStatisticChart;
     function initChart(){
         $.get("/api/stats/netstat", function(data){
-        networkStatisticChart = new Chart(
+            networkStatisticChart = new Chart(
                 document.getElementById('networkActivity'),
                 {
                     type: 'line',
@@ -835,6 +855,10 @@
                     }
                 }
             );
+            // Mark chart as initialized after creation
+            chartInitialized = true;
+            // Fetch initial data now that chart is ready
+            fetchData();
         });
     }
 
@@ -896,6 +920,5 @@
 
     //Initialize chart data
     initChart();
-    fetchData();
     setInterval(fetchData, 1000);
 </script>
