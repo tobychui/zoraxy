@@ -43,9 +43,8 @@ import (
 
 const (
 	/* Build Constants */
-	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.3.2"
-	DEVELOPMENT_BUILD = false
+	SYSTEM_NAME    = "Zoraxy"
+	SYSTEM_VERSION = "3.3.2"
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487
@@ -86,7 +85,6 @@ var (
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
-	enableProxyProtocolSupport  = flag.Bool("experimental_proxy_protocol", false, "Enable PROXY protocol v1/v2 support for TLS listener (experimental)")
 
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
