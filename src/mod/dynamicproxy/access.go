@@ -7,7 +7,6 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/eventsystem"
-	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
@@ -34,7 +33,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 // For string, it will return the blocked reason (if any)
 func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory string, w http.ResponseWriter, r *http.Request) (bool, string) {
 	//Check if this ip is in blacklist
-	clientIpAddr := netutils.GetRequesterIP(r)
+	clientIpAddr := accessRule.GetClientIP(r)
 	if accessRule.IsBlacklisted(clientIpAddr) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)

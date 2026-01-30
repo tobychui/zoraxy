@@ -20,6 +20,9 @@ import (
 	API.go
 
 	This file contains all the API called by the web management interface
+
+	**Important Notes**
+	If you are adding new plugin api, add them in plugin_api.go instead of this file
 */
 
 // Register the APIs for HTTP proxy management functions
@@ -134,8 +137,14 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
 	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
 	authRouter.HandleFunc("/api/whitelist/allowLocal", handleWhitelistAllowLoopback)
+	authRouter.HandleFunc("/api/whitelist/trustProxy", handleWhitelistTrustProxy)
 	/* Quick Ban List */
 	authRouter.HandleFunc("/api/quickban/list", handleListQuickBan)
+	/* Trusted Proxies */
+	authRouter.HandleFunc("/api/trustedproxy/list", handleListTrustedProxies)
+	authRouter.HandleFunc("/api/trustedproxy/add", handleAddTrustedProxy)
+	authRouter.HandleFunc("/api/trustedproxy/remove", handleRemoveTrustedProxy)
+	authRouter.HandleFunc("/api/trustedproxy/update", handleUpdateTrustedProxy)
 }
 
 // Register the APIs for path blocking rules management functions, WIP

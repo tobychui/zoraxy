@@ -76,6 +76,7 @@ func main() {
 	CONF_GEODB_PATH = CONF_FOLDER + "/geodb"
 	CONF_LOG_CONFIG = CONF_FOLDER + "/log_conf.json"
 	ACME_AUTORENEW_CONFIG_PATH = CONF_FOLDER + "/acme_conf.json"
+	CONF_TRUSTED_PROXIES = CONF_FOLDER + "/trusted_proxies.json"
 
 	/* Maintaince Function Modes */
 	if *showver {

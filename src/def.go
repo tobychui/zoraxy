@@ -121,6 +121,7 @@ var (
 	CONF_PLUGIN_GROUPS         string //Plugin groups configuration path
 	CONF_GEODB_PATH            string //GeoIP database path
 	CONF_LOG_CONFIG            string //Log configuration path
+	CONF_TRUSTED_PROXIES       string //Trusted proxy IPs configuration path
 
 	/* mDNS */
 	previousmdnsScanResults = []*mdns.NetworkHost{}

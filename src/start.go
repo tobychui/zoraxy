@@ -169,9 +169,10 @@ func startupSequence() {
 
 	//Create the access controller
 	accessController, err = access.NewAccessController(&access.Options{
-		Database:     sysdb,
-		GeoDB:        geodbStore,
-		ConfigFolder: CONF_ACCESS_RULE,
+		Database:           sysdb,
+		GeoDB:              geodbStore,
+		ConfigFolder:       CONF_ACCESS_RULE,
+		TrustedProxiesFile: CONF_TRUSTED_PROXIES,
 	})
 	if err != nil {
 		panic(err)
