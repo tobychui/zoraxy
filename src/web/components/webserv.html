@@ -88,6 +88,15 @@
         <p>Manage your files in the web directory using WebDAV protocol</p>
     </div>
     <div class="ui form">
+        <div class="ui basic segment webdavRunningStateWrapper">
+            <h4 class="ui header" id="webdavRunningState">
+                <i class="grey circle icon"></i>
+                <div class="content">
+                    <span class="webdav_status">Stopped</span>
+                    <div class="sub header">Listen port :<span class="webdav_port">5488</span></div>
+                </div>
+            </h4>
+        </div>
         <div class="inline field">
             <div class="ui toggle checkbox">
                 <input id="webdav_enable" type="checkbox" class="hidden">
@@ -184,6 +193,20 @@
             }
         }
 
+        function setWebDAVServerRunningState(running){
+            if (running){
+                $("#webdav_enable").parent().checkbox("set checked");
+                $("#webdavRunningState").find("i").attr("class", "white circle check icon");
+                $("#webdavRunningState").find(".webdav_status").text("Running");
+                $(".webdavRunningStateWrapper").addClass("enabled")
+            }else{
+                $("#webdav_enable").parent().checkbox("set unchecked");
+                $("#webdavRunningState").find("i").attr("class", "white circle times icon");
+                $("#webdavRunningState").find(".webdav_status").text("Stopped");
+                $(".webdavRunningStateWrapper").removeClass("enabled")
+            }
+        }
+
         function updateWebServState(){
             $.get("/api/webserv/status", function(data){
                 //Clear all event listeners
@@ -219,11 +242,7 @@
                 updateWebServLinkExample(data.ListeningPort);
 
                 //WebDAV settings
-                if (data.EnableWebDAV){
-                    $("#webdav_enable").parent().checkbox("set checked");
-                }else{
-                    $("#webdav_enable").parent().checkbox("set unchecked");
-                }
+                setWebDAVServerRunningState(data.EnableWebDAV);
                 
                 $("#webdav_port").val(data.WebDAVPort);
                 updateWebDAVPortExample(data.WebDAVPort);
@@ -258,18 +277,20 @@
                         $.get("/api/webserv/webdav/start", function(data){
                             if (data.error != undefined){
                                 msgbox(data.error, false);
-                                $("#webdav_enable").parent().checkbox("set unchecked");
+                                setWebDAVServerRunningState(false);
                             }else{
                                 msgbox("WebDAV server started");
+                                setWebDAVServerRunningState(true);
                             }
                         });
                     }else{
                         $.get("/api/webserv/webdav/stop", function(data){
                             if (data.error != undefined){
                                 msgbox(data.error, false);
-                                $("#webdav_enable").parent().checkbox("set checked");
+                                setWebDAVServerRunningState(true);
                             }else{
                                 msgbox("WebDAV server stopped");
+                                setWebDAVServerRunningState(false);
                             }
                         });
                     }

@@ -646,6 +646,25 @@ body.darkTheme .menudivider{
 }
 
 
+.webdavRunningStateWrapper{
+    padding: 1em;
+    border-radius: 1em !important;
+}
+
+
+.webdavRunningStateWrapper .ui.header, .webdavRunningStateWrapper .sub.header{
+    color: white !important;
+}
+
+.webdavRunningStateWrapper:not(.enabled){
+    background: var(--theme_red) !important;
+}
+
+.webdavRunningStateWrapper.enabled{
+    background: var(--theme_green) !important;
+}
+
+
 /*
     Uptime Monitor
 */
