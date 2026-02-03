@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"html"
 	"log"
 	"net"
 	"net/http"
@@ -219,4 +220,10 @@ func ValidateListeningAddress(address string) bool {
 	}
 
 	return true
+}
+
+// SanitizeLogContent escapes special HTML characters in log content to prevent XSS attacks.
+// See #1028
+func SanitizeLogContent(content string) string {
+	return html.EscapeString(content)
 }
