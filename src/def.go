@@ -85,6 +85,7 @@ var (
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
+	enableProxyProtocolSupport  = flag.Bool("experimental_proxy_protocol", false, "Enable PROXY protocol v1/v2 support for TLS listener (experimental)")
 
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
