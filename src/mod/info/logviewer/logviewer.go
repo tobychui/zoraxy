@@ -127,6 +127,9 @@ func (v *Viewer) HandleReadLog(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Sanitize log content to prevent XSS attacks
+	content = utils.SanitizeLogContent(content)
+
 	utils.SendTextResponse(w, content)
 }
 
@@ -182,6 +185,10 @@ func (v *Viewer) HandleLogErrorSummary(w http.ResponseWriter, r *http.Request) {
 				statusStr := fields[2]
 				if len(statusStr) == 3 && (statusStr[0] != '1' && statusStr[0] != '2' && statusStr[0] != '3') {
 					fieldsWithTimestamp := append([]string{timestamp}, strings.Fields(strings.TrimSpace(line))...)
+					// Sanitize each field to prevent XSS attacks
+					for i := range fieldsWithTimestamp {
+						fieldsWithTimestamp[i] = utils.SanitizeLogContent(fieldsWithTimestamp[i])
+					}
 					errorLines = append(errorLines, fieldsWithTimestamp)
 				}
 			}
@@ -401,6 +408,8 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 
 			// Track origin hits for TopOrigins
 			if origin != "" {
+				// Sanitize origin to prevent XSS
+				origin = utils.SanitizeLogContent(origin)
 				summary.TopOrigins[origin]++
 			}
 
@@ -434,6 +443,8 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 			}
 
 			if userAgent != "" {
+				// Sanitize user agent to prevent XSS
+				userAgent = utils.SanitizeLogContent(userAgent)
 				summary.TopUserAgents[userAgent]++
 			}
 
@@ -441,6 +452,8 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 				if idx := strings.IndexAny(path, "?#"); idx != -1 {
 					path = path[:idx]
 				}
+				// Sanitize path to prevent XSS
+				path = utils.SanitizeLogContent(path)
 				summary.TopPaths[path]++
 			}
 

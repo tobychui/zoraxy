@@ -28,6 +28,7 @@ type RedirectRules struct {
 	ForwardChildpath  bool   //Also redirect the pathname
 	StatusCode        int    //Status Code for redirection
 	RequireExactMatch bool   //Require exact URL match instead of prefix matching
+	DeviceType        string //Device type filter: "all", "desktop", or "mobile"
 }
 
 func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger *logger.Logger) (*RuleTable, error) {
@@ -76,7 +77,7 @@ func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger
 	return &thisRuleTable, nil
 }
 
-func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool) error {
+func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string) error {
 	// Create a new RedirectRules object with the given parameters
 	newRule := &RedirectRules{
 		RedirectURL:       redirectURL,
@@ -84,6 +85,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 		ForwardChildpath:  forwardPathname,
 		StatusCode:        statusCode,
 		RequireExactMatch: requireExactMatch,
+		DeviceType:        deviceType,
 	}
 
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
@@ -114,13 +116,14 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 }
 
 // Edit an existing redirection rule, the oldRedirectURL is used to find the rule to be edited
-func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool) error {
+func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string) error {
 	newRule := &RedirectRules{
 		RedirectURL:       newRedirectURL,
 		TargetURL:         destURL,
 		ForwardChildpath:  forwardPathname,
 		StatusCode:        statusCode,
 		RequireExactMatch: requireExactMatch,
+		DeviceType:        deviceType,
 	}
 
 	//Remove the old rule

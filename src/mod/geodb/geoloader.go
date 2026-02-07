@@ -52,6 +52,9 @@ func constrctTrieTree(data [][]string) *trie {
 		tt.insert(endIp, cc)
 	}
 
+	// Sort the ranges for binary search after all inserts
+	tt.build()
+
 	return tt
 }
 

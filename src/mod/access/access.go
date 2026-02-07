@@ -36,15 +36,16 @@ func NewAccessController(options *Options) (*Controller, error) {
 
 	// Create the global access rule if not exists
 	var defaultAccessRule = AccessRule{
-		ID:                   "default",
-		Name:                 "Default",
-		Desc:                 "Default access rule for all HTTP proxy hosts",
-		BlacklistEnabled:     false,
-		WhitelistEnabled:     false,
-		WhiteListCountryCode: &map[string]string{},
-		WhiteListIP:          &map[string]string{},
-		BlackListContryCode:  &map[string]string{},
-		BlackListIP:          &map[string]string{},
+		ID:                    "default",
+		Name:                  "Default",
+		Desc:                  "Default access rule for all HTTP proxy hosts",
+		BlacklistEnabled:      false,
+		WhitelistEnabled:      false,
+		TrustProxyHeadersOnly: false,
+		WhiteListCountryCode:  &map[string]string{},
+		WhiteListIP:           &map[string]string{},
+		BlackListContryCode:   &map[string]string{},
+		BlackListIP:           &map[string]string{},
 	}
 	defaultRuleSettingFile := filepath.Join(confFolder, "default.json")
 	if utils.FileExists(defaultRuleSettingFile) {
@@ -103,6 +104,13 @@ func NewAccessController(options *Options) (*Controller, error) {
 	}
 	thisController.ProxyAccessRule = &ProxyAccessRules
 
+	// Load trusted proxies from file
+	err = thisController.LoadTrustedProxies()
+	if err != nil {
+		options.Logger.PrintAndLog("access", "Unable to load trusted proxies from file", err)
+		return nil, err
+	}
+
 	//Start the public ip ticker
 	if options.PublicIpCheckInterval <= 0 {
 		options.PublicIpCheckInterval = 12 * 60 * 60 //12 hours
@@ -130,12 +138,11 @@ func (c *Controller) GetGlobalAccessRule() (*AccessRule, error) {
 // Load access rules to runtime, require rule ID
 func (c *Controller) GetAccessRuleByID(accessRuleID string) (*AccessRule, error) {
 	if accessRuleID == "default" || accessRuleID == "" {
-
 		return c.DefaultAccessRule, nil
 	}
+
 	//Load from sync.Map, should be O(1)
 	targetRule, ok := c.ProxyAccessRule.Load(accessRuleID)
-
 	if !ok {
 		return nil, errors.New("target access rule not exists")
 	}

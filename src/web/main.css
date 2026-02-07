@@ -646,6 +646,25 @@ body.darkTheme .menudivider{
 }
 
 
+.webdavRunningStateWrapper{
+    padding: 1em;
+    border-radius: 1em !important;
+}
+
+
+.webdavRunningStateWrapper .ui.header, .webdavRunningStateWrapper .sub.header{
+    color: white !important;
+}
+
+.webdavRunningStateWrapper:not(.enabled){
+    background: var(--theme_red) !important;
+}
+
+.webdavRunningStateWrapper.enabled{
+    background: var(--theme_green) !important;
+}
+
+
 /*
     Uptime Monitor
 */
@@ -661,13 +680,13 @@ body.darkTheme .menudivider{
 }
 
 .statusDot{
-    height: 1.8em;
-    border-radius: 0.4em;
-    width: 0.4em;
+    height: 1.3em;
+    border-radius: 0.5em;
+    width: 0.5em;
     background-color: #e8e8e8;
     display:inline-block;
     cursor: pointer;
-    margin-left: 0.1em;
+    margin-left: 3px;
 }
 
 .online.statusDot{

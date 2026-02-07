@@ -23,18 +23,29 @@ type StaticWebServerStatus struct {
 	Running                     bool
 	EnableWebDirManager         bool
 	DisableListenToAllInterface bool
+	EnableWebDAV                bool
+	WebDAVPort                  int
+	WebDAVRunning               bool
 }
 
 // Handle getting current static web server status
 func (ws *WebServer) HandleGetStatus(w http.ResponseWriter, r *http.Request) {
 	listeningPortInt, _ := strconv.Atoi(ws.option.Port)
+	webdavPortInt, _ := strconv.Atoi(ws.option.WebDAVPort)
+	webdavRunning := false
+	if ws.WebDAV != nil {
+		webdavRunning = ws.WebDAV.IsRunning()
+	}
+
 	currentStatus := StaticWebServerStatus{
 		ListeningPort:               listeningPortInt,
 		EnableDirectoryListing:      ws.option.EnableDirectoryListing,
 		WebRoot:                     ws.option.WebRoot,
 		Running:                     ws.isRunning,
-		EnableWebDirManager:         ws.option.EnableWebDirManager,
 		DisableListenToAllInterface: ws.option.DisableListenToAllInterface,
+		EnableWebDAV:                ws.option.EnableWebDAV,
+		WebDAVPort:                  webdavPortInt,
+		WebDAVRunning:               webdavRunning,
 	}
 
 	js, _ := json.Marshal(currentStatus)
@@ -124,5 +135,48 @@ func (ws *WebServer) SetDisableListenToAllInterface(w http.ResponseWriter, r *ht
 			return
 		}
 	}
+	utils.SendOK(w)
+}
+
+// Handle request for starting the WebDAV server
+func (ws *WebServer) HandleStartWebDAV(w http.ResponseWriter, r *http.Request) {
+	err := ws.StartWebDAV()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	utils.SendOK(w)
+}
+
+// Handle request for stopping the WebDAV server
+func (ws *WebServer) HandleStopWebDAV(w http.ResponseWriter, r *http.Request) {
+	err := ws.StopWebDAV()
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	utils.SendOK(w)
+}
+
+// Handle change WebDAV server listening port request
+func (ws *WebServer) HandleWebDAVPortChange(w http.ResponseWriter, r *http.Request) {
+	newPort, err := utils.PostInt(r, "port")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
+	// Check if newPort is a valid TCP port number (1-65535)
+	if newPort < 1 || newPort > 65535 {
+		utils.SendErrorResponse(w, "invalid port number given")
+		return
+	}
+
+	err = ws.ChangeWebDAVPort(strconv.Itoa(newPort))
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
 	utils.SendOK(w)
 }

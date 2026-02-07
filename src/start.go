@@ -107,7 +107,7 @@ func startupSequence() {
 		backendType = dbinc.BackendBoltDB
 	}
 	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)
-	db, err := database.NewDatabase("./sys.db", backendType)
+	db, err := database.NewDatabase(*path_database, backendType)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -169,9 +169,10 @@ func startupSequence() {
 
 	//Create the access controller
 	accessController, err = access.NewAccessController(&access.Options{
-		Database:     sysdb,
-		GeoDB:        geodbStore,
-		ConfigFolder: CONF_ACCESS_RULE,
+		Database:           sysdb,
+		GeoDB:              geodbStore,
+		ConfigFolder:       CONF_ACCESS_RULE,
+		TrustedProxiesFile: CONF_TRUSTED_PROXIES,
 	})
 	if err != nil {
 		panic(err)
@@ -204,8 +205,10 @@ func startupSequence() {
 		Port:                   strconv.Itoa(WEBSERV_DEFAULT_PORT), //Default Port
 		WebRoot:                *path_webserver,
 		EnableDirectoryListing: true,
-		EnableWebDirManager:    *allowWebFileManager,
+		EnableWebDAV:           false,  //WebDAV disabled by default, can be enabled via UI
+		WebDAVPort:             "5488", //Default WebDAV port
 		Logger:                 SystemWideLogger,
+		AuthAgent:              authAgent,
 	})
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()
@@ -475,7 +478,7 @@ func ShutdownSeq() {
 
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
-	os.RemoveAll("./tmp")
+	os.RemoveAll(TMP_FOLDER)
 
 	//Close database
 	SystemWideLogger.Println("Stopping system database")

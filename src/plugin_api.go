@@ -7,6 +7,16 @@ import (
 	"imuslab.com/zoraxy/mod/netstat"
 )
 
+/*
+	plugin_api.go
+
+	Module to register all the REST API endpoints for various management functions
+
+	**Important Notes**
+	These APIs are for plugin use only. If you are implementing a new feature for the
+	webmin UI, add them in api.go instead of this file.
+*/
+
 // Register the APIs for HTTP proxy management functions
 func RegisterHTTPProxyRestAPI(authMiddleware *auth.PluginAuthMiddleware) {
 	/* Reverse Proxy Settings & Status */
@@ -100,10 +110,7 @@ func RegisterStaticWebServerRestAPI(authRouter *auth.PluginAuthMiddleware) {
 	/* Static Web Server Controls */
 	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
 
-	/* File Manager */
-	if *allowWebFileManager {
-		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
-	}
+	// File manager list api removed due to WebDAV implementation
 }
 
 func RegisterPluginRestAPI(authRouter *auth.PluginAuthMiddleware) {

@@ -7,7 +7,7 @@ import (
 )
 
 /* Handle account reset by removing all users from the system */
-func ResetAccount(databaseBackend *string) {
+func ResetAccount(databaseBackend *string, databasePath *string) {
 	fmt.Println("Resetting admin account...")
 
 	//Initialize the database to access the auth table
@@ -26,7 +26,7 @@ func ResetAccount(databaseBackend *string) {
 		}
 	}
 
-	db, err := database.NewDatabase("./sys.db", backendType)
+	db, err := database.NewDatabase(*databasePath, backendType)
 	if err != nil {
 		fmt.Println("Error opening database:", err)
 		return

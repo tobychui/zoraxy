@@ -158,29 +158,6 @@ func (t *reservedIPRadixTree) search(ip net.IP) string {
 	return lastMatch
 }
 
-// Check if a ip is private IP range
-func isPrivateIP(ipStr string) bool {
-	if ipStr == "127.0.0.1" || ipStr == "::1" {
-		// local loopback
-		return true
-	}
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return false
-	}
-	if ip.IsPrivate() {
-		return true
-	}
-	// Check for IPv6 link-local addresses (fe80::/10)
-	if ip.To16() != nil && ip.To4() == nil {
-		// IPv6 only
-		if ip[0] == 0xfe && (ip[1]&0xc0) == 0x80 {
-			return true
-		}
-	}
-	return false
-}
-
 // getReservedIPZone checks if an IP is in a reserved range and returns the zone name
 // Uses radix tree for O(log n) lookup complexity
 func getReservedIPZone(ipStr string) string {
