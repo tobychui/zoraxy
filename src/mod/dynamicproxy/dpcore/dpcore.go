@@ -82,15 +82,12 @@ type ResponseRewriteRuleSet struct {
 	Version         string //Version number of Zoraxy, use for X-Proxy-By
 }
 
-type requestCanceler interface {
-	CancelRequest(req *http.Request)
-}
-
 type DpcoreOptions struct {
 	IgnoreTLSVerification   bool          //Disable all TLS verification when request pass through this proxy router
 	FlushInterval           time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
 	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
 	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
+	DevelopmentMode         bool          //Enable development mode for this proxy core
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -107,36 +104,14 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 
 	}
 
-	thisTransporter := http.DefaultTransport
-
-	//Hack the default transporter to handle more connections
-	optimalConcurrentConnection := 256
-	if dpcOptions.MaxConcurrentConnection > 0 {
-		optimalConcurrentConnection = dpcOptions.MaxConcurrentConnection
-	}
-
-	thisTransporter.(*http.Transport).IdleConnTimeout = 30 * time.Second
-	thisTransporter.(*http.Transport).MaxIdleConns = optimalConcurrentConnection * 2
-	thisTransporter.(*http.Transport).DisableCompression = true
-	thisTransporter.(*http.Transport).DisableKeepAlives = false
-
-	if dpcOptions.ResponseHeaderTimeout > 0 {
-		//Set response header timeout
-		thisTransporter.(*http.Transport).ResponseHeaderTimeout = time.Duration(dpcOptions.ResponseHeaderTimeout) * time.Millisecond
-	}
-
-	if dpcOptions.IgnoreTLSVerification {
-		//Ignore TLS certificate validation error
-		if thisTransporter.(*http.Transport).TLSClientConfig != nil {
-			thisTransporter.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
-		}
-	}
+	// Create a new transport instance instead of modifying the shared DefaultTransport
+	thisTransporter := newBaseTransport(dpcOptions)
 
 	return &ReverseProxy{
 		Director:      director,
 		Prepender:     prepender,
 		FlushInterval: dpcOptions.FlushInterval,
-		Verbal:        false,
+		Verbal:        dpcOptions.DevelopmentMode,
 		Transport:     thisTransporter,
 	}
 }
@@ -245,21 +220,47 @@ func (p *ReverseProxy) logf(format string, args ...interface{}) {
 	}
 }
 
+func newBaseTransport(opts *DpcoreOptions) *http.Transport {
+	optimalConcurrentConnection := 256
+	if opts.MaxConcurrentConnection > 0 {
+		optimalConcurrentConnection = opts.MaxConcurrentConnection
+	}
+
+	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          optimalConcurrentConnection * 2,
+		MaxIdleConnsPerHost:   optimalConcurrentConnection,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		DisableCompression:    true,
+		DisableKeepAlives:     false,
+	}
+
+	if opts.ResponseHeaderTimeout > 0 {
+		tr.ResponseHeaderTimeout = time.Duration(opts.ResponseHeaderTimeout) * time.Millisecond
+	}
+
+	if opts.IgnoreTLSVerification {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	return tr
+}
+
 func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	transport := p.Transport
 
+	// Bind cancel context to request
 	outreq := req.Clone(req.Context())
-
 	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 	outreq = outreq.WithContext(ctx)
-
-	if requestCanceler, ok := transport.(requestCanceler); ok {
-		go func() {
-			<-ctx.Done()
-			requestCanceler.CancelRequest(outreq)
-		}()
-	}
 
 	p.Director(outreq)
 	outreq.Close = false
@@ -296,47 +297,60 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
-	//Force HTTP/1.1 if requested
-	if rrr.ForceHTTP11 {
-		if tr, ok := transport.(*http.Transport); ok {
-			trc := tr.Clone()
+	// Fix for #997
+	// Only clone transport when configuration needs to change to preserve connection pooling
+	needClone := false
+	var trc *http.Transport
+
+	if tr, ok := transport.(*http.Transport); ok {
+		// Check if we need to modify transport configuration
+		if rrr.ForceHTTP11 {
+			if !needClone {
+				//Proxy rule config changed. Clone a new transport instance
+				trc = tr.Clone()
+				needClone = true
+			}
 			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
 			trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
-			tr.ForceAttemptHTTP2 = false
-			transport = tr
+			trc.ForceAttemptHTTP2 = false
 		}
-	}
 
-	//Fix for issue #821
-	if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
-		if tr, ok := transport.(*http.Transport); ok {
+		// Fix for issue #821 - only clone if ServerName needs updating
+		if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
 			serverName := outreq.Host
 			if h, _, err := net.SplitHostPort(serverName); err == nil {
 				serverName = h
 			}
 
-			if tr.TLSClientConfig == nil || tr.TLSClientConfig.ServerName != serverName {
-				trc := tr.Clone()
+			// Only clone if ServerName actually needs to be updated
+			currentServerName := ""
+			if tr.TLSClientConfig != nil {
+				currentServerName = tr.TLSClientConfig.ServerName
+			}
+
+			if currentServerName != serverName {
+				if !needClone {
+					trc = tr.Clone()
+					needClone = true
+				}
+
 				var cfg *tls.Config
-				if tr.TLSClientConfig != nil {
-					cfg = tr.TLSClientConfig.Clone()
+				if trc.TLSClientConfig != nil {
+					cfg = trc.TLSClientConfig.Clone()
 				} else {
 					cfg = &tls.Config{}
 				}
 				cfg.ServerName = serverName
 				trc.TLSClientConfig = cfg
-
-				// Preserve ForceHTTP11 settings if it was set
-				if rrr.ForceHTTP11 {
-					trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
-					trc.ForceAttemptHTTP2 = false
-				}
-
-				transport = trc
 			}
+		}
+
+		if needClone {
+			transport = trc
 		}
 	}
 
+	// Perform the request to the backend server
 	res, err := transport.RoundTrip(outreq)
 	if err != nil {
 		if p.Verbal {
@@ -345,7 +359,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		return http.StatusBadGateway, err
 	}
 
-	// Remove hop-by-hop headers listed in the "Connection" header of the response, Remove hop-by-hop headers.
+	// Remove hop-by-hop headers listed in the "Connection" header of the response
 	if !rrr.NoRemoveHopByHop {
 		removeHeaders(res.Header, rrr.NoCache)
 	}
@@ -393,7 +407,6 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			locationRewrite = strings.TrimSuffix(rrr.PathPrefix, "/") + originLocation
 		} else {
 			//Relative path. Do not modifiy location header
-
 		}
 
 		//Custom redirection to this rproxy relative path
@@ -438,6 +451,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 
 	return res.StatusCode, nil
 }
+
 func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
 	hij, ok := rw.(http.Hijacker)
 	if !ok {

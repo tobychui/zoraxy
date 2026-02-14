@@ -52,13 +52,19 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		redirectTypeString = "307"
 	}
 
+	deviceType, err := utils.PostPara(r, "deviceType")
+	if err != nil {
+		//Assume all devices
+		deviceType = "all"
+	}
+
 	redirectionStatusCode, err := strconv.Atoi(redirectTypeString)
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid status code number")
 		return
 	}
 
-	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true")
+	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -118,13 +124,19 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		redirectTypeString = "307"
 	}
 
+	deviceType, err := utils.PostPara(r, "deviceType")
+	if err != nil {
+		//Assume all devices
+		deviceType = "all"
+	}
+
 	redirectionStatusCode, err := strconv.Atoi(redirectTypeString)
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid status code number")
 		return
 	}
 
-	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true")
+	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return

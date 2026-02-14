@@ -96,7 +96,7 @@
             width: 100%;
             border: 1px solid var(--divider_color);
             border-radius: 0.5em;
-            height: calc(100%);
+            height: calc(99%);
         }
 
         #httprpEditModal .editor_side_wrapper .wrapper_frame{
@@ -373,7 +373,7 @@
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="ForceHTTP11">
                                 <label>Force HTTP/1.1<br>
-                                    <small>Force the proxy to use HTTP/1.1 for upstream connections, disabling HTTP/2 (Experimental)</small></label>
+                                    <small>Force the proxy to use HTTP/1.1 for upstream connections, disabling HTTP/2</small></label>
                             </div>
                         </div>
                     </div>
@@ -1284,7 +1284,7 @@
             html = '<div class="ui list">';
             ports.forEach(function(port, index){
                 html += `<div class="item">
-                    <i class="ui blue server icon"></i>
+                    <i class="angle double right blue icon"></i>
                     <div class="content">
                         <div class="description">
                             ${port}

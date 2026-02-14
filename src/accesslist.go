@@ -599,6 +599,160 @@ func handleWhitelistAllowLoopback(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Handle toggle for TrustProxyHeadersOnly setting
+func handleWhitelistTrustProxy(w http.ResponseWriter, r *http.Request) {
+	enable, _ := utils.PostPara(r, "enable")
+	ruleID, err := utils.PostPara(r, "id")
+	if err != nil {
+		ruleID = "default"
+	}
+
+	rule, err := accessController.GetAccessRuleByID(ruleID)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	if enable == "" {
+		//Return the current enabled state
+		currentEnabled := rule.TrustProxyHeadersOnly
+		js, _ := json.Marshal(currentEnabled)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		switch enable {
+		case "true":
+			rule.ToggleTrustProxy(true)
+		case "false":
+			rule.ToggleTrustProxy(false)
+		default:
+			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
+			return
+		}
+
+		utils.SendOK(w)
+	}
+}
+
+/*
+	Trusted Proxy Management
+*/
+
+// List all trusted proxies
+func handleListTrustedProxies(w http.ResponseWriter, r *http.Request) {
+	proxies := accessController.ListTrustedProxies()
+	js, _ := json.Marshal(proxies)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// Add a new trusted proxy
+func handleAddTrustedProxy(w http.ResponseWriter, r *http.Request) {
+	ip, err := utils.PostPara(r, "ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid or empty ip address")
+		return
+	}
+
+	desc, _ := utils.PostPara(r, "desc")
+
+	//Sanitize inputs
+	p := bluemonday.StrictPolicy()
+	ip = strings.TrimSpace(ip)
+	desc = p.Sanitize(desc)
+
+	//Add the proxy
+	added := accessController.AddTrustedProxy(ip, desc)
+	if !added {
+		utils.SendErrorResponse(w, "proxy already exists")
+		return
+	}
+
+	//Save to file
+	err = accessController.SaveTrustedProxies()
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to save trusted proxies: "+err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// Remove a trusted proxy
+func handleRemoveTrustedProxy(w http.ResponseWriter, r *http.Request) {
+	ip, err := utils.PostPara(r, "ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid or empty ip address")
+		return
+	}
+
+	ip = strings.TrimSpace(ip)
+
+	//Remove the proxy
+	removed := accessController.RemoveTrustedProxy(ip)
+	if !removed {
+		utils.SendErrorResponse(w, "proxy not found")
+		return
+	}
+
+	//Save to file
+	err = accessController.SaveTrustedProxies()
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to save trusted proxies: "+err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// Update a trusted proxy (change IP or description)
+func handleUpdateTrustedProxy(w http.ResponseWriter, r *http.Request) {
+	originalIP, err := utils.PostPara(r, "original_ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "original ip is required")
+		return
+	}
+
+	newIP, err := utils.PostPara(r, "new_ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "new ip is required")
+		return
+	}
+
+	desc, _ := utils.PostPara(r, "desc")
+
+	//Sanitize inputs
+	p := bluemonday.StrictPolicy()
+	originalIP = strings.TrimSpace(originalIP)
+	newIP = strings.TrimSpace(newIP)
+	desc = p.Sanitize(desc)
+
+	//If IP changed, check if new IP already exists as an entry
+	if originalIP != newIP {
+		if accessController.TrustedProxyExists(newIP) {
+			utils.SendErrorResponse(w, "new ip already exists as trusted proxy")
+			return
+		}
+	}
+
+	//Remove old entry
+	removed := accessController.RemoveTrustedProxy(originalIP)
+	if !removed {
+		utils.SendErrorResponse(w, "original proxy not found")
+		return
+	}
+
+	//Add new entry
+	accessController.AddTrustedProxy(newIP, desc)
+
+	//Save to file
+	err = accessController.SaveTrustedProxies()
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to save trusted proxies: "+err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
 // List all quick ban ip address
 func handleListQuickBan(w http.ResponseWriter, r *http.Request) {
 	currentSummary := statisticCollector.GetCurrentDailySummary()

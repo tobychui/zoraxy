@@ -13,6 +13,7 @@
                   <th>Destination URL</th>
                   <th class="no-sort">Copy Pathname</th>
                   <th class="no-sort">Require Exact Match</th>
+                  <th class="no-sort">Device Type</th>
                   <th class="no-sort">Status Code</th>
                   <th class="no-sort">Actions</th>
               </tr>
@@ -90,6 +91,27 @@
           </div>
         </div>
         <div class="grouped fields">
+            <label>Device Type Filters</label>
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input type="radio" name="redirect-device" value="all" checked>
+                <label>All Devices<br><small>Apply this redirection rule to all devices</small></label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input type="radio" name="redirect-device" value="desktop">
+                <label>Desktop Devices Only<br><small>Apply this redirection rule to desktop device only. Unknown device types will be treated as desktop</small></label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="ui radio checkbox">
+                <input type="radio" name="redirect-device" value="mobile">
+                <label>Mobile Devices Only<br><small>Apply this redirection rule to mobile devices only</small></label>
+              </div>
+            </div>
+        </div>
+        <div class="grouped fields">
             <label>Redirection Status Code</label>
             <div class="field">
               <div class="ui radio checkbox">
@@ -132,6 +154,7 @@
         let forwardChildpath = document.querySelector('input[name="forward-childpath"]').checked;
         let requireExactMatch = document.querySelector('input[name="require-exact-match"]').checked;
         let redirectType = document.querySelector('input[name="redirect-type"]:checked').value;
+        let deviceType = document.querySelector('input[name="redirect-device"]:checked').value;
 
         $.cjax({
             url: "/api/redirect/add", 
@@ -142,6 +165,7 @@
                 forwardChildpath: forwardChildpath,
                 requireExactMatch: requireExactMatch,
                 redirectType: parseInt(redirectType),
+                deviceType: deviceType,
             },
             success: function(data){
                 if (data.error != undefined){
@@ -186,11 +210,18 @@
               if (!hrefURL.startsWith("http")){
                 hrefURL = "https://" + hrefURL;
               }
+              let deviceTypeLabel = "All Devices";
+              if (entry.DeviceType === "desktop") {
+                deviceTypeLabel = "Desktop Only";
+              } else if (entry.DeviceType === "mobile") {
+                deviceTypeLabel = "Mobile Only";
+              }
               $("#redirectionRuleList").append(`<tr>
                   <td><a href="${hrefURL}" target="_blank">${entry.RedirectURL}</a></td>
                   <td>${entry.TargetURL}</td>
                   <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                   <td>${entry.RequireExactMatch?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
+                  <td>${deviceTypeLabel}</td>
                   <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
                   <td>
                     <button onclick="editRule(this);" payload="${encodedEntry}" title="Edit redirection rule" class="ui mini circular icon basic button redirectEditBtn"><i class="edit icon"></i></button>
@@ -200,7 +231,7 @@
             });
             
             if (data.length == 0){
-              $("#redirectionRuleList").append(`<tr><td colspan="6"><i class="green check circle icon"></i> No redirection rule</td></tr>`);
+              $("#redirectionRuleList").append(`<tr><td colspan="7"><i class="green check circle icon"></i> No redirection rule</td></tr>`);
             }
             
         });
@@ -216,6 +247,7 @@
       let forwardChildpath = payload.ForwardChildpath;
       let requireExactMatch = payload.RequireExactMatch || false;
       let statusCode = payload.StatusCode;
+      let deviceType = payload.DeviceType || "all";
 
       row.html(`
         <td>
@@ -230,6 +262,11 @@
         </td>
         <td><div class="ui toggle checkbox"><input type="checkbox" ${forwardChildpath ? "checked" : ""} id="editForwardChildpath"><label></label></div></td>
         <td><div class="ui toggle checkbox"><input type="checkbox" ${requireExactMatch ? "checked" : ""} id="editRequireExactMatch"><label></label></div></td>
+        <td>
+          <div class="ui radio checkbox"><input type="radio" name="editDeviceType" value="all" ${deviceType == "all" ? "checked" : ""}><label>All</label></div><br>
+          <div class="ui radio checkbox"><input type="radio" name="editDeviceType" value="desktop" ${deviceType == "desktop" ? "checked" : ""}><label>Desktop</label></div><br>
+          <div class="ui radio checkbox"><input type="radio" name="editDeviceType" value="mobile" ${deviceType == "mobile" ? "checked" : ""}><label>Mobile</label></div>
+        </td>
         <td>
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="307" ${statusCode == 307 ? "checked" : ""}><label>Temporary Redirect (307)</label></div><br>
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="301" ${statusCode == 301 ? "checked" : ""}><label>Moved Permanently (301)</label></div>
@@ -250,6 +287,7 @@
       let forwardChildpath = $("#editForwardChildpath").is(":checked");
       let requireExactMatch = $("#editRequireExactMatch").is(":checked");
       let statusCode = parseInt($("input[name='editStatusCode']:checked").val());
+      let deviceType = $("input[name='editDeviceType']:checked").val();
 
       $.cjax({
         url: "/api/redirect/edit", 
@@ -261,6 +299,7 @@
             forwardChildpath: forwardChildpath,
             requireExactMatch: requireExactMatch,
             redirectType: statusCode,
+            deviceType: deviceType,
         },
         success: function(data){
             if (data.error != undefined){

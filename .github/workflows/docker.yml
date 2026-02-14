@@ -6,17 +6,16 @@ name: Build and push Docker image
     types: [released, prereleased]
 
 env:
-  DOCKER_ACCOUNT: zoraxydocker
-  DOCKER_REPO: zoraxy
-  DOCKER_REPO_TAG_CACHE_NAME: buildcache
-  DOCKER_PLATFORMS: linux/amd64,linux/arm64
-
+  DOCKER_ACCOUNT: ${{ vars.DOCKER_ACCOUNT || 'zoraxydocker' }}
+  DOCKER_REPO: ${{ vars.DOCKER_REPO || 'zoraxy' }}
+  DOCKER_REPO_TAG_CACHE_NAME: ${{ vars.DOCKER_REPO_TAG_CACHE_NAME || 'buildcache' }}
+  DOCKER_PLATFORMS: ${{ vars.DOCKER_PLATFORMS || 'linux/amd64,linux/arm64' }}
 permissions:
   contents: read
 
 jobs:
   setup-build-push:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2

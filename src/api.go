@@ -20,6 +20,9 @@ import (
 	API.go
 
 	This file contains all the API called by the web management interface
+
+	**Important Notes**
+	If you are adding new plugin api, add them in plugin_api.go instead of this file
 */
 
 // Register the APIs for HTTP proxy management functions
@@ -47,6 +50,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/listenPort80", HandleUpdatePort80Listener)
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
+	authRouter.HandleFunc("/api/proxy/proxyProtocol", HandleProxyProtocolChange)
 	/* Reverse proxy upstream (load balance) */
 	authRouter.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
 	authRouter.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
@@ -133,8 +137,14 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/whitelist/ip/remove", handleIpWhitelistRemove)
 	authRouter.HandleFunc("/api/whitelist/enable", handleWhitelistEnable)
 	authRouter.HandleFunc("/api/whitelist/allowLocal", handleWhitelistAllowLoopback)
+	authRouter.HandleFunc("/api/whitelist/trustProxy", handleWhitelistTrustProxy)
 	/* Quick Ban List */
 	authRouter.HandleFunc("/api/quickban/list", handleListQuickBan)
+	/* Trusted Proxies */
+	authRouter.HandleFunc("/api/trustedproxy/list", handleListTrustedProxies)
+	authRouter.HandleFunc("/api/trustedproxy/add", handleAddTrustedProxy)
+	authRouter.HandleFunc("/api/trustedproxy/remove", handleRemoveTrustedProxy)
+	authRouter.HandleFunc("/api/trustedproxy/update", handleUpdateTrustedProxy)
 }
 
 // Register the APIs for path blocking rules management functions, WIP
@@ -209,17 +219,11 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/setPort", HandleStaticWebServerPortChange)
 	authRouter.HandleFunc("/api/webserv/setDirList", staticWebServer.SetEnableDirectoryListing)
 	authRouter.HandleFunc("/api/webserv/disableListenAllInterface", staticWebServer.SetDisableListenToAllInterface)
-	/* File Manager */
-	if *allowWebFileManager {
-		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
-		authRouter.HandleFunc("/api/fs/upload", staticWebServer.FileManager.HandleUpload)
-		authRouter.HandleFunc("/api/fs/download", staticWebServer.FileManager.HandleDownload)
-		authRouter.HandleFunc("/api/fs/newFolder", staticWebServer.FileManager.HandleNewFolder)
-		authRouter.HandleFunc("/api/fs/copy", staticWebServer.FileManager.HandleFileCopy)
-		authRouter.HandleFunc("/api/fs/move", staticWebServer.FileManager.HandleFileMove)
-		authRouter.HandleFunc("/api/fs/properties", staticWebServer.FileManager.HandleFileProperties)
-		authRouter.HandleFunc("/api/fs/del", staticWebServer.FileManager.HandleFileDelete)
-	}
+
+	/* WebDAV Server Controls */
+	authRouter.HandleFunc("/api/webserv/webdav/start", staticWebServer.HandleStartWebDAV)
+	authRouter.HandleFunc("/api/webserv/webdav/stop", staticWebServer.HandleStopWebDAV)
+	authRouter.HandleFunc("/api/webserv/webdav/setPort", staticWebServer.HandleWebDAVPortChange)
 }
 
 // Register the APIs for Network Utilities functions

@@ -227,6 +227,20 @@ body.darkTheme .ui.checkbox:not(.toggle) input[type="checkbox"]{
     opacity: 100% !important;
 }
 
+body.darkTheme .ui.accordion .title{
+    color: var(--text_color_secondary) !important;
+}
+
+body.darkTheme .ui.ordered.list .item{
+    color: var(--text_color) !important;
+}
+
+body.darkTheme .ui.ordered.list .list > .item::before,
+body.darkTheme .ui.ordered.list > .item::before,
+body.darkTheme ol.ui.list li::before {
+    color: var(--text_color) !important;
+}
+
 #sidemenuBtn{
     border: 1px solid var(--button_border_color) !important;
 }
@@ -1050,7 +1064,8 @@ body.darkTheme #gan thead th {
 body.darkTheme #utm .standardContainer {
     background-color: var(--theme_bg) !important;
     color: var(--text_color) !important;
-    border: 1px solid var(--divider_color) !important;
+    /* border: 1px solid var(--divider_color) !important; */
+
 }
 
 body.darkTheme #utm .standardContainer .padding.statusDot {

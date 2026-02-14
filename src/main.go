@@ -63,6 +63,21 @@ func main() {
 	//Parse startup flags
 	flag.Parse()
 
+	//Initialize path variables from flags
+	TMP_FOLDER = *path_tmp
+	CONF_FOLDER = *path_conf
+	CONF_HTTP_PROXY = CONF_FOLDER + "/proxy"
+	CONF_STREAM_PROXY = CONF_FOLDER + "/streamproxy"
+	CONF_CERT_STORE = CONF_FOLDER + "/certs"
+	CONF_REDIRECTION = CONF_FOLDER + "/redirect"
+	CONF_ACCESS_RULE = CONF_FOLDER + "/access"
+	CONF_PATH_RULE = CONF_FOLDER + "/rules/pathrules"
+	CONF_PLUGIN_GROUPS = CONF_FOLDER + "/plugin_groups.json"
+	CONF_GEODB_PATH = CONF_FOLDER + "/geodb"
+	CONF_LOG_CONFIG = CONF_FOLDER + "/log_conf.json"
+	ACME_AUTORENEW_CONFIG_PATH = CONF_FOLDER + "/acme_conf.json"
+	CONF_TRUSTED_PROXIES = CONF_FOLDER + "/trusted_proxies.json"
+
 	/* Maintaince Function Modes */
 	if *showver {
 		fmt.Println(SYSTEM_NAME + " - Version " + SYSTEM_VERSION)
@@ -74,7 +89,7 @@ func main() {
 	}
 	if *reset_account {
 		//Reset admin account by removing all users from the system
-		auth.ResetAccount(databaseBackend)
+		auth.ResetAccount(databaseBackend, path_database)
 		os.Exit(0)
 	}
 
