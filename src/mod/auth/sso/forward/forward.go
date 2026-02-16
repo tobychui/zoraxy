@@ -239,7 +239,7 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 		if len(ar.options.ResponseHeaders) != 0 {
 			// Copy specific user-specified headers from the response of the forward auth request to the request sent to the
 			// upstream server/next hop.
-			headerCopyIncluded(respForwarded.Header, w.Header(), ar.options.ResponseHeaders, false)
+			headerCopyIncluded(respForwarded.Header, r.Header, ar.options.ResponseHeaders, false)
 		}
 
 		// Return the request to the proxy for forwarding to the backend.
