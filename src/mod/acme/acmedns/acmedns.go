@@ -16,6 +16,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/allinkl"
 	"github.com/go-acme/lego/v4/providers/dns/alwaysdata"
 	"github.com/go-acme/lego/v4/providers/dns/anexia"
+	"github.com/go-acme/lego/v4/providers/dns/artfiles"
 	"github.com/go-acme/lego/v4/providers/dns/arvancloud"
 	"github.com/go-acme/lego/v4/providers/dns/auroradns"
 	"github.com/go-acme/lego/v4/providers/dns/autodns"
@@ -28,6 +29,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/binarylane"
 	"github.com/go-acme/lego/v4/providers/dns/bindman"
 	"github.com/go-acme/lego/v4/providers/dns/bluecat"
+	"github.com/go-acme/lego/v4/providers/dns/bluecatv2"
 	"github.com/go-acme/lego/v4/providers/dns/bookmyname"
 	"github.com/go-acme/lego/v4/providers/dns/brandit"
 	"github.com/go-acme/lego/v4/providers/dns/bunny"
@@ -43,10 +45,12 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/conohav3"
 	"github.com/go-acme/lego/v4/providers/dns/constellix"
 	"github.com/go-acme/lego/v4/providers/dns/cpanel"
+	"github.com/go-acme/lego/v4/providers/dns/ddnss"
 	"github.com/go-acme/lego/v4/providers/dns/derak"
 	"github.com/go-acme/lego/v4/providers/dns/desec"
 	"github.com/go-acme/lego/v4/providers/dns/digitalocean"
 	"github.com/go-acme/lego/v4/providers/dns/directadmin"
+	"github.com/go-acme/lego/v4/providers/dns/dnsexit"
 	"github.com/go-acme/lego/v4/providers/dns/dnsimple"
 	"github.com/go-acme/lego/v4/providers/dns/dnsmadeeasy"
 	"github.com/go-acme/lego/v4/providers/dns/dnspod"
@@ -96,6 +100,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/jdcloud"
 	"github.com/go-acme/lego/v4/providers/dns/joker"
 	"github.com/go-acme/lego/v4/providers/dns/keyhelp"
+	"github.com/go-acme/lego/v4/providers/dns/leaseweb"
 	"github.com/go-acme/lego/v4/providers/dns/liara"
 	"github.com/go-acme/lego/v4/providers/dns/lightsail"
 	"github.com/go-acme/lego/v4/providers/dns/limacity"
@@ -113,6 +118,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/namecheap"
 	"github.com/go-acme/lego/v4/providers/dns/namedotcom"
 	"github.com/go-acme/lego/v4/providers/dns/namesilo"
+	"github.com/go-acme/lego/v4/providers/dns/namesurfer"
 	"github.com/go-acme/lego/v4/providers/dns/nearlyfreespeech"
 	"github.com/go-acme/lego/v4/providers/dns/neodigit"
 	"github.com/go-acme/lego/v4/providers/dns/netcup"
@@ -151,6 +157,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/syse"
 	"github.com/go-acme/lego/v4/providers/dns/technitium"
 	"github.com/go-acme/lego/v4/providers/dns/tencentcloud"
+	"github.com/go-acme/lego/v4/providers/dns/todaynic"
 	"github.com/go-acme/lego/v4/providers/dns/transip"
 	"github.com/go-acme/lego/v4/providers/dns/ultradns"
 	"github.com/go-acme/lego/v4/providers/dns/uniteddomains"
@@ -245,6 +252,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return anexia.NewDNSProviderConfig(cfg)
+	case "artfiles":
+		cfg := artfiles.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return artfiles.NewDNSProviderConfig(cfg)
 	case "arvancloud":
 		cfg := arvancloud.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -353,6 +369,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return bluecat.NewDNSProviderConfig(cfg)
+	case "bluecatv2":
+		cfg := bluecatv2.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return bluecatv2.NewDNSProviderConfig(cfg)
 	case "bookmyname":
 		cfg := bookmyname.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -488,6 +513,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return cpanel.NewDNSProviderConfig(cfg)
+	case "ddnss":
+		cfg := ddnss.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return ddnss.NewDNSProviderConfig(cfg)
 	case "derak":
 		cfg := derak.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -524,6 +558,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return directadmin.NewDNSProviderConfig(cfg)
+	case "dnsexit":
+		cfg := dnsexit.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return dnsexit.NewDNSProviderConfig(cfg)
 	case "dnsimple":
 		cfg := dnsimple.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -965,6 +1008,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return keyhelp.NewDNSProviderConfig(cfg)
+	case "leaseweb":
+		cfg := leaseweb.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return leaseweb.NewDNSProviderConfig(cfg)
 	case "liara":
 		cfg := liara.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1118,6 +1170,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return namesilo.NewDNSProviderConfig(cfg)
+	case "namesurfer":
+		cfg := namesurfer.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return namesurfer.NewDNSProviderConfig(cfg)
 	case "nearlyfreespeech":
 		cfg := nearlyfreespeech.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1460,6 +1521,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return tencentcloud.NewDNSProviderConfig(cfg)
+	case "todaynic":
+		cfg := todaynic.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return todaynic.NewDNSProviderConfig(cfg)
 	case "transip":
 		cfg := transip.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
