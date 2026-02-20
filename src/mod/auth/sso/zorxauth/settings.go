@@ -48,7 +48,7 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 	// Parse parameters
 	ssoRedirectURL, err := utils.PostPara(r, "ssoRedirectURL")
 	if err != nil {
-		utils.SendErrorResponse(w, "ssoRedirectURL not found")
+		utils.SendErrorResponse(w, "SSO Redirect URL not set")
 		return
 	}
 
