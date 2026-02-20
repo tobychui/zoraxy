@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Error - Zoraxy Auth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .icon {
+            text-align: center;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .error-message {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+        
+        .error-message p {
+            color: #c53030;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .guide {
+            background: #f7fafc;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .guide h2 {
+            color: #2d3748;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+        
+        .guide ol {
+            margin-left: 20px;
+            color: #4a5568;
+        }
+        
+        .guide li {
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+        
+        .guide code {
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #1f1bd8;
+        }
+        
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 16px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            color: #2c5282;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .icon {
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">⚠️</div>
+        <h1>Configuration Error</h1>
+        <p class="subtitle">Zoraxy Auth is not properly configured</p>
+        
+        <div class="error-message">
+            <p><strong>Error:</strong> The SSO Redirect URL is not configured. This setting is required for Zoraxy Auth to function properly.</p>
+        </div>
+        
+        <div class="guide">
+            <h2>How to Fix This</h2>
+            <ol>
+                <li>Log in to your Zoraxy admin panel</li>
+                <li>Navigate to <strong>SSO Settings</strong> → <strong>Zoraxy Auth</strong> tab</li>
+                <li>Configure the <code>SSO Redirect URL</code> field with your authentication server URL</li>
+                <li>Save the settings and try again</li>
+            </ol>
+        </div>
+        
+        <div class="info-box">
+            <p><strong>Tip:</strong> The SSO Redirect URL should point to the Zoraxy Auth gateway endpoint where users will log in. Make sure you have added a HTTP proxy rule to forward the SSO domain to the Zoraxy Auth SSO port.</p>
+        </div>
+    </div>
+</body>
+</html>

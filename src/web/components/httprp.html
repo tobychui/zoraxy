@@ -482,6 +482,12 @@
                                         <label>OAuth2</label>
                                     </div>
                                 </div>
+                                <div class="field">
+                                    <div class="ui radio checkbox">
+                                        <input type="radio" value="4" name="authProviderType">
+                                        <label>Zoraxy Auth</label>
+                                    </div>
+                                </div>
                             </div>
                             <br>
                             <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
@@ -792,6 +798,8 @@
                         authDisplay = `<i class="ui blue key icon"></i> Forward Auth`;
                     } else if (subd.AuthenticationProvider.AuthMethod == 0x3) {
                         authDisplay = `<i class="ui yellow key icon"></i> OAuth2`;
+                    } else if (subd.AuthenticationProvider.AuthMethod == 0x4) {
+                        authDisplay = `<i class="ui purple key icon"></i> Zoraxy Auth`;
                     } else {
                         authDisplay = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">None</small>`;
                     }
@@ -830,6 +838,7 @@
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Forward Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> OAuth2`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x4?`<i class="ui purple key icon"></i> Zoraxy Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
                             ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
@@ -1814,6 +1823,9 @@
             break;
         case 0x3:
             editor.find(".authProviderPicker input[value='3']").prop("checked", true);
+            break;
+        case 0x4:
+            editor.find(".authProviderPicker input[value='4']").prop("checked", true);
             break;
         default:
             editor.find(".authProviderPicker input[value='0']").prop("checked", true);

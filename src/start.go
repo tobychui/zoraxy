@@ -19,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
@@ -189,6 +190,8 @@ func startupSequence() {
 		Logger:   SystemWideLogger,
 		Database: sysdb,
 	})
+
+	zorxAuthRouter = zorxauth.NewAuthRouter(sysdb, SystemWideLogger)
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{

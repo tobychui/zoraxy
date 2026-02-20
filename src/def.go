@@ -19,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -165,6 +166,7 @@ var (
 	//Authentication Provider
 	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication
 	oauth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
+	zorxAuthRouter    *zorxauth.AuthRouter //ZorxAuth router for ZorxAuth SSO authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

@@ -171,6 +171,7 @@ func ReverseProxyInit() {
 		AccessController:   accessController,
 		ForwardAuthRouter:  forwardAuthRouter,
 		OAuth2Router:       oauth2Router,
+		ZorxAuthAgentRouter: zorxAuthRouter,
 		LoadBalancer:       loadBalancer,
 		PluginManager:      pluginManager,
 		/* Utilities */
@@ -724,6 +725,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
 	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
+	case 4:
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodZorxAuth
 	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}

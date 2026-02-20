@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied - Zoraxy Auth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .icon {
+            text-align: center;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .error-message {
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+
+        .error-message p {
+            color: #1d1d1d;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .error-message code {
+            background: #2b2b2b;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background: #ebf8ff;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 28px;
+        }
+
+        .info-box p {
+            color: #2c5282;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        .status-msg {
+            margin-top: 14px;
+            font-size: 14px;
+            color: #718096;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .icon {
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🚫</div>
+        <h1>Access Denied</h1>
+        <p class="subtitle">You are authenticated but not permitted to access this host</p>
+
+        <div class="error-message">
+            <p>Your account does not have permission to access <code id="hostDisplay"></code>. Contact your administrator if you believe this is a mistake.</p>
+        </div>
+
+        <div class="info-box">
+            <p>If you have another account with the required permissions, you can log out and sign in again. Your current session will be terminated.</p>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-danger" onclick="doLogout()">Logout &amp; Switch Account</button>
+            <button class="btn btn-secondary" onclick="history.back()">Go Back</button>
+        </div>
+        <p class="status-msg" id="statusMsg"></p>
+    </div>
+
+    <script>
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var redirectUrl = params.get("redirect");
+            var host = redirectUrl ? new URL(decodeURIComponent(redirectUrl)).host : "the requested host";
+            var redirect = params.get("redirect") || "";
+            document.getElementById("hostDisplay").textContent = host;
+
+            window.doLogout = function () {
+                var statusEl = document.getElementById("statusMsg");
+                statusEl.textContent = "Logging out…";
+
+                fetch("/logout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        // Redirect back to login page, preserving the original redirect target
+                        var loginURL = "/";
+                        if (redirect) {
+                            loginURL += "?redirect=" + encodeURIComponent(redirect);
+                        }
+                        window.location.href = loginURL;
+                    } else {
+                        statusEl.textContent = "Logout failed: " + (data.error || "unknown error");
+                    }
+                })
+                .catch(function (err) {
+                    statusEl.textContent = "Logout request failed. Please try again.";
+                });
+            };
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+		<link rel="stylesheet" href="../script/semantic/semantic.min.css">
+		<script src="../script/jquery-3.6.0.min.js"></script>
+		<script src="../script/semantic/semantic.min.js"></script>
+		<script src="../script/utils.js"></script>
+		<style>
+			.passwordHint {
+				opacity: 0.7;
+				font-size: 0.85em;
+			}
+			.userFormSection .field {
+				margin-bottom: 0.6em !important;
+			}
+		</style>
+	</head>
+	<body>
+		<link rel="stylesheet" href="../darktheme.css">
+		<script src="../script/darktheme.js"></script>
+		<br>
+		<div class="ui container">
+			<h3 class="ui header">Zoraxy Auth User Management</h3>
+			<p>Create, edit and remove users for Zoraxy Auth SSO login.</p>
+
+			<!-- User List -->
+			<div class="ui divider"></div>
+			<h4 class="ui header">Registered Users</h4>
+			<table class="ui very compact basic unstackable celled table">
+				<thead>
+					<tr>
+						<th>Username</th>
+						<th>Email</th>
+						<th>Allowed Hosts</th>
+						<th style="width:5em; text-align:right;">Actions</th>
+					</tr>
+				</thead>
+				<tbody id="usersTableBody">
+					<tr>
+						<td colspan="4"><small>Loading users...</small></td>
+					</tr>
+				</tbody>
+			</table>
+			<!-- Edit User Form  -->
+			<div id="editUserSection" class="ui form userFormSection" style="display:none;">
+				<div class="ui divider"></div>
+				<b class="ui header">Editing User: <span id="editUsernameLabel"></span></b>
+                 <p>Update the user information and click "Save Changes". Leave password blank to keep current password.</p>
+				<input type="hidden" id="editOriginalUsername">
+				<div class="two stackable fields">
+					<div class="field">
+						<label>Username</label>
+						<input id="editUsername" type="text" placeholder="alice" autocomplete="off">
+					</div>
+					<div class="field">
+						<label>Email (Optional)</label>
+						<input id="editEmail" type="text" placeholder="alice@example.com" autocomplete="off">
+					</div>
+				</div>
+				<div class="two stackable fields">
+					<div class="field">
+						<label>Password <small class="passwordHint">(leave blank to keep current)</small></label>
+						<input id="editPassword" type="password" placeholder="Leave blank to keep" autocomplete="off">
+					</div>
+					<div class="field">
+						<label>Allowed Hosts <small class="passwordHint">(comma separated, blank = allow all)</small></label>
+						<input id="editAllowedHosts" type="text" placeholder="app.example.com, *.internal.example.com" autocomplete="off">
+						<div style="margin-top:0.4em; display:flex; gap:0.4em; align-items:center;">
+							<select id="editHostQuickSelect" style="flex:1;">
+								<option value="">— select a registered host —</option>
+							</select>
+							<button class="ui mini basic button" type="button" onclick="addHostToInput('editAllowedHosts', $('#editHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+						</div>
+					</div>
+				</div>
+				<button class="ui basic button" onclick="saveUser();"><i class="ui green save icon"></i> Save Changes</button>
+				<button class="ui basic button" onclick="cancelEdit();"><i class="ui grey cancel icon"></i> Cancel</button>
+			</div>
+
+			<!-- Create User Form -->
+			<div id="newUserSection" class="ui form userFormSection">
+				<div class="ui divider"></div>
+				<b class="ui header">Register New User</b>
+                <p>Create a new user for Zoraxy Auth SSO login.</p>
+				<div class="three stackable fields">
+					<div class="field">
+						<label>Username</label>
+						<input id="newUsername" type="text" placeholder="alan" autocomplete="off">
+					</div>
+					<div class="field">
+						<label>Email (Optional)</label>
+						<input id="newEmail" type="text" placeholder="alan@example.com" autocomplete="off">
+					</div>
+					<div class="field">
+						<label>Password</label>
+						<input id="newPassword" type="password" placeholder="Required" autocomplete="off">
+					</div>
+				</div>
+				<div class="field">
+					<label>Allowed Hosts <small class="passwordHint">(comma separated, blank = allow all)</small></label>
+					<input id="newAllowedHosts" type="text" placeholder="app.example.com, *.internal.example.com" autocomplete="off">
+					<div style="margin-top:0.4em; display:flex; gap:0.4em; align-items:center;">
+						<select id="newHostQuickSelect" style="flex:1;">
+							<option value="">— select a registered host —</option>
+						</select>
+						<button class="ui mini basic button" type="button" onclick="addHostToInput('newAllowedHosts', $('#newHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+					</div>
+				</div>
+				<button class="ui basic button" onclick="createUser();"><i class="ui green add icon"></i> Register User</button>
+			</div>
+
+			<br><br>
+		</div>
+
+		<script>
+			function notify(message, isSuccess = true){
+				if (parent !== undefined && parent.msgbox !== undefined){
+					parent.msgbox(message, isSuccess);
+				}else{
+					alert(message);
+				}
+			}
+
+			function escapeHtml(value){
+				return String(value || "")
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;');
+			}
+
+			function normalizeHostsForInput(hosts){
+				if (hosts === undefined || hosts === null || !Array.isArray(hosts)){
+					return "";
+				}
+				return hosts.join(', ');
+			}
+
+			function addHostToInput(inputId, hostname){
+				if (!hostname) return;
+				const input = $('#' + inputId);
+				const current = input.val().trim();
+				input.val(current === '' ? hostname : current + ', ' + hostname);
+			}
+
+			function loadRegisteredHosts(){
+				$.cjax({
+					url: '/api/proxy/list?type=host',
+					method: 'GET',
+					success: function(data){
+						if (!data || data.error !== undefined || data.length === 0) return;
+						const options = data.map(function(ep){
+							const h = escapeHtml(ep.RootOrMatchingDomain);
+							return `<option value="${h}">${h}</option>`;
+						}).join('');
+						$('#newHostQuickSelect').append(options);
+						$('#editHostQuickSelect').append(options);
+					}
+				});
+			}
+
+			function loadUsers(){
+				$('#usersTableBody').html(`<tr><td colspan="4"><small>Loading users...</small></td></tr>`);
+				$.cjax({
+					url: '/api/sso/zorxauth/users/list',
+					method: 'GET',
+					success: function(data){
+						if (data.error !== undefined){
+							$('#usersTableBody').html(`<tr><td colspan="4"><i class="ui red warning circle icon"></i> ${escapeHtml(data.error)}</td></tr>`);
+							return;
+						}
+						renderUsers(data);
+					},
+					error: function(){
+						$('#usersTableBody').html(`<tr><td colspan="4"><i class="ui red warning circle icon"></i> Failed to load users</td></tr>`);
+					}
+				});
+			}
+
+			function renderUsers(users){
+				let body = $('#usersTableBody');
+				body.html('');
+
+				if (!users || users.length === 0){
+					body.html(`<tr><td colspan="4"><i class="ui green circle check icon"></i> No ZorxAuth user created</td></tr>`);
+					return;
+				}
+
+                users.forEach(function(user){
+                    const hosts = user.allowedHosts || [];
+                    const hostsDisplay = hosts.length > 0 
+                        ? `<ul style="margin:0; padding-left:1.2em;">${hosts.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>` 
+                        : '<span style="opacity:0.5;">all hosts</span>';
+                    const emailDisplay = escapeHtml(user.email) || '<span style="opacity:0.5;">—</span>';
+                    body.append(`<tr class="userRow" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}">
+                        <td>${escapeHtml(user.username)}</td>
+                        <td>${emailDisplay}</td>
+                        <td>${hostsDisplay}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="ui mini icon basic button" title="Edit user" onclick="openEditUser(this);"><i class="edit icon"></i></button>
+                            <button class="ui mini icon basic red button" title="Delete user" onclick="deleteUser(this);"><i class="trash icon"></i></button>
+                        </td>
+                    </tr>`);
+                });
+			}
+
+			function openEditUser(btn){
+				const row = $(btn).closest('.userRow');
+				const username = row.attr('data-username');
+				const email = row.attr('data-email');
+				const allowedHosts = row.attr('data-allowedhosts');
+
+				$('#editOriginalUsername').val(username);
+				$('#editUsername').val(username);
+				$('#editEmail').val(email);
+				$('#editPassword').val('');
+				$('#editAllowedHosts').val(allowedHosts);
+				$('#editUsernameLabel').text(username);
+
+				$('#newUserSection').hide();
+				$('#editUserSection').show();
+
+				// Scroll the edit form into view smoothly
+				$('#editUserSection')[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+
+			function cancelEdit(){
+				$('#editUserSection').hide();
+				$('#newUserSection').show();
+			}
+
+			function createUser(){
+				const username = $('#newUsername').val().trim();
+				const email = $('#newEmail').val().trim();
+				const password = $('#newPassword').val();
+				const allowedHosts = $('#newAllowedHosts').val().trim();
+
+				if (username === '' || password === ''){
+					notify('Username and password are required', false);
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/users/create',
+					method: 'POST',
+					data: {
+						username: username,
+						email: email,
+						password: password,
+						allowedHosts: allowedHosts
+					},
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('User created');
+						$('#newUsername').val('');
+						$('#newEmail').val('');
+						$('#newPassword').val('');
+						$('#newAllowedHosts').val('');
+						loadUsers();
+					}
+				});
+			}
+
+			function saveUser(){
+				const originalUsername = $('#editOriginalUsername').val();
+				const newUsername = $('#editUsername').val().trim();
+				const email = $('#editEmail').val().trim();
+				const allowedHosts = $('#editAllowedHosts').val().trim();
+				const password = $('#editPassword').val();
+
+				if (newUsername === ''){
+					notify('Username cannot be empty', false);
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/users/update',
+					method: 'POST',
+					data: {
+						username: originalUsername,
+						newUsername: newUsername,
+						email: email,
+						allowedHosts: allowedHosts,
+						password: password
+					},
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('User updated');
+						cancelEdit();
+						loadUsers();
+					}
+				});
+			}
+
+			function deleteUser(buttonObject){
+				const row = $(buttonObject).closest('.userRow');
+				const username = row.attr('data-username');
+				if (!confirm('Delete user "' + username + '"?')){
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/users/delete',
+					method: 'POST',
+					data: {
+						username: username
+					},
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('User deleted');
+						loadUsers();
+					}
+				});
+			}
+
+			loadRegisteredHosts();
+			loadUsers();
+		</script>
+	</body>
+</html>

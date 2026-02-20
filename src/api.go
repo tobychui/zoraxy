@@ -102,6 +102,16 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/forward-auth", forwardAuthRouter.HandleAPIOptions)
 	authRouter.HandleFunc("/api/sso/OAuth2", oauth2Router.HandleSetOAuth2Settings)
+	authRouter.HandleFunc("/api/sso/zorxauth/provider", zorxAuthRouter.HandleAuthProviderSettings)
+	authRouter.HandleFunc("/api/sso/zorxauth/gateway", zorxAuthRouter.HandleGatewaySettings)
+}
+
+// Register ZorxAuth user management APIs separately from generic SSO provider settings routes
+func RegisterZorxAuthUserManagementAPIs(authRouter *auth.RouterDef) {
+	authRouter.HandleFunc("/api/sso/zorxauth/users/list", zorxAuthRouter.HandleUsersList)
+	authRouter.HandleFunc("/api/sso/zorxauth/users/create", zorxAuthRouter.HandleUserCreate)
+	authRouter.HandleFunc("/api/sso/zorxauth/users/update", zorxAuthRouter.HandleUserUpdate)
+	authRouter.HandleFunc("/api/sso/zorxauth/users/delete", zorxAuthRouter.HandleUserDelete)
 }
 
 // Register the APIs for redirection rules management functions
@@ -369,6 +379,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterHTTPProxyAPIs(authRouter)
 	RegisterTLSAPIs(authRouter)
 	RegisterAuthenticationHandlerAPIs(authRouter)
+	RegisterZorxAuthUserManagementAPIs(authRouter)
 	RegisterRedirectionAPIs(authRouter)
 	RegisterAccessRuleAPIs(authRouter)
 	RegisterPathRuleAPIs(authRouter)
