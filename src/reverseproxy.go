@@ -234,6 +234,7 @@ func ReverseProxyInit() {
 			MaxRecordsStore:   288,                                //1 day
 			OnlineStateNotify: loadBalancer.NotifyHostOnlineState, //Notify the load balancer for online state
 			Logger:            SystemWideLogger,                   //Logger
+			Verbal:            *development_build,                 //Enable verbose logging in dev mode
 		})
 
 		SystemWideLogger.Println("Uptime Monitor background service started")

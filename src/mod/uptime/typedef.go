@@ -42,13 +42,14 @@ type Config struct {
 	MaxRecordsStore   int
 	OnlineStateNotify func(upstreamIP string, isOnline bool)
 	Logger            *logger.Logger
+	Verbal            bool
 }
 
 type Monitor struct {
 	Config              *Config
 	OnlineStatusLog     map[string][]*Record
-	logMutex            sync.RWMutex         //Mutex for OnlineStatusLog map access
-	runningUptimeChecks bool                 //To prevent overlapping uptime checks
+	logMutex            sync.RWMutex //Mutex for OnlineStatusLog map access
+	runningUptimeChecks bool         //To prevent overlapping uptime checks
 }
 
 // Default configs

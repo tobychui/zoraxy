@@ -85,7 +85,6 @@ var (
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
-	enableProxyProtocolSupport  = flag.Bool("experimental_proxy_protocol", false, "Enable PROXY protocol v1/v2 support for TLS listener (experimental)")
 
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
@@ -98,7 +97,7 @@ var (
 
 	/* Maintaince & Development Function Flags */
 	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
-	development_build = flag.Bool("dev", false, "Use external web folder for UI development")
+	development_build = flag.Bool("dev", false, "Use external web folder for UI development and enable verbose logging")
 	reset_account     = flag.Bool("reset_ac", false, "Reset admin account username and password to default and exit")
 )
 
