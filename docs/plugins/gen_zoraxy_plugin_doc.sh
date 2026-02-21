@@ -1,7 +1,8 @@
 #!/bin/bash
 
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 # Cd into zoraxy plugin directory
-cd ../../src/mod/plugins/zoraxy_plugin/
+cd "${SCRIPT_DIR}"/../../src/mod/plugins/zoraxy_plugin/
 
 # Add header to the documentation
 echo "# Zoraxy Plugin APIs" >docs.md

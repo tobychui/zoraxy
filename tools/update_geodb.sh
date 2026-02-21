@@ -1,6 +1,7 @@
 #!/bin/bash
 
-cd ../src/mod/geodb
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+cd "${SCRIPT_DIR}"/../src/mod/geodb
 
 # Delete the old csv files
 rm geoipv4.csv
@@ -32,4 +33,3 @@ if [ "$failed" = true ]; then
     read -p "Press [Ctrl+C] to exit..." input
   done
 fi
-
