@@ -90,6 +90,38 @@ func (ar *AuthRouter) getUserByUsername(username string) (*User, error) {
 	return user, nil
 }
 
+func (ar *AuthRouter) getUserByEmail(email string) (*User, error) {
+	if ar.Database == nil {
+		return nil, errors.New("database not available")
+	}
+
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, errors.New("email is empty")
+	}
+
+	users, err := ar.listUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, user := range users {
+		if strings.EqualFold(user.Email, email) {
+			return user, nil
+		}
+	}
+
+	return nil, errors.New("user not found")
+}
+
+func (ar *AuthRouter) getUserByUsernameOrEmail(identifier string) (*User, error) {
+	u, err := ar.getUserByUsername(identifier)
+	if err == nil {
+		return u, nil
+	}
+	return ar.getUserByEmail(identifier)
+}
+
 func (ar *AuthRouter) listUsers() ([]*User, error) {
 	if ar.Database == nil {
 		return nil, errors.New("database not available")
@@ -371,7 +403,7 @@ func (ar *AuthRouter) ValidateUserAccessToHost(username, host string) bool {
 		return false
 	}
 
-	user, err := ar.getUserByUsername(username)
+	user, err := ar.getUserByUsernameOrEmail(username)
 	if err != nil {
 		return false
 	}
@@ -407,7 +439,7 @@ func (ar *AuthRouter) ValidateUsername(username, password string) bool {
 		return false
 	}
 
-	user, err := ar.getUserByUsername(username)
+	user, err := ar.getUserByUsernameOrEmail(username)
 	if err != nil {
 		users, listErr := ar.listUsers()
 		if listErr != nil {

@@ -237,6 +237,9 @@
                     <input type="text" id="zorxAuthSSORedirectURL" name="ssoRedirectURL" placeholder="https://auth.example.com">
                     <small>URL of the SSO authentication endpoint where unauthenticated users will be redirected. <br><b>Remember to include protocol (e.g., https://) in the URL</b></small>
                 </div>
+                <div class="ui message">
+                    <p>Logged in users can logout by navigating to: <code id="logoutUrlDisplay">N/A</code></p>
+                </div>
                 <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
                     <div class="ui advancedSSOZorxAuthOptions accordion">
                         <div class="title">
@@ -557,12 +560,34 @@
                 } else {
                     $("#zorxAuthUseExpotentialBackoff").parent().checkbox("set unchecked");
                 }
+                
+                // Update logout URL display based on SSO Redirect URL
+                updateLogoutUrlDisplay();
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching Zoraxy Auth settings:', textStatus, errorThrown);
             }
         });
     }
+
+    /*
+        Update logout URL display based on SSO Redirect URL
+    */
+    function updateLogoutUrlDisplay() {
+        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val();
+        if (ssoRedirectURL) {
+            // Remove trailing slash if present
+            const baseUrl = ssoRedirectURL.replace(/\/$/, '');
+            $('#logoutUrlDisplay').text(baseUrl + '/logout');
+        } else {
+            $('#logoutUrlDisplay').text('https://auth.example.com/logout');
+        }
+    }
+
+    // Update logout URL display when SSO Redirect URL changes
+    $('#zorxAuthSSORedirectURL').on('input', function() {
+        updateLogoutUrlDisplay();
+    });
 
     /*
         Zoraxy Auth settings update handler.

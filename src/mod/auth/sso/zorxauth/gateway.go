@@ -200,7 +200,7 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
-			
+
 			sessionId := gs.router.generateValidationCodeForSession(username)
 			// Parse the redirect target so we can build the session-set URL on the target host.
 			parsedTarget, parseErr := url.Parse(redirectURL)
@@ -325,7 +325,18 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		targetProtocol = "http"
 	}
 
-	if !gs.router.ValidateUserAccessToHost(username, host) {
+	u, err := gs.router.getUserByUsernameOrEmail(username)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Internal server error",
+		})
+		return
+	}
+
+	if !gs.router.ValidateUserAccessToHost(u.Username, host) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -357,7 +368,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	sessionToken := gs.router.generateSessionToken()
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
 	gatewaySession := &GatewaySession{
-		Username: username,
+		Username: u.Username,
 		Expiry:   expiryTime,
 	}
 	gs.router.gatewaySessionStore.Store(sessionToken, gatewaySession)
@@ -378,7 +389,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		gs.router.gatewaySessionStore.Delete(sessionToken)
 	})
 
-	sessionId := gs.router.generateValidationCodeForSession(username)
+	sessionId := gs.router.generateValidationCodeForSession(u.Username)
 	hostWithPort := host
 	if port != "" {
 		hostWithPort = host + ":" + port
