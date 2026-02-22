@@ -2,15 +2,20 @@ package zorxauth
 
 import (
 	"sync"
+	"time"
 
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 )
 
 const (
-	DB_NAME             = "zorxauth"
-	DB_USERS_TABLE      = "zorxauth_users"
-	DB_USERS_KEY_PREFIX = "user_"
+	DB_NAME                       = "zorxauth"
+	DB_USERS_TABLE                = "zorxauth_users"
+	DB_USERS_KEY_PREFIX           = "user_"
+	DB_BROWSER_SESSIONS_TABLE     = "zorxauth_browser_sessions"
+	DB_BROWSER_SESSION_KEY_PREFIX = "session_"
+	DB_GATEWAY_SESSIONS_TABLE     = "zorxauth_gateway_sessions"
+	DB_GATEWAY_SESSION_KEY_PREFIX = "gateway_"
 )
 
 type User struct {
@@ -19,17 +24,6 @@ type User struct {
 	Email        string   `json:"email"` //optional
 	PasswordHash string   `json:"passwordHash"`
 	AllowedHosts []string `json:"allowedHosts"` //optional, if empty, allow all hosts
-}
-
-type GroupOptions struct {
-	AllowedHosts []string
-}
-
-type Group struct {
-	ID      string        `json:"id"` //uuidv4
-	Name    string        `json:"name"`
-	Admin   bool          `json:"admin"` //Allow access all proxy rules
-	Options *GroupOptions `json:"options"`
 }
 
 // AuthRouterOptions contains configuration for the ZorxAuth router
@@ -46,8 +40,17 @@ type AuthRouterOptions struct {
 	SSOSessionSetURL         string `json:"sso_session_set_url"`         //URL of the SSO session set endpoint
 	CookieName               string `json:"cookie_name"`                 //Name of the session cookie
 	CookieDuration           int    `json:"cookie_duration"`             //Duration in seconds for the session cookie
-	CookieDurationRememberMe int    `json:"cookie_duration_remember_me"` //Duration in seconds for the session cookie when "Remember Me" is selected
-	AllowCrossHostSession    bool   `json:"allow_cross_host_session"`    //Whether to allow session cookies to be valid across different hosts
+	CookieDurationRememberMe int    `json:"cookie_duration_remember_me"` //Duration in seconds for the session cookie when "Remember Me" is selected}
+}
+
+type BrowserSession struct {
+	Username string
+	Expiry   time.Time
+}
+
+type GatewaySession struct {
+	Username string
+	Expiry   time.Time
 }
 
 // AuthRouter handles ZorxAuth SSO authentication routing
@@ -58,7 +61,8 @@ type AuthRouter struct {
 
 	/* Internal */
 	sessionIdStore      sync.Map //sessionId -> userID
-	gatewaySessionStore sync.Map //sessionId -> userID
+	gatewaySessionStore sync.Map //sessionId -> *GatewaySession
+	cookieIdStore       sync.Map //browserSessionID (cookie value) -> *BrowserSession
 	gatewayServer       *GatewayServer
 
 	/* Login rate limiting */
@@ -79,6 +83,5 @@ func getDefaultOptions() *AuthRouterOptions {
 		CookieName:               "zr_xauth_session",
 		CookieDuration:           3600,
 		CookieDurationRememberMe: 604800, // 7 days
-		AllowCrossHostSession:    true,
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"net/mail"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/utils"
@@ -338,17 +339,23 @@ func (ar *AuthRouter) GetUserFromRequest(w http.ResponseWriter, r *http.Request)
 		return nil, err
 	}
 
-	usernameObj, exists := ar.sessionIdStore.Load(cookie.Value)
+	sessionObj, exists := ar.cookieIdStore.Load(cookie.Value)
 	if !exists {
 		return nil, errors.New("session not found")
 	}
 
-	username, ok := usernameObj.(string)
-	if !ok || username == "" {
+	browserSession, ok := sessionObj.(*BrowserSession)
+	if !ok || browserSession == nil {
 		return nil, errors.New("invalid session mapping")
 	}
 
-	user, err := ar.getUserByUsername(username)
+	// Check if session has expired
+	if time.Now().After(browserSession.Expiry) {
+		ar.cookieIdStore.Delete(cookie.Value)
+		return nil, errors.New("session expired")
+	}
+
+	user, err := ar.getUserByUsername(browserSession.Username)
 	if err != nil {
 		return nil, errors.New("user record not found")
 	}

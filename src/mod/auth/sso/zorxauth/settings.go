@@ -37,7 +37,6 @@ func (ar *AuthRouter) handleSettingsGET(w http.ResponseWriter, r *http.Request) 
 		"enableRateLimit":          ar.Options.EnableRateLimit,
 		"rateLimitPerIp":           ar.Options.RateLimitPerIp,
 		"useExpotentialBackoff":    ar.Options.UseExpotentialBackoff,
-		"allowCrossHostSession":    ar.Options.AllowCrossHostSession,
 	})
 
 	utils.SendJSONResponse(w, string(js))
@@ -80,7 +79,6 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 		rateLimitPerIp = 60
 	}
 	useExpotentialBackoff, _ := utils.PostBool(r, "useExpotentialBackoff")
-	allowCrossHostSession, _ := utils.PostBool(r, "allowCrossHostSession")
 
 	// Update runtime configuration
 	ar.Options.SSORedirectURL = ssoRedirectURL
@@ -91,7 +89,6 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 	ar.Options.EnableRateLimit = enableRateLimit
 	ar.Options.RateLimitPerIp = rateLimitPerIp
 	ar.Options.UseExpotentialBackoff = useExpotentialBackoff
-	ar.Options.AllowCrossHostSession = allowCrossHostSession
 
 	// Save to database
 	err = ar.Database.Write(DB_NAME, "options", ar.Options)
@@ -222,6 +219,56 @@ func (ar *AuthRouter) handleGatewaySettingsPOST(w http.ResponseWriter, r *http.R
 				return
 			}
 		}
+	}
+
+	utils.SendOK(w)
+}
+
+// HandleLogoutAllUsers logs out all users by clearing all session stores
+func (ar *AuthRouter) HandleLogoutAllUsers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Clear all session ID store (one-time validation codes)
+	ar.sessionIdStore.Range(func(key, value interface{}) bool {
+		ar.sessionIdStore.Delete(key)
+		return true
+	})
+
+	// Clear all gateway session store
+	ar.gatewaySessionStore.Range(func(key, value interface{}) bool {
+		ar.gatewaySessionStore.Delete(key)
+		return true
+	})
+
+	// Clear all cookie ID store (browser sessions)
+	ar.cookieIdStore.Range(func(key, value interface{}) bool {
+		ar.cookieIdStore.Delete(key)
+		return true
+	})
+
+	// Clear all browser sessions from database
+	entries, err := ar.Database.ListTable(DB_BROWSER_SESSIONS_TABLE)
+	if err == nil {
+		for _, entry := range entries {
+			key := string(entry[0])
+			ar.Database.Delete(DB_BROWSER_SESSIONS_TABLE, key)
+		}
+	}
+
+	// Clear all gateway sessions from database
+	gatewayEntries, err := ar.Database.ListTable(DB_GATEWAY_SESSIONS_TABLE)
+	if err == nil {
+		for _, entry := range gatewayEntries {
+			key := string(entry[0])
+			ar.Database.Delete(DB_GATEWAY_SESSIONS_TABLE, key)
+		}
+	}
+
+	if ar.Logger != nil {
+		ar.Logger.PrintAndLog("zorxauth", "All user sessions have been cleared", nil)
 	}
 
 	utils.SendOK(w)

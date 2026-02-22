@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Logout from Zoraxy Auth SSO">
+    <meta name="author" content="Zoraxy">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Logout - Zoraxy Auth</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .icon {
+            text-align: center;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .user-info {
+            background: #f7fafc;
+            border-left: 4px solid #4299e1;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+        
+        .user-info p {
+            color: #2d3748;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .user-info strong {
+            color: #1a202c;
+            font-weight: 600;
+        }
+        
+        .btn-logout {
+            width: 100%;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 12px;
+        }
+        
+        .btn-logout:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+        }
+        
+        .btn-logout:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn-logout:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-cancel {
+            width: 100%;
+            padding: 12px 24px;
+            background: #e2e8f0;
+            color: #2d3748;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-cancel:hover {
+            background: #cbd5e0;
+        }
+        
+        .info-box {
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            color: #2c5282;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .info-box p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .success-message {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .success-message p {
+            color: #22543d;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .success-message p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .error-message {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .error-message p {
+            color: #c53030;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .subtitle {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🔐</div>
+        
+        <div id="logoutForm">
+            <h1>Logout from SSO</h1>
+            <p class="subtitle">You are currently signed in</p>
+            
+            <div class="user-info" id="userInfoBox">
+                <p>Signed in as: <strong id="username">{{username}}</strong></p>
+            </div>
+            
+            <div class="info-box">
+                <p><strong>About SSO Logout:</strong></p>
+                <p>Logging out will end your session across all services connected to this Single Sign-On (SSO) authentication gateway.</p>
+                <p>You will need to sign in again to access protected resources.</p>
+            </div>
+            
+            <div class="error-message" id="errorMessage">
+                <p id="errorText"></p>
+            </div>
+            
+            <button type="button" id="logoutBtn" class="btn-logout" onclick="performLogout()">Logout from All Services</button>
+            <button type="button" class="btn-cancel" onclick="goBack()">Cancel</button>
+        </div>
+        
+        <div id="successView" class="hidden">
+            <h1>Logged Out Successfully</h1>
+            <p class="subtitle">You have been signed out from SSO</p>
+            
+            <div class="success-message show">
+                <p><strong>✓ Successfully logged out</strong></p>
+                <p>Your session has been terminated across all services connected to this SSO gateway.</p>
+                <p>All browser session cookies have been cleared.</p>
+            </div>
+            
+            <div class="info-box">
+                <p><strong>What happens now?</strong></p>
+                <p>• You are no longer authenticated with any protected services</p>
+                <p>• Your browser cookies for this SSO have been cleared</p>
+                <p>• You can safely close this page</p>
+                <p>• To access protected resources again, you'll need to sign in</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function performLogout() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            // Disable button and show loading state
+            logoutBtn.disabled = true;
+            logoutBtn.innerHTML = 'Logging out<span class="spinner"></span>';
+            errorMessage.classList.remove('show');
+            
+            fetch('/logout', {
+                method: 'POST',
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success view
+                    document.getElementById('logoutForm').classList.add('hidden');
+                    document.getElementById('successView').classList.remove('hidden');
+                } else {
+                    throw new Error(data.error || 'Logout failed');
+                }
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                errorText.textContent = error.message || 'An error occurred during logout. Please try again.';
+                errorMessage.classList.add('show');
+                logoutBtn.disabled = false;
+                logoutBtn.textContent = 'Logout from All Services';
+            });
+        }
+        
+        function goBack() {
+            // Try to go back in history, or close the window if opened via JS
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.close();
+            }
+        }
+    </script>
+</body>
+</html>

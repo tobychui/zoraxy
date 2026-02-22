@@ -3,6 +3,8 @@ package zorxauth
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -40,6 +42,8 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 	// Create a new table for zorxauth settings if it doesn't exist
 	db.NewTable(DB_NAME)
 	db.NewTable(DB_USERS_TABLE)
+	db.NewTable(DB_BROWSER_SESSIONS_TABLE)
+	db.NewTable(DB_GATEWAY_SESSIONS_TABLE)
 
 	if !db.KeyExists(DB_NAME, "options") {
 		//Write default options to database
@@ -57,6 +61,12 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 		Options:            &options,
 		rateLimitResetStop: make(chan bool, 1),
 	}
+
+	// Load browser sessions from database
+	authRouter.loadBrowserSessions()
+
+	// Load gateway sessions from database
+	authRouter.loadGatewaySessions()
 
 	// Start the per-minute login attempt counter reset ticker
 	go authRouter.startLoginRateLimitTicker()
@@ -132,4 +142,188 @@ func (ar *AuthRouter) incrementLoginAttempt(ip string) {
 func (ar *AuthRouter) incrementLoginFailure(ip string) int64 {
 	v, _ := ar.loginFailureCounter.LoadOrStore(ip, new(int64))
 	return atomic.AddInt64(v.(*int64), 1)
+}
+
+// loadBrowserSessions loads existing browser sessions from database into memory
+func (ar *AuthRouter) loadBrowserSessions() {
+	// Get all keys from the browser sessions table
+	entries, err := ar.Database.ListTable(DB_BROWSER_SESSIONS_TABLE)
+	if err != nil {
+		if ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to list browser sessions: "+err.Error(), err)
+		}
+		return
+	}
+
+	now := time.Now()
+	loadedCount := 0
+	expiredCount := 0
+
+	for _, entry := range entries {
+		var session BrowserSession
+		key := string(entry[0])
+		err := ar.Database.Read(DB_BROWSER_SESSIONS_TABLE, key, &session)
+		if err != nil {
+			if ar.Logger != nil {
+				ar.Logger.PrintAndLog("zorxauth", "Failed to read browser session "+key+": "+err.Error(), err)
+			}
+			continue
+		}
+
+		// Skip expired sessions
+		if now.After(session.Expiry) {
+			expiredCount++
+			ar.Database.Delete(DB_BROWSER_SESSIONS_TABLE, key)
+			continue
+		}
+
+		// Extract session ID from key (remove prefix)
+		sessionID := strings.TrimPrefix(key, DB_BROWSER_SESSION_KEY_PREFIX)
+
+		// Store in memory
+		ar.cookieIdStore.Store(sessionID, &session)
+		loadedCount++
+
+		// Set up cleanup timer for when session expires
+		timeUntilExpiry := time.Until(session.Expiry)
+		if timeUntilExpiry > 0 {
+			sessionIDCopy := sessionID
+			time.AfterFunc(timeUntilExpiry, func() {
+				ar.cookieIdStore.Delete(sessionIDCopy)
+			})
+		}
+	}
+
+	if ar.Logger != nil {
+		ar.Logger.PrintAndLog("zorxauth", "Loaded "+strconv.Itoa(loadedCount)+" browser sessions from database ("+strconv.Itoa(expiredCount)+" expired sessions removed)", nil)
+	}
+}
+
+// loadGatewaySessions loads existing gateway sessions from database into memory
+func (ar *AuthRouter) loadGatewaySessions() {
+	// Get all keys from the gateway sessions table
+	entries, err := ar.Database.ListTable(DB_GATEWAY_SESSIONS_TABLE)
+	if err != nil {
+		if ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to list gateway sessions: "+err.Error(), err)
+		}
+		return
+	}
+
+	now := time.Now()
+	loadedCount := 0
+	expiredCount := 0
+
+	for _, entry := range entries {
+		var session GatewaySession
+		key := string(entry[0])
+		err := ar.Database.Read(DB_GATEWAY_SESSIONS_TABLE, key, &session)
+		if err != nil {
+			if ar.Logger != nil {
+				ar.Logger.PrintAndLog("zorxauth", "Failed to read gateway session "+key+": "+err.Error(), err)
+			}
+			continue
+		}
+
+		// Skip expired sessions
+		if now.After(session.Expiry) {
+			expiredCount++
+			ar.Database.Delete(DB_GATEWAY_SESSIONS_TABLE, key)
+			continue
+		}
+
+		// Extract session ID from key (remove prefix)
+		sessionID := strings.TrimPrefix(key, DB_GATEWAY_SESSION_KEY_PREFIX)
+
+		// Store in memory
+		ar.gatewaySessionStore.Store(sessionID, &session)
+		loadedCount++
+
+		// Set up cleanup timer for when session expires
+		timeUntilExpiry := time.Until(session.Expiry)
+		if timeUntilExpiry > 0 {
+			sessionIDCopy := sessionID
+			time.AfterFunc(timeUntilExpiry, func() {
+				ar.gatewaySessionStore.Delete(sessionIDCopy)
+			})
+		}
+	}
+
+	if ar.Logger != nil {
+		ar.Logger.PrintAndLog("zorxauth", "Loaded "+strconv.Itoa(loadedCount)+" gateway sessions from database ("+strconv.Itoa(expiredCount)+" expired sessions removed)", nil)
+	}
+}
+
+// Close saves all browser sessions to database and performs cleanup
+func (ar *AuthRouter) Close() {
+	// Stop the login rate limit ticker
+	if ar.rateLimitResetStop != nil {
+		select {
+		case ar.rateLimitResetStop <- true:
+		default:
+		}
+	}
+
+	// Stop the gateway server if running
+	if ar.gatewayServer != nil {
+		ar.gatewayServer.Stop()
+	}
+
+	// Save all browser sessions to database
+	ar.cookieIdStore.Range(func(key, value interface{}) bool {
+		sessionID, ok := key.(string)
+		if !ok {
+			return true
+		}
+
+		browserSession, ok := value.(*BrowserSession)
+		if !ok {
+			return true
+		}
+
+		// Skip expired sessions
+		if time.Now().After(browserSession.Expiry) {
+			return true
+		}
+
+		// Save to database
+		dbKey := DB_BROWSER_SESSION_KEY_PREFIX + sessionID
+		err := ar.Database.Write(DB_BROWSER_SESSIONS_TABLE, dbKey, browserSession)
+		if err != nil && ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to save browser session: "+err.Error(), err)
+		}
+
+		return true
+	})
+
+	// Save all gateway sessions to database
+	ar.gatewaySessionStore.Range(func(key, value interface{}) bool {
+		sessionID, ok := key.(string)
+		if !ok {
+			return true
+		}
+
+		gatewaySession, ok := value.(*GatewaySession)
+		if !ok {
+			return true
+		}
+
+		// Skip expired sessions
+		if time.Now().After(gatewaySession.Expiry) {
+			return true
+		}
+
+		// Save to database
+		dbKey := DB_GATEWAY_SESSION_KEY_PREFIX + sessionID
+		err := ar.Database.Write(DB_GATEWAY_SESSIONS_TABLE, dbKey, gatewaySession)
+		if err != nil && ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to save gateway session: "+err.Error(), err)
+		}
+
+		return true
+	})
+
+	if ar.Logger != nil {
+		ar.Logger.PrintAndLog("zorxauth", "Browser and gateway sessions saved to database", nil)
+	}
 }

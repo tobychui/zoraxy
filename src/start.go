@@ -459,10 +459,12 @@ func ShutdownSeq() {
 	if mdnsScanner != nil {
 		mdnsScanner.Close()
 	}
+
 	SystemWideLogger.Println("Shutting down load balancer")
 	if loadBalancer != nil {
 		loadBalancer.Close()
 	}
+
 	SystemWideLogger.Println("Closing Certificates Auto Renewer")
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
@@ -471,6 +473,12 @@ func ShutdownSeq() {
 	if accessController != nil {
 		SystemWideLogger.Println("Closing Access Controller")
 		accessController.Close()
+	}
+
+	//Close the zorxauth router to save browser sessions
+	if zorxAuthRouter != nil {
+		SystemWideLogger.Println("Shutting down Zoraxy Auth Router")
+		zorxAuthRouter.Close()
 	}
 
 	//Close the plugin manager

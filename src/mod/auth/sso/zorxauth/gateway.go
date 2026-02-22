@@ -18,6 +18,9 @@ var authPageHTML []byte
 //go:embed noaccess.html
 var noAccessHTML []byte
 
+//go:embed logout.html
+var logoutHTML []byte
+
 //go:embed favicon.png
 var faviconPNG []byte
 
@@ -147,6 +150,11 @@ func (gs *GatewayServer) IsRunning() bool {
 	return gs.server != nil
 }
 
+/*
+	Authentication Gateway Handlers
+	These handlers serve the authentication pages and process login/logout requests.
+*/
+
 // handleAuthPage serves the authentication/login page
 func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) {
 	// Check if gateway is enabled
@@ -154,7 +162,9 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	//Check if the user already has a valid session cookie, if so, redirect to the original destination or home page
+	// Check if the user already has a valid session cookie in the SSO portal
+	// if yes, grant access without showing the login page and directly redirect to the original
+	// request domain set session URL with a one-time validation code
 	authenticated, username := gs.router.RequestIsAuthenticatedInSSO(w, r)
 	if authenticated {
 		redirectURL := r.URL.Query().Get("redirect")
@@ -177,6 +187,20 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 		}
 
 		if gs.router.ValidateUserAccessToHost(username, host) {
+			// Renew the gateway session expiry time since the user is actively using it
+			cookie, cookieErr := r.Cookie(gs.router.Options.CookieName)
+			if cookieErr == nil && cookie.Value != "" {
+				// Load the existing gateway session
+				if sessionData, exists := gs.router.gatewaySessionStore.Load(cookie.Value); exists {
+					if gatewaySession, ok := sessionData.(*GatewaySession); ok {
+						// Extend the session expiry time
+						newExpiry := time.Now().Add(time.Duration(gs.router.Options.CookieDuration) * time.Second)
+						gatewaySession.Expiry = newExpiry
+						gs.router.gatewaySessionStore.Store(cookie.Value, gatewaySession)
+					}
+				}
+			}
+			
 			sessionId := gs.router.generateValidationCodeForSession(username)
 			// Parse the redirect target so we can build the session-set URL on the target host.
 			parsedTarget, parseErr := url.Parse(redirectURL)
@@ -320,37 +344,39 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		rememberMe = true
 	}
 
-	if gs.router.Options.AllowCrossHostSession {
-		//Generate a cookie for the authentication gateway domain with Domain
-		// this way next time this user is redirected to the gateway for authentication,
-		// the cookie will be included in the request and the gateway can recognize the user and skip the login step
-		cookieDuration := gs.router.Options.CookieDuration
-		if rememberMe {
-			cookieDuration = gs.router.Options.CookieDurationRememberMe
-		}
-		isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
-
-		// Generate a session token and store it in the gateway session store
-		sessionToken := gs.router.generateSessionToken()
-		gs.router.gatewaySessionStore.Store(sessionToken, username)
-
-		// Set the gateway cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     gs.router.Options.CookieName,
-			Value:    sessionToken,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   isSecure,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   cookieDuration,
-		})
-
-		// Schedule automatic removal from the store when the cookie expires
-		time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
-			gs.router.gatewaySessionStore.Delete(sessionToken)
-		})
-
+	//Generate a cookie for the authentication gateway domain with Domain
+	// this way next time this user is redirected to the gateway for authentication,
+	// the cookie will be included in the request and the gateway can recognize the user and skip the login step
+	cookieDuration := gs.router.Options.CookieDuration
+	if rememberMe {
+		cookieDuration = gs.router.Options.CookieDurationRememberMe
 	}
+	isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+
+	// Generate a session token and store it in the gateway session store
+	sessionToken := gs.router.generateSessionToken()
+	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
+	gatewaySession := &GatewaySession{
+		Username: username,
+		Expiry:   expiryTime,
+	}
+	gs.router.gatewaySessionStore.Store(sessionToken, gatewaySession)
+
+	// Set the gateway cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     gs.router.Options.CookieName,
+		Value:    sessionToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   isSecure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   cookieDuration,
+	})
+
+	// Schedule automatic removal from the store when the cookie expires
+	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
+		gs.router.gatewaySessionStore.Delete(sessionToken)
+	})
 
 	sessionId := gs.router.generateValidationCodeForSession(username)
 	hostWithPort := host
@@ -381,26 +407,83 @@ func (gs *GatewayServer) handleNoAccessPage(w http.ResponseWriter, r *http.Reque
 	w.Write(noAccessHTML)
 }
 
-// handleLogout processes logout requests. It invalidates the gateway-domain
-// session cookie so that the next visit to the auth page shows the login form.
+// handleLogout processes logout requests.
+// GET: Serves the logout page with user info and logout button
+// POST: Invalidates all sessions (gateway and browser sessions) and clears cookies
 func (gs *GatewayServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if gs.ServeGatewayDisabled(w, r) {
 		return
 	}
 
+	// Handle GET request - serve logout page
+	if r.Method == http.MethodGet {
+		// Get current username for template replacement
+		authenticated, username := gs.router.RequestIsAuthenticatedInSSO(w, r)
+		if !authenticated {
+			// If user is not authenticated show error
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Unauthorized"))
+			return
+		}
+
+		// Replace template placeholder with actual username
+		pageContent := strings.Replace(string(logoutHTML), "{{username}}", username, -1)
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(pageContent))
+		return
+	}
+
+	// Handle POST request - perform logout
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Invalidate the gateway session cookie if one exists.
+	// Get the current user's username from their session
+	authenticated, username := gs.router.RequestIsAuthenticatedInSSO(w, r)
+	if !authenticated || username == "" {
+		// No valid session to logout from
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "No active session",
+		})
+		return
+	}
+
+	// Get the session cookie for the current browser
 	cookie, err := r.Cookie(gs.router.Options.CookieName)
 	if err == nil && cookie.Value != "" {
-		// Remove from in-memory store so the token is no longer valid.
+		// Remove from gateway session store
 		gs.router.gatewaySessionStore.Delete(cookie.Value)
 	}
 
-	// Expire the cookie in the browser.
+	// Iterate through all browser sessions and remove all sessions for this username
+	// This ensures the user is logged out from ALL devices/browsers
+	gs.router.cookieIdStore.Range(func(key, value interface{}) bool {
+		sessionID, ok := key.(string)
+		if !ok {
+			return true // continue iteration
+		}
+
+		browserSession, ok := value.(*BrowserSession)
+		if !ok {
+			return true // continue iteration
+		}
+
+		// If this session belongs to the current user, delete it
+		if browserSession.Username == username {
+			gs.router.cookieIdStore.Delete(sessionID)
+		}
+
+		return true // continue iteration
+	})
+
+	// Expire the cookie in the current browser
 	isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 	http.SetCookie(w, &http.Cookie{
 		Name:     gs.router.Options.CookieName,
