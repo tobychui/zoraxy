@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,6 +20,11 @@ func RewriteURL(rooturl string, requestURL string) (*url.URL, error) {
 
 // Check if the current platform support web.ssh function
 func IsWebSSHSupported() bool {
+	// Windows uses wintty (pure Go implementation), always supported
+	if UseWinTTY {
+		return true
+	}
+
 	//Check if the binary exists in system/gotty/
 	binary := "gotty_" + runtime.GOOS + "_" + runtime.GOARCH
 
@@ -36,7 +42,10 @@ func IsWebSSHSupported() bool {
 	return true
 }
 
-// Get the next free port in the list
+// Get the next free port in the list.
+// In addition to checking the instance list, it probes the port with a
+// real TCP bind to handle cases where the OS has not yet released a
+// socket from a recently-stopped server.
 func (m *Manager) GetNextPort() int {
 	nextPort := m.StartingPort
 	occupiedPort := make(map[int]bool)
@@ -44,11 +53,22 @@ func (m *Manager) GetNextPort() int {
 		occupiedPort[instance.AssignedPort] = true
 	}
 	for {
-		if !occupiedPort[nextPort] {
+		if !occupiedPort[nextPort] && isPortAvailable(nextPort) {
 			return nextPort
 		}
 		nextPort++
 	}
+}
+
+// isPortAvailable checks whether a TCP port on loopback is actually
+// free by attempting to bind and immediately releasing it.
+func isPortAvailable(port int) bool {
+	ln, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
 }
 
 // Check if a given domain and port is a valid ssh server

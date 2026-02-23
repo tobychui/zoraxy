@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinTTY - Web Terminal</title>
+    <link rel="stylesheet" href="./assets/css/xterm.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: #1e1e1e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #title-bar {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+            color: #e0e0e0;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #title-bar .title {
+            font-weight: 500;
+        }
+        
+        #title-bar .status {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        #title-bar .status.connected {
+            color: #4caf50;
+        }
+        
+        #title-bar .status.disconnected {
+            color: #f44336;
+        }
+        
+        #terminal-container {
+            flex: 1;
+            padding: 4px;
+            overflow: hidden;
+        }
+        
+        #terminal {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Login modal */
+        #login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        #login-modal.hidden {
+            display: none;
+        }
+        
+        .login-box {
+            background: #2d2d2d;
+            border-radius: 8px;
+            padding: 32px;
+            min-width: 320px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid #404040;
+        }
+        
+        .login-box h2 {
+            color: #e0e0e0;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .login-box .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .login-box .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .login-box label {
+            display: block;
+            color: #aaa;
+            font-size: 12px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        
+        .login-box input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            background: #1e1e1e;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .login-box input[type="password"]:focus {
+            border-color: #0078d4;
+        }
+        
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: #0078d4;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .login-box button:hover {
+            background: #006cbd;
+        }
+        
+        .login-box button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .login-box .error {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 12px;
+            display: none;
+        }
+        
+        .login-box .error.show {
+            display: block;
+        }
+        
+        /* Reconnect overlay */
+        #reconnect-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        
+        #reconnect-overlay.hidden {
+            display: none;
+        }
+        
+        #reconnect-overlay .message {
+            color: #e0e0e0;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        
+        #reconnect-overlay button {
+            padding: 12px 32px;
+            background: #0078d4;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        #reconnect-overlay button:hover {
+            background: #006cbd;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #404040;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="title-bar">
+            <span class="title" id="terminal-title">WinTTY - Web Terminal</span>
+            <span class="status" id="connection-status">Disconnected</span>
+        </div>
+        <div id="terminal-container">
+            <div id="terminal"></div>
+        </div>
+    </div>
+    
+    <!-- Login Modal -->
+    <div id="login-modal">
+        <div class="login-box">
+            <h2>SSH Login</h2>
+            <div class="subtitle" id="login-target">Connecting to server...</div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" autofocus>
+                </div>
+                <button type="submit" id="connect-btn">Connect</button>
+                <div class="error" id="login-error"></div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Reconnect Overlay -->
+    <div id="reconnect-overlay" class="hidden">
+        <div class="message">Connection closed</div>
+        <button id="reconnect-btn">Reconnect</button>
+    </div>
+
+    <script src="./assets/js/xterm.min.js"></script>
+    <script src="./assets/js/xterm-addon-fit.min.js"></script>
+    <script src="./assets/js/xterm-addon-web-links.min.js"></script>
+    <script>
+        // Configuration
+        let config = {
+            title: 'WinTTY',
+            remoteAddr: '',
+            remotePort: 22,
+            username: ''
+        };
+
+        // Terminal instance
+        let terminal = null;
+        let fitAddon = null;
+        let socket = null;
+        let isConnected = false;
+
+        // Initialize the application
+        async function init() {
+            // Fetch configuration from server
+            try {
+                const response = await fetch('./config');
+                config = await response.json();
+                document.getElementById('terminal-title').textContent = config.title;
+                document.title = config.title + ' - WinTTY';
+                document.getElementById('login-target').textContent = 
+                    `${config.username}@${config.remoteAddr}:${config.remotePort}`;
+            } catch (e) {
+                console.error('Failed to fetch config:', e);
+            }
+
+            // Initialize terminal
+            initTerminal();
+
+            // Set up event listeners
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('reconnect-btn').addEventListener('click', handleReconnect);
+
+            // Handle window resize
+            window.addEventListener('resize', handleResize);
+        }
+
+        function initTerminal() {
+            terminal = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'block',
+                fontSize: 14,
+                fontFamily: '"Cascadia Code", "Fira Code", "Source Code Pro", Menlo, Monaco, "Courier New", monospace',
+                theme: {
+                    background: '#1e1e1e',
+                    foreground: '#e0e0e0',
+                    cursor: '#e0e0e0',
+                    cursorAccent: '#1e1e1e',
+                    selection: 'rgba(255, 255, 255, 0.3)',
+                    black: '#000000',
+                    red: '#cd3131',
+                    green: '#0dbc79',
+                    yellow: '#e5e510',
+                    blue: '#2472c8',
+                    magenta: '#bc3fbc',
+                    cyan: '#11a8cd',
+                    white: '#e5e5e5',
+                    brightBlack: '#666666',
+                    brightRed: '#f14c4c',
+                    brightGreen: '#23d18b',
+                    brightYellow: '#f5f543',
+                    brightBlue: '#3b8eea',
+                    brightMagenta: '#d670d6',
+                    brightCyan: '#29b8db',
+                    brightWhite: '#ffffff'
+                },
+                allowTransparency: false,
+                scrollback: 10000
+            });
+
+            fitAddon = new FitAddon.FitAddon();
+            terminal.loadAddon(fitAddon);
+
+            const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+            terminal.loadAddon(webLinksAddon);
+
+            terminal.open(document.getElementById('terminal'));
+            fitAddon.fit();
+
+            // Handle terminal input
+            terminal.onData(data => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(data);
+                }
+            });
+        }
+
+        function handleResize() {
+            if (fitAddon) {
+                fitAddon.fit();
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    const dims = fitAddon.proposeDimensions();
+                    if (dims) {
+                        socket.send(JSON.stringify({
+                            type: 'resize',
+                            cols: dims.cols,
+                            rows: dims.rows
+                        }));
+                    }
+                }
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            if (!password) {
+                showError('Password is required');
+                return;
+            }
+
+            const connectBtn = document.getElementById('connect-btn');
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Connecting...';
+            hideError();
+
+            try {
+                await connect(password);
+            } catch (err) {
+                showError(err.message || 'Connection failed');
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Connect';
+            }
+        }
+
+        function connect(password) {
+            return new Promise((resolve, reject) => {
+                //const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                //const wsUrl = `${protocol}//${window.location.host}/ws?password=${encodeURIComponent(password)}`;
+                const baseURL = window.location.toString().replace("http://", "ws://").replace("https://", "wss://");
+                const wsUrl = `${baseURL}ws?password=${encodeURIComponent(password)}`;
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = () => {
+                    isConnected = true;
+                    document.getElementById('login-modal').classList.add('hidden');
+                    updateStatus('connected');
+                    terminal.focus();
+                    
+                    // Send initial resize
+                    setTimeout(() => {
+                        handleResize();
+                    }, 100);
+                    
+                    resolve();
+                };
+
+                socket.onmessage = (event) => {
+                    const data = event.data;
+                    
+                    // Check for error message
+                    if (data.startsWith('{')) {
+                        try {
+                            const msg = JSON.parse(data);
+                            if (msg.error) {
+                                reject(new Error(msg.error));
+                                socket.close();
+                                return;
+                            }
+                        } catch (e) {
+                            // Not JSON, treat as terminal data
+                        }
+                    }
+                    
+                    terminal.write(data);
+                };
+
+                socket.onclose = () => {
+                    if (isConnected) {
+                        isConnected = false;
+                        updateStatus('disconnected');
+                        document.getElementById('reconnect-overlay').classList.remove('hidden');
+                    }
+                };
+
+                socket.onerror = (err) => {
+                    reject(new Error('WebSocket connection failed'));
+                };
+
+                // Timeout for connection
+                setTimeout(() => {
+                    if (socket.readyState !== WebSocket.OPEN) {
+                        socket.close();
+                        reject(new Error('Connection timeout'));
+                    }
+                }, 15000);
+            });
+        }
+
+        function handleReconnect() {
+            document.getElementById('reconnect-overlay').classList.add('hidden');
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+            document.getElementById('connect-btn').disabled = false;
+            document.getElementById('connect-btn').textContent = 'Connect';
+            terminal.clear();
+        }
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+            statusEl.className = 'status ' + status;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('login-error');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('login-error').classList.remove('show');
+        }
+
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
