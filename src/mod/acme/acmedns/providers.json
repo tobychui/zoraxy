@@ -73,6 +73,10 @@
     "Datatype": "string"
    },
    {
+    "Title": "Line",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -180,6 +184,33 @@
    },
    {
     "Title": "APIURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "artfiles": {
+  "Name": "artfiles",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
     "Datatype": "string"
    },
    {
@@ -617,6 +648,49 @@
    {
     "Title": "SkipDeploy",
     "Datatype": "bool"
+   }
+  ]
+ },
+ "bluecatv2": {
+  "Name": "bluecatv2",
+  "ConfigableFields": [
+   {
+    "Title": "ServerURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ConfigName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ViewName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "SkipDeploy",
+    "Datatype": "bool"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
    }
   ]
  },
@@ -1065,6 +1139,29 @@
    }
   ]
  },
+ "ddnss": {
+  "Name": "ddnss",
+  "ConfigableFields": [
+   {
+    "Title": "Key",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "derak": {
   "Name": "derak",
   "ConfigableFields": [
@@ -1159,6 +1256,29 @@
    },
    {
     "Title": "ZoneName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "dnsexit": {
+  "Name": "dnsexit",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
@@ -2542,6 +2662,29 @@
    }
   ]
  },
+ "leaseweb": {
+  "Name": "leaseweb",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "liara": {
   "Name": "liara",
   "ConfigableFields": [
@@ -2974,6 +3117,41 @@
    }
   ],
   "HiddenFields": []
+ },
+ "namesurfer": {
+  "Name": "namesurfer",
+  "ConfigableFields": [
+   {
+    "Title": "BaseURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APISecret",
+    "Datatype": "string"
+   },
+   {
+    "Title": "View",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "nearlyfreespeech": {
   "Name": "nearlyfreespeech",
@@ -4088,6 +4266,33 @@
    }
   ],
   "HiddenFields": []
+ },
+ "todaynic": {
+  "Name": "todaynic",
+  "ConfigableFields": [
+   {
+    "Title": "AuthUserID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
  },
  "transip": {
   "Name": "transip",
