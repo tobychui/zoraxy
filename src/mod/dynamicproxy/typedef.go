@@ -158,7 +158,6 @@ type HeaderRewriteRules struct {
 	PermissionPolicy              *permissionpolicy.PermissionsPolicy //Permission policy header
 	DisableHopByHopHeaderRemoval  bool                                //Do not remove hop-by-hop headers
 	DisableUserAgentHeaderRemoval bool                                //Do not remove User-Agent header from server response
-
 }
 
 /*
@@ -171,11 +170,11 @@ type HeaderRewriteRules struct {
 type AuthMethod int
 
 const (
-	AuthMethodNone    AuthMethod = iota //No authentication required
-	AuthMethodBasic                     //Basic Auth
-	AuthMethodForward                   //Forward
-	AuthMethodOauth2                    //Oauth2
-	AuthMethodZorxAuth                  //ZorxAuth SSO
+	AuthMethodNone     AuthMethod = iota //No authentication required
+	AuthMethodBasic                      //Basic Auth
+	AuthMethodForward                    //Forward
+	AuthMethodOauth2                     //Oauth2
+	AuthMethodZorxAuth                   //ZorxAuth SSO
 )
 
 type AuthenticationProvider struct {
