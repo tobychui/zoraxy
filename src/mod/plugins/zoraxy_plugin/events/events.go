@@ -90,11 +90,12 @@ func (e *BlacklistToggledEvent) GetEventSource() string {
 
 // AccessRuleCreatedEvent represents an event when a new access ruleset is created
 type AccessRuleCreatedEvent struct {
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	Desc             string `json:"desc"`
-	BlacklistEnabled bool   `json:"blacklist_enabled"`
-	WhitelistEnabled bool   `json:"whitelist_enabled"`
+	ID                    string `json:"id"`
+	Name                  string `json:"name"`
+	Desc                  string `json:"desc"`
+	BlacklistEnabled      bool   `json:"blacklist_enabled"`
+	WhitelistEnabled      bool   `json:"whitelist_enabled"`
+	TrustProxyHeadersOnly bool   `json:"trust_proxy_headers_only"`
 }
 
 func (e *AccessRuleCreatedEvent) GetName() EventName {

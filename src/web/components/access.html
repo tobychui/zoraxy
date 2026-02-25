@@ -36,6 +36,10 @@
                 <button class="ui basic circular button" onclick="openAccessRuleEditor();" title="Edit Access Rules"><i class="ui edit icon"></i> Access Rule Editor</button>
                 <button class="ui basic circular icon button" onclick="reloadAccessRulesWithFeedback();"><i class="ui green refresh icon"></i></button>
             </div>
+            <div class="ui divider"></div>
+            <div style="width: 100%;" align="center">
+                <button class="ui basic circular button" onclick="openTrustedProxyEditor();" title="Edit Trusted Proxy Settings"><i class="ui green shield icon"></i> Trusted Proxy Settings</button>
+            </div>
         </div>
         <div class="twelve wide column">
             <!-- Black / White list menu-->
@@ -387,51 +391,6 @@
                                 <label>Enable LAN and Loopback<br>
                                     <small>Allowing loopback request from your public IP address and local area network devices</small></label>
                             </div>
-                            <br>
-                              <div class="ui toggle checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" id="enableWhitelistTrustedProxy">
-                                <label>Enable Trusted Proxy Gating<br>
-                                    <small>Only trust X-Real-IP or X-Forwarded-For headers from trusted proxy listed below</small></label>
-                            </div>
-                            <div class="ui divider"></div>
-                            <h4 class="ui header">
-                                <i class="ui green shield alternate icon"></i> 
-                                <div class="content">
-                                    Trusted Proxy
-                                     <div class="sub header">Add or remove trusted proxy IPs or CIDRs (e.g. Cloudflare IPs)</div>
-                                </div>
-                            </h4>
-                            <!-- Add new trusted proxy form -->
-                            <div class="ui form">
-                                <div class="two fields">
-                                    <div class="field">
-                                        <label>IP Address / CIDR</label>
-                                        <input type="text" id="trustedProxyIpInput" placeholder="e.g. 103.21.244.0/22 or 192.168.1.1">
-                                    </div>
-                                    <div class="field">
-                                        <label>Description</label>
-                                        <input type="text" id="trustedProxyDescInput" placeholder="e.g. Cloudflare">
-                                    </div>
-                                </div>
-                                <button class="ui basic green button" onclick="addTrustedProxy();">
-                                    <i class="ui green add icon"></i> Add Trusted Proxy
-                                </button>
-                            </div>
-                            <div class="ui message">
-                                <i class="ui info circle icon"></i> Supports single IP addresses and CIDR notation (e.g. 103.21.244.0/22)
-                            </div>
-                            <!-- Trusted proxy table -->
-                            <table class="ui unstackable basic celled table">
-                                <thead>
-                                    <tr>
-                                        <th>IP / CIDR</th>
-                                        <th>Description</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="trustedProxyTable">
-                                </tbody>
-                            </table>
                         </div>
                     </div>  
                 </div>
@@ -782,6 +741,10 @@
         showSideWrapper('snippet/accessRuleEditor.html');
     }
 
+    function openTrustedProxyEditor(){
+        showSideWrapper('snippet/trustedProxyEditor.html');
+    }
+
     function reloadAccessRulesWithFeedback(){
         reloadAccessRules(function(){
             msgbox("Access Rules Reloaded", true);
@@ -883,19 +846,16 @@
         $("#enableWhitelist").off("change");
         $("#enableBlacklist").off("change");
         $("#enableWhitelistLoopback").off("change");
-        $("#enableWhitelistTrustedProxy").off("change");
 
         //Initialize the button states
         initBlacklistEnableState();
         initWhitelistEnableState();
-        initTrustedProxyGatingState();
 
         //Update the lists
         initBannedCountryList();
         initIpBanTable()
         initWhitelistCountryList();
         initIpWhitelistTable();
-        initTrustedProxyTable();
     }
 
     /*
@@ -1146,206 +1106,6 @@
         });
     }
 
-    /*
-        Trusted Proxy Management
-    */
-
-    // Initialize trusted proxy table
-    function initTrustedProxyTable(){
-        $.get('/api/trustedproxy/list', function(data) {
-            $('#trustedProxyTable').html("");
-            if (!data || data.length === 0) {
-                $('#trustedProxyTable').append(`
-                <tr>
-                    <td colspan="3"><i class="yellow warning icon"></i>No trusted proxies configured</td>
-                </tr>
-                `);
-            } else {
-                $.each(data, function(index, proxy) {
-                    let ip = proxy.IP;
-                    let desc = proxy.Desc || '';
-                    let icon = ip.includes('/') ? "angle double right blue icon" : "angle double right green icon";
-                    $('#trustedProxyTable').append(`
-                        <tr class="trustedProxyItem" data-ip="${encodeURIComponent(ip)}">
-                            <td class="proxy-ip-cell">
-                                <i class="${icon} proxy-icon"></i>
-                                <span class="proxy-ip-display">${ip}</span>
-                                <div class="ui mini fluid input proxy-ip-edit" style="display:none;">
-                                    <input type="text" value="${ip}">
-                                </div>
-                            </td>
-                            <td class="proxy-desc-cell">
-                                <span class="proxy-desc-display">${desc}</span>
-                                <div class="ui mini fluid input proxy-desc-edit" style="display:none;">
-                                    <input type="text" value="${desc}">
-                                </div>
-                            </td>
-                            <td>
-                                <div class="proxy-actions-display">
-                                    <button class="ui icon basic mini blue button" onclick="editTrustedProxyRow(this);" title="Edit">
-                                        <i class="edit icon"></i>
-                                    </button>
-                                    <button class="ui icon basic mini red button" onclick="removeTrustedProxy('${ip}');" title="Delete">
-                                        <i class="trash alternate icon"></i>
-                                    </button>
-                                </div>
-                                <div class="proxy-actions-edit" style="display:none;">
-                                    <button class="ui icon basic mini green button" onclick="saveTrustedProxyRow(this, '${ip}');" title="Save">
-                                        <i class="check icon"></i>
-                                    </button>
-                                    <button class="ui icon basic mini grey button" onclick="cancelTrustedProxyEdit(this);" title="Cancel">
-                                        <i class="times icon"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `);
-                });
-            }
-        });
-    }
-
-    // Initialize trusted proxy gating toggle state
-    function initTrustedProxyGatingState(){
-        //Initialize the checkbox first
-        $('#enableWhitelistTrustedProxy').parent().checkbox();
-        
-        $.get('/api/whitelist/trustProxy?id=' + currentEditingAccessRule, function(data){
-            if (data == true){
-                $('#enableWhitelistTrustedProxy').parent().checkbox("set checked");
-            }else{
-                $('#enableWhitelistTrustedProxy').parent().checkbox("set unchecked");
-            }
-
-            //Register on change event
-            $("#enableWhitelistTrustedProxy").off("change").on("change", function(){
-                enableTrustedProxyGating();
-            })
-        }).fail(function(xhr, status, error){
-            console.error("Failed to load trusted proxy gating state:", error);
-        });
-    }
-
-    // Toggle trusted proxy gating
-    function enableTrustedProxyGating(){
-        var isChecked = $('#enableWhitelistTrustedProxy').is(':checked');
-        $.cjax({
-            type: 'POST',
-            url: '/api/whitelist/trustProxy',
-            data: { enable: isChecked, id: currentEditingAccessRule},
-            success: function(data){
-                if (data.error != undefined){
-                    msgbox("Failed to update trusted proxy gating: " + data.error, false);
-                    //Revert the checkbox state
-                    if (isChecked){
-                        $('#enableWhitelistTrustedProxy').parent().checkbox("set unchecked");
-                    }else{
-                        $('#enableWhitelistTrustedProxy').parent().checkbox("set checked");
-                    }
-                    return;
-                }else{
-                    msgbox("Trusted proxy gating " + (isChecked ? "enabled" : "disabled"), true);
-                }
-            }
-        });
-    }
-
-    // Add a new trusted proxy
-    function addTrustedProxy(){
-        let ip = $('#trustedProxyIpInput').val().trim();
-        let desc = $('#trustedProxyDescInput').val().trim();
-
-        if (ip == ''){
-            msgbox("Please enter an IP address or CIDR", false);
-            return;
-        }
-
-        $.cjax({
-            type: 'POST',
-            url: '/api/trustedproxy/add',
-            data: { ip: ip, desc: desc },
-            success: function(data){
-                if (data.error != undefined){
-                    msgbox("Failed to add trusted proxy: " + data.error, false);
-                    return;
-                }
-                msgbox("Trusted proxy added", true);
-                $('#trustedProxyIpInput').val('');
-                $('#trustedProxyDescInput').val('');
-                initTrustedProxyTable();
-            }
-        });
-    }
-
-    // Remove a trusted proxy
-    function removeTrustedProxy(ip){
-        if (!confirm("Are you sure you want to remove this trusted proxy?")){
-            return;
-        }
-
-        $.cjax({
-            type: 'POST',
-            url: '/api/trustedproxy/remove',
-            data: { ip: ip },
-            success: function(data){
-                if (data.error != undefined){
-                    msgbox("Failed to remove trusted proxy: " + data.error, false);
-                    return;
-                }
-                msgbox("Trusted proxy removed", true);
-                initTrustedProxyTable();
-            }
-        });
-    }
-
-    // Edit trusted proxy row - switch to edit mode
-    function editTrustedProxyRow(btn){
-        let row = $(btn).closest('tr');
-        row.find('.proxy-icon, .proxy-ip-display, .proxy-desc-display, .proxy-actions-display').hide();
-        row.find('.proxy-ip-edit, .proxy-desc-edit, .proxy-actions-edit').show();
-        row.find('.proxy-ip-edit input').focus();
-    }
-
-    // Cancel editing a trusted proxy row
-    function cancelTrustedProxyEdit(btn){
-        let row = $(btn).closest('tr');
-        let originalIp = decodeURIComponent(row.data('ip'));
-        row.find('.proxy-ip-edit input').val(row.find('.proxy-ip-display').text());
-        row.find('.proxy-desc-edit input').val(row.find('.proxy-desc-display').text());
-        row.find('.proxy-icon, .proxy-ip-display, .proxy-desc-display, .proxy-actions-display').show();
-        row.find('.proxy-ip-edit, .proxy-desc-edit, .proxy-actions-edit').hide();
-    }
-
-    // Save edited trusted proxy row
-    function saveTrustedProxyRow(btn, originalIp){
-        let row = $(btn).closest('tr');
-        let newIp = row.find('.proxy-ip-edit input').val().trim();
-        let newDesc = row.find('.proxy-desc-edit input').val().trim();
-
-        if (newIp == ''){
-            msgbox("IP address cannot be empty", false);
-            return;
-        }
-
-        $.cjax({
-            type: 'POST',
-            url: '/api/trustedproxy/update',
-            data: { 
-                original_ip: originalIp,
-                new_ip: newIp,
-                desc: newDesc
-            },
-            success: function(data){
-                if (data.error != undefined){
-                    msgbox("Failed to update trusted proxy: " + data.error, false);
-                    return;
-                }
-                msgbox("Trusted proxy updated", true);
-                initTrustedProxyTable();
-            }
-        });
-    }
-    
     /*
         Blacklist API Calls
     */
