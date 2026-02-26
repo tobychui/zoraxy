@@ -68,7 +68,6 @@ ENV PORT="8000"
 ENV SSHLB="false"
 ENV UPDATE_GEOIP="false"
 ENV VERSION="false"
-ENV WEBFM="true"
 ENV WEBROOT="./www"
 
 VOLUME [ "/opt/zoraxy/config/" ]
