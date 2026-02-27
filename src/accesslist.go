@@ -77,6 +77,10 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ruleDesc, _ := utils.PostPara(r, "desc")
+	trustProxy, err := utils.PostBool(r, "trustProxy")
+	if err != nil {
+		trustProxy = false
+	}
 
 	//Filter out injection if any
 	p := bluemonday.StripTagsPolicy()
@@ -85,11 +89,12 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 
 	ruleUUID := uuid.New().String()
 	newAccessRule := access.AccessRule{
-		ID:               ruleUUID,
-		Name:             ruleName,
-		Desc:             ruleDesc,
-		BlacklistEnabled: false,
-		WhitelistEnabled: false,
+		ID:                    ruleUUID,
+		Name:                  ruleName,
+		Desc:                  ruleDesc,
+		BlacklistEnabled:      false,
+		WhitelistEnabled:      false,
+		TrustProxyHeadersOnly: trustProxy,
 	}
 
 	//Add it to runtime
@@ -102,11 +107,12 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 	// emit an event for the new access rule creation
 	eventsystem.Publisher.Emit(
 		&events.AccessRuleCreatedEvent{
-			ID:               ruleUUID,
-			Name:             ruleName,
-			Desc:             ruleDesc,
-			BlacklistEnabled: false,
-			WhitelistEnabled: false,
+			ID:                    ruleUUID,
+			Name:                  ruleName,
+			Desc:                  ruleDesc,
+			BlacklistEnabled:      false,
+			WhitelistEnabled:      false,
+			TrustProxyHeadersOnly: trustProxy,
 		},
 	)
 

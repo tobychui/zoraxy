@@ -19,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -85,7 +86,6 @@ var (
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
-	enableProxyProtocolSupport  = flag.Bool("experimental_proxy_protocol", false, "Enable PROXY protocol v1/v2 support for TLS listener (experimental)")
 
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
@@ -98,7 +98,7 @@ var (
 
 	/* Maintaince & Development Function Flags */
 	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
-	development_build = flag.Bool("dev", false, "Use external web folder for UI development")
+	development_build = flag.Bool("dev", false, "Use external web folder for UI development and enable verbose logging")
 	reset_account     = flag.Bool("reset_ac", false, "Reset admin account username and password to default and exit")
 )
 
@@ -166,6 +166,7 @@ var (
 	//Authentication Provider
 	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication
 	oauth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
+	zorxAuthRouter    *zorxauth.AuthRouter //ZorxAuth router for ZorxAuth SSO authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

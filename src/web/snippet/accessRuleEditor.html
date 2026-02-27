@@ -42,8 +42,14 @@
                 </div>
                 <div class="field">
                     <label>Description</label>
-                    <textarea name="description" placeholder="Description" required></textarea>
+                    <textarea name="description" placeholder="Description"></textarea>
                 </div>
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="newRuleTrustProxy">
+                    <label>Enable Trusted Proxy Gating<br>
+                        <small>Only trust X-Real-IP or X-Forwarded-For headers from trusted proxy listed in the whitelist advanced settings</small></label>
+                </div>
+                <div class="ui divider"></div>
                 <button class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>
             </form>
         <br>
@@ -71,11 +77,19 @@
                 </div>
                 <div class="field">
                     <label>Description</label>
-                    <textarea name="description" placeholder="Description" required></textarea>
+                    <textarea name="description" placeholder="Description"></textarea>
                 </div>
+                 <div class="ui toggle checkbox" id="trustedProxyGatingToggle">
+                    <input type="checkbox" id="enableWhitelistTrustedProxy">
+                    <label>Enable Trusted Proxy Gating<br>
+                        <small>Only trust X-Real-IP or X-Forwarded-For headers from trusted proxy listed in the whitelist advanced settings</small></label>
+                </div>
+                <div class="ui divider"></div>
                 <button class="ui basic button" type="submit"><i class="ui green save icon"></i> Save Changes</button>
                 <button class="ui basic button" onclick="removeAccessRule(event);"><i class="ui red trash icon"></i> Remove Rule</button>
             </form>
+          
+           
         </div>
         <br>
         <button class="ui basic button"  style="float: right;" onclick="parent.hideSideWrapper();"><i class="remove icon"></i> Close</button>
@@ -86,25 +100,29 @@
     let accessRuleList = [];
     $('.dropdown').dropdown();
     $('.menu .item').tab();
+    $('#newRuleTrustProxy').parent().checkbox();
 
     function handleCreateNewAccessRule(event) {
         event.preventDefault(); // Prevent the default form submission
         const formData = new FormData(event.target);
         const accessRuleName = formData.get('accessRuleName');
         const description = formData.get('description');
+        const trustProxy = $('#newRuleTrustProxy').is(':checked');
 
         console.log('Access Rule Name:', accessRuleName);
         console.log('Description:', description);
         
         $("#accessRuleForm input[name='accessRuleName']").val("");
         $("#accessRuleForm textarea[name='description']").val("");
+        $('#newRuleTrustProxy').parent().checkbox('set unchecked');
 
         $.cjax({
             url: "/api/access/create",
             method: "POST",
             data: {
                 "name": accessRuleName,
-                "desc": description
+                "desc": description,
+                "trustProxy": trustProxy
             },
             success: function(data){
                 if (data.error != undefined){
@@ -152,6 +170,58 @@
         document.querySelector('#modifyRuleInfo input[name="accessRuleUUID"]').value = accessRuleID;
         document.querySelector('#modifyRuleInfo input[name="accessRuleName"]').value = accessRuleName;
         document.querySelector('#modifyRuleInfo textarea[name="description"]').value = accessRuleDesc;
+
+        //Load trusted proxy gating state for this rule
+        initTrustedProxyGatingState(targetAccessRuleUUID);
+    }
+
+    // Initialize trusted proxy gating toggle state
+    function initTrustedProxyGatingState(ruleID){
+        //Initialize the checkbox first
+        $('#enableWhitelistTrustedProxy').parent().checkbox();
+
+        //Remove previous change handler
+        $("#enableWhitelistTrustedProxy").off("change");
+
+        $.get('/api/whitelist/trustProxy?id=' + ruleID, function(data){
+            if (data == true){
+                $('#enableWhitelistTrustedProxy').parent().checkbox("set checked");
+            }else{
+                $('#enableWhitelistTrustedProxy').parent().checkbox("set unchecked");
+            }
+
+            //Register on change event
+            $("#enableWhitelistTrustedProxy").off("change").on("change", function(){
+                enableTrustedProxyGating(ruleID);
+            });
+        }).fail(function(xhr, status, error){
+            console.error("Failed to load trusted proxy gating state:", error);
+        });
+    }
+
+    // Toggle trusted proxy gating
+    function enableTrustedProxyGating(ruleID){
+        var isChecked = $('#enableWhitelistTrustedProxy').is(':checked');
+        $.cjax({
+            type: 'POST',
+            url: '/api/whitelist/trustProxy',
+            data: { enable: isChecked, id: ruleID},
+            success: function(data){
+                if (data.error != undefined){
+                    parent.msgbox("Failed to update trusted proxy gating: " + data.error, false);
+                    //Revert the checkbox state
+                    if (isChecked){
+                        $('#enableWhitelistTrustedProxy').parent().checkbox("set unchecked");
+                    }else{
+                        $('#enableWhitelistTrustedProxy').parent().checkbox("set checked");
+                    }
+                    return;
+                }else{
+                    //Show success indicator
+                    parent.msgbox("Trusted proxy gating " + (isChecked ? "enabled" : "disabled"), true);
+                }
+            }
+        });
     }
 
     //Bind events to modify rule form

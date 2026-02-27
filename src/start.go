@@ -19,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
@@ -189,6 +190,8 @@ func startupSequence() {
 		Logger:   SystemWideLogger,
 		Database: sysdb,
 	})
+
+	zorxAuthRouter = zorxauth.NewAuthRouter(sysdb, SystemWideLogger)
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{
@@ -456,10 +459,12 @@ func ShutdownSeq() {
 	if mdnsScanner != nil {
 		mdnsScanner.Close()
 	}
+
 	SystemWideLogger.Println("Shutting down load balancer")
 	if loadBalancer != nil {
 		loadBalancer.Close()
 	}
+
 	SystemWideLogger.Println("Closing Certificates Auto Renewer")
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
@@ -468,6 +473,12 @@ func ShutdownSeq() {
 	if accessController != nil {
 		SystemWideLogger.Println("Closing Access Controller")
 		accessController.Close()
+	}
+
+	//Close the zorxauth router to save browser sessions
+	if zorxAuthRouter != nil {
+		SystemWideLogger.Println("Shutting down Zoraxy Auth Router")
+		zorxAuthRouter.Close()
 	}
 
 	//Close the plugin manager

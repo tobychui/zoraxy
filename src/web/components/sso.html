@@ -7,7 +7,7 @@
     <div class="ui top attached tabular menu ssoTabs">
         <a class="item active" data-tab="forward_auth_tab">Forward Auth</a>
         <a class="item" data-tab="oauth2_tab">OAuth 2.0</a>
-        <!-- <a class="item" data-tab="zoraxy_sso_tab">Zoraxy SSO</a> -->
+        <a class="item" data-tab="zoraxy_sso_tab">Zoraxy Auth</a>
         </div>
         <div class="ui bottom attached tab segment active" data-tab="forward_auth_tab">
         <!-- Forward Auth -->
@@ -170,16 +170,141 @@
         </form>
         </div>
         <div class="ui bottom attached tab segment" data-tab="zoraxy_sso_tab">
-            <!-- Zoraxy SSO -->
-            <h3>Zoraxy SSO</h3>
-            <p>Configuration settings for Zoraxy SSO provider.</p>
-            <p>Currently not implemented.</p>
+            <!-- Zoraxy Auth -->
+            <h2>Zoraxy Auth</h2>
+            <p>Zoraxy Auth is a built-in SSO authentication system that allows you to manage users directly within Zoraxy.</p>
+            <!-- Setup Instructions -->
+            <div class="ui accordion zorxAuthGatewayInstructions">
+                <div class="title">
+                    <i class="dropdown icon"></i>
+                    Setup Instructions
+                </div>
+                <div class="content">
+                    <div class="ui segment">
+                        <p>To use Zoraxy Auth, you will need to configure the gateway settings below.</p>
+                        <ol>
+                            <li>Enable the Zoraxy Auth Gateway by toggling the switch below.</li>
+                            <li>Set up an HTTP proxy rule to forward the SSO domain to the Zoraxy Auth SSO port. <br>
+                                e.g. <code>auth.example.com → localhost:5489</code></li>
+                            <li>Configure the SSO Redirect URL in the settings below to point to the SSO domain.<br>
+                                e.g. <code>https://auth.example.com</code></li>
+                        </ol>
+                        <br>
+                        <p><b>Logout Instructions</b></p>
+                        <p>If your site uses Zoraxy Auth for SSO, for better UX, add a hyperlink to the logout URL in your application's navigation or user menu.</p>
+                        <ol>
+                            <li>To logout from SSO, navigate to the SSO domain and append <code>/logout</code> to the URL.<br>
+                                e.g. <code>https://auth.example.com/logout</code></li>
+                            <li>Click the "Logout from All Services" button to end your session across all connected services.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <!-- Status and Gateway Settings -->
+            <div class="ui basic segment ssoRunningState zorxAuthGatewayRunningStateWrapper enabled">
+            <h4 class="ui header" id="zorxAuthGatewayRunningState">
+                    <i class="white circle check icon"></i>
+                    <div class="content">
+                        <span class="zorxAuthGateway_status">Running</span>
+                        <div class="sub header">Listen port :<span class="zorxAuthGateway_port">5489</span></div>
+                    </div>
+                </h4>
+            </div>
+            <form class="ui form" action="#" id="zorxAuthGatewaySettings">
+                 <div class="field" style="margin-top: 2em;">
+                    <div class="ui toggle checkbox">
+                        <input type="checkbox" id="zorxAuthGatewayEnabled" name="gatewayEnabled">
+                        <label for="zorxAuthGatewayEnabled">Enable Zoraxy Auth Gateway<br>
+                        <small>Enable or disable the Zoraxy Auth Gateway (login interface) web request handling. Already authentication sessions will remain active until they expire</small></label>
+                    </div>
+                 </div>
+                <div class="field" style="margin-top: 1.4em;">
+                    <label for="zorxAuthGatewayPort">Gateway Port</label>
+                    <input type="number" id="zorxAuthGatewayPort" name="gatewayPort" placeholder="5489" min="1" max="65535" value="5489">
+                    <small>Port number for the Zoraxy Auth Gateway to listen on</small>
+                </div>
+                <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
+                <button class="ui basic button" type="button" onclick="openZorxAuthUserEditor();"><i class="ui green users icon"></i> Manage Users</button>
+                <button class="ui basic red button" type="button" onclick="logoutAllUsers();"><i class="ui sign-out icon"></i> Logout All Users</button>
+            </form>
+            <div class="ui divider"></div>
+            <!-- SSO Settings -->
+            <form class="ui form" action="#" id="zorxAuthSettings">
+                <h3>SSO Behavior</h3>
+                <p>Configure the behavior of the Zoraxy SSO authentication system.</p>
+                <div class="field">
+                    <label for="zorxAuthSSORedirectURL">SSO Redirect URL</label>
+                    <input type="text" id="zorxAuthSSORedirectURL" name="ssoRedirectURL" placeholder="https://auth.example.com">
+                    <small>URL of the SSO authentication endpoint where unauthenticated users will be redirected. <br><b>Remember to include protocol (e.g., https://) in the URL</b></small>
+                </div>
+                <div class="ui message">
+                    <p>Logged in users can logout by navigating to: <code id="logoutUrlDisplay">N/A</code></p>
+                </div>
+                <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
+                    <div class="ui advancedSSOZorxAuthOptions accordion">
+                        <div class="title">
+                            <i class="dropdown icon"></i>
+                            Advanced Options
+                        </div>
+                        <div class="content">
+                            <br>
+                            <div class="field">
+                                <label for="zorxAuthSSOSessionSetURL">Session Set URL</label>
+                                <input type="text" id="zorxAuthSSOSessionSetURL" name="ssoSessionSetURL" placeholder="/.wellknown/zorxauth/session/set">
+                                <small>URL that will be called by the SSO endpoint after successful authentication to set the session ID.</small>
+                            </div>
+                            <div class="ui divider"></div>
+                            <b>Cookie Settings</b>
+                            <br><br>
+                            <div class="field">
+                                <label for="zorxAuthCookieName">Cookie Name</label>
+                                <input type="text" id="zorxAuthCookieName" name="cookieName" placeholder="zr_xauth_session">
+                                <small>Name of the cookie to store the session ID. Default: zr_xauth_session</small>
+                            </div>
+                            <div class="field">
+                                <label for="zorxAuthCookieDuration">Cookie Duration (seconds)</label>
+                                <input type="number" id="zorxAuthCookieDuration" name="cookieDuration" placeholder="3600" min="60">
+                                <small>Duration in seconds for the session cookie. Default: 3600 (1 hour)</small>
+                            </div>
+                            <div class="field">
+                                <label for="zorxAuthCookieDurationRememberMe">Cookie Duration (seconds) - Remember Me</label>
+                                <input type="number" id="zorxAuthCookieDurationRememberMe" name="cookieDurationRememberMe" placeholder="604800" min="60">
+                                <small>Duration in seconds for the session cookie when user selected Remember Me. Default: 604800 (7 days)</small>
+                            </div>
+                            <div class="ui divider"></div>
+                            <b>Rate Limiting</b>
+                            <br><br>
+                            <div class="ui checkbox" style="margin-bottom: 1em;">
+                                <input type="checkbox" id="zorxAuthEnableRateLimit" name="enableRateLimit">
+                                <label>Enable Rate Limiting<br><small>Limit authentication attempts per IP address to prevent brute force attacks</small></label>
+                            </div>
+                            <div class="field">
+                                <label for="zorxAuthRateLimitPerIp">Rate Limit Per IP (attempts/minute)</label>
+                                <input type="number" id="zorxAuthRateLimitPerIp" name="rateLimitPerIp" placeholder="60" min="1">
+                                <small>Number of allowed authentication attempts per minute per IP. Default: 60</small>
+                            </div>
+                            <div class="ui checkbox">
+                                <input type="checkbox" id="zorxAuthUseExpotentialBackoff" name="useExpotentialBackoff">
+                                <label>Use Exponential Backoff<br><small>Increase delay between failed authentication attempts exponentially</small></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5em;">
+                    <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
+                    <button class="ui basic button" type="button" id="zorxAuthClear"><i class="red trash icon"></i> Clear</button></div>
+                </div>
+            </form>
+            <br>
         </div>
 </div>
 
 <script>
     $(".ssoTabs .item").tab();
-
+    $(".advancedSSOForwardAuthOptions.accordion").accordion();
+    $(".advancedSSOZorxAuthOptions.accordion").accordion();
+    $(".zorxAuthGatewayInstructions.accordion").accordion();
     $(document).ready(function() {
         /* Load Forward Authz settings from backend */
         getForwardAuthSettings();
@@ -187,8 +312,18 @@
         /* Load OAuth 2.0 settings from backend */
         getOAuth20Settings();
 
+        /* Load Zoraxy Auth settings from backend */
+        getZorxAuthSettings();
+
+        /* Load Zoraxy Auth Gateway settings from backend */
+        getZorxAuthGatewaySettings();
+
         /* Add more initialization code here if needed */
     });
+
+    function openZorxAuthUserEditor(){
+        showSideWrapper('snippet/zorxauthUserEditor.html?t=' + Date.now());
+    }
 
     /*
         Forward Auth settings fetcher.
@@ -398,6 +533,246 @@
         });
     });
 
+    /*
+        Zoraxy Auth settings fetcher.
+    */
+    function getZorxAuthSettings() {
+        $.cjax({
+            url: '/api/sso/zorxauth/provider',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                $('#zorxAuthSSORedirectURL').val(data.ssoRedirectURL || '');
+                $('#zorxAuthSSOSessionSetURL').val(data.ssoSessionSetURL || '');
+                $('#zorxAuthCookieName').val(data.cookieName || 'zr_xauth_session');
+                $('#zorxAuthCookieDuration').val(data.cookieDuration || 3600);
+                $('#zorxAuthCookieDurationRememberMe').val(data.cookieDurationRememberMe || 604800);
+                
+                // Rate limiting settings
+                if (data.enableRateLimit !== undefined && data.enableRateLimit === true) {
+                    $("#zorxAuthEnableRateLimit").parent().checkbox("set checked");
+                } else {
+                    $("#zorxAuthEnableRateLimit").parent().checkbox("set unchecked");
+                }
+                $('#zorxAuthRateLimitPerIp').val(data.rateLimitPerIp || 60);
+                if (data.useExpotentialBackoff !== undefined && data.useExpotentialBackoff === true) {
+                    $("#zorxAuthUseExpotentialBackoff").parent().checkbox("set checked");
+                } else {
+                    $("#zorxAuthUseExpotentialBackoff").parent().checkbox("set unchecked");
+                }
+                
+                // Update logout URL display based on SSO Redirect URL
+                updateLogoutUrlDisplay();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching Zoraxy Auth settings:', textStatus, errorThrown);
+            }
+        });
+    }
+
+    /*
+        Update logout URL display based on SSO Redirect URL
+    */
+    function updateLogoutUrlDisplay() {
+        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val();
+        if (ssoRedirectURL) {
+            // Remove trailing slash if present
+            const baseUrl = ssoRedirectURL.replace(/\/$/, '');
+            $('#logoutUrlDisplay').text(baseUrl + '/logout');
+        } else {
+            $('#logoutUrlDisplay').text('https://auth.example.com/logout');
+        }
+    }
+
+    // Update logout URL display when SSO Redirect URL changes
+    $('#zorxAuthSSORedirectURL').on('input', function() {
+        updateLogoutUrlDisplay();
+    });
+
+    /*
+        Zoraxy Auth settings update handler.
+    */
+    $("#zorxAuthSettings").on("submit", function(event) {
+        event.preventDefault();
+
+        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val();
+        const ssoSessionSetURL = $('#zorxAuthSSOSessionSetURL').val();
+        const cookieName = $('#zorxAuthCookieName').val() || 'zr_xauth_session';
+        const cookieDuration = parseInt($('#zorxAuthCookieDuration').val()) || 3600;
+        const cookieDurationRememberMe = parseInt($('#zorxAuthCookieDurationRememberMe').val()) || 604800;
+        const enableRateLimit = $('#zorxAuthEnableRateLimit').is(':checked');
+        const rateLimitPerIp = parseInt($('#zorxAuthRateLimitPerIp').val()) || 60;
+        const useExpotentialBackoff = $('#zorxAuthUseExpotentialBackoff').is(':checked');
+
+        console.log(`Updating Zoraxy Auth settings. SSO Redirect: ${ssoRedirectURL}. Session Set URL: ${ssoSessionSetURL}. Cookie: ${cookieName}. Duration: ${cookieDuration}. RememberMe Duration: ${cookieDurationRememberMe}. Rate Limit: ${enableRateLimit}. Rate Limit/IP: ${rateLimitPerIp}. Exponential Backoff: ${useExpotentialBackoff}`);
+
+        $.cjax({
+            url: '/api/sso/zorxauth/provider',
+            method: 'POST',
+            data: {
+                ssoRedirectURL: ssoRedirectURL,
+                ssoSessionSetURL: ssoSessionSetURL,
+                cookieName: cookieName,
+                cookieDuration: cookieDuration,
+                cookieDurationRememberMe: cookieDurationRememberMe,
+                enableRateLimit: enableRateLimit,
+                rateLimitPerIp: rateLimitPerIp,
+                useExpotentialBackoff: useExpotentialBackoff
+            },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('Zoraxy Auth settings updated', true);
+                console.log('Zoraxy Auth settings updated:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Zoraxy Auth settings:', textStatus, errorThrown);
+                msgbox('Error updating Zoraxy Auth settings, check console', false);
+            }
+        });
+    });
+
+    $("#zorxAuthClear").on("click", function(event) {
+        event.preventDefault();
+
+        $.cjax({
+            url: '/api/sso/zorxauth/provider',
+            method: 'DELETE',
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                getZorxAuthSettings();
+
+                msgbox('Zoraxy Auth settings cleared', true);
+                console.log('Zoraxy Auth settings cleared:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error clearing Zoraxy Auth settings:', textStatus, errorThrown);
+                msgbox('Error clearing Zoraxy Auth settings, check console', false);
+            }
+        });
+    });
+
+    /*
+        Zoraxy Auth Gateway settings fetcher.
+    */
+    function setZorxAuthGatewayRunningState(gatewayEnabled, isRunning, gatewayPort) {
+        if (gatewayPort !== undefined && gatewayPort !== null && gatewayPort !== "") {
+            $(".zorxAuthGateway_port").text(gatewayPort);
+        }
+
+        if (!gatewayEnabled) {
+            $("#zorxAuthGatewayRunningState").find("i").attr("class", "white circle times icon");
+            $("#zorxAuthGatewayRunningState").find(".zorxAuthGateway_status").text("Disabled");
+            $(".zorxAuthGatewayRunningStateWrapper").removeClass("enabled");
+            return;
+        }
+
+        if (isRunning) {
+            $("#zorxAuthGatewayRunningState").find("i").attr("class", "white circle check icon");
+            $("#zorxAuthGatewayRunningState").find(".zorxAuthGateway_status").text("Running");
+            $(".zorxAuthGatewayRunningStateWrapper").addClass("enabled");
+        } else {
+            $("#zorxAuthGatewayRunningState").find("i").attr("class", "white circle times icon");
+            $("#zorxAuthGatewayRunningState").find(".zorxAuthGateway_status").text("Stopped");
+            $(".zorxAuthGatewayRunningStateWrapper").removeClass("enabled");
+        }
+    }
+
+    function getZorxAuthGatewaySettings() {
+        $.cjax({
+            url: '/api/sso/zorxauth/gateway',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.gatewayEnabled !== undefined && data.gatewayEnabled === true) {
+                    $("#zorxAuthGatewayEnabled").parent().checkbox("set checked");
+                } else {
+                    $("#zorxAuthGatewayEnabled").parent().checkbox("set unchecked");
+                }
+                $('#zorxAuthGatewayPort').val(data.gatewayPort || 5489);
+
+                setZorxAuthGatewayRunningState(
+                    data.gatewayEnabled === true,
+                    data.isRunning === true,
+                    data.gatewayPort || 5489
+                );
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching Zoraxy Auth Gateway settings:', textStatus, errorThrown);
+            }
+        });
+    }
+
+    /*
+        Zoraxy Auth Gateway settings update handler.
+    */
+    $("#zorxAuthGatewaySettings").on("submit", function(event) {
+        event.preventDefault();
+
+        const gatewayEnabled = $('#zorxAuthGatewayEnabled').is(':checked');
+        const gatewayPort = parseInt($('#zorxAuthGatewayPort').val()) || 5489;
+
+        console.log(`Updating Zoraxy Auth Gateway settings. Enabled: ${gatewayEnabled}. Port: ${gatewayPort}`);
+
+        $.cjax({
+            url: '/api/sso/zorxauth/gateway',
+            method: 'POST',
+            data: {
+                gatewayEnabled: gatewayEnabled,
+                gatewayPort: gatewayPort
+            },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('Zoraxy Auth Gateway settings updated', true);
+                console.log('Zoraxy Auth Gateway settings updated:', data);
+                
+                // Reload settings to update running status
+                setTimeout(function() {
+                    getZorxAuthGatewaySettings();
+                }, 500);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error updating Zoraxy Auth Gateway settings:', textStatus, errorThrown);
+                msgbox('Error updating Zoraxy Auth Gateway settings, check console', false);
+            }
+        });
+    });
+
     /* Bind UI events */
     $(".sso .advanceSettings").accordion();
+
+    /*
+        Logout all users handler.
+    */
+    function logoutAllUsers() {
+        if (!confirm("Are you sure you want to logout ALL users? This will terminate all active sessions and cannot be undone.")) {
+            return;
+        }
+
+        $.cjax({
+            url: '/api/sso/zorxauth/users/logoutAll',
+            method: 'POST',
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox('All users have been logged out successfully', true);
+                console.log('All users logged out:', data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error logging out all users:', textStatus, errorThrown);
+                msgbox('Error logging out all users, check console', false);
+            }
+        });
+    }
 </script>

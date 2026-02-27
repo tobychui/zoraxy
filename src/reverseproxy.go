@@ -171,6 +171,7 @@ func ReverseProxyInit() {
 		AccessController:   accessController,
 		ForwardAuthRouter:  forwardAuthRouter,
 		OAuth2Router:       oauth2Router,
+		ZorxAuthAgentRouter: zorxAuthRouter,
 		LoadBalancer:       loadBalancer,
 		PluginManager:      pluginManager,
 		/* Utilities */
@@ -234,6 +235,7 @@ func ReverseProxyInit() {
 			MaxRecordsStore:   288,                                //1 day
 			OnlineStateNotify: loadBalancer.NotifyHostOnlineState, //Notify the load balancer for online state
 			Logger:            SystemWideLogger,                   //Logger
+			Verbal:            *development_build,                 //Enable verbose logging in dev mode
 		})
 
 		SystemWideLogger.Println("Uptime Monitor background service started")
@@ -723,6 +725,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
 	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
+	case 4:
+		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodZorxAuth
 	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 	}

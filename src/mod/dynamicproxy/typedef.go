@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
@@ -68,8 +69,9 @@ type RouterOption struct {
 	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
 
 	/* Authentication Providers */
-	ForwardAuthRouter *forward.AuthRouter
-	OAuth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
+	ForwardAuthRouter   *forward.AuthRouter
+	OAuth2Router        *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
+	ZorxAuthAgentRouter *zorxauth.AuthRouter //ZorxAuthAgent for handling zorxauth SSO authentication
 
 	/* Utilities */
 	DevelopmentMode bool           //Enable development mode, provide more debug information in headers
@@ -156,7 +158,6 @@ type HeaderRewriteRules struct {
 	PermissionPolicy              *permissionpolicy.PermissionsPolicy //Permission policy header
 	DisableHopByHopHeaderRemoval  bool                                //Do not remove hop-by-hop headers
 	DisableUserAgentHeaderRemoval bool                                //Do not remove User-Agent header from server response
-
 }
 
 /*
@@ -169,10 +170,11 @@ type HeaderRewriteRules struct {
 type AuthMethod int
 
 const (
-	AuthMethodNone    AuthMethod = iota //No authentication required
-	AuthMethodBasic                     //Basic Auth
-	AuthMethodForward                   //Forward
-	AuthMethodOauth2                    //Oauth2
+	AuthMethodNone     AuthMethod = iota //No authentication required
+	AuthMethodBasic                      //Basic Auth
+	AuthMethodForward                    //Forward
+	AuthMethodOauth2                     //Oauth2
+	AuthMethodZorxAuth                   //ZorxAuth SSO
 )
 
 type AuthenticationProvider struct {

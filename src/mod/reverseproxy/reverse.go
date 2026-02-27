@@ -14,10 +14,6 @@ import (
 
 var onExitFlushLoop func()
 
-const (
-	defaultTimeout = time.Minute * 5
-)
-
 // ReverseProxy is an HTTP Handler that takes an incoming request and
 // sends it to another server, proxying the response back to the
 // client, support http, also support https tunnel using http.hijacker
@@ -235,23 +231,9 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request) erro
 	// Shallow copies of maps, like header
 	*outreq = *req
 
-	if cn, ok := rw.(http.CloseNotifier); ok {
-		if requestCanceler, ok := transport.(requestCanceler); ok {
-			// After the Handler has returned, there is no guarantee
-			// that the channel receives a value, so to make sure
-			reqDone := make(chan struct{})
-			defer close(reqDone)
-			clientGone := cn.CloseNotify()
-
-			go func() {
-				select {
-				case <-clientGone:
-					requestCanceler.CancelRequest(outreq)
-				case <-reqDone:
-				}
-			}()
-		}
-	}
+	// Deprecated http.CloseNotifier and replaced with context cancellation.
+	// See https://pkg.go.dev/net/http#CloseNotifier
+	outreq = outreq.WithContext(req.Context())
 
 	p.Director(outreq)
 	outreq.Close = false

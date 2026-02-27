@@ -3,6 +3,7 @@ package uptime
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"strconv"
@@ -187,7 +188,7 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 // Get website stauts with latency given URL, return is conn succ and its latency and status code
 func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
-	statusCode, err := getWebsiteStatus(target.URL)
+	statusCode, err := m.getWebsiteStatus(target.URL)
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
 		m.Config.Logger.PrintAndLog(logModuleName, "Ping upstream timeout. Assume offline", err)
@@ -223,7 +224,7 @@ func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int)
 
 }
 
-func getWebsiteStatus(url string) (int, error) {
+func (m *Monitor) getWebsiteStatus(url string) (int, error) {
 	// Create a one-time use cookie jar to store cookies
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
@@ -237,11 +238,12 @@ func getWebsiteStatus(url string) (int, error) {
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header = http.Header{
-		"User-Agent": {"zoraxy-uptime/1.1"},
+		"User-Agent": {"zoraxy-uptime/1.2"},
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
+
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
 		if strings.Contains(url, "https://") {
@@ -250,9 +252,13 @@ func getWebsiteStatus(url string) (int, error) {
 			rewriteURL = strings.ReplaceAll(url, "http://", "https://")
 		}
 
+		if m.Config.Verbal {
+			m.Config.Logger.PrintAndLog(logModuleName, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
+		}
+
 		req, _ := http.NewRequest("GET", rewriteURL, nil)
 		req.Header = http.Header{
-			"User-Agent": {"zoraxy-uptime/1.1"},
+			"User-Agent": {"zoraxy-uptime/1.2"},
 		}
 
 		resp, err := client.Do(req)
