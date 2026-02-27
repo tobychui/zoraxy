@@ -97,7 +97,6 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `TZ` | `Etc/UTC` (String) | Define timezone using [standard tzdata values](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). |
 | `UPDATE_GEOIP` | `false` (Boolean) | Download the latest GeoIP data and exit. |
 | `VERSION` | `false` (Boolean) | Show version of this server. |
-| `WEBFM` | `true` (Boolean) | Enable web file manager for static web server root folder. |
 | `WEBROOT` | `./www` (String) | Static web server root folder. Only allow change in start parameters. |
 | `ZEROTIER` | `false` (Boolean) | Enable ZeroTier functionality for GAN. |
 

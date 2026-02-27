@@ -101,7 +101,6 @@ def start_zoraxy():
     f"-port=:{ getenv('PORT', '8000') }",
     f"-sshlb={ getenv('SSHLB', 'false') }",
     f"-version={ getenv('VERSION', 'false') }",
-    f"-webfm={ getenv('WEBFM', 'true') }",
     f"-webroot={ getenv('WEBROOT', './www') }",
   ]
 
