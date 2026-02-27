@@ -59,12 +59,12 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 
 	cookieName, _ := utils.PostPara(r, "cookieName")
 	if cookieName == "" {
-		cookieName = "zorxauth_session_id"
+		cookieName = getDefaultOptions().CookieName
 	}
 
 	cookieDuration, _ := utils.PostInt(r, "cookieDuration")
 	if cookieDuration == 0 {
-		cookieDuration = 3600
+		cookieDuration = getDefaultOptions().CookieDuration
 	}
 
 	cookieDurationRememberMe, _ := utils.PostInt(r, "cookieDurationRememberMe")

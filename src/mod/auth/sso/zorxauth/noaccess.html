@@ -165,7 +165,7 @@
         (function () {
             var params = new URLSearchParams(window.location.search);
             var redirectUrl = params.get("redirect");
-            var host = redirectUrl ? new URL(decodeURIComponent(redirectUrl)).host : "the requested host";
+            var host = redirectUrl ? new URL(redirectUrl).host : "the requested host";
             var redirect = params.get("redirect") || "";
             document.getElementById("hostDisplay").textContent = host;
 

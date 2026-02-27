@@ -244,7 +244,7 @@
                     <input type="password" id="password" placeholder="Enter your password" autofocus>
                 </div>
                 <button type="submit" id="connect-btn">Connect</button>
-                <div class="error" id="login-error"></div>
+                <div class="error" id="login-error" style="max-width: 300px;"></div>
             </form>
         </div>
     </div>
@@ -389,33 +389,38 @@
 
         function connect(password) {
             return new Promise((resolve, reject) => {
-                //const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                //const wsUrl = `${protocol}//${window.location.host}/ws?password=${encodeURIComponent(password)}`;
                 const baseURL = window.location.toString().replace("http://", "ws://").replace("https://", "wss://");
-                const wsUrl = `${baseURL}ws?password=${encodeURIComponent(password)}`;
+                const wsUrl = `${baseURL}ws`;
+                let authenticated = false;
                 socket = new WebSocket(wsUrl);
 
                 socket.onopen = () => {
-                    isConnected = true;
-                    document.getElementById('login-modal').classList.add('hidden');
-                    updateStatus('connected');
-                    terminal.focus();
-                    
-                    // Send initial resize
-                    setTimeout(() => {
-                        handleResize();
-                    }, 100);
-                    
-                    resolve();
+                    // WebSocket connected, wait for server to request auth
                 };
 
                 socket.onmessage = (event) => {
                     const data = event.data;
                     
-                    // Check for error message
+                    // Check for JSON control messages
                     if (data.startsWith('{')) {
                         try {
                             const msg = JSON.parse(data);
+                            if (msg.type === 'auth_required') {
+                                // Server is requesting password, send it over the secure WebSocket channel
+                                socket.send(JSON.stringify({ type: 'auth', password: password }));
+                                return;
+                            }
+                            if (msg.type === 'auth_success') {
+                                // Authentication succeeded, session is ready
+                                authenticated = true;
+                                isConnected = true;
+                                document.getElementById('login-modal').classList.add('hidden');
+                                updateStatus('connected');
+                                terminal.focus();
+                                setTimeout(() => { handleResize(); }, 100);
+                                resolve();
+                                return;
+                            }
                             if (msg.error) {
                                 reject(new Error(msg.error));
                                 socket.close();
@@ -426,7 +431,9 @@
                         }
                     }
                     
-                    terminal.write(data);
+                    if (authenticated) {
+                        terminal.write(data);
+                    }
                 };
 
                 socket.onclose = () => {
@@ -441,13 +448,13 @@
                     reject(new Error('WebSocket connection failed'));
                 };
 
-                // Timeout for connection
+                // Timeout for connection + authentication
                 setTimeout(() => {
-                    if (socket.readyState !== WebSocket.OPEN) {
+                    if (!authenticated) {
                         socket.close();
                         reject(new Error('Connection timeout'));
                     }
-                }, 15000);
+                }, 30000);
             });
         }
 

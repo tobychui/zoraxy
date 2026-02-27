@@ -243,6 +243,17 @@
 					return;
 				}
 
+				// Email validation: if provided, must be a valid format
+				if (email !== ''){
+					const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+					if (!emailRegex.test(email)){
+						$('#newEmail').addClass('error').closest('.field').addClass('error');
+						notify('Invalid email address format', false);
+						return;
+					}
+				}
+				$('#newEmail').removeClass('error').closest('.field').removeClass('error');
+
 				$.cjax({
 					url: '/api/sso/zorxauth/users/create',
 					method: 'POST',

@@ -242,14 +242,6 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	debugLog("handleWebSocket: new connection from %s", r.RemoteAddr)
 
-	// Get password from query parameters (sent securely via WebSocket upgrade)
-	password := r.URL.Query().Get("password")
-	if password == "" {
-		debugLog("handleWebSocket: rejected - no password provided")
-		http.Error(w, "Password required", http.StatusBadRequest)
-		return
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logf("WebSocket upgrade error: %v", err)
@@ -257,6 +249,37 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+
+	// Request password from client via WebSocket channel
+	debugLog("handleWebSocket: sending auth_required to client")
+	authReq := map[string]string{"type": "auth_required"}
+	authReqData, _ := json.Marshal(authReq)
+	if err := conn.WriteMessage(websocket.TextMessage, authReqData); err != nil {
+		logf("WebSocket write error (auth_required): %v", err)
+		return
+	}
+
+	// Wait for password from client with a timeout
+	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		debugLog("handleWebSocket: failed to read auth message: %v", err)
+		s.sendError(conn, "Authentication timeout or read error")
+		return
+	}
+	conn.SetReadDeadline(time.Time{}) // Clear deadline
+
+	var authMsg struct {
+		Type     string `json:"type"`
+		Password string `json:"password"`
+	}
+	if err := json.Unmarshal(message, &authMsg); err != nil || authMsg.Type != "auth" || authMsg.Password == "" {
+		debugLog("handleWebSocket: invalid auth message")
+		s.sendError(conn, "Invalid authentication message")
+		return
+	}
+	password := authMsg.Password
+	debugLog("handleWebSocket: received password via WebSocket channel")
 
 	// Connect to SSH server
 	debugLog("handleWebSocket: connecting SSH to %s@%s:%d", s.config.Username, s.config.RemoteAddr, s.config.RemotePort)
@@ -268,6 +291,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer sshClient.Close()
 	debugLog("handleWebSocket: SSH connected successfully")
+
+	// Notify client that authentication succeeded
+	authOk := map[string]string{"type": "auth_success"}
+	authOkData, _ := json.Marshal(authOk)
+	if err := conn.WriteMessage(websocket.TextMessage, authOkData); err != nil {
+		logf("WebSocket write error (auth_success): %v", err)
+		return
+	}
 
 	// Create channels for coordinating shutdown
 	done := make(chan struct{})
@@ -363,7 +394,7 @@ func (s *Server) connectSSH(password string) (*SSHClient, error) {
 				return answers, nil
 			}),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // For simplicity; in production, verify host keys
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
 

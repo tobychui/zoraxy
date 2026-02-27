@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"imuslab.com/zoraxy/mod/netutils"
 )
 
 //go:embed auth.html
@@ -254,7 +256,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientIP := r.RemoteAddr
+	clientIP := netutils.GetRequesterIPUntrusted(r)
 
 	// --- Rate limiting: enforce per-minute attempt ceiling per IP ---
 	if gs.router.Options.EnableRateLimit && gs.router.Options.RateLimitPerIp > 0 {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -241,7 +242,8 @@ func (ar *AuthRouter) HandleAuthRouting(w http.ResponseWriter, r *http.Request) 
 		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 			scheme = "https"
 		}
-		redirectURL := ar.Options.SSORedirectURL + "?redirect=" + scheme + "://" + r.Host + r.RequestURI
+		originalURL := scheme + "://" + r.Host + r.RequestURI
+		redirectURL := ar.Options.SSORedirectURL + "?redirect=" + url.QueryEscape(originalURL)
 
 		// For AJAX requests, return 401 with JSON instead of redirecting
 		// This avoids CORS issues with cross-origin redirects
@@ -276,7 +278,8 @@ func (ar *AuthRouter) HandleAuthRouting(w http.ResponseWriter, r *http.Request) 
 		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 			scheme = "https"
 		}
-		redirectURL := ar.Options.SSORedirectURL + "?redirect=" + scheme + "://" + r.Host + r.RequestURI
+		originalURL := scheme + "://" + r.Host + r.RequestURI
+		redirectURL := ar.Options.SSORedirectURL + "?redirect=" + url.QueryEscape(originalURL)
 
 		// For AJAX requests, return 401 with JSON instead of redirecting
 		if isAjaxRequest(r) {

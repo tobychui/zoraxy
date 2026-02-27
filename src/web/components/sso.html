@@ -258,8 +258,8 @@
                             <br><br>
                             <div class="field">
                                 <label for="zorxAuthCookieName">Cookie Name</label>
-                                <input type="text" id="zorxAuthCookieName" name="cookieName" placeholder="zorxauth_session_id">
-                                <small>Name of the cookie to store the session ID. Default: zorxauth_session_id</small>
+                                <input type="text" id="zorxAuthCookieName" name="cookieName" placeholder="zr_xauth_session">
+                                <small>Name of the cookie to store the session ID. Default: zr_xauth_session</small>
                             </div>
                             <div class="field">
                                 <label for="zorxAuthCookieDuration">Cookie Duration (seconds)</label>
@@ -544,7 +544,7 @@
             success: function(data) {
                 $('#zorxAuthSSORedirectURL').val(data.ssoRedirectURL || '');
                 $('#zorxAuthSSOSessionSetURL').val(data.ssoSessionSetURL || '');
-                $('#zorxAuthCookieName').val(data.cookieName || 'zorxauth_session_id');
+                $('#zorxAuthCookieName').val(data.cookieName || 'zr_xauth_session');
                 $('#zorxAuthCookieDuration').val(data.cookieDuration || 3600);
                 $('#zorxAuthCookieDurationRememberMe').val(data.cookieDurationRememberMe || 604800);
                 
@@ -597,7 +597,7 @@
 
         const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val();
         const ssoSessionSetURL = $('#zorxAuthSSOSessionSetURL').val();
-        const cookieName = $('#zorxAuthCookieName').val() || 'zorxauth_session_id';
+        const cookieName = $('#zorxAuthCookieName').val() || 'zr_xauth_session';
         const cookieDuration = parseInt($('#zorxAuthCookieDuration').val()) || 3600;
         const cookieDurationRememberMe = parseInt($('#zorxAuthCookieDurationRememberMe').val()) || 604800;
         const enableRateLimit = $('#zorxAuthEnableRateLimit').is(':checked');
