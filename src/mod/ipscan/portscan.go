@@ -30,7 +30,7 @@ func ScanPorts(host string) []*OpenedPort {
 		wg.Add(1)
 		go func(port int) {
 			defer wg.Done()
-			address := fmt.Sprintf("%s:%d", host, port)
+			address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 
 			// Check TCP
 			conn, err := net.DialTimeout("tcp", address, 5*time.Second)
