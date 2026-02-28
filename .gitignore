@@ -39,15 +39,6 @@ src/sys.uuid
 src/zoraxy
 src/log/
 
-# dev-tags
-/Dockerfile
-/Entrypoint.sh
-
-# docker testing stuff
-docker/test/
-docker/container-builder.sh
-docker/docker-compose.yaml
-
 # plugins
 example/plugins/ztnc/ztnc.db
 example/plugins/ztnc/authtoken.secret
