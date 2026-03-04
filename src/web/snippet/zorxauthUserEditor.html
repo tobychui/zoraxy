@@ -24,97 +24,223 @@
 		<div class="ui container">
 			<h3 class="ui header">Zoraxy Auth User Management</h3>
 			<p>Create, edit and remove users for Zoraxy Auth SSO login.</p>
-
-			<!-- User List -->
 			<div class="ui divider"></div>
-			<h4 class="ui header">Registered Users</h4>
-			<table class="ui very compact basic unstackable celled table">
-				<thead>
-					<tr>
-						<th>Username</th>
-						<th>Email</th>
-						<th>Allowed Hosts</th>
-						<th style="width:5em; text-align:right;">Actions</th>
-					</tr>
-				</thead>
-				<tbody id="usersTableBody">
-					<tr>
-						<td colspan="4"><small>Loading users...</small></td>
-					</tr>
-				</tbody>
-			</table>
-			<!-- Edit User Form  -->
-			<div id="editUserSection" class="ui form userFormSection" style="display:none;">
-				<div class="ui divider"></div>
-				<b class="ui header">Editing User: <span id="editUsernameLabel"></span></b>
-                 <p>Update the user information and click "Save Changes". Leave password blank to keep current password.</p>
-				<input type="hidden" id="editOriginalUsername">
-				<div class="two stackable fields">
-					<div class="field">
-						<label>Username</label>
-						<input id="editUsername" type="text" placeholder="alice" autocomplete="off">
+			<div class="ui top attached tabular menu">
+				<a class="active item" data-tab="users"><i class="ui green user circle icon"></i> Users</a>
+				<a class="item" data-tab="groupPolicies"><i class="ui blue bookmark icon"></i> Group Policies</a>
+			</div>
+			<div class="ui bottom attached active tab segment" data-tab="users">
+				<!-- User List -->
+				<h4 class="ui header">Registered Users</h4>
+				<table class="ui very compact basic unstackable celled table">
+					<thead>
+						<tr>
+							<th>Username</th>
+							<th>Email</th>
+							<th>Access Policy</th>
+							<th style="width:5em; text-align:right;">Actions</th>
+						</tr>
+					</thead>
+					<tbody id="usersTableBody">
+						<tr>
+							<td colspan="4"><small>Loading users...</small></td>
+						</tr>
+					</tbody>
+				</table>
+				<!-- Edit User Form  -->
+				<div id="editUserSection" class="ui form userFormSection" style="display:none;">
+					<div class="ui divider"></div>
+					<b class="ui header">Editing User: <span id="editUsernameLabel"></span></b>
+					<p>Update the user information and click "Save Changes". Leave password blank to keep current password.</p>
+					<input type="hidden" id="editOriginalUsername">
+					<div class="two stackable fields">
+						<div class="field">
+							<label>Username</label>
+							<input id="editUsername" type="text" placeholder="alice" autocomplete="off">
+						</div>
+						<div class="field">
+							<label>Email (Optional)</label>
+							<input id="editEmail" type="text" placeholder="alice@example.com" autocomplete="off">
+						</div>
 					</div>
-					<div class="field">
-						<label>Email (Optional)</label>
-						<input id="editEmail" type="text" placeholder="alice@example.com" autocomplete="off">
+					<div class="two stackable fields">
+						<div class="field">
+							<label>Password <small class="passwordHint">(leave blank to keep current)</small></label>
+							<input id="editPassword" type="password" placeholder="Leave blank to keep" autocomplete="off">
+						</div>
+						<div class="field">
+							<label>Access Policy</label>
+							<div class="ui toggle checkbox" style="margin-bottom:0.5em;">
+								<input type="checkbox" id="editUseGroupPolicy" onchange="toggleGroupPolicyMode('edit');">
+								<label>Use Group Policy</label>
+							</div>
+							<div id="editGroupPolicySelect" style="display:none;">
+								<select id="editGroupId" class="ui fluid dropdown">
+									<option value="">— select a group policy —</option>
+								</select>
+							</div>
+						</div>
 					</div>
-				</div>
-				<div class="two stackable fields">
+					<div id="editHostsSection">
 					<div class="field">
-						<label>Password <small class="passwordHint">(leave blank to keep current)</small></label>
-						<input id="editPassword" type="password" placeholder="Leave blank to keep" autocomplete="off">
-					</div>
-					<div class="field">
-						<label>Allowed Hosts <small class="passwordHint">(comma separated, blank = allow all)</small></label>
-						<input id="editAllowedHosts" type="text" placeholder="app.example.com, *.internal.example.com" autocomplete="off">
-						<div style="margin-top:0.4em; display:flex; gap:0.4em; align-items:center;">
+						<label>Allowed Hosts <small class="passwordHint">(blank = allow all)</small></label>
+						<div style="margin-bottom:0.4em; display:flex; gap:0.4em; align-items:center;">
 							<select id="editHostQuickSelect" style="flex:1;">
 								<option value="">— select a registered host —</option>
 							</select>
-							<button class="ui mini basic button" type="button" onclick="addHostToInput('editAllowedHosts', $('#editHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+							<button class="ui mini basic button" type="button" onclick="addHostToTable('editHostsTable', $('#editHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+						</div>
+						<table class="ui very compact basic unstackable table" id="editHostsTable" style="margin-top:0.5em;">
+							<tbody class="hostsTableBody">
+								<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>
+							</tbody>
+						</table>
+					</div>
+					</div>
+					<button class="ui basic button" onclick="saveUser();"><i class="ui green save icon"></i> Save Changes</button>
+					<button class="ui basic button" onclick="cancelEdit();"><i class="ui grey cancel icon"></i> Cancel</button>
+				</div>
+
+				<!-- Create User Form -->
+				<div id="newUserSection" class="ui form userFormSection">
+					<div class="ui divider"></div>
+					<b class="ui header">Register New User</b>
+					<p>Create a new user for Zoraxy Auth SSO login.</p>
+					<div class="three stackable fields">
+						<div class="field">
+							<label>Username</label>
+							<input id="newUsername" type="text" placeholder="Alan" autocomplete="off">
+						</div>
+						<div class="field">
+							<label>Email (Optional)</label>
+							<input id="newEmail" type="text" placeholder="alan@example.com" autocomplete="off">
+						</div>
+						<div class="field">
+							<label>Password</label>
+							<input id="newPassword" type="password" placeholder="Required" autocomplete="off">
 						</div>
 					</div>
-				</div>
-				<button class="ui basic button" onclick="saveUser();"><i class="ui green save icon"></i> Save Changes</button>
-				<button class="ui basic button" onclick="cancelEdit();"><i class="ui grey cancel icon"></i> Cancel</button>
-			</div>
-
-			<!-- Create User Form -->
-			<div id="newUserSection" class="ui form userFormSection">
-				<div class="ui divider"></div>
-				<b class="ui header">Register New User</b>
-                <p>Create a new user for Zoraxy Auth SSO login.</p>
-				<div class="three stackable fields">
 					<div class="field">
-						<label>Username</label>
-						<input id="newUsername" type="text" placeholder="alan" autocomplete="off">
+						<label>Access Policy</label>
+						<div class="ui toggle checkbox" style="margin-bottom:0.5em;">
+							<input type="checkbox" id="newUseGroupPolicy" onchange="toggleGroupPolicyMode('new');">
+							<label>Use Group Policy</label>
+						</div>
+						<div id="newGroupPolicySelect" style="display:none;">
+							<select id="newGroupId" class="ui fluid dropdown">
+								<option value="">— select a group policy —</option>
+							</select>
+						</div>
 					</div>
+					<div id="newHostsSection">
 					<div class="field">
-						<label>Email (Optional)</label>
-						<input id="newEmail" type="text" placeholder="alan@example.com" autocomplete="off">
-					</div>
-					<div class="field">
-						<label>Password</label>
-						<input id="newPassword" type="password" placeholder="Required" autocomplete="off">
-					</div>
-				</div>
-				<div class="field">
-					<label>Allowed Hosts <small class="passwordHint">(comma separated, blank = allow all)</small></label>
-					<input id="newAllowedHosts" type="text" placeholder="app.example.com, *.internal.example.com" autocomplete="off">
-					<div style="margin-top:0.4em; display:flex; gap:0.4em; align-items:center;">
+						<label>Allowed Hosts <small class="passwordHint">(blank = allow all)</small></label>
+						<div style="margin-bottom:0.4em; display:flex; gap:0.4em; align-items:center;">
 						<select id="newHostQuickSelect" style="flex:1;">
 							<option value="">— select a registered host —</option>
 						</select>
-						<button class="ui mini basic button" type="button" onclick="addHostToInput('newAllowedHosts', $('#newHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+						<button class="ui mini basic button" type="button" onclick="addHostToTable('newHostsTable', $('#newHostQuickSelect').val());"><i class="add icon"></i> Add</button>
 					</div>
+					<table class="ui very compact basic unstackable table" id="newHostsTable" style="margin-top:0.5em;">
+							<tbody class="hostsTableBody">
+								<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>
+							</tbody>
+						</table>
+					</div>
+					</div>
+					<button class="ui basic button" onclick="createUser();"><i class="ui green add icon"></i> Register User</button>
 				</div>
-				<button class="ui basic button" onclick="createUser();"><i class="ui green add icon"></i> Register User</button>
 			</div>
+			<div class="ui bottom attached tab segment" data-tab="groupPolicies">
+				<!-- Group Policy Management -->
+				<h4 class="ui header">Group Policies</h4>
+				<p>Group policies let you define shared access rules and assign them to multiple users.</p>
+				<table class="ui very compact basic unstackable celled table">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Description</th>
+							<th>Allowed Hosts</th>
+							<th style="width:5em; text-align:right;">Actions</th>
+						</tr>
+					</thead>
+					<tbody id="groupPoliciesTableBody">
+						<tr>
+							<td colspan="4"><small>Loading group policies...</small></td>
+						</tr>
+					</tbody>
+				</table>
 
-			<br><br>
+				<!-- Edit Group Policy Form -->
+				<div id="editGroupPolicySection" class="ui form userFormSection" style="display:none;">
+					<div class="ui divider"></div>
+					<b class="ui header">Editing Group Policy: <span id="editGPNameLabel"></span></b>
+					<p>Update the group policy and click "Save Changes".</p>
+					<input type="hidden" id="editGPId">
+					<div class="two stackable fields">
+						<div class="field">
+							<label>Name</label>
+							<input id="editGPName" type="text" placeholder="Group Name" autocomplete="off">
+						</div>
+						<div class="field">
+							<label>Description (Optional)</label>
+							<input id="editGPDescription" type="text" placeholder="Access policy for group" autocomplete="off">
+						</div>
+					</div>
+					<div class="field">
+						<label>Allowed Hosts <small class="passwordHint">(blank = allow all)</small></label>
+						<div style="margin-bottom:0.4em; display:flex; gap:0.4em; align-items:center;">
+							<select id="editGPHostQuickSelect" style="flex:1;">
+								<option value="">— select a registered host —</option>
+							</select>
+							<button class="ui mini basic button" type="button" onclick="addHostToTable('editGPHostsTable', $('#editGPHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+						</div>
+						<table class="ui very compact basic unstackable table" id="editGPHostsTable" style="margin-top:0.5em;">
+							<tbody class="hostsTableBody">
+								<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>
+							</tbody>
+						</table>
+					</div>
+					<button class="ui basic button" onclick="saveGroupPolicy();"><i class="ui green save icon"></i> Save Changes</button>
+					<button class="ui basic button" onclick="cancelEditGroupPolicy();"><i class="ui grey cancel icon"></i> Cancel</button>
+				</div>
+
+				<!-- Create Group Policy Form -->
+				<div id="newGroupPolicySection" class="ui form userFormSection">
+					<div class="ui divider"></div>
+					<b class="ui header">Create New Group Policy</b>
+					<p>Define a new group policy with shared access rules.</p>
+					<div class="two stackable fields">
+						<div class="field">
+							<label>Name</label>
+							<input id="newGPName" type="text" placeholder="Group Name" autocomplete="off">
+						</div>
+						<div class="field">
+							<label>Description (Optional)</label>
+							<input id="newGPDescription" type="text" placeholder="Access policy for group" autocomplete="off">
+						</div>
+					</div>
+					<div class="field">
+						<label>Allowed Hosts <small class="passwordHint">(blank = allow all)</small></label>
+						<div style="margin-bottom:0.4em; display:flex; gap:0.4em; align-items:center;">
+							<select id="newGPHostQuickSelect" style="flex:1;">
+								<option value="">— select a registered host —</option>
+							</select>
+							<button class="ui mini basic button" type="button" onclick="addHostToTable('newGPHostsTable', $('#newGPHostQuickSelect').val());"><i class="add icon"></i> Add</button>
+						</div>
+						<table class="ui very compact basic unstackable table" id="newGPHostsTable" style="margin-top:0.5em;">
+							<tbody class="hostsTableBody">
+								<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>
+							</tbody>
+						</table>
+					</div>
+					<button class="ui basic button" onclick="createGroupPolicy();"><i class="ui green add icon"></i> Create Group Policy</button>
+				</div>
+			</div>
 		</div>
-
+		<br><br>
 		<script>
+			$('.menu .item').tab();
 			function notify(message, isSuccess = true){
 				if (parent !== undefined && parent.msgbox !== undefined){
 					parent.msgbox(message, isSuccess);
@@ -139,11 +265,92 @@
 				return hosts.join(', ');
 			}
 
-			function addHostToInput(inputId, hostname){
+			function addHostToTable(tableId, hostname){
 				if (!hostname) return;
-				const input = $('#' + inputId);
-				const current = input.val().trim();
-				input.val(current === '' ? hostname : current + ', ' + hostname);
+				hostname = hostname.trim();
+				if (!hostname) return;
+
+				const table = $('#' + tableId);
+				const tbody = table.find('.hostsTableBody');
+
+				// Check if hostname already exists
+				let exists = false;
+				tbody.find('.hostRow').each(function(){
+					if ($(this).attr('data-hostname') === hostname){
+						exists = true;
+						return false; // break loop
+					}
+				});
+
+				if (exists){
+					notify('Host "' + hostname + '" is already in the list', false);
+					return;
+				}
+
+				// Remove empty row if it exists
+				tbody.find('.emptyRow').remove();
+
+				// Add new row
+				const row = `<tr class="hostRow" data-hostname="${escapeHtml(hostname)}">
+					<td style="padding:0.4em 0.6em;">${escapeHtml(hostname)}</td>
+					<td style="width:3em; text-align:right; padding:0.4em 0.6em;">
+						<button class="ui mini icon basic red circular button" type="button" onclick="removeHostFromTable(this);" title="Remove host"><i class="times icon"></i></button>
+					</td>
+				</tr>`;
+				tbody.append(row);
+			}
+
+			function removeHostFromTable(btn){
+				const row = $(btn).closest('.hostRow');
+				const tbody = row.closest('.hostsTableBody');
+				row.remove();
+
+				// If no rows left, show empty message
+				if (tbody.find('.hostRow').length === 0){
+					tbody.html('<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>');
+				}
+			}
+
+			function getHostsFromTable(tableId){
+				const table = $('#' + tableId);
+				const tbody = table.find('.hostsTableBody');
+				const hosts = [];
+
+				tbody.find('.hostRow').each(function(){
+					const hostname = $(this).attr('data-hostname');
+					if (hostname){
+						hosts.push(hostname);
+					}
+				});
+
+				return hosts.join(', ');
+			}
+
+			function populateHostTable(tableId, hostsString){
+				const table = $('#' + tableId);
+				const tbody = table.find('.hostsTableBody');
+				tbody.empty();
+
+				if (!hostsString || hostsString.trim() === ''){
+					tbody.html('<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>');
+					return;
+				}
+
+				const hosts = hostsString.split(',').map(h => h.trim()).filter(h => h !== '');
+				if (hosts.length === 0){
+					tbody.html('<tr class="emptyRow"><td style="opacity:0.5; text-align:center;">No hosts specified (allow all)</td></tr>');
+					return;
+				}
+
+				hosts.forEach(function(hostname){
+					const row = `<tr class="hostRow" data-hostname="${escapeHtml(hostname)}">
+						<td style="padding:0.4em 0.6em;">${escapeHtml(hostname)}</td>
+						<td style="width:3em; text-align:right; padding:0.4em 0.6em;">
+							<button class="ui mini icon basic red circular button" type="button" onclick="removeHostFromTable(this);" title="Remove host"><i class="times icon"></i></button>
+						</td>
+					</tr>`;
+					tbody.append(row);
+				});
 			}
 
 			function loadRegisteredHosts(){
@@ -158,6 +365,8 @@
 						}).join('');
 						$('#newHostQuickSelect').append(options);
 						$('#editHostQuickSelect').append(options);
+						$('#newGPHostQuickSelect').append(options);
+						$('#editGPHostQuickSelect').append(options);
 					}
 				});
 			}
@@ -168,8 +377,8 @@
 					url: '/api/sso/zorxauth/users/list',
 					method: 'GET',
 					success: function(data){
-						if (data.error !== undefined){
-							$('#usersTableBody').html(`<tr><td colspan="4"><i class="ui red warning circle icon"></i> ${escapeHtml(data.error)}</td></tr>`);
+						if (!data || data.error !== undefined){
+							$('#usersTableBody').html(`<tr><td colspan="4"><i class="ui green check circle icon"></i> ${escapeHtml(data ? data.error : 'No users found')}</td></tr>`);
 							return;
 						}
 						renderUsers(data);
@@ -185,20 +394,30 @@
 				body.html('');
 
 				if (!users || users.length === 0){
-					body.html(`<tr><td colspan="4"><i class="ui green circle check icon"></i> No ZorxAuth user created</td></tr>`);
+					body.html(`<tr><td colspan="4"><i class="ui green circle check icon"></i> No Zoraxy Auth user created</td></tr>`);
 					return;
 				}
 
-                users.forEach(function(user){
+            users.forEach(function(user){
                     const hosts = user.allowedHosts || [];
-                    const hostsDisplay = hosts.length > 0 
-                        ? `<ul style="margin:0; padding-left:1.2em;">${hosts.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>` 
-                        : '<span style="opacity:0.5;">all hosts</span>';
+                    let accessDisplay;
+                    if (user.useGroupPolicy && user.groupId){
+                        const gpName = groupPolicyNameMap[user.groupId];
+                        if (gpName) {
+                            accessDisplay = `<span><i class="ui blue bookmark icon"></i> ${escapeHtml(gpName)}</span>`;
+                        } else {
+                            accessDisplay = `<span style="color:#db2828;"><i class="ui red warning sign icon"></i> Invalid Policy</span>`;
+                        }
+                    } else if (hosts.length > 0){
+                        accessDisplay = `<ul style="margin:0; padding-left:1.2em;">${hosts.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ul>`;
+                    } else {
+                        accessDisplay = '<span style="opacity:0.5;">all hosts</span>';
+                    }
                     const emailDisplay = escapeHtml(user.email) || '<span style="opacity:0.5;">—</span>';
-                    body.append(`<tr class="userRow" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}">
+                    body.append(`<tr class="userRow" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}" data-usegrouppolicy="${user.useGroupPolicy ? '1' : '0'}" data-groupid="${escapeHtml(user.groupId || '')}">
                         <td>${escapeHtml(user.username)}</td>
                         <td>${emailDisplay}</td>
-                        <td>${hostsDisplay}</td>
+                        <td>${accessDisplay}</td>
                         <td style="text-align:right; white-space:nowrap;">
                             <button class="ui mini icon basic button" title="Edit user" onclick="openEditUser(this);"><i class="edit icon"></i></button>
                             <button class="ui mini icon basic red button" title="Delete user" onclick="deleteUser(this);"><i class="trash icon"></i></button>
@@ -212,13 +431,20 @@
 				const username = row.attr('data-username');
 				const email = row.attr('data-email');
 				const allowedHosts = row.attr('data-allowedhosts');
+				const useGroupPolicy = row.attr('data-usegrouppolicy') === '1';
+				const groupId = row.attr('data-groupid') || '';
 
 				$('#editOriginalUsername').val(username);
 				$('#editUsername').val(username);
 				$('#editEmail').val(email);
 				$('#editPassword').val('');
-				$('#editAllowedHosts').val(allowedHosts);
+				populateHostTable('editHostsTable', allowedHosts);
 				$('#editUsernameLabel').text(username);
+
+				// Group policy
+				$('#editUseGroupPolicy').prop('checked', useGroupPolicy);
+				$('#editGroupId').val(groupId);
+				toggleGroupPolicyMode('edit');
 
 				$('#newUserSection').hide();
 				$('#editUserSection').show();
@@ -228,6 +454,7 @@
 			}
 
 			function cancelEdit(){
+				populateHostTable('editHostsTable', '');
 				$('#editUserSection').hide();
 				$('#newUserSection').show();
 			}
@@ -236,7 +463,9 @@
 				const username = $('#newUsername').val().trim();
 				const email = $('#newEmail').val().trim();
 				const password = $('#newPassword').val();
-				const allowedHosts = $('#newAllowedHosts').val().trim();
+				const useGroupPolicy = $('#newUseGroupPolicy').is(':checked');
+				const groupId = useGroupPolicy ? $('#newGroupId').val() : '';
+				const allowedHosts = getHostsFromTable('newHostsTable');
 
 				if (username === '' || password === ''){
 					notify('Username and password are required', false);
@@ -261,7 +490,9 @@
 						username: username,
 						email: email,
 						password: password,
-						allowedHosts: allowedHosts
+						allowedHosts: allowedHosts,
+						useGroupPolicy: useGroupPolicy,
+						groupId: groupId
 					},
 					success: function(data){
 						if (data.error !== undefined){
@@ -272,7 +503,10 @@
 						$('#newUsername').val('');
 						$('#newEmail').val('');
 						$('#newPassword').val('');
-						$('#newAllowedHosts').val('');
+						$('#newUseGroupPolicy').prop('checked', false);
+						$('#newGroupId').val('');
+						toggleGroupPolicyMode('new');
+						populateHostTable('newHostsTable', '');
 						loadUsers();
 					}
 				});
@@ -282,8 +516,10 @@
 				const originalUsername = $('#editOriginalUsername').val();
 				const newUsername = $('#editUsername').val().trim();
 				const email = $('#editEmail').val().trim();
-				const allowedHosts = $('#editAllowedHosts').val().trim();
+				const allowedHosts = getHostsFromTable('editHostsTable');
 				const password = $('#editPassword').val();
+				const useGroupPolicy = $('#editUseGroupPolicy').is(':checked');
+				const groupId = useGroupPolicy ? $('#editGroupId').val() : '';
 
 				if (newUsername === ''){
 					notify('Username cannot be empty', false);
@@ -298,7 +534,9 @@
 						newUsername: newUsername,
 						email: email,
 						allowedHosts: allowedHosts,
-						password: password
+						password: password,
+						useGroupPolicy: useGroupPolicy,
+						groupId: groupId
 					},
 					success: function(data){
 						if (data.error !== undefined){
@@ -337,7 +575,188 @@
 			}
 
 			loadRegisteredHosts();
-			loadUsers();
+			loadGroupPolicies(function(){ loadUsers(); });
+
+			/* ============ Group Policy Variables & Functions ============ */
+			var groupPolicyNameMap = {}; // id -> name, used for display in user table
+
+			function toggleGroupPolicyMode(prefix){
+				const checked = $('#' + prefix + 'UseGroupPolicy').is(':checked');
+				if (checked){
+					$('#' + prefix + 'GroupPolicySelect').show();
+					$('#' + prefix + 'HostsSection').hide();
+				} else {
+					$('#' + prefix + 'GroupPolicySelect').hide();
+					$('#' + prefix + 'HostsSection').show();
+				}
+			}
+
+			function populateGroupPolicyDropdowns(policies){
+				groupPolicyNameMap = {};
+				const options = policies.map(function(gp){
+					groupPolicyNameMap[gp.id] = gp.name;
+					return `<option value="${escapeHtml(gp.id)}">${escapeHtml(gp.name)}</option>`;
+				}).join('');
+
+				$('#newGroupId').html('<option value="">— select a group policy —</option>' + options);
+				$('#editGroupId').html('<option value="">— select a group policy —</option>' + options);
+			}
+
+			function loadGroupPolicies(callback){
+				$('#groupPoliciesTableBody').html('<tr><td colspan="4"><small>Loading group policies...</small></td></tr>');
+				$.cjax({
+					url: '/api/sso/zorxauth/grouppolicy/list',
+					method: 'GET',
+					success: function(data){
+						if (!data || data.error !== undefined){
+							$('#groupPoliciesTableBody').html(`<tr><td colspan="4"><i class="ui green check circle icon"></i> ${escapeHtml(data ? data.error : 'No group policies found')}</td></tr>`);
+							populateGroupPolicyDropdowns([]);
+							if (callback) callback();
+							return;
+						}
+						populateGroupPolicyDropdowns(Array.isArray(data) ? data : []);
+						renderGroupPolicies(data);
+						if (callback) callback();
+					},
+					error: function(){
+						$('#groupPoliciesTableBody').html('<tr><td colspan="4"><i class="ui red warning circle icon"></i> Failed to load group policies</td></tr>');
+						if (callback) callback();
+					}
+				});
+			}
+
+			function renderGroupPolicies(policies){
+				let body = $('#groupPoliciesTableBody');
+				body.html('');
+
+				if (!policies || policies.length === 0){
+					body.html('<tr><td colspan="4"><i class="ui green circle check icon"></i> No group policies created</td></tr>');
+					return;
+				}
+
+				policies.forEach(function(gp){
+					const hosts = gp.allowedHosts || [];
+					const hostsDisplay = hosts.length > 0
+						? `<ul style="margin:0; padding-left:1.2em;">${hosts.map(h => '<li>' + escapeHtml(h) + '</li>').join('')}</ul>`
+						: '<span style="opacity:0.5;">all hosts</span>';
+					const descDisplay = escapeHtml(gp.description) || '<span style="opacity:0.5;">—</span>';
+					body.append(`<tr class="gpRow" data-id="${escapeHtml(gp.id)}" data-name="${escapeHtml(gp.name)}" data-description="${escapeHtml(gp.description)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(gp.allowedHosts))}">
+						<td>${escapeHtml(gp.name)}</td>
+						<td>${descDisplay}</td>
+						<td>${hostsDisplay}</td>
+						<td style="text-align:right; white-space:nowrap;">
+							<button class="ui mini icon basic button" title="Edit policy" onclick="openEditGroupPolicy(this);"><i class="edit icon"></i></button>
+							<button class="ui mini icon basic red button" title="Delete policy" onclick="deleteGroupPolicy(this);"><i class="trash icon"></i></button>
+						</td>
+					</tr>`);
+				});
+			}
+
+			function openEditGroupPolicy(btn){
+				const row = $(btn).closest('.gpRow');
+				$('#editGPId').val(row.attr('data-id'));
+				$('#editGPName').val(row.attr('data-name'));
+				$('#editGPDescription').val(row.attr('data-description'));
+				populateHostTable('editGPHostsTable', row.attr('data-allowedhosts'));
+				$('#editGPNameLabel').text(row.attr('data-name'));
+
+				$('#newGroupPolicySection').hide();
+				$('#editGroupPolicySection').show();
+				$('#editGroupPolicySection')[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+
+			function cancelEditGroupPolicy(){
+				populateHostTable('editGPHostsTable', '');
+				$('#editGroupPolicySection').hide();
+				$('#newGroupPolicySection').show();
+			}
+
+			function createGroupPolicy(){
+				const name = $('#newGPName').val().trim();
+				const description = $('#newGPDescription').val().trim();
+				const allowedHosts = getHostsFromTable('newGPHostsTable');
+
+				if (name === ''){
+					notify('Group policy name is required', false);
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/grouppolicy/create',
+					method: 'POST',
+					data: {
+						name: name,
+						description: description,
+						allowedHosts: allowedHosts
+					},
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Group policy created');
+						$('#newGPName').val('');
+						$('#newGPDescription').val('');
+						populateHostTable('newGPHostsTable', '');
+						loadGroupPolicies(function(){ loadUsers(); });
+					}
+				});
+			}
+
+			function saveGroupPolicy(){
+				const id = $('#editGPId').val();
+				const name = $('#editGPName').val().trim();
+				const description = $('#editGPDescription').val().trim();
+				const allowedHosts = getHostsFromTable('editGPHostsTable');
+
+				if (name === ''){
+					notify('Group policy name is required', false);
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/grouppolicy/update',
+					method: 'POST',
+					data: {
+						id: id,
+						name: name,
+						description: description,
+						allowedHosts: allowedHosts
+					},
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Group policy updated');
+						cancelEditGroupPolicy();
+						loadGroupPolicies(function(){ loadUsers(); });
+					}
+				});
+			}
+
+			function deleteGroupPolicy(btn){
+				const row = $(btn).closest('.gpRow');
+				const name = row.attr('data-name');
+				const id = row.attr('data-id');
+				if (!confirm('Delete group policy "' + name + '"? Users assigned to this policy will fall back to their own allowed hosts.')){
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/grouppolicy/delete',
+					method: 'POST',
+					data: { id: id },
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Group policy deleted');
+						loadGroupPolicies(function(){ loadUsers(); });
+					}
+				});
+			}
 		</script>
 	</body>
 </html>
