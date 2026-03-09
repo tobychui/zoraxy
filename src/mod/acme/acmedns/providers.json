@@ -1104,6 +1104,33 @@
    }
   ]
  },
+ "corenetworks": {
+  "Name": "corenetworks",
+  "ConfigableFields": [
+   {
+    "Title": "Login",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "cpanel": {
   "Name": "cpanel",
   "ConfigableFields": [
@@ -1714,6 +1741,37 @@
    {
     "Title": "HTTPClient",
     "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "exoscale": {
+  "Name": "exoscale",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APISecret",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Endpoint",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "TTL",
+    "Datatype": "int64"
    }
   ]
  },
@@ -4267,6 +4325,29 @@
   ],
   "HiddenFields": []
  },
+ "timewebcloud": {
+  "Name": "timewebcloud",
+  "ConfigableFields": [
+   {
+    "Title": "AuthToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "todaynic": {
   "Name": "todaynic",
   "ConfigableFields": [
@@ -4569,6 +4650,40 @@
    },
    {
     "Title": "DomainName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": []
+ },
+ "volcengine": {
+  "Name": "volcengine",
+  "ConfigableFields": [
+   {
+    "Title": "AccessKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "SecretKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Region",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Host",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Scheme",
     "Datatype": "string"
    },
    {

@@ -19,11 +19,13 @@ const (
 )
 
 type User struct {
-	ID           string   `json:"id"` //uuidv4
-	Username     string   `json:"username"`
-	Email        string   `json:"email"` //optional
-	PasswordHash string   `json:"passwordHash"`
-	AllowedHosts []string `json:"allowedHosts"` //optional, if empty, allow all hosts
+	ID             string   `json:"id"` //uuidv4
+	Username       string   `json:"username"`
+	Email          string   `json:"email"` //optional, alternative login identifier if provided
+	PasswordHash   string   `json:"passwordHash"`
+	UseGroupPolicy bool     `json:"useGroupPolicy"` //Use group poliy instead of AllowedHosts for checking access
+	GroupID        string   `json:"groupId"`        //GroupID is the group policy ID that the user belongs to
+	AllowedHosts   []string `json:"allowedHosts"`   //optional, if empty, allow all hosts
 }
 
 // AuthRouterOptions contains configuration for the ZorxAuth router
@@ -40,7 +42,9 @@ type AuthRouterOptions struct {
 	SSOSessionSetURL         string `json:"sso_session_set_url"`         //URL of the SSO session set endpoint
 	CookieName               string `json:"cookie_name"`                 //Name of the session cookie
 	CookieDuration           int    `json:"cookie_duration"`             //Duration in seconds for the session cookie
-	CookieDurationRememberMe int    `json:"cookie_duration_remember_me"` //Duration in seconds for the session cookie when "Remember Me" is selected}
+	CookieDurationRememberMe int    `json:"cookie_duration_remember_me"` //Duration in seconds for the session cookie when "Remember Me" is selected
+	/* Storage Options */
+	ConfigFolderPath string `json:"config_folder_path"` //Path to the config folder for storing group policy files. Default: ./conf/sso/zorxauth
 }
 
 type BrowserSession struct {
@@ -65,6 +69,9 @@ type AuthRouter struct {
 	cookieIdStore       sync.Map //browserSessionID (cookie value) -> *BrowserSession
 	gatewayServer       *GatewayServer
 
+	/* Group Policies */
+	groupPolicies sync.Map // id (string) -> *GroupPolicy
+
 	/* Login rate limiting */
 	loginAttemptCounter sync.Map  // IP -> *int64, total attempts in current minute window
 	loginFailureCounter sync.Map  // IP -> *int64, consecutive failures used for exponential backoff
@@ -83,5 +90,6 @@ func getDefaultOptions() *AuthRouterOptions {
 		CookieName:               "zr_xauth_session",
 		CookieDuration:           3600,
 		CookieDurationRememberMe: 604800, // 7 days
+		ConfigFolderPath:         "./conf/sso/zorxauth",
 	}
 }

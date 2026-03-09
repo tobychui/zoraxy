@@ -113,6 +113,12 @@ func RegisterZorxAuthUserManagementAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/zorxauth/users/update", zorxAuthRouter.HandleUserUpdate)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/delete", zorxAuthRouter.HandleUserDelete)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/logoutAll", zorxAuthRouter.HandleLogoutAllUsers)
+
+	// Group Policy management
+	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/list", zorxAuthRouter.HandleGroupPolicyList)
+	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/create", zorxAuthRouter.HandleGroupPolicyCreate)
+	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/update", zorxAuthRouter.HandleGroupPolicyUpdate)
+	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/delete", zorxAuthRouter.HandleGroupPolicyDelete)
 }
 
 // Register the APIs for redirection rules management functions

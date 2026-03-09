@@ -84,13 +84,6 @@ func getExcludedDNSProviders() []string {
 		"selectelv2",   //Not sure why not working with our code generator
 		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
 		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
-
-		//The following are incomaptible with Zoraxy due to dependencies issue,
-		//might be resolved in future
-		"corenetworks",
-		"timewebcloud",
-		"volcengine",
-		"exoscale",
 	}
 }
 

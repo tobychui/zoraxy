@@ -68,6 +68,9 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 	// Load gateway sessions from database
 	authRouter.loadGatewaySessions()
 
+	// Initialize group policy store (load from disk)
+	authRouter.initGroupPolicyStore()
+
 	// Start the per-minute login attempt counter reset ticker
 	go authRouter.startLoginRateLimitTicker()
 

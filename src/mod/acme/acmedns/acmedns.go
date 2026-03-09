@@ -44,6 +44,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/conoha"
 	"github.com/go-acme/lego/v4/providers/dns/conohav3"
 	"github.com/go-acme/lego/v4/providers/dns/constellix"
+	"github.com/go-acme/lego/v4/providers/dns/corenetworks"
 	"github.com/go-acme/lego/v4/providers/dns/cpanel"
 	"github.com/go-acme/lego/v4/providers/dns/ddnss"
 	"github.com/go-acme/lego/v4/providers/dns/derak"
@@ -66,6 +67,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/edgeone"
 	"github.com/go-acme/lego/v4/providers/dns/efficientip"
 	"github.com/go-acme/lego/v4/providers/dns/epik"
+	"github.com/go-acme/lego/v4/providers/dns/exoscale"
 	"github.com/go-acme/lego/v4/providers/dns/f5xc"
 	"github.com/go-acme/lego/v4/providers/dns/freemyip"
 	"github.com/go-acme/lego/v4/providers/dns/gandi"
@@ -157,6 +159,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/syse"
 	"github.com/go-acme/lego/v4/providers/dns/technitium"
 	"github.com/go-acme/lego/v4/providers/dns/tencentcloud"
+	"github.com/go-acme/lego/v4/providers/dns/timewebcloud"
 	"github.com/go-acme/lego/v4/providers/dns/todaynic"
 	"github.com/go-acme/lego/v4/providers/dns/transip"
 	"github.com/go-acme/lego/v4/providers/dns/ultradns"
@@ -168,6 +171,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/vinyldns"
 	"github.com/go-acme/lego/v4/providers/dns/virtualname"
 	"github.com/go-acme/lego/v4/providers/dns/vkcloud"
+	"github.com/go-acme/lego/v4/providers/dns/volcengine"
 	"github.com/go-acme/lego/v4/providers/dns/vscale"
 	"github.com/go-acme/lego/v4/providers/dns/vultr"
 	"github.com/go-acme/lego/v4/providers/dns/webnames"
@@ -504,6 +508,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return constellix.NewDNSProviderConfig(cfg)
+	case "corenetworks":
+		cfg := corenetworks.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return corenetworks.NewDNSProviderConfig(cfg)
 	case "cpanel":
 		cfg := cpanel.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -702,6 +715,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return epik.NewDNSProviderConfig(cfg)
+	case "exoscale":
+		cfg := exoscale.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return exoscale.NewDNSProviderConfig(cfg)
 	case "f5xc":
 		cfg := f5xc.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1521,6 +1543,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return tencentcloud.NewDNSProviderConfig(cfg)
+	case "timewebcloud":
+		cfg := timewebcloud.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return timewebcloud.NewDNSProviderConfig(cfg)
 	case "todaynic":
 		cfg := todaynic.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1620,6 +1651,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return vkcloud.NewDNSProviderConfig(cfg)
+	case "volcengine":
+		cfg := volcengine.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return volcengine.NewDNSProviderConfig(cfg)
 	case "vscale":
 		cfg := vscale.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
