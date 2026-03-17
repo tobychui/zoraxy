@@ -109,11 +109,12 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 				hostIdAndName = hostIdAndName + " (upstream:" + strconv.Itoa(i) + ")"
 			}
 			UptimeTargets = append(UptimeTargets, &uptime.Target{
-				ID:        hostIdAndName,
-				Name:      hostIdAndName,
-				URL:       url,
-				Protocol:  protocol,
-				ProxyType: uptime.ProxyType_Host,
+				ID:                hostIdAndName,
+				Name:              hostIdAndName,
+				URL:               url,
+				Protocol:          protocol,
+				ProxyType:         uptime.ProxyType_Host,
+				SkipTlsValidation: origin.SkipCertValidations,
 			})
 
 			//Add each virtual directory into the list
@@ -126,11 +127,12 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 				}
 				//Add the root url
 				UptimeTargets = append(UptimeTargets, &uptime.Target{
-					ID:        hostid + vdir.MatchingPath,
-					Name:      hostid + vdir.MatchingPath,
-					URL:       url,
-					Protocol:  protocol,
-					ProxyType: uptime.ProxyType_Vdir,
+					ID:                hostid + vdir.MatchingPath,
+					Name:              hostid + vdir.MatchingPath,
+					URL:               url,
+					Protocol:          protocol,
+					ProxyType:         uptime.ProxyType_Vdir,
+					SkipTlsValidation: origin.SkipCertValidations,
 				})
 
 			}

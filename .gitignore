@@ -66,3 +66,4 @@ www/html/index.html
 /build
 src/zoraxy.exe~
 /src/www
+/src/conf.old_*

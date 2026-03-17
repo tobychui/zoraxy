@@ -285,7 +285,10 @@ func (v *Viewer) senatizeLogFilenameInput(filename string) string {
 	filename = strings.TrimSuffix(filename, ".log.gz")
 	filename = strings.TrimSuffix(filename, ".log")
 	filename = filepath.ToSlash(filename)
-	filename = strings.ReplaceAll(filename, "../", "")
+	filename = filepath.Clean(filename)
+	if strings.Contains(filename, "..") {
+		return ""
+	}
 	//Check if .log.gz or .log exists
 	if utils.FileExists(filepath.Join(v.option.RootFolder, filename+".log")) {
 		return filepath.Join(v.option.RootFolder, filename+".log")

@@ -65,7 +65,19 @@
         $.get("/api/utm/list", function(data){
             let records = data;
             renderRecords(records);
-        })
+        }).fail(function(jqXHR){
+            if (jqXHR.status === 500){
+                $("#utmrender").html(`<div class="ui basic segment">
+                    <h4 class="ui header">
+                        <i class="yellow clock outline icon"></i>
+                        <div class="content">
+                            Uptime Monitor is still initializing
+                            <div class="sub header">The uptime monitoring service is starting up. Please wait a moment and try again.</div>
+                        </div>
+                    </h4>
+                </div>`);
+            }
+        });
     }
     initUptimeTable();
 
