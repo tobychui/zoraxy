@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	logModuleName = "uptime-monitor"
+	LOG_MODULE_NAME           = "uptime-monitor"
+	UPTIME_MONITOR_USER_AGENT = "zoraxy-uptime/1.3"
 )
 
 type Record struct {
@@ -29,11 +30,12 @@ const (
 )
 
 type Target struct {
-	ID        string
-	Name      string
-	URL       string
-	Protocol  string
-	ProxyType ProxyType
+	ID                string
+	Name              string
+	URL               string
+	Protocol          string
+	ProxyType         ProxyType
+	SkipTlsValidation bool
 }
 
 type Config struct {

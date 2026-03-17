@@ -1,9 +1,11 @@
 package uptime
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"strconv"
@@ -46,7 +48,7 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 			case <-done:
 				return
 			case t := <-ticker.C:
-				thisMonitor.Config.Logger.PrintAndLog(logModuleName, "Uptime updated - "+strconv.Itoa(int(t.Unix())), nil)
+				thisMonitor.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Uptime updated - "+strconv.Itoa(int(t.Unix())), nil)
 				thisMonitor.ExecuteUptimeCheck()
 			}
 		}
@@ -58,7 +60,7 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 func (m *Monitor) ExecuteUptimeCheck() {
 	if m.runningUptimeChecks {
 		//Prevent overlapping uptime checks
-		m.Config.Logger.PrintAndLog(logModuleName, "Another uptime check is running in the background. Skipped", nil)
+		m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Another uptime check is running in the background. Skipped", nil)
 		return
 	}
 	m.runningUptimeChecks = true
@@ -82,7 +84,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 			}
 
 		} else {
-			m.Config.Logger.PrintAndLog(logModuleName, "Unknown protocol: "+target.Protocol, errors.New("unsupported protocol"))
+			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Unknown protocol: "+target.Protocol, errors.New("unsupported protocol"))
 			continue
 		}
 
@@ -188,10 +190,10 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 // Get website stauts with latency given URL, return is conn succ and its latency and status code
 func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
-	statusCode, err := m.getWebsiteStatus(target.URL)
+	statusCode, err := m.getWebsiteStatus(target.URL, target.SkipTlsValidation)
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
-		m.Config.Logger.PrintAndLog(logModuleName, "Ping upstream timeout. Assume offline", err)
+		m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Ping upstream timeout. Assume offline", err)
 
 		// Check if this is the first record
 		// sometime after startup the first check may fail due to network issues
@@ -224,21 +226,30 @@ func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int)
 
 }
 
-func (m *Monitor) getWebsiteStatus(url string) (int, error) {
+func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool) (int, error) {
 	// Create a one-time use cookie jar to store cookies
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return 0, err
 	}
 
+	transport := &http.Transport{}
+	if skipTLSVerification {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport.DialTLS = func(network, addr string) (net.Conn, error) {
+			return tls.Dial(network, addr, &tls.Config{InsecureSkipVerify: true})
+		}
+	}
+
 	client := http.Client{
-		Jar:     jar,
-		Timeout: 5 * time.Second,
+		Jar:       jar,
+		Timeout:   5 * time.Second,
+		Transport: transport,
 	}
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header = http.Header{
-		"User-Agent": {"zoraxy-uptime/1.2"},
+		"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 	}
 
 	resp, err := client.Do(req)
@@ -253,12 +264,12 @@ func (m *Monitor) getWebsiteStatus(url string) (int, error) {
 		}
 
 		if m.Config.Verbal {
-			m.Config.Logger.PrintAndLog(logModuleName, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
+			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
 		}
 
 		req, _ := http.NewRequest("GET", rewriteURL, nil)
 		req.Header = http.Header{
-			"User-Agent": {"zoraxy-uptime/1.2"},
+			"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 		}
 
 		resp, err := client.Do(req)
