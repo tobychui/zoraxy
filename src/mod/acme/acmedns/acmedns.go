@@ -6,6 +6,7 @@ package acmedns
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
@@ -190,7 +191,7 @@ import (
 
 //name is the DNS provider name, e.g. cloudflare or gandi
 //JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"far","Password":"boo"}
-func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64)(challenge.Provider, error){
+func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64, hostURL *url.URL)(challenge.Provider, error){
 	pgDuration := time.Duration(propagationTimeout) * time.Second
 	plInterval := time.Duration(pollingInterval) * time.Second
 	switch name {
@@ -291,6 +292,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		}
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
+		cfg.Endpoint = hostURL
 		return autodns.NewDNSProviderConfig(cfg)
 	case "axelname":
 		cfg := axelname.NewDefaultConfig()
@@ -417,6 +419,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		}
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
+		cfg.Endpoint = hostURL
 		return checkdomain.NewDNSProviderConfig(cfg)
 	case "civo":
 		cfg := civo.NewDefaultConfig()
@@ -678,6 +681,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		}
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
+		cfg.Endpoint = hostURL
 		return easydns.NewDNSProviderConfig(cfg)
 	case "edgecenter":
 		cfg := edgecenter.NewDefaultConfig()
@@ -1326,6 +1330,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		}
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
+		cfg.Host = hostURL
 		return pdns.NewDNSProviderConfig(cfg)
 	case "plesk":
 		cfg := plesk.NewDefaultConfig()
@@ -1623,6 +1628,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		}
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
+		cfg.BaseURL = hostURL
 		return versio.NewDNSProviderConfig(cfg)
 	case "vinyldns":
 		cfg := vinyldns.NewDefaultConfig()
@@ -1767,6 +1773,7 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		}
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
+		cfg.Endpoint = hostURL
 		return zoneee.NewDNSProviderConfig(cfg)
 	case "zonomi":
 		cfg := zonomi.NewDefaultConfig()
