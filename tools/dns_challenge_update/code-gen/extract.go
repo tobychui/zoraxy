@@ -37,7 +37,7 @@ import (
 )
 
 //name is the DNS provider name, e.g. cloudflare or gandi
-//JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"far","Password":"boo"}
+//JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"foo","Password":"bar"}
 func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64, hostURL *url.URL)(challenge.Provider, error){
 	pgDuration := time.Duration(propagationTimeout) * time.Second
 	plInterval := time.Duration(pollingInterval) * time.Second
