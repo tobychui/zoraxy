@@ -50,12 +50,19 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 		if configDataType == "*url.URL" {
 			//Extract the hostURL from dnsCredentialsMap and delete it from the map
 			//Prevent Unmarshal error when try to unmarshal the json to provider config struct on *url.URL type (ex. powerdns Host field)
-			urlStr := dnsCredentialsMap[configTitle].(string)
+			urlStrRaw := dnsCredentialsMap[configTitle]
+			if urlStrRaw == nil {
+				//If the url field is not provided, check next *url.URL field
+				continue
+			}
+			urlStr := urlStrRaw.(string)
 			delete(dnsCredentialsMap, configTitle)
 			hostURL, err = url.Parse(urlStr)
 			if err != nil {
 				return nil, err
 			}
+			//Select first field
+			break
 		}
 	}
 
