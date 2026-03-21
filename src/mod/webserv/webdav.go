@@ -52,7 +52,6 @@ func (wd *WebDAVServer) basicAuthMiddleware(next http.Handler) http.Handler {
 		if !ok || !wd.authAgent.ValidateUsernameAndPassword(username, password) {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Zoraxy WebDAV"`)
 			w.Header().Set("Dav", "1, 2")
-			w.Header().Set("Allow", "OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
