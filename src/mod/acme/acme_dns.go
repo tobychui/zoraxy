@@ -2,6 +2,7 @@ package acme
 
 import (
 	"encoding/json"
+	"net/url"
 	"strconv"
 
 	"github.com/go-acme/lego/v4/challenge"
@@ -39,6 +40,32 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 		}
 	}
 
+	providerConfigStructure, err := acmedns.GetProviderConfigStructure(dnsProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	var hostURL *url.URL = nil
+	for configTitle, configDataType := range providerConfigStructure {
+		if configDataType == "*url.URL" {
+			//Extract the hostURL from dnsCredentialsMap and delete it from the map
+			//Prevent Unmarshal error when try to unmarshal the json to provider config struct on *url.URL type (ex. powerdns Host field)
+			urlStrRaw := dnsCredentialsMap[configTitle]
+			if urlStrRaw == nil {
+				//If the url field is not provided, check next *url.URL field
+				continue
+			}
+			urlStr := urlStrRaw.(string)
+			delete(dnsCredentialsMap, configTitle)
+			hostURL, err = url.Parse(urlStr)
+			if err != nil {
+				return nil, err
+			}
+			//Select first field
+			break
+		}
+	}
+
 	//Restructure dnsCredentials string from map
 	dnsCredentialsBytes, err := json.Marshal(dnsCredentialsMap)
 	if err != nil {
@@ -52,5 +79,6 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 		dnsCredentials,
 		int64(userDefinedPropagationTimeout),
 		int64(userDefinedPollingInterval),
+		hostURL,
 	)
 }

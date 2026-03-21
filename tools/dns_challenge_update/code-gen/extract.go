@@ -29,6 +29,7 @@ var defTemplate string = `package acmedns
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/go-acme/lego/v4/challenge"
@@ -36,8 +37,8 @@ import (
 )
 
 //name is the DNS provider name, e.g. cloudflare or gandi
-//JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"far","Password":"boo"}
-func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64)(challenge.Provider, error){
+//JSON (js) must be in key-value string that match ConfigableFields Title in providers.json, e.g. {"Username":"foo","Password":"bar"}
+func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64, pollingInterval int64, hostURL *url.URL)(challenge.Provider, error){
 	pgDuration := time.Duration(propagationTimeout) * time.Second
 	plInterval := time.Duration(pollingInterval) * time.Second
 	switch name {
@@ -236,6 +237,7 @@ func main() {
 		strctContentLines := strings.Split(strctContent, "\n")
 		configKeys := []*Field{}
 		hiddenKeys := []*Field{}
+		hostKey := "" // Assume only one url.URL field exist, and this field is used for host/endpoint URL of the provider
 		for _, lineDef := range strctContentLines {
 			fields := strings.Fields(lineDef)
 			if len(fields) < 2 || strings.HasPrefix(fields[0], "//") {
@@ -246,7 +248,11 @@ func main() {
 			//Filter out the fields that is not user-filled
 			switch fields[1] {
 			case "*url.URL":
-				fallthrough
+				hostKey = fields[0]
+				configKeys = append(configKeys, &Field{
+					Title:    fields[0],
+					Datatype: fields[1],
+				})
 			case "string":
 				//Add exception rule for gandi baseURL
 				if (providerName == "gandi" || providerName == "gandiv5") && fields[0] == "BaseURL" {
@@ -314,20 +320,21 @@ func main() {
 		err := json.Unmarshal([]byte(js), &cfg)
 		if err != nil {
 			return nil, err
-		}
+		}`
+
+		if providerName != "acmedns" {
+			codeSegment += `
 		cfg.PropagationTimeout = pgDuration
-		cfg.PollingInterval = plInterval
-		return ` + providerName + `.NewDNSProviderConfig(cfg)`
-		if providerName == "acmedns" {
-			codeSegment = `
-	case "` + providerName + `":
-		cfg := ` + providerName + `.NewDefaultConfig()
-		err := json.Unmarshal([]byte(js), &cfg)
-		if err != nil {
-			return nil, err
+		cfg.PollingInterval = plInterval`
 		}
-		return ` + providerName + `.NewDNSProviderConfig(cfg)`
+
+		if hostKey != "" {
+			codeSegment += `
+		cfg.` + hostKey + ` = hostURL`
 		}
+		codeSegment += `
+		return ` + providerName + `.NewDNSProviderConfig(cfg)`
+
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"
 	}
