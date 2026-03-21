@@ -1,3 +1,19 @@
+# v3.3.2 21 Mar 2026
+
++ Added Zoraxy Auth SSO
++ Typo fixes by [coddec](https://github.com/coddec)
++ Updated IP blacklist description text by [Psychoboy](https://github.com/Psychoboy)
++ Fix: forward auth saving and defaults by [CrazyWolf13](https://github.com/CrazyWolf13)
++ Update lego to v4.32.0, fix shell script and enable providers for lego by [zen8841](https://github.com/zen8841)
++ Remove: docker webfm env var by [PassiveLemon](https://github.com/PassiveLemon)
++ Fixed: missing headers for WebDAV [#1079](https://github.com/tobychui/zoraxy/issues/1079)
++ Improved: fast-geoip mode takes much less RAM, around now 150MB (compared to previously 800+ MB) fixes [#1007](https://github.com/tobychui/zoraxy/issues/1007)
++ Fixed: Uptime monitor fails when target requires https [#1076](https://github.com/tobychui/zoraxy/issues/1076)
++ Fixed: DNS Challenge Breaks Zoraxy [#1019](https://github.com/tobychui/zoraxy/issues/1019)
++ Fixed: Network Status auto stretch [#669](https://github.com/tobychui/zoraxy/issues/669)
++ Fixed: logview.html executes javascript [#1028](https://github.com/tobychui/zoraxy/issues/1028)
++ Updated dependencies
+
 # v3.3.1 28 Jan 2026
 
 + Add captcha gating by [yeungalan](https://github.com/yeungalan)
@@ -6,7 +22,7 @@
 + [docs] Fix typo in SniffResult constant by [kuhnchris](https://github.com/kuhnchris)
 + Fix incorrect status codes and missing error pages in production by [Restorn](https://github.com/kuhnchris)
 + UPDATE_GEOIP should only update if true by [kuhnchris](https://github.com/kuhnchris)
-+ allow plugin API to modify proxy upstreams by [kuhnchris](https://github.com/kuhnchris
++ Allow plugin API to modify proxy upstreams by [kuhnchris](https://github.com/kuhnchris
 + fix: error checking origin to avoid goroutine panic by [kuhnchris](https://github.com/kuhnchris)
 + Error message & ":" parsing by [kuhnchris](https://github.com/kuhnchris)
 + fix: ui error on null container ports by [eyerrock](https://github.com/eyerrock)
@@ -19,9 +35,9 @@
 + Fixed empty response on virtual directories on http while tls is enabled [#941](https://github.com/tobychui/zoraxy/issues/941)
 + Fixed high speed toggling cause system panic [#952](https://github.com/tobychui/zoraxy/issues/952)
 + support acme test/staging mode from flags by [jimmyGALLAND](https://github.com/jimmyGALLAND)
-+ fix: Unable to remove path prefix authentication exclusions [#972](https://github.com/tobychui/zoraxy/issues/972)
-+ fix: Zoraxy docker crash [#967](https://github.com/tobychui/zoraxy/issues/967)
-+ fix: web Directory Loader not visible [#980](https://github.com/tobychui/zoraxy/issues/980)
++ Fix: Unable to remove path prefix authentication exclusions [#972](https://github.com/tobychui/zoraxy/issues/972)
++ Fix: Zoraxy docker crash [#967](https://github.com/tobychui/zoraxy/issues/967)
++ Fix: web Directory Loader not visible [#980](https://github.com/tobychui/zoraxy/issues/980)
 
 
 # v3.3.0 06 Dec 2025
@@ -35,8 +51,8 @@
 + Fixed Disable load balance and do not pause upstream for 60s [#896](https://github.com/tobychui/zoraxy/issues/896)
 + Fixed ACME bug [#903](https://github.com/tobychui/zoraxy/issues/903)
 + Fixed redirection bug [#900](https://github.com/tobychui/zoraxy/issues/900)
-+ smaller bugfixes
-+ updated dependecies
++ Smaller bugfixes
++ Updated dependencies
 
 
 # v3.2.9 2 Nov 2025
