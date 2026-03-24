@@ -64,7 +64,9 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 		{"1.68.12.37", "CN"},
 		{"1.74.243.23", "JP"},
 		{"2a01:4f9:3070:124a:1234:5678:9abc:def0", "DE"},
-		{"2a01:4f9:3070:124b:dead:beef:cafe:1", "FI"},
+		{"2a01:4f9:3070:124b:dead:beef:cafe:1", "DE"},
+		{"2a00:20:4290:164d:a4a3:efb6:aea1:4b8e", "DE"},
+		{"100.67.181.105", "CarrierNAT"},
 	}
 
 	for _, testcase := range knownIpCountryMap {
