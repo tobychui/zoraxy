@@ -51,6 +51,14 @@ func TestReplaceLocationHost(t *testing.T) {
 			expectedResult: "https://proxy.example.com/blog/post?id=1",
 			expectError:    false,
 		},
+		{
+			name:           "TLS upstream with non-standard port redirect",
+			urlString:      "https://truenas.lan:4443/ui",
+			rrr:            &dpcore.ResponseRewriteRuleSet{ProxyDomain: "truenas.lan:4443", OriginalHost: "truenas.mydomain", UseTLS: true},
+			useTLS:         true,
+			expectedResult: "https://truenas.mydomain/ui",
+			expectError:    false,
+		},
 	}
 
 	for _, tt := range tests {
