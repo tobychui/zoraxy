@@ -104,6 +104,11 @@ func acmeDeregisterSpecialRoutingRule() {
 
 // This function check if the renew setup is satisfied. If not, toggle them automatically
 func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
+	if isLocalNodeManagedByPrimary() {
+		utils.SendErrorResponse(w, getLocalNodeManagedACMEMessage())
+		return
+	}
+
 	requireRestoreHttpsRedirect := false
 	requireRestorePort80 := false
 	dnsPara, _ := utils.PostBool(r, "dns")

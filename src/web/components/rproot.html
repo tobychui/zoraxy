@@ -1,8 +1,17 @@
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="rootPage">
     <div class="ui basic segment">
         <h2>Default Site</h2>
         <p>Default routing options for inbound traffic</p>
+        <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+            <div class="header">Managed by Primary Node</div>
+            <p>Default site changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
+        </div>
         <div class="ui form">
+            <div class="field hideInNodeMode">
+                <label>Target</label>
+                <div id="rootAssignedNodeDropdown"></div>
+                <small>Select primary to edit the local default site, or choose a node to configure its override.</small>
+            </div>
             <div class="grouped fields">
                 <label>What to show when Zoraxy is hit with an unknown Host?</label>
                 <div class="field">
@@ -66,7 +75,7 @@
         </div>
         
         <!-- Redirect as default site Options-->
-        <div id="defaultSiteRedirectOptions" class="ui basic segment advanceoptions defaultSiteOptionDetails" style="display:none;"">
+        <div id="defaultSiteRedirectOptions" class="ui basic segment advanceoptions defaultSiteOptionDetails" style="display:none;">
             <div class="ui form">
                 <div class="field">
                     <label>Redirect target domain</label>
@@ -79,13 +88,91 @@
         </div>
 
         <button class="ui basic button" onclick="setProxyRoot(this)"><i class="green checkmark icon" ></i> Apply Changes</button>
-        <button class="ui basic button" onclick="initRootInfo()"><i class="refresh icon" ></i> Reset</button>
+        <button id="clearRootNodeOverrideButton" class="ui basic red button" style="display:none;" onclick="clearRootNodeOverride(this)"><i class="undo icon"></i> Use Primary Default</button>
+        <button class="ui basic button" data-node-lock-exempt onclick="initRootInfo()"><i class="refresh icon" ></i> Reset</button>
         <br>
     </div>
 </div>
 <script>
     var currentDefaultSiteOption = 0; //For enum see typedef.go
+    var currentRootConfig = null;
     $("#advanceRootSettings").accordion();
+
+    function getSelectedRootTargetNodeId(){
+        return ($("#rootAssignedNodeDropdown input[name='assignedNodeId']").val() || "").trim();
+    }
+
+    function getRootConfigForTarget(targetNodeId){
+        if (currentRootConfig == null){
+            return null;
+        }
+
+        if (targetNodeId == ""){
+            return currentRootConfig;
+        }
+
+        if (currentRootConfig.NodeDefaultSites != undefined && currentRootConfig.NodeDefaultSites[targetNodeId] != undefined){
+            let override = currentRootConfig.NodeDefaultSites[targetNodeId];
+            return {
+                DefaultSiteOption: override.default_site_option,
+                DefaultSiteValue: override.default_site_value,
+                ActiveOrigins: [{
+                    OriginIpOrDomain: override.origin_ip_or_domain,
+                    RequireTLS: override.require_tls,
+                    SkipCertValidations: override.skip_cert_validations
+                }]
+            };
+        }
+
+        return currentRootConfig;
+    }
+
+    function updateRootNodeOverrideButtonState(){
+        if (getSelectedRootTargetNodeId() == ""){
+            $("#clearRootNodeOverrideButton").hide();
+        }else{
+            $("#clearRootNodeOverrideButton").show();
+        }
+    }
+
+    function populateRootForm(targetConfig){
+        if (targetConfig == null){
+            return;
+        }
+
+        var $radios = $('input:radio[name=defaultsiteOption]');
+        let proxyType = targetConfig.DefaultSiteOption;
+        if (proxyType == 0){
+            $radios.filter('[value=webserver]').prop('checked', true);
+        }else if (proxyType == 1){
+            $radios.filter('[value=proxy]').prop('checked', true);
+            $("#proxyRoot").val(targetConfig.DefaultSiteValue);
+        }else if (proxyType == 2){
+            $radios.filter('[value=redirect]').prop('checked', true);
+            $("#redirectDomain").val(targetConfig.DefaultSiteValue);
+        }else if (proxyType == 3){
+            $radios.filter('[value=notfound]').prop('checked', true);
+        }else if (proxyType == 4){
+            $radios.filter('[value=closeresp]').prop('checked', true);
+        }
+
+        updateAvaibleDefaultSiteOptions();
+
+        if (targetConfig.ActiveOrigins != undefined && targetConfig.ActiveOrigins.length > 0){
+            $("#proxyRoot").val(targetConfig.ActiveOrigins[0].OriginIpOrDomain);
+            if (targetConfig.ActiveOrigins[0].RequireTLS){
+                $("#rootReqTLS").parent().checkbox("set checked");
+            }else{
+                $("#rootReqTLS").parent().checkbox("set unchecked");
+            }
+        }
+
+        updateRootNodeOverrideButtonState();
+    }
+
+    function refreshRootTargetSelection(){
+        populateRootForm(getRootConfigForTarget(getSelectedRootTargetNodeId()));
+    }
 
     //Handle toggle events of option radio boxes
     function updateAvaibleDefaultSiteOptions(){
@@ -134,26 +221,8 @@
             if (data == null){
                 msgbox("Default site load failed", false);
             }else{
-                var $radios = $('input:radio[name=defaultsiteOption]');
-                let proxyType = data.DefaultSiteOption;
-                //See typedef.go for enum conversion
-                if (proxyType == 0){
-                    $radios.filter('[value=webserver]').prop('checked', true);
-                }else if (proxyType == 1){
-                    $radios.filter('[value=proxy]').prop('checked', true);
-                    $("#proxyRoot").val(data.DefaultSiteValue);
-                }else if (proxyType == 2){
-                    $radios.filter('[value=redirect]').prop('checked', true);
-                    $("#redirectDomain").val(data.DefaultSiteValue);
-                }else if (proxyType == 3){
-                    $radios.filter('[value=notfound]').prop('checked', true);
-                }else if (proxyType == 4){
-                    $radios.filter('[value=closeresp]').prop('checked', true);
-                }
-                updateAvaibleDefaultSiteOptions();
-                
-                $("#proxyRoot").val(data.ActiveOrigins[0].OriginIpOrDomain);
-                checkRootRequireTLS(data.ActiveOrigins[0].OriginIpOrDomain);
+                currentRootConfig = data;
+                refreshRootTargetSelection();
             }
 
             if (callback != undefined){
@@ -161,6 +230,11 @@
             }
         });
     }
+    renderAssignedNodeDropdown($("#rootAssignedNodeDropdown"), "", function(){
+        refreshRootTargetSelection();
+    }, true);
+    applyNodeModeVisibility($("#rootPage"), true);
+    applyNodeWriteLockState($("#rootPage"));
     initRootInfo(function(){
         bindDefaultSiteRadioCheckboxEvents();
     });
@@ -244,6 +318,7 @@
         }
 
         //Create the endpoint by calling add
+        let targetNodeId = getSelectedRootTargetNodeId();
         $.cjax({
             url: "/api/proxy/add",
             data: {
@@ -252,6 +327,7 @@
                 "ep": newpr,
                 "defaultSiteOpt": currentDefaultSiteOption,
                 "defaultSiteVal":defaultSiteValue,
+                "targetNodeId": targetNodeId,
             },
             method: "POST",
             success: function(data){
@@ -285,6 +361,54 @@
             }
         });
 
+    }
+
+    function clearRootNodeOverride(btn=undefined){
+        let targetNodeId = getSelectedRootTargetNodeId();
+        if (targetNodeId == ""){
+            return;
+        }
+        let endpointValue = $("#proxyRoot").val().trim();
+        if (endpointValue == "" && currentDefaultSiteOption == 0){
+            endpointValue = "127.0.0.1:" + $("#webserv_listenPort").val();
+        }
+        let defaultSiteValue = "";
+        if (currentDefaultSiteOption == 1){
+            defaultSiteValue = $("#proxyRoot").val().trim();
+        }else if (currentDefaultSiteOption == 2){
+            defaultSiteValue = $("#redirectDomain").val().trim();
+        }
+
+        if (btn != undefined){
+            $(btn).addClass("disabled");
+        }
+
+        $.cjax({
+            url: "/api/proxy/add",
+            method: "POST",
+            data: {
+                "type": "root",
+                "targetNodeId": targetNodeId,
+                "clearNodeOverride": true,
+                "ep": endpointValue,
+                "tls": $("#rootReqTLS")[0].checked,
+                "defaultSiteOpt": currentDefaultSiteOption,
+                "defaultSiteVal": defaultSiteValue
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                }else{
+                    msgbox("Node default site reverted to primary");
+                    initRootInfo();
+                }
+            },
+            complete: function(){
+                if (btn != undefined){
+                    $(btn).removeClass("disabled");
+                }
+            }
+        });
     }
 
 </script>

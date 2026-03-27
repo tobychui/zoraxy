@@ -57,6 +57,7 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		//Assume all devices
 		deviceType = "all"
 	}
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
 
 	redirectionStatusCode, err := strconv.Atoi(redirectTypeString)
 	if err != nil {
@@ -64,7 +65,7 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType)
+	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType, assignedNodeID)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -129,6 +130,7 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		//Assume all devices
 		deviceType = "all"
 	}
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
 
 	redirectionStatusCode, err := strconv.Atoi(redirectTypeString)
 	if err != nil {
@@ -136,7 +138,7 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType)
+	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType, assignedNodeID)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return

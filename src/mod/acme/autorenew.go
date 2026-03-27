@@ -38,6 +38,7 @@ type AutoRenewer struct {
 	EarlyRenewDays    int //How many days before cert expire to renew certificate
 	TickerstopChan    chan bool
 	Logger            *logger.Logger //System wide logger
+	DisableReason     string
 }
 
 type ExpiredCerts struct {
@@ -208,6 +209,11 @@ func (a *AutoRenewer) HandleRenewPolicy(w http.ResponseWriter, r *http.Request) 
 }
 
 func (a *AutoRenewer) HandleRenewNow(w http.ResponseWriter, r *http.Request) {
+	if a.IsDisabled() {
+		utils.SendErrorResponse(w, a.GetDisableReason())
+		return
+	}
+
 	renewedDomains, err := a.CheckAndRenewCertificates()
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
@@ -236,6 +242,10 @@ func (a *AutoRenewer) HandleAutoRenewEnable(w http.ResponseWriter, r *http.Reque
 			utils.SendErrorResponse(w, "invalid or empty enable state")
 		}
 		if val {
+			if a.IsDisabled() {
+				utils.SendErrorResponse(w, a.GetDisableReason())
+				return
+			}
 			//Check if the email is not empty
 			if a.RenewerConfig.Email == "" {
 				utils.SendErrorResponse(w, "Email is not set")
@@ -422,6 +432,83 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 func (a *AutoRenewer) saveRenewConfigToFile() error {
 	js, _ := json.MarshalIndent(a.RenewerConfig, "", " ")
 	return os.WriteFile(a.ConfigFilePath, js, 0775)
+}
+
+func (a *AutoRenewer) Disable(reason string) error {
+	if a == nil {
+		return errors.New("auto renewer is not initialized")
+	}
+
+	a.DisableReason = strings.TrimSpace(reason)
+	a.RenewerConfig.Enabled = false
+	a.StopAutoRenewTicker()
+	return a.saveRenewConfigToFile()
+}
+
+func (a *AutoRenewer) SetRuntimeDisableReason(reason string) {
+	if a == nil {
+		return
+	}
+
+	trimmedReason := strings.TrimSpace(reason)
+	a.DisableReason = trimmedReason
+	if trimmedReason != "" {
+		a.StopAutoRenewTicker()
+		return
+	}
+
+	if a.RenewerConfig != nil && a.RenewerConfig.Enabled {
+		a.StartAutoRenewTicker()
+	}
+}
+
+func (a *AutoRenewer) IsDisabled() bool {
+	if a == nil {
+		return false
+	}
+
+	return strings.TrimSpace(a.DisableReason) != ""
+}
+
+func (a *AutoRenewer) GetDisableReason() string {
+	if a == nil || strings.TrimSpace(a.DisableReason) == "" {
+		return "ACME automation is disabled"
+	}
+
+	return a.DisableReason
+}
+
+func DisableAutoRenewConfig(config string) error {
+	renewerConfig := AutoRenewConfig{
+		Enabled:      false,
+		RenewAll:     true,
+		FilesToRenew: []string{},
+	}
+
+	if utils.FileExists(config) {
+		content, err := os.ReadFile(config)
+		if err != nil {
+			return errors.New("Failed to open acme auto renewer config: " + err.Error())
+		}
+
+		if len(strings.TrimSpace(string(content))) > 0 {
+			if err := json.Unmarshal(content, &renewerConfig); err != nil {
+				return errors.New("Malformed acme config file: " + err.Error())
+			}
+		}
+	}
+
+	renewerConfig.Enabled = false
+	if renewerConfig.FilesToRenew == nil {
+		renewerConfig.FilesToRenew = []string{}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(config), 0775); err != nil {
+		return err
+	}
+
+	js, _ := json.MarshalIndent(renewerConfig, "", " ")
+	return os.WriteFile(config, js, 0775)
 }
 
 // Handle update auto renew EAD configuration

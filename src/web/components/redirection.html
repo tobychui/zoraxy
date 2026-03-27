@@ -1,8 +1,12 @@
 
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="redirectionPage">
     <div class="ui basic segment">
       <h2>Redirection Rules</h2>
       <p>Add exception case for redirecting any matching URLs</p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+      <div class="header">Managed by Primary Node</div>
+      <p>Redirection changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
     </div>
     <!-- Current list of redirection rules-->
     <div style="width: 100%; overflow-x: auto;">
@@ -14,6 +18,7 @@
                   <th class="no-sort">Copy Pathname</th>
                   <th class="no-sort">Require Exact Match</th>
                   <th class="no-sort">Device Type</th>
+                  <th class="no-sort hideInNodeMode">Node</th>
                   <th class="no-sort">Status Code</th>
                   <th class="no-sort">Actions</th>
               </tr>
@@ -126,6 +131,11 @@
               </div>
             </div>
         </div>
+        <div class="field hideInNodeMode">
+          <label>Assigned Node</label>
+          <div id="redirectAssignedNodeDropdown"></div>
+          <small>Select which node should handle this redirection. Leave on primary to keep it local.</small>
+        </div>
         <button class="ui basic button" onclick="addRules();"><i class="ui teal plus icon"></i> Add Redirection Rule</button>
         <div class="ui green message" id="ruleAddSucc" style="display:none;">
           <i class="ui green checkmark icon"></i> Redirection Rules Added
@@ -146,6 +156,7 @@
       document.getElementsByName("destination-url")[0].value = "";
       document.getElementsByName("forward-childpath")[0].checked = true;
       document.getElementsByName("require-exact-match")[0].checked = false;
+      renderAssignedNodeDropdown($("#redirectAssignedNodeDropdown"), "", null, false);
     }
 
     function addRules(){
@@ -155,6 +166,7 @@
         let requireExactMatch = document.querySelector('input[name="require-exact-match"]').checked;
         let redirectType = document.querySelector('input[name="redirect-type"]:checked').value;
         let deviceType = document.querySelector('input[name="redirect-device"]:checked').value;
+        let assignedNodeId = $("#redirectAssignedNodeDropdown input[name='assignedNodeId']").val() || "";
 
         $.cjax({
             url: "/api/redirect/add", 
@@ -166,6 +178,7 @@
                 requireExactMatch: requireExactMatch,
                 redirectType: parseInt(redirectType),
                 deviceType: deviceType,
+                assignedNodeId: assignedNodeId,
             },
             success: function(data){
                 if (data.error != undefined){
@@ -203,6 +216,7 @@
 
     function initRedirectionRuleList(){
         $("#redirectionRuleList").html("");
+        loadAssignableNodes(function(){
         $.get("/api/redirect/list", function(data){
             data.forEach(function(entry){
               let encodedEntry = encodeURIComponent(JSON.stringify(entry));
@@ -222,6 +236,7 @@
                   <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                   <td>${entry.RequireExactMatch?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
                   <td>${deviceTypeLabel}</td>
+                  <td class="hideInNodeMode">${getAssignedNodeLabel(entry.AssignedNodeID, true)}</td>
                   <td>${entry.StatusCode==307?"Temporary Redirect (307)":"Moved Permanently (301)"}</td>
                   <td>
                     <button onclick="editRule(this);" payload="${encodedEntry}" title="Edit redirection rule" class="ui mini circular icon basic button redirectEditBtn"><i class="edit icon"></i></button>
@@ -231,9 +246,12 @@
             });
             
             if (data.length == 0){
-              $("#redirectionRuleList").append(`<tr><td colspan="7"><i class="green check circle icon"></i> No redirection rule</td></tr>`);
+              $("#redirectionRuleList").append(`<tr><td colspan="8"><i class="green check circle icon"></i> No redirection rule</td></tr>`);
             }
+            applyNodeModeVisibility($("#redirectionRuleList"));
+            applyNodeWriteLockState($("#redirectionPage"));
             
+        });
         });
     }
     initRedirectionRuleList();
@@ -248,6 +266,7 @@
       let requireExactMatch = payload.RequireExactMatch || false;
       let statusCode = payload.StatusCode;
       let deviceType = payload.DeviceType || "all";
+      let assignedNodeID = payload.AssignedNodeID || "";
 
       row.html(`
         <td>
@@ -267,6 +286,9 @@
           <div class="ui radio checkbox"><input type="radio" name="editDeviceType" value="desktop" ${deviceType == "desktop" ? "checked" : ""}><label>Desktop</label></div><br>
           <div class="ui radio checkbox"><input type="radio" name="editDeviceType" value="mobile" ${deviceType == "mobile" ? "checked" : ""}><label>Mobile</label></div>
         </td>
+        <td class="hideInNodeMode">
+          <div id="editRedirectAssignedNodeDropdown"></div>
+        </td>
         <td>
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="307" ${statusCode == 307 ? "checked" : ""}><label>Temporary Redirect (307)</label></div><br>
           <div class="ui radio checkbox"><input type="radio" name="editStatusCode" value="301" ${statusCode == 301 ? "checked" : ""}><label>Moved Permanently (301)</label></div>
@@ -278,6 +300,8 @@
       `);
 
       $(".checkbox").checkbox();
+      renderAssignedNodeDropdown($("#editRedirectAssignedNodeDropdown"), assignedNodeID, null, false);
+      applyNodeModeVisibility(row);
     }
 
     function saveEditRule(obj){
@@ -288,6 +312,7 @@
       let requireExactMatch = $("#editRequireExactMatch").is(":checked");
       let statusCode = parseInt($("input[name='editStatusCode']:checked").val());
       let deviceType = $("input[name='editDeviceType']:checked").val();
+      let assignedNodeId = $("#editRedirectAssignedNodeDropdown input[name='assignedNodeId']").val() || "";
 
       $.cjax({
         url: "/api/redirect/edit", 
@@ -300,6 +325,7 @@
             requireExactMatch: requireExactMatch,
             redirectType: statusCode,
             deviceType: deviceType,
+            assignedNodeId: assignedNodeId,
         },
         success: function(data){
             if (data.error != undefined){
@@ -311,6 +337,10 @@
         }
       });
     }
+
+    renderAssignedNodeDropdown($("#redirectAssignedNodeDropdown"), "", null, true);
+    applyNodeModeVisibility($("#redirectionPage"), true);
+    applyNodeWriteLockState($("#redirectionPage"));
 
     function initRegexpSupportToggle(){
       $.get("/api/redirect/regex", function(data){

@@ -1,7 +1,11 @@
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="streamProxyPage">
     <div class="ui basic segment">
         <h2>Stream Proxy</h2>
         <p>Proxy traffic flow on layer 3 via TCP or UDP</p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>Stream proxy changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
     </div>
     <div class="ui divider"></div>
     <div class="ui basic segment" style="margin-top: 0;">
@@ -15,6 +19,7 @@
                         <th>Listening Address</th>
                         <th>Target Address</th>
                         <th>Mode</th>
+                        <th class="hideInNodeMode">Node</th>
                         <th>Timeout (s)</th>
                         <th>Enable Logging</th>
                         <th>Actions</th>
@@ -26,7 +31,7 @@
             </table>
         </div>
         <br>
-        <button class="ui basic right floated button" onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i>Refresh</button>
+        <button class="ui basic right floated button" data-node-lock-exempt onclick="initProxyConfigList();" title="Refresh List"><i class="ui green refresh icon"></i>Refresh</button>
         <br><br>
     </div>
     <div class="ui divider"></div>
@@ -57,6 +62,11 @@
                 <label>Timeout (s)</label>
                 <input type="text" name="timeout" placeholder="" value="10">
                 <small>Connection timeout in seconds</small>
+            </div>
+            <div class="field hideInNodeMode">
+                <label>Assigned Node</label>
+                <div id="streamProxyAssignedNodeDropdown"></div>
+                <small>Select which node should run this stream proxy. Leave on primary to keep it local.</small>
             </div>
             <Br>
             <div class="field">
@@ -94,14 +104,18 @@
                         <i class="exclamation triangle icon"></i> Proxy Protocol V1 is not supported for UDP. The proxy protocol header will not be included in UDP packets if selected.
                     </div>
             </div>
-            <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
-            <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event, this);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
-            <button class="ui basic red button" onclick="event.preventDefault(); cancelStreamProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>  
+            <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>
+            <button id="editStreamProxyButton" type="button" class="ui basic button" onclick="confirmEditTCPProxyConfig(event, this);" style="display:none;"><i class="ui green check icon"></i> Update</button>
+            <button type="button" class="ui basic red button" onclick="event.preventDefault(); cancelStreamProxyEdit(event);"><i class="ui red remove icon"></i> Cancel</button>
         </form>
     </div>
 </div>
     <script>
         let editingStreamProxyConfigUUID = ""; //The current editing TCP Proxy config UUID
+
+        function renderStreamProxyNodeDropdown(selectedNodeID, forceRefresh) {
+            renderAssignedNodeDropdown($("#streamProxyAssignedNodeDropdown"), selectedNodeID || "", null, forceRefresh === true);
+        }
 
         // Show/hide warning for Proxy Protocol V1 + UDP
         function updateProxyProtocolUdpWarning() {
@@ -160,6 +174,7 @@
             $('#streamProxyForm select[name=proxyProtocolVersion]').dropdown('set selected', '0');
             $("#streamProxyForm input[name=timeout]").val(10);
             $("#streamProxyForm .toggle.checkbox").checkbox("set unchecked");
+            renderStreamProxyNodeDropdown("", false);
         }
 
         function cancelStreamProxyEdit(event=undefined) {
@@ -208,18 +223,44 @@
             var tableBody = $('#proxyTable tbody');
             tableBody.empty();
             if (proxyConfigs.length === 0) {
-            var noResultsRow = $('<tr><td colspan="7"><i class="green check circle icon"></i>No Proxy Configs</td></tr>');
+            var noResultsRow = $('<tr><td colspan="8"><i class="green check circle icon"></i>No Proxy Configs</td></tr>');
                 tableBody.append(noResultsRow);
             } else {
                
                 proxyConfigs.forEach(function(config) {
+                    var effectiveRunning = config.effective_running !== undefined ? config.effective_running : (config.EffectiveRunning !== undefined ? config.EffectiveRunning : config.Running);
+                    var managedByNode = config.managed_by_node === true || config.ManagedByNode === true;
+                    var remoteStatus = config.remote_status || config.RemoteStatus || null;
                     var runningLogo = 'Stopped';
                     var runningClass = "stopped";
-                    var startButton = `<button onclick="startStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Start Proxy"><i class="green play icon"></i></button>`;
-                    if (config.Running){
+                    var startButton = `<button type="button" data-node-lock-exempt onclick="startStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Start Proxy"><i class="green play icon"></i></button>`;
+                    if (effectiveRunning){
                         runningLogo = 'Running';
-                        startButton = `<button onclick="stopStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Stop Proxy"><i class="red stop icon"></i></button>`;
+                        startButton = `<button type="button" data-node-lock-exempt onclick="stopStreamProx('${config.UUID}');" class="ui basic mini circular icon button" title="Stop Proxy"><i class="red stop icon"></i></button>`;
                         runningClass = "running"
+                    }
+
+                    if (managedByNode){
+                        if (remoteStatus){
+                            if (!remoteStatus.online){
+                                runningLogo = 'Node Offline';
+                                runningClass = "stopped";
+                            }else if (remoteStatus.running){
+                                runningLogo = 'Running on Node';
+                                runningClass = "running";
+                            }else if (remoteStatus.status === "unknown"){
+                                runningLogo = 'Node Status Unknown';
+                                runningClass = "stopped";
+                            }else{
+                                runningLogo = 'Stopped on Node';
+                                runningClass = "stopped";
+                            }
+                        }else{
+                            runningLogo = 'Node Status Unknown';
+                            runningClass = "stopped";
+                        }
+
+                        startButton = `<button type="button" class="ui basic mini circular icon disabled button" title="Managed by assigned node"><i class="grey pause icon"></i></button>`;
                     }
 
                     var modeText = [];
@@ -248,6 +289,7 @@
                     row.append($('<td>').text(config.ListeningAddress));
                     row.append($('<td>').text(config.ProxyTargetAddr));
                     row.append($('<td>').text(modeText));
+                    row.append($('<td>').addClass('hideInNodeMode').html(getAssignedNodeLabel(config.AssignedNodeID, true)));
                     row.append($('<td>').text(config.Timeout));
                     row.append($('<td>').html(config.EnableLogging ? 
                         '<i class="green check icon" title="Logging Enabled"></i>' : 
@@ -255,12 +297,14 @@
                     ));
                     row.append($('<td>').html(`
                         ${startButton}
-                        <button onclick="editTCPProxyConfig('${config.UUID}');" class="ui circular basic mini icon button" title="Edit Config"><i class="edit icon"></i></button>
-                        <button onclick="deleteTCPProxyConfig('${config.UUID}');" class="ui circular red basic mini icon button" title="Delete Config"><i class="trash icon"></i></button>
+                        <button type="button" onclick="editTCPProxyConfig('${config.UUID}');" class="ui circular basic mini icon button" title="Edit Config"><i class="edit icon"></i></button>
+                        <button type="button" onclick="deleteTCPProxyConfig('${config.UUID}');" class="ui circular red basic mini icon button" title="Delete Config"><i class="trash icon"></i></button>
                     `));
                     tableBody.append(row);
                 });
             }
+            applyNodeModeVisibility($("#proxyTable"));
+            applyNodeWriteLockState($("#streamProxyPage"));
         }
 
         function getConfigDetailsFromDOM(configUUID){
@@ -326,6 +370,7 @@
                     }
                 });
                 editingStreamProxyConfigUUID = configUUID;
+                renderStreamProxyNodeDropdown(targetConfig.AssignedNodeID || "", false);
             }else{
                 msgbox("Unable to load target config", false);
             }
@@ -360,6 +405,7 @@
                     useUDP: $("#streamProxyForm input[name=useUDP]")[0].checked ,
                     proxyProtocolVersion: parseInt($("#streamProxyForm select[name=proxyProtocolVersion]").val(), 10),
                     enableLogging: $("#streamProxyForm input[name=enableLogging]")[0].checked ,
+                    assignedNodeId: $("#streamProxyAssignedNodeDropdown input[name=assignedNodeId]").val() || "",
                     timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
                 },
                 success: function(response) {
@@ -436,17 +482,22 @@
         }
 
         function initProxyConfigList(){
-            $.ajax({
-                type: 'GET',
-                url: '/api/streamprox/config/list',
-                success: function(response) {
-                    renderProxyConfigs(response);
-                },
-                error: function() {
-                    msgbox('Unable to load proxy configs', false);
-                }
+            loadAssignableNodes(function() {
+                $.ajax({
+                    type: 'GET',
+                    url: '/api/streamprox/config/list',
+                    success: function(response) {
+                        renderProxyConfigs(response);
+                    },
+                    error: function() {
+                        msgbox('Unable to load proxy configs', false);
+                    }
+                });
             });
         }
+        applyNodeModeVisibility($("#streamProxyPage"), true);
+        applyNodeWriteLockState($("#streamProxyPage"));
+        renderStreamProxyNodeDropdown("", true);
         initProxyConfigList();
     </script>
 </div>

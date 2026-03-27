@@ -54,6 +54,59 @@ services:
       TZ: "America/New_York"
 ```
 
+### Primary / Worker Node Example
+
+Worker mode is enabled automatically when both `ZORAXY_NODE_SERVER` and `ZORAXY_NODE_TOKEN` are set.
+
+```yml
+services:
+  zoraxy-node:
+    image: zoraxydocker/zoraxy:latest
+    container_name: zoraxy-node
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /path/to/zoraxy-node/config/:/opt/zoraxy/config/
+      - /path/to/zoraxy-node/plugin/:/opt/zoraxy/plugin/
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DOCKER: "true"
+      ZORAXY_NODE_SERVER: "http://primary.example.internal:8000"
+      ZORAXY_NODE_TOKEN: "<join-token>"
+      ZORAXY_NODE_NAME: "edge-waw-01"
+      ZORAXY_NODE_IP: "192.168.1.50"
+```
+
+Notes:
+- `ZORAXY_NODE_NAME` is optional and sets the default worker display name.
+- `ZORAXY_NODE_IP` is optional and is useful when the primary cannot infer the worker's reachable admin address correctly.
+- Join tokens are generated on the primary from the `Nodes` tab.
+
+### Cluster Smoke Test Compose
+
+For local `primary + node` smoke tests against the current repository, use [`docker-compose.cluster.yaml`](./docker-compose.cluster.yaml).
+
+It builds the image from the local checkout, starts:
+- `primary` on `http://127.0.0.1:18000`
+- `node` on `http://127.0.0.1:18001`
+- test backends `primary-echo` and `node-echo` on the internal Docker network
+
+The helper service `prepare-node` pre-creates a deterministic worker registration in the primary config and passes the same token to the worker container through a shared bootstrap volume. This avoids depending on UI-only management APIs and their CSRF flow.
+
+Start it with:
+
+```bash
+docker compose -f docker/docker-compose.cluster.yaml up -d --build
+```
+
+Notes:
+- the primary container reuses the repository root configuration: `sys.db`, `sys.uuid`, `conf/`, `tmp/`, `log/` and `plugins/`
+- for isolated smoke runs you can override those mounts with `PRIMARY_SYS_DB`, `PRIMARY_SYS_UUID`, `PRIMARY_CONF_DIR`, `PRIMARY_TMP_DIR`, `PRIMARY_LOG_DIR` and `PRIMARY_PLUGIN_DIR`
+- the worker keeps its own isolated Docker volumes for config and plugins
+- the pre-created worker registration is persisted in `conf/nodes/55cb7b15-2c94-4fc5-9d3e-25d6507c9d9a.config`
+- published proxy ports are `18080/18443` for the primary and `18180/18444` for the node
+- when creating smoke-test routes in the UI, use `http://primary-echo:5678` and `http://node-echo:5678` as upstreams
+
 ### Ports
 
 | Port | Details |
@@ -130,4 +183,3 @@ To build the Docker image:
   - Run the build command with `docker build -t zoraxy_build .`
   - You can now use the image `zoraxy_build`
     - If you wish to change the image name, then modify`zoraxy_build` in the previous step and then build again.
-

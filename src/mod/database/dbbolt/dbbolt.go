@@ -126,6 +126,9 @@ func (d *Database) ListTable(tableName string) ([][][]byte, error) {
 	var results [][][]byte
 	err := d.Db.(*bolt.DB).View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(tableName))
+		if b == nil {
+			return errors.New("table not exists")
+		}
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -134,6 +137,17 @@ func (d *Database) ListTable(tableName string) ([][][]byte, error) {
 		return nil
 	})
 	return results, err
+}
+
+func (d *Database) GetAllTables() ([]string, error) {
+	var tables []string
+	err := d.Db.(*bolt.DB).View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			tables = append(tables, string(name))
+			return nil
+		})
+	})
+	return tables, err
 }
 
 func (d *Database) Close() {

@@ -30,3 +30,15 @@ func (d *UXOptimizer) HandleDockerAvailable(w http.ResponseWriter, r *http.Reque
 func (d *UXOptimizer) HandleDockerContainersList(w http.ResponseWriter, r *http.Request) {
 	utils.SendErrorResponse(w, "Platform not supported")
 }
+
+func (d *UXOptimizer) GetCurrentContainerImage() string {
+	return ""
+}
+
+func (d *UXOptimizer) ResolveSuggestedNodeImage(defaultImage string) (string, string) {
+	return defaultImage, "default"
+}
+
+func (d *UXOptimizer) RefreshCurrentContainerImage() error {
+	return nil
+}

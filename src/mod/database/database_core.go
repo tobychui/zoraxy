@@ -65,6 +65,10 @@ func (d *Database) listTable(tableName string) ([][][]byte, error) {
 	return d.Backend.ListTable(tableName)
 }
 
+func (d *Database) getAllTables() ([]string, error) {
+	return d.Backend.GetAllTables()
+}
+
 func (d *Database) close() {
 	d.Backend.Close()
 }

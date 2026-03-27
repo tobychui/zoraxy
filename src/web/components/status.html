@@ -63,6 +63,34 @@
     <div class="poweroptions" style="display:inline-block;">
         <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
         <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
+        <button id="syncNowBtn" class="ui basic blue button" style="display:none;" onclick="syncNodeNow();"><i class="ui sync alternate icon"></i> Sync Now</button>
+    </div>
+    <div id="nodeSyncStatusCard" class="ui info message" style="display:none; margin-top: 1em;">
+        <div class="header">Node Sync Status</div>
+        <p id="nodeSyncStatusText">Checking synchronization state</p>
+        <p id="nodeSyncStatusMeta" style="margin-bottom: 0;"></p>
+    </div>
+    <div id="localNodeNameCard" class="ui message" style="margin-top: 1em; display:none;">
+        <div class="header">Node Name</div>
+        <p>Display name used locally and reported to the primary node.</p>
+        <div class="ui action input" style="max-width: 32em;">
+            <input type="text" id="localNodeNameInput" placeholder="Node name">
+            <button id="saveLocalNodeNameBtn" class="ui green button" onclick="saveLocalNodeName();"><i class="save icon"></i> Save</button>
+        </div>
+    </div>
+    <div id="localNodeOverrideCard" class="ui warning message" style="margin-top: 1em; display:none;">
+        <div class="header">Emergency Local Override</div>
+        <p>Local edits on a worker node are locked by default because the primary node is the source of truth. Enable this only if the primary is unavailable and you need to make temporary local changes.</p>
+        <div id="localNodeOverrideToggle" class="ui toggle checkbox">
+            <input id="localNodeOverrideInput" type="checkbox">
+            <label>Unlock local configuration changes<br>
+            <small>Changes made while unlocked can be overwritten by the next successful sync from the primary node.</small></label>
+        </div>
+    </div>
+    <div id="primaryNodeTelemetryCard" class="ui message" style="display:none; margin-top: 1em;">
+        <div class="header">Node Fleet Telemetry</div>
+        <p id="primaryNodeTelemetryText">Loading node telemetry summary</p>
+        <p id="primaryNodeTelemetryMeta" style="margin-bottom: 0;"></p>
     </div>
     <div class="ui divider"></div>
     <h4>Network Status</h4>
@@ -217,7 +245,239 @@
 <script>
     let loopbackProxiedInterface = false;
     let currentListeningPort = 80;
+    let suppressLocalNodeOverrideChange = false;
     $(".advanceSettings").accordion();
+
+    function formatNodeSyncDate(value, fallback = "Never"){
+        if (!value){
+            return fallback;
+        }
+
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())){
+            return value;
+        }
+
+        return parsed.toLocaleString();
+    }
+
+    function renderNodeSyncStatus(data){
+        if (!data || data.mode !== "node"){
+            $("#nodeSyncStatusCard").hide();
+            $("#syncNowBtn").hide().removeClass("loading disabled");
+            return;
+        }
+
+        $("#syncNowBtn").css("display", "inline-block");
+
+        let stateClass = "blue";
+        let headline = "Waiting for initial sync";
+
+        if (data.state === "local_override"){
+            stateClass = "orange";
+            headline = "Local override enabled; primary sync is paused";
+        }else if (data.state === "primary_unreachable"){
+            stateClass = "red";
+            if (data.has_previous_sync){
+                headline = "Primary node unreachable; using previous synchronized state";
+            }else{
+                headline = "Primary node unreachable; initial synchronization failed";
+            }
+        }else if (data.state === "synced"){
+            stateClass = "green";
+            headline = "Configuration synchronized with primary node";
+        }else if (data.state === "degraded"){
+            stateClass = "yellow";
+            headline = "Using previous synchronized state";
+        }else if (data.state === "error"){
+            stateClass = "red";
+            headline = "Initial synchronization failed";
+        }
+
+        $("#nodeSyncStatusCard")
+            .removeClass("blue green yellow red orange")
+            .addClass(stateClass)
+            .show();
+
+        $("#nodeSyncStatusText").text(headline);
+
+        const details = [];
+        if (data.primary_server){
+            details.push("Primary: " + data.primary_server);
+        }
+        if (data.sync_interval_seconds){
+            details.push("Sync interval: " + data.sync_interval_seconds + "s");
+        }
+        if (data.local_override){
+            details.push("Local override: enabled");
+        }
+        details.push("Last success: " + formatNodeSyncDate(data.last_success_at));
+        if (data.last_attempt_at){
+            details.push("Last attempt: " + formatNodeSyncDate(data.last_attempt_at, "Unknown"));
+        }
+        if (data.last_error){
+            details.push("Last error: " + data.last_error);
+        }
+
+        $("#nodeSyncStatusMeta").html(details.join("<br>"));
+    }
+
+    function loadNodeSyncStatus(){
+        $.get("/api/node/status", function(data){
+            renderNodeSyncStatus(data);
+            if (!data || data.mode !== "node"){
+                loadPrimaryNodeTelemetrySummary();
+            }else{
+                $("#primaryNodeTelemetryCard").hide();
+            }
+        });
+    }
+
+    function loadLocalNodeSettings(){
+        $.get("/api/node/localstate", function(data){
+            if (!data || data.mode !== "node"){
+                $("#localNodeNameCard").hide();
+                $("#localNodeOverrideCard").hide();
+                return;
+            }
+            $("#localNodeNameInput").val(data && data.name ? data.name : "");
+            suppressLocalNodeOverrideChange = true;
+            $("#localNodeOverrideInput").prop("checked", !!data.config_write_unlocked);
+            $("#localNodeOverrideToggle").checkbox(data && data.config_write_unlocked ? "set checked" : "set unchecked");
+            suppressLocalNodeOverrideChange = false;
+            $("#localNodeNameCard").show();
+            $("#localNodeOverrideCard").show();
+        }).fail(function(){
+            $("#localNodeNameCard").hide();
+            $("#localNodeOverrideCard").hide();
+        });
+    }
+
+    function saveLocalNodeName(){
+        const btn = $("#saveLocalNodeNameBtn");
+        btn.addClass("loading disabled");
+        $.cjax({
+            url: "/api/node/name",
+            method: "POST",
+            data: {
+                name: $("#localNodeNameInput").val().trim()
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false, 5000);
+                    return;
+                }
+                $("#localNodeNameInput").val(data.name || "");
+                if (typeof localNodeInfoCache !== "undefined"){
+                    localNodeInfoCache = null;
+                }
+                if (typeof localNodeStateCache !== "undefined"){
+                    localNodeStateCache = null;
+                }
+                if (typeof assignableNodeCache !== "undefined"){
+                    assignableNodeCache = null;
+                }
+                if (typeof loadNodeModeIndicator === "function"){
+                    loadNodeModeIndicator();
+                }
+                msgbox("Node name updated");
+            },
+            error: function(){
+                msgbox("Failed to update node name", false, 5000);
+            },
+            complete: function(){
+                btn.removeClass("loading disabled");
+            }
+        });
+    }
+
+    function updateLocalNodeOverride(enabled){
+        $.cjax({
+            url: "/api/node/name",
+            method: "POST",
+            data: {
+                configWriteUnlocked: enabled
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false, 5000);
+                    loadLocalNodeSettings();
+                    return;
+                }
+                if (typeof localNodeStateCache !== "undefined"){
+                    localNodeStateCache = null;
+                }
+                if (typeof localNodeInfoCache !== "undefined"){
+                    localNodeInfoCache = null;
+                }
+                $("#localNodeOverrideToggle").checkbox(enabled ? "set checked" : "set unchecked");
+                msgbox(enabled ? "Emergency local override enabled" : "Emergency local override disabled");
+                loadNodeSyncStatus();
+            },
+            error: function(){
+                msgbox("Failed to update emergency local override", false, 5000);
+                loadLocalNodeSettings();
+            }
+        });
+    }
+
+    function renderPrimaryNodeTelemetrySummary(data){
+        if (!data || !data.total_nodes){
+            $("#primaryNodeTelemetryCard").hide();
+            return;
+        }
+
+        $("#primaryNodeTelemetryCard").show();
+        $("#primaryNodeTelemetryText").html(
+            `Registered nodes: <b>${data.total_nodes}</b>, online: <b>${data.online_nodes}</b>, enabled: <b>${data.enabled_nodes}</b>`
+        );
+        $("#primaryNodeTelemetryMeta").html(
+            `Today requests: ${abbreviateNumber(data.today_total)} ` +
+            `(<span style="color: #2e7d32;">${abbreviateNumber(data.today_valid)}</span> ok / ` +
+            `<span style="color: #c62828;">${abbreviateNumber(data.today_error)}</span> err)<br>` +
+            `Nodes with telemetry: ${data.nodes_with_telemetry}, uptime targets: ${data.uptime_targets}, offline: ${data.uptime_offline}`
+        );
+    }
+
+    function loadPrimaryNodeTelemetrySummary(){
+        $.get("/api/nodes/summary", function(data){
+            renderPrimaryNodeTelemetrySummary(data);
+        }).fail(function(){
+            $("#primaryNodeTelemetryCard").hide();
+        });
+    }
+
+    function syncNodeNow(){
+        const syncBtn = $("#syncNowBtn");
+        syncBtn.addClass("loading disabled");
+        $.cjax({
+            url: "/api/node/sync",
+            method: "POST",
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                    return;
+                }
+                renderNodeSyncStatus(data);
+                if (data.state === "local_override"){
+                    msgbox("Local override is enabled, so configuration import is paused", false, 5000);
+                }else{
+                    msgbox("Node synchronization completed");
+                }
+            },
+            error: function(xhr){
+                let message = "Failed to synchronize node";
+                if (xhr && xhr.responseJSON && xhr.responseJSON.error){
+                    message = xhr.responseJSON.error;
+                }
+                msgbox(message, false, 5000);
+            },
+            complete: function(){
+                syncBtn.removeClass("loading disabled");
+                loadNodeSyncStatus();
+            }
+        });
+    }
 
     //Initial the start stop button if this is reverse proxied
     $.get("/api/proxy/requestIsProxied", function(data){
@@ -353,14 +613,55 @@
             }
         });
     }
+    $("#localNodeOverrideToggle").checkbox({
+        onChange: function() {
+            if (suppressLocalNodeOverrideChange){
+                return;
+            }
+            updateLocalNodeOverride($(this).is(":checked"));
+        }
+    });
     getDailySummaryDetails();
+    loadNodeSyncStatus();
+    loadLocalNodeSettings();
+    setInterval(loadNodeSyncStatus, 10000);
+    setInterval(loadPrimaryNodeTelemetrySummary, 10000);
 
 
     function getDailySummary(){
         $.get("/api/stats/summary?fast=true", function(data){
-            $("#summaryTotalCount").text(abbreviateNumber(data.TotalRequest));
-            $("#summarySuccCount").text(abbreviateNumber(data.ValidRequest));
-            $("#summaryErrCount").text(abbreviateNumber(data.ErrorRequest));
+            let totalRequest = data.TotalRequest || 0;
+            let validRequest = data.ValidRequest || 0;
+            let errorRequest = data.ErrorRequest || 0;
+
+            $.get("/api/info/x", function(info){
+                if (info && info.Mode && info.Mode.toLowerCase() === "node"){
+                    $("#summaryTotalCount").text(abbreviateNumber(totalRequest));
+                    $("#summarySuccCount").text(abbreviateNumber(validRequest));
+                    $("#summaryErrCount").text(abbreviateNumber(errorRequest));
+                    return;
+                }
+
+                $.get("/api/nodes/summary", function(nodeSummary){
+                    if (nodeSummary){
+                        totalRequest += nodeSummary.today_total || 0;
+                        validRequest += nodeSummary.today_valid || 0;
+                        errorRequest += nodeSummary.today_error || 0;
+                    }
+
+                    $("#summaryTotalCount").text(abbreviateNumber(totalRequest));
+                    $("#summarySuccCount").text(abbreviateNumber(validRequest));
+                    $("#summaryErrCount").text(abbreviateNumber(errorRequest));
+                }).fail(function(){
+                    $("#summaryTotalCount").text(abbreviateNumber(totalRequest));
+                    $("#summarySuccCount").text(abbreviateNumber(validRequest));
+                    $("#summaryErrCount").text(abbreviateNumber(errorRequest));
+                });
+            }).fail(function(){
+                $("#summaryTotalCount").text(abbreviateNumber(totalRequest));
+                $("#summarySuccCount").text(abbreviateNumber(validRequest));
+                $("#summaryErrCount").text(abbreviateNumber(errorRequest));
+            });
         });
     }
     setInterval(function(){
@@ -478,6 +779,9 @@
         $.cjax({
             url: "/api/proxy/setIncoming",
             method: "POST",
+            headers: {
+                "X-CSRF-Token": getCsrfToken()
+            },
             data: {incoming: newPortValue},
             success: function(data){
                 if (data.error != undefined){

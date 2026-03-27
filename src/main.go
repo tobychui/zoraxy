@@ -37,6 +37,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -59,15 +60,91 @@ func SetupCloseHandler() {
 	}()
 }
 
+func loadOrCreateSystemUUID(uuidRecord string) (string, error) {
+	uuidRecord = strings.TrimSpace(uuidRecord)
+	if uuidRecord == "" {
+		return "", fmt.Errorf("UUID file path is empty")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(uuidRecord), 0775); err != nil {
+		return "", fmt.Errorf("unable to create UUID directory: %w", err)
+	}
+
+	if !utils.FileExists(uuidRecord) {
+		newSystemUUID := uuid.New().String()
+		if err := os.WriteFile(uuidRecord, []byte(newSystemUUID), 0775); err != nil {
+			return "", fmt.Errorf("unable to create node UUID file %s: %w", uuidRecord, err)
+		}
+	}
+
+	uuidBytes, err := os.ReadFile(uuidRecord)
+	if err != nil {
+		return "", fmt.Errorf("unable to read node UUID from %s: %w", uuidRecord, err)
+	}
+
+	systemUUID := strings.TrimSpace(string(uuidBytes))
+	if systemUUID == "" {
+		return "", fmt.Errorf("node UUID file %s is empty", uuidRecord)
+	}
+
+	if _, err := uuid.Parse(systemUUID); err != nil {
+		return "", fmt.Errorf("invalid node UUID in %s: %w", uuidRecord, err)
+	}
+
+	return systemUUID, nil
+}
+
+func applyNodeEnvironmentOverrides() {
+	if strings.TrimSpace(*nodeServer) == "" {
+		if envNodeServer := strings.TrimSpace(os.Getenv("ZORAXY_NODE_SERVER")); envNodeServer != "" {
+			*nodeServer = envNodeServer
+		}
+	}
+
+	if strings.TrimSpace(*nodeToken) == "" {
+		if envNodeToken := strings.TrimSpace(os.Getenv("ZORAXY_NODE_TOKEN")); envNodeToken != "" {
+			*nodeToken = envNodeToken
+		}
+	}
+
+	if strings.TrimSpace(*nodeIP) == "" {
+		if envNodeIP := strings.TrimSpace(os.Getenv("ZORAXY_NODE_IP")); envNodeIP != "" {
+			*nodeIP = envNodeIP
+		}
+	}
+}
+
+func resolveRuntimeMode() error {
+	hasNodeServer := strings.TrimSpace(*nodeServer) != ""
+	hasNodeToken := strings.TrimSpace(*nodeToken) != ""
+
+	if hasNodeServer != hasNodeToken {
+		return fmt.Errorf("node mode requires both server and token; provide both via flags or ZORAXY_NODE_SERVER/ZORAXY_NODE_TOKEN")
+	}
+
+	if hasNodeServer && hasNodeToken {
+		*mode = "node"
+	} else {
+		*mode = "primary"
+	}
+
+	return nil
+}
+
 func main() {
 	//Parse startup flags
 	flag.Parse()
+	applyNodeEnvironmentOverrides()
+	if err := resolveRuntimeMode(); err != nil {
+		log.Fatal(err)
+	}
 
 	//Initialize path variables from flags
 	TMP_FOLDER = *path_tmp
 	CONF_FOLDER = *path_conf
 	CONF_HTTP_PROXY = CONF_FOLDER + "/proxy"
 	CONF_STREAM_PROXY = CONF_FOLDER + "/streamproxy"
+	CONF_NODES = CONF_FOLDER + "/nodes"
 	CONF_CERT_STORE = CONF_FOLDER + "/certs"
 	CONF_REDIRECTION = CONF_FOLDER + "/redirect"
 	CONF_ACCESS_RULE = CONF_FOLDER + "/access"
@@ -106,22 +183,37 @@ func main() {
 
 	SetupCloseHandler()
 
-	//Read or create the system uuid
-	uuidRecord := *path_uuid
-	if !utils.FileExists(uuidRecord) {
-		newSystemUUID := uuid.New().String()
-		os.WriteFile(uuidRecord, []byte(newSystemUUID), 0775)
+	if *mode == "node" {
+		loadedUUID, err := loadOrCreateSystemUUID(*path_uuid)
+		if err != nil {
+			log.Fatal(err)
+		}
+		nodeUUID = loadedUUID
+
+		if *nodeToken == "" {
+			log.Fatal("Node token cannot be empty")
+		}
+
+		if *nodeServer == "" {
+			log.Fatal("Node server cannot be empty")
+		}
+	} else {
+		loadedUUID, err := loadOrCreateSystemUUID(*path_uuid)
+		if err != nil {
+			log.Println("Unable to read system uuid from file system:", err)
+			panic(err)
+		}
+		nodeUUID = loadedUUID
 	}
-	uuidBytes, err := os.ReadFile(uuidRecord)
-	if err != nil {
-		SystemWideLogger.PrintAndLog("ZeroTier", "Unable to read system uuid from file system", nil)
-		panic(err)
-	}
-	nodeUUID = string(uuidBytes)
 
 	//Create a new webmin mux, plugin mux and csrf middleware layer
 	webminPanelMux = http.NewServeMux()
 	pluginAPIMux := http.NewServeMux()
+	nodeAPIMux := http.NewServeMux()
+
+	//Startup all modules, see start.go
+	startupSequence()
+
 	csrfMiddleware = csrf.Protect(
 		[]byte(nodeUUID),
 		csrf.CookieName(CSRF_COOKIENAME),
@@ -130,17 +222,16 @@ func main() {
 		csrf.SameSite(csrf.SameSiteLaxMode),
 	)
 
-	//Startup all modules, see start.go
-	startupSequence()
-
 	//Initiate APIs
 	requireAuth = !(*noauth)
 	initAPIs(webminPanelMux)
 	initRestAPI(pluginAPIMux)
+	initNodeAPI(nodeAPIMux, webminPanelMux)
 
 	// Create a entry mux to accept all management interface requests
 	entryMux := http.NewServeMux()
 	entryMux.Handle("/plugin/", pluginAPIMux)            //For plugins API access
+	entryMux.Handle("/node/", nodeAPIMux)                //For nodes API access
 	entryMux.Handle("/", csrfMiddleware(webminPanelMux)) //For webmin UI access, require csrf token
 
 	// Start the reverse proxy server in go routine
@@ -155,6 +246,15 @@ func main() {
 	//Start the finalize sequences
 	finalSequence()
 
+	if *mode == "node" {
+		if err := applyDesiredLocalNodeServiceState(); err != nil {
+			SystemWideLogger.PrintAndLog("nodes", "Failed to apply desired node service state", err)
+		}
+		go func() {
+			_ = nodeManager.SyncNow()
+		}()
+	}
+
 	if strings.HasPrefix(*webUIPort, ":") {
 		//Bind to all interfaces, issue #672
 		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://localhost" + *webUIPort)
@@ -162,7 +262,7 @@ func main() {
 		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://" + *webUIPort)
 	}
 
-	err = http.ListenAndServe(*webUIPort, entryMux)
+	err := http.ListenAndServe(*webUIPort, entryMux)
 
 	if err != nil {
 		log.Fatal(err)

@@ -6,11 +6,15 @@
         font-weight: bolder;
     }
 </style>
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="accessPage">
     <div class="ui basic segment">
         <h2>Access Control</h2>
         <p>Setup blacklist or whitelist based on estimated IP geographic location or IP address. <br>
             To apply access control to a proxy hosts, create a "Access Rule" below and apply it to the proxy hosts in the HTTP Proxy tab.</p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>Access control changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
     </div>
     <div id="currentEditingAccessRule" class="ui basic segment">
         Select an access rule to start editing
@@ -1679,4 +1683,5 @@
 
     //Bind UI events
     $(".advanceSettings").accordion();
+    applyNodeWriteLockState($("#accessPage"));
 </script>

@@ -15,6 +15,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
+	"imuslab.com/zoraxy/mod/node"
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
@@ -59,6 +60,7 @@ type RouterOption struct {
 	UseProxyProtocol   bool   //Enable PROXY protocol v1/v2 support for TLS listener
 
 	/* Routing Service Managers */
+	NodeManager        *node.Manager             //Nodes manager for http proxy
 	TlsManager         *tlscert.Manager          //TLS manager for serving SAN certificates
 	RedirectRuleTable  *redirection.RuleTable    //Redirection rules handler and table
 	GeodbStore         *geodb.Store              //GeoIP resolver
@@ -144,6 +146,7 @@ type VirtualDirectoryEndpoint struct {
 	Domain              string               //Domain or IP to proxy to
 	RequireTLS          bool                 //Target domain require TLS
 	SkipCertValidations bool                 //Set to true to accept self signed certs
+	AssignedNodeID      string               //Assigned node ID, empty means serve locally on primary
 	Disabled            bool                 //If the rule is enabled
 	proxy               *dpcore.ReverseProxy `json:"-"`
 	parent              *ProxyEndpoint       `json:"-"`
@@ -212,6 +215,7 @@ type ProxyEndpoint struct {
 	ProxyType            ProxyType               //The type of this proxy, see const def
 	RootOrMatchingDomain string                  //Matching domain for host, also act as key
 	MatchingDomainAlias  []string                //A list of domains that alias to this rule
+	AssignedNodeID       string                  //Assigned node ID, empty means serve locally on primary
 	ActiveOrigins        []*loadbalance.Upstream //Activated Upstream or origin servers IP or domain to proxy to
 	InactiveOrigins      []*loadbalance.Upstream //Disabled Upstream or origin servers IP or domain to proxy to
 	UseStickySession     bool                    //Use stick session for load balancing
@@ -262,11 +266,20 @@ type ProxyEndpoint struct {
 	//Fallback routing logic (Special Rule Sets Only)
 	DefaultSiteOption int    //Fallback routing logic options
 	DefaultSiteValue  string //Fallback routing target, optional
+	NodeDefaultSites  map[string]*NodeDefaultSiteConfig
 
 	//Internal Logic Elements
 	parent   *Router            `json:"-"` //Parent router, excluded from JSON
 	detector *exploits.Detector `json:"-"` //Exploit detector instance, excluded from JSON
 	Tags     []string           // Tags for the proxy endpoint
+}
+
+type NodeDefaultSiteConfig struct {
+	DefaultSiteOption   int    `json:"default_site_option"`
+	DefaultSiteValue    string `json:"default_site_value"`
+	OriginIpOrDomain    string `json:"origin_ip_or_domain"`
+	RequireTLS          bool   `json:"require_tls"`
+	SkipCertValidations bool   `json:"skip_cert_validations"`
 }
 
 /*

@@ -11,26 +11,26 @@ import (
 	"strings"
 	"time"
 
-	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
-	"imuslab.com/zoraxy/mod/eventsystem"
-
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
+	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
+	"imuslab.com/zoraxy/mod/node"
 	"imuslab.com/zoraxy/mod/pathrule"
 	"imuslab.com/zoraxy/mod/plugins"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
@@ -120,6 +120,49 @@ func startupSequence() {
 	os.MkdirAll(TMP_FOLDER, 0775)
 	os.MkdirAll(CONF_HTTP_PROXY, 0775)
 
+	if err := bootstrapNodeSync(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create Nodes Manager
+
+	nodeManager, err = node.NewManager(sysdb, &node.Options{
+		ConfigStore:      CONF_NODES,
+		StatusFile:       getNodeSyncStatusFile(),
+		Logger:           SystemWideLogger,
+		UpdateInterval:   getConfiguredNodeSyncInterval(),
+		RequestTimeout:   *nodeSyncTimeout,
+		Mode:             *mode,
+		NodeServer:       *nodeServer,
+		NodeToken:        *nodeToken,
+		SystemVersion:    SYSTEM_VERSION,
+		ManagementPort:   getLocalManagementPort(),
+		HostnameProvider: os.Hostname,
+		NodeIPProvider:   detectLocalNodeIP,
+		NodeNameProvider: func() (string, error) {
+			return getEffectiveLocalNodeName(), nil
+		},
+		LocalOverrideProvider:     getLocalNodeConfigWriteUnlocked,
+		GetConfigVersion:          getCurrentNodeConfigVersion,
+		GetStreamProxyRuntime:     buildNodeStreamProxyRuntimeSnapshot,
+		GetTelemetrySnapshot:      buildNodeTelemetrySnapshot,
+		ExportProxyConfigs:        exportNodeProxyConfigs,
+		ExportProxyConfigsForNode: exportNodeProxyConfigsForNode,
+		ImportProxyConfigs:        importNodeProxyConfigs,
+		ExportAccessRules:         exportNodeAccessRules,
+		ExportAccessRulesForNode:  exportNodeAccessRulesForNode,
+		ImportAccessRules:         importNodeAccessRules,
+		ExportCertificates:        exportNodeCertificates,
+		ExportCertificatesForNode: exportNodeCertificatesForNode,
+		ImportCertificates:        importNodeCertificates,
+		ExportSystemData:          exportNodeSystemData,
+		ExportSystemDataForNode:   exportNodeSystemDataForNode,
+		ImportSystemData:          importNodeSystemData,
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	//Create an auth agent
 	sessionKey, err := auth.GetSessionKey(sysdb, SystemWideLogger)
 	if err != nil {
@@ -149,6 +192,7 @@ func startupSequence() {
 	if err != nil {
 		panic(err)
 	}
+	redirectTable.LocalNodeMatcher = nodeManager.MatchesLocalNode
 
 	//Create a geodb store
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
@@ -300,8 +344,16 @@ func startupSequence() {
 	//Create TCP Proxy Manager
 	streamProxyManager, err = streamproxy.NewStreamProxy(&streamproxy.Options{
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
-		ConfigStore:          CONF_STREAM_PROXY,
-		Logger:               SystemWideLogger,
+		IsLocallyAssigned:    nodeManager.MatchesLocalNode,
+		ResolveRemoteStatus:  resolveStreamProxyRemoteStatus,
+		RuntimeStateChanged: func() {
+			if *mode == "node" && nodeManager != nil {
+				go nodeManager.ReportNodeStateNow()
+				go nodeManager.SyncTelemetryNow()
+			}
+		},
+		ConfigStore: CONF_STREAM_PROXY,
+		Logger:      SystemWideLogger,
 	})
 	if err != nil {
 		panic(err)
@@ -337,6 +389,13 @@ func startupSequence() {
 	//Create a table just to store acme related preferences
 	sysdb.NewTable("acmepref")
 	acmeHandler = initACME()
+
+	if *mode == "node" {
+		if err := acme.DisableAutoRenewConfig(ACME_AUTORENEW_CONFIG_PATH); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	acmeAutoRenewer, err = acme.NewAutoRenewer(
 		ACME_AUTORENEW_CONFIG_PATH,
 		CONF_CERT_STORE,
@@ -348,6 +407,7 @@ func startupSequence() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	updateLocalNodeManagedRuntimeState()
 
 	/*
 		Plugin Manager
@@ -422,6 +482,11 @@ func startupSequence() {
 		SystemWideLogger.PrintAndLog("warning", "Invalid start flag combination: docker=true && runtime.GOOS == windows. Running in docker UX development mode.", nil)
 	}
 	DockerUXOptimizer = dockerux.NewDockerOptimizer(*runningInDocker, SystemWideLogger)
+	if DockerUXOptimizer != nil && *runningInDocker {
+		if err := DockerUXOptimizer.RefreshCurrentContainerImage(); err != nil {
+			SystemWideLogger.PrintAndLog("docker", "Unable to auto-detect current container image for node join instructions", err)
+		}
+	}
 
 }
 

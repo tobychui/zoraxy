@@ -65,7 +65,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		domainOnly = hostPath[0]
 	}
 	sep := h.Parent.GetProxyEndpointFromHostname(domainOnly)
-	if sep != nil && !sep.Disabled {
+	if sep != nil && !sep.Disabled && h.Parent.isLocallyAssigned(sep.AssignedNodeID) {
 		//Matching proxy rule found
 		//Access Check (blacklist / whitelist)
 		ruleID := sep.AccessFilterUUID

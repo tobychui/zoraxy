@@ -12,6 +12,19 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+func (router *Router) isLocallyAssigned(assignedNodeID string) bool {
+	assignedNodeID = strings.TrimSpace(assignedNodeID)
+	if assignedNodeID == "" {
+		return true
+	}
+
+	if router == nil || router.Option == nil || router.Option.NodeManager == nil {
+		return false
+	}
+
+	return router.Option.NodeManager.MatchesLocalNode(assignedNodeID)
+}
+
 /*
 	Dynamic Proxy Router Functions
 

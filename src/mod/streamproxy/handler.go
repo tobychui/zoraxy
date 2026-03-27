@@ -9,6 +9,50 @@ import (
 	"imuslab.com/zoraxy/mod/utils"
 )
 
+type proxyConfigResponse struct {
+	*ProxyRelayInstance
+	EffectiveRunning bool                `json:"effective_running"`
+	ManagedByNode    bool                `json:"managed_by_node"`
+	CanStartLocally  bool                `json:"can_start_locally"`
+	RemoteStatus     *RemoteRuntimeState `json:"remote_status,omitempty"`
+}
+
+func (m *Manager) buildProxyConfigResponse(config *ProxyRelayInstance) *proxyConfigResponse {
+	if config == nil {
+		return nil
+	}
+
+	clonedConfig, err := CloneConfig(config)
+	if err != nil || clonedConfig == nil {
+		cloned := *config
+		cloned.tcpStopChan = nil
+		cloned.udpStopChan = nil
+		cloned.parent = nil
+		clonedConfig = &cloned
+	}
+
+	managedByNode := !m.isLocallyAssigned(config.AssignedNodeID)
+	effectiveRunning := config.IsRunning() || config.Running
+	response := &proxyConfigResponse{
+		ProxyRelayInstance: clonedConfig,
+		EffectiveRunning:   effectiveRunning,
+		ManagedByNode:      managedByNode,
+		CanStartLocally:    !managedByNode,
+	}
+
+	if managedByNode {
+		response.ProxyRelayInstance.Running = false
+		response.EffectiveRunning = false
+		response.RemoteStatus = m.getRemoteRuntimeState(config)
+		if response.RemoteStatus != nil && response.RemoteStatus.Online {
+			response.ProxyRelayInstance.Running = response.RemoteStatus.Running
+			response.EffectiveRunning = response.RemoteStatus.Running
+		}
+	}
+
+	return response
+}
+
 /*
 	Handler.go
 	Handlers for the tcprox. Remove this file
@@ -49,6 +93,7 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 	useUDP, _ := utils.PostBool(r, "useUDP")
 	ProxyProtocolVersion, _ := utils.PostInt(r, "proxyProtocolVersion")
 	enableLogging, _ := utils.PostBool(r, "enableLogging")
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
 
 	//Create the target config
 	newConfigUUID := m.NewConfig(&ProxyRelayOptions{
@@ -60,6 +105,7 @@ func (m *Manager) HandleAddProxyConfig(w http.ResponseWriter, r *http.Request) {
 		UseUDP:               useUDP,
 		ProxyProtocolVersion: convertIntToProxyProtocolVersion(ProxyProtocolVersion),
 		EnableLogging:        enableLogging,
+		AssignedNodeID:       assignedNodeID,
 	})
 
 	js, _ := json.Marshal(newConfigUUID)
@@ -81,6 +127,7 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 	useUDP, _ := utils.PostBool(r, "useUDP")
 	proxyProtocolVersion, _ := utils.PostInt(r, "proxyProtocolVersion")
 	enableLogging, _ := utils.PostBool(r, "enableLogging")
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
 
 	newTimeoutStr, _ := utils.PostPara(r, "timeout")
 	newTimeout := -1
@@ -103,6 +150,7 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 		ProxyProtocolVersion: proxyProtocolVersion,
 		EnableLogging:        enableLogging,
 		NewTimeout:           newTimeout,
+		AssignedNodeID:       assignedNodeID,
 	}
 
 	// Call the EditConfig method to modify the configuration
@@ -116,7 +164,12 @@ func (m *Manager) HandleEditProxyConfigs(w http.ResponseWriter, r *http.Request)
 }
 
 func (m *Manager) HandleListConfigs(w http.ResponseWriter, r *http.Request) {
-	js, _ := json.Marshal(m.Configs)
+	results := make([]*proxyConfigResponse, 0, len(m.Configs))
+	for _, config := range m.Configs {
+		results = append(results, m.buildProxyConfigResponse(config))
+	}
+
+	js, _ := json.Marshal(results)
 	utils.SendJSONResponse(w, string(js))
 }
 
@@ -130,6 +183,10 @@ func (m *Manager) HandleStartProxy(w http.ResponseWriter, r *http.Request) {
 	targetProxyConfig, err := m.GetConfigByUUID(uuid)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	if !m.isLocallyAssigned(targetProxyConfig.AssignedNodeID) {
+		utils.SendErrorResponse(w, "target proxy is assigned to another node")
 		return
 	}
 
@@ -152,6 +209,10 @@ func (m *Manager) HandleStopProxy(w http.ResponseWriter, r *http.Request) {
 	targetProxyConfig, err := m.GetConfigByUUID(uuid)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	if !m.isLocallyAssigned(targetProxyConfig.AssignedNodeID) {
+		utils.SendErrorResponse(w, "target proxy is assigned to another node")
 		return
 	}
 
@@ -206,6 +267,6 @@ func (m *Manager) HandleGetProxyStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	js, _ := json.Marshal(targetConfig)
+	js, _ := json.Marshal(m.buildProxyConfigResponse(targetConfig))
 	utils.SendJSONResponse(w, string(js))
 }

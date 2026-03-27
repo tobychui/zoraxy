@@ -21,6 +21,7 @@ A general purpose HTTP reverse proxy and forwarding tool. Now written in Go!
   - DNS Challenge for Let's Encrypt and [these DNS providers](https://go-acme.github.io/lego/dns/)
 - Blacklist / Whitelist by country or IP address (single IP, CIDR or wildcard for beginners)
 - Stream Proxy (TCP & UDP)
+- Primary / Worker node cluster mode with config sync, telemetry, and per-node traffic assignment
 - Integrated Up-time Monitor
 - Web-SSH Terminal
 - Plugin System
@@ -138,6 +139,10 @@ Usage of zoraxy:
         Enable mDNS scanner and transponder (default true)
   -mdnsname string
         mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)
+  -nodeIP string
+        Advertised node management IP reported to primary node, leave empty to auto-detect
+  -node_sync_timeout duration
+        Timeout for worker node sync HTTP requests to primary (default 30s)
   -noauth
         Disable authentication for management interface
   -plugin string
@@ -146,8 +151,12 @@ Usage of zoraxy:
         Management web interface listening port (default ":8000")
   -reset_ac
         Reset admin account username and password to default and exit
+  -server string
+        Server URL for node registration
   -sshlb
         Allow loopback web ssh connection (DANGER)
+  -token string
+        Token for node registration
   -tmp string
         Temporary folder path (default "./tmp")
   -update_geoip
@@ -170,6 +179,32 @@ If you already have an upstream reverse proxy server in place with permission ma
 
 > [!WARNING]
 > For security reasons, you should only enable no-auth if you are running Zoraxy in a trusted environment or with another authentication management proxy in front.*
+
+### Primary / Worker Node Cluster Mode
+
+Zoraxy can also be deployed as a primary / worker cluster.
+
+- The primary instance remains the source of truth for configuration.
+- Worker nodes register with a token, fetch synchronized configuration from the primary, and report health, runtime state, and telemetry back.
+- Routes can be assigned per node from the UI, so the primary only serves local traffic and worker nodes only serve their assigned traffic.
+
+Worker mode is selected automatically when both `-server` and `-token` are provided, or when both `ZORAXY_NODE_SERVER` and `ZORAXY_NODE_TOKEN` are present in the environment.
+
+Common worker-related environment variables:
+
+```bash
+ZORAXY_NODE_SERVER=http://primary.example.internal:8000
+ZORAXY_NODE_TOKEN=<join-token>
+ZORAXY_NODE_NAME=edge-waw-01
+ZORAXY_NODE_IP=192.168.1.50
+```
+
+Notes:
+
+- `ZORAXY_NODE_NAME` sets the default worker display name unless it is overridden locally from the UI.
+- `ZORAXY_NODE_IP` can be used when the primary cannot reliably discover a worker's reachable management address.
+- Workers are read-only for primary-managed sections by default. `Emergency Local Override` exists for temporary outage scenarios.
+- Primary can enforce an exact version match before workers import synchronized configuration.
 
 ## Screenshots
 
@@ -246,4 +281,3 @@ If you like the project and want to support us, please consider a donation. You 
 ## License
 
 This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **This software is intended to be free of charge. If you have acquired this software from a third-party seller, the authors of this repository bears no responsibility for any technical difficulties assistance or support.**
-
