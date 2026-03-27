@@ -24,6 +24,9 @@
             <div class="item">
                 <img class="logo" src="img/logo.svg">
             </div>
+            <div id="nodeModeIndicator" class="item" style="display:none;">
+                <div class="ui tiny orange label">Node Mode</div>
+            </div>
 
             <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
                 <button id="sidemenuBtn" class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
@@ -93,6 +96,11 @@
                     <a class="item" tag="plugins">
                         <i class="simplistic puzzle piece icon"></i> Plugins Manager
                     </a>
+
+                    <a class="item" tag="nodes">
+                        <i class="simplistic globe icon"></i> Nodes
+                    </a>
+
                     <div class="ui divider menudivider">Plugins</div>
                     <cx id="pluginMenu"></container>
                         <a class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
@@ -107,7 +115,7 @@
                 <div id="qstart" class="functiontab" target="quickstart.html"></div>
 
                 <!-- Status Tab -->
-                <div id="status" class="functiontab" target="status.html" style="display: block ;">
+                <div id="status" class="functiontab" target="status.html">
                     <br><br><div class="ui active centered inline loader"></div>
                 </div>
 
@@ -158,6 +166,9 @@
 
                 <!-- Plugin Context Menu -->
                 <div id="pluginContextWindow" class="functiontab" target="plugincontext.html"></div>
+
+                <!-- Nodes -->
+                <div id="nodes" class="functiontab" target="nodes.html"></div>
 
 
                 </div>
@@ -230,6 +241,38 @@
                 components/ directory into their corrisponding divs
             */
             let loadingComponents = 0;
+
+            function loadNodeModeIndicator(){
+                loadLocalNodeState(function(data){
+                    const nodeName = (data && data.name) ? data.name : "Node";
+                    const nodeMode = data && data.mode === "node";
+                    const nodeLocked = isNodeWriteLockedState(data);
+
+                    if (nodeMode){
+                        $("#nodeModeIndicator .ui.label").text("Node: " + nodeName);
+                        $("#nodeModeIndicator").show();
+                        $(".toolbar .item[tag='nodes']").hide();
+                        $("#nodes").hide();
+                    }else{
+                        $("#nodeModeIndicator .ui.label").text("Node Mode");
+                        $("#nodeModeIndicator").hide();
+                        $(".toolbar .item[tag='nodes']").show();
+                    }
+
+                    $(".toolbar .item[tag='qstart']").toggle(!nodeLocked);
+                    $(".toolbar .item[tag='rules']").toggle(!nodeLocked);
+
+                    if (nodeLocked) {
+                        let activeTag = $("#mainmenu").find(".item.active").attr("tag");
+                        if ((activeTag == undefined || activeTag == "") && window.location.hash.length > 1){
+                            activeTag = window.location.hash.substr(1);
+                        }
+                        if (activeTag === "qstart" || activeTag === "rules") {
+                            openTabById("status");
+                        }
+                    }
+                }, true);
+            }
             
             function initTabs(callback=undefined){
                 $('.functiontab').each(function(){
@@ -251,7 +294,7 @@
             function waitInit(callback = undefined, retryCount = 0){
                 if (loadingComponents > 0 && retryCount < 5){
                     setTimeout(function(){
-                        waitInit(callback, retryCount++);
+                        waitInit(callback, retryCount + 1);
                     }, 300);
                 }else if (loadingComponents == 0){
                     callback();
@@ -261,6 +304,8 @@
             }
 
             initTabs(function(){
+                $(".functiontab").hide();
+                loadNodeModeIndicator();
                 initRPStaste();
 
                 if (window.location.hash.length > 1){

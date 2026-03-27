@@ -15,11 +15,12 @@ import (
 )
 
 type RuleTable struct {
-	AllowRegex    bool     //Allow regular expression to be used in rule matching. Require up to O(n^m) time complexity
-	CaseSensitive bool     //Force case sensitive URL matching
-	configPath    string   //The location where the redirection rules is stored
-	rules         sync.Map //Store map[string]*RedirectRules for this reverse proxy instance
-	Logger        *logger.Logger
+	AllowRegex       bool     //Allow regular expression to be used in rule matching. Require up to O(n^m) time complexity
+	CaseSensitive    bool     //Force case sensitive URL matching
+	configPath       string   //The location where the redirection rules is stored
+	rules            sync.Map //Store map[string]*RedirectRules for this reverse proxy instance
+	LocalNodeMatcher func(string) bool
+	Logger           *logger.Logger
 }
 
 type RedirectRules struct {
@@ -29,6 +30,7 @@ type RedirectRules struct {
 	StatusCode        int    //Status Code for redirection
 	RequireExactMatch bool   //Require exact URL match instead of prefix matching
 	DeviceType        string //Device type filter: "all", "desktop", or "mobile"
+	AssignedNodeID    string //Assigned node ID, empty means serve locally on primary
 }
 
 func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger *logger.Logger) (*RuleTable, error) {
@@ -37,7 +39,10 @@ func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger
 		configPath:    configPath,
 		AllowRegex:    allowRegex,
 		CaseSensitive: caseSensitive,
-		Logger:        logger,
+		LocalNodeMatcher: func(assignedNodeID string) bool {
+			return strings.TrimSpace(assignedNodeID) == ""
+		},
+		Logger: logger,
 	}
 	//Load all the rules from the config path
 	if !utils.FileExists(configPath) {
@@ -77,7 +82,7 @@ func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger
 	return &thisRuleTable, nil
 }
 
-func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string) error {
+func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string, assignedNodeID string) error {
 	// Create a new RedirectRules object with the given parameters
 	newRule := &RedirectRules{
 		RedirectURL:       redirectURL,
@@ -86,6 +91,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 		StatusCode:        statusCode,
 		RequireExactMatch: requireExactMatch,
 		DeviceType:        deviceType,
+		AssignedNodeID:    strings.TrimSpace(assignedNodeID),
 	}
 
 	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
@@ -116,7 +122,7 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 }
 
 // Edit an existing redirection rule, the oldRedirectURL is used to find the rule to be edited
-func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string) error {
+func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string, assignedNodeID string) error {
 	newRule := &RedirectRules{
 		RedirectURL:       newRedirectURL,
 		TargetURL:         destURL,
@@ -124,6 +130,7 @@ func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL strin
 		StatusCode:        statusCode,
 		RequireExactMatch: requireExactMatch,
 		DeviceType:        deviceType,
+		AssignedNodeID:    strings.TrimSpace(assignedNodeID),
 	}
 
 	//Remove the old rule
@@ -198,6 +205,9 @@ func (t *RuleTable) MatchRedirectRule(requestedURL string) *RedirectRules {
 	t.rules.Range(func(key interface{}, value interface{}) bool {
 		rule := value.(*RedirectRules)
 		keyStr := key.(string)
+		if t.LocalNodeMatcher != nil && !t.LocalNodeMatcher(rule.AssignedNodeID) {
+			return true
+		}
 
 		if t.AllowRegex {
 			//Regexp matching rule

@@ -95,6 +95,7 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 	}
 
 	skipValid := (skipValidStr == "true")
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
 
 	//Load the target proxy endpoint from runtime
 	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
@@ -130,6 +131,7 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 		Domain:              domain,
 		RequireTLS:          reqTLS,
 		SkipCertValidations: skipValid,
+		AssignedNodeID:      strings.TrimSpace(assignedNodeID),
 	}
 
 	//Add Virtual Directory Rule to this Proxy Endpoint
@@ -236,6 +238,7 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 	}
 
 	skipValid := (skipValidStr == "true")
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
 
 	var targetEndpoint *dynamicproxy.ProxyEndpoint
 	if eptype == "root" {
@@ -273,6 +276,7 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 		Domain:              domain,
 		RequireTLS:          reqTLS,
 		SkipCertValidations: skipValid,
+		AssignedNodeID:      strings.TrimSpace(assignedNodeID),
 		Disabled:            false,
 	}
 

@@ -1,7 +1,11 @@
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="httprpPage">
     <div class="ui basic segment">
         <h2>HTTP Proxy</h2>
         <p>Proxy HTTP server with HTTP or HTTPS for multiple hosts. If you are only proxying for one host / domain, use Default Site instead.</p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>HTTP proxy changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
     </div>
     <style>
         #httpProxyList .ui.toggle.checkbox input:checked ~ label::before{
@@ -224,13 +228,14 @@
     
     <div id="httpProxyTableWrapper" style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui unstackable sortable compact celled definition table">
-            <thead>
+            <thead class="full-width">
                 <tr>
                     <th></th>
                     <th>Host</th>
                     <th class="details-view">Alt. Listening Addr</th>
                     <th>Destination</th>
                     <th class="details-view">Authentication</th>
+                    <th class="details-view hideInNodeMode">Node</th>
                     <th>Virtual Directory</th>
                     <th class="no-sort">Tags</th>
                     <th class="no-sort" style="width:100px; cursor: default !important;"></th>
@@ -340,7 +345,14 @@
                                     <i class="ui plus icon"></i>
                                 </button>
                             </div>
-                           
+                            <div class="ui divider"></div>
+                            <div class="hideInNodeMode">
+                                <b>Assigned Node</b>
+                                <p style="margin-top: 0.4em;"><small>Select which node should serve this hostname. Leave on primary to keep it local.</small></p>
+                                <div class="listen_mode" style="margin-top:0.4em;">
+                                    <!-- Node assignment will be populated here -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Destinations -->
@@ -694,20 +706,21 @@
     /* List all proxy endpoints */
     function listProxyEndpoints(){
         $.get("/api/proxy/list?type=host", function(data){
-            $("#httpProxyList").html(``);
-            if (data.error !== undefined){
+            loadAssignableNodes(function(){
+                $("#httpProxyList").html(``);
+                if (data.error !== undefined){
+                        $("#httpProxyList").append(`<tr>
+                        <td data-label="" colspan="9"><i class="remove icon"></i> ${data.error}</td>
+                    </tr>`);
+                }else if (data.length == 0){
                     $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="9"><i class="remove icon"></i> ${data.error}</td>
-                </tr>`);
-            }else if (data.length == 0){
-                $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="9"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
-                </tr>`);
-            }else{
-                //Sort by RootOrMatchingDomain field
-                data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0))
-                httpProxyList = data;
-                data.forEach(subd => {
+                        <td data-label="" colspan="9"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
+                    </tr>`);
+                }else{
+                    //Sort by RootOrMatchingDomain field
+                    data.sort((a,b) => (a.RootOrMatchingDomain > b.RootOrMatchingDomain) ? 1 : ((b.RootOrMatchingDomain > a.RootOrMatchingDomain) ? -1 : 0))
+                    httpProxyList = data;
+                    data.forEach(subd => {
                     let subdData = encodeURIComponent(JSON.stringify(subd));
                     
                     //Build the upstream list
@@ -804,6 +817,7 @@
                         authDisplay = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">None</small>`;
                     }
                     let authDisplayEmpty = (subd.AuthenticationProvider.AuthMethod == 0x0);
+                    let assignedNodeDisplay = getAssignedNodeLabel(subd.AssignedNodeID, true);
                     
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td class="collapsing ignoremw" datatype="enable">
@@ -828,6 +842,9 @@
                         <td data-label="auth" datatype="auth" class="details-view" style="${authDisplayEmpty?"text-align: center;":""}">
                             ${authDisplay}
                         </td>
+                        <td data-label="node" datatype="node" class="details-view hideInNodeMode">
+                            ${assignedNodeDisplay}
+                        </td>
                         <td data-label="" editable="true" datatype="vdir" style="${vdIsEmpty?"text-align: center;":""}">${vdList}</td>
                         <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags" style="${tagListEmpty?"text-align: center;":""}">
                             <div class="tags-list">
@@ -848,12 +865,15 @@
                             <button title="Remove Proxy Rule" class="ui circular mini red basic icon button inlineEditActionBtn" onclick='deleteEndpoint("${(subd.RootOrMatchingDomain).hexEncode()}")'><i class="trash icon"></i></button>
                         </td>
                     </tr>`);
-                });
-                populateTagFilterDropdown(data);
-            }
+                    });
+                    populateTagFilterDropdown(data);
+                }
 
-            resolveAccessRuleNameOnHostRPlist();
-            initDetailView();
+                resolveAccessRuleNameOnHostRPlist();
+                initDetailView();
+                applyNodeModeVisibility($("#httpProxyTableWrapper"));
+                applyNodeWriteLockState($("#httprpPage"));
+            });
         });
     }
 
@@ -1083,6 +1103,14 @@
         });
     }
 
+    function updateNodesList(uuid, assignedNodeID){
+        let editor = $("#httprpEditModalWrapper");
+        renderAssignedNodeDropdown(editor.find(".listen_mode"), assignedNodeID, function(){
+            saveProxyInlineEdit(uuid);
+        }, true);
+        applyNodeModeVisibility(editor);
+    }
+
     function saveProxyInlineEdit(uuid){
         let editor = $("#httprpEditModal");
         
@@ -1101,6 +1129,7 @@
         let blockCommonExploits = $(editor).find(".BlockCommonExploits")[0].checked;
         let blockAICrawlers = $(editor).find(".BlockAICrawlers")[0].checked;
         let mitigationAction = $(editor).find(".mitigationActionDropdown").dropdown("get value");
+        let assignedNodeId = $(editor).find(".listen_mode input[name='assignedNodeId']").val() || "";
 
         // CAPTCHA Gating
         let requireCaptcha = $(editor).find(".RequireCaptcha")[0].checked;
@@ -1134,6 +1163,7 @@
                 "blockCommonExploits": blockCommonExploits,
                 "blockAICrawlers": blockAICrawlers,
                 "mitigationAction": mitigationAction,
+                "assignedNodeId": assignedNodeId,
                 "ratenum" :rateLimit,
                 "captcha": requireCaptcha,
                 "captchaProvider": captchaProvider,
@@ -1645,6 +1675,8 @@
             editor.find(".downstream_primary_hostname_edit_input").hide();
             editor.find(".downstream_primary_hostname_edit_btn").parent().show();
         });
+
+        updateNodesList(uuid, subd.AssignedNodeID || "");
         editor.find(".saveDownstreamHostnameBtn").off("click").on("click", function(){
             let newHostname = editor.find(".downstream_primary_hostname_edit_input input").val().trim();
             if (newHostname.length == 0){
@@ -2127,6 +2159,9 @@
             //Reset the tag filter
             $("#tagFilterDropdown").dropdown('set selected', "");
         }
+        applyNodeWriteLockState($("#httprpPage"), {}, true);
     }
+    applyNodeModeVisibility($("#httprpEditModalWrapper"), true);
+    applyNodeWriteLockState($("#httprpPage"));
         
 </script>

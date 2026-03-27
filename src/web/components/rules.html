@@ -23,7 +23,11 @@
         }
     }
 </style>
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="createProxyRulesPage">
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>Create Proxy Rules is unavailable on worker nodes until Emergency Local Override is enabled in Status.</p>
+    </div>
     <div class="ui stackable grid">
         <div class="ten wide column">
             <div class="ui basic segment" style="border-radius: 1em; padding: 1em !important;">
@@ -75,6 +79,11 @@
                                     <label>Tags</label>
                                     <input type="text" id="proxyTags" placeholder="e.g. mediaserver, management">
                                     <small>Comma-separated list of tags for this proxy host.</small>
+                                </div>
+                                <div class="field hideInNodeMode">
+                                    <label>Assigned Node</label>
+                                    <div id="newProxyAssignedNodeDropdown"></div>
+                                    <small>Select which node should serve this hostname. Leave on primary to keep it local.</small>
                                 </div>
                                 <div class="ui horizontal divider">
                                     <i class="ui green lock icon"></i>
@@ -325,6 +334,7 @@
         let blockCommonExploits = $("#blockCommonExploits")[0].checked;
         let blockAICrawlers = $("#blockAICrawlers")[0].checked;
         let mitigationAction = $("#mitigationAction").val();
+        let assignedNodeId = $("#newProxyAssignedNodeDropdown input[name='assignedNodeId']").val() || "";
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -359,6 +369,7 @@
                 access: accessRuleToUse,
                 stickysess: useStickySessionLB,
                 tags: tags,
+                assignedNodeId: assignedNodeId,
                 enableUtm: enableUtm,
                 disableLog: disableLog,
                 dStatisticCollection: disableStatisticCollection,
@@ -378,6 +389,7 @@
                     $("#blockAICrawlers").prop("checked", false);
                     $("#mitigationAction").parent().dropdown("set selected", "0");
                     $("#disableStatisticCollection").prop("checked", false);
+                    renderAssignedNodeDropdown($("#newProxyAssignedNodeDropdown"), "", null, false);
                     credentials = [];
                     updateTable();
                     reloadUptimeList();
@@ -411,6 +423,9 @@
         });
         
     }
+
+    renderAssignedNodeDropdown($("#newProxyAssignedNodeDropdown"), "", null, true);
+    applyNodeModeVisibility($(".standardContainer"), true);
 
     //Clearn the proxy target value, make sure user do not enter http:// or https://
     //and auto select TLS checkbox if https:// exists
@@ -666,6 +681,8 @@
         }
     }
     initAdvanceSettingsAccordion();
+
+    applyNodeWriteLockState($("#createProxyRulesPage"));
    
  
    

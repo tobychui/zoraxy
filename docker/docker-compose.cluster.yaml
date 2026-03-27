@@ -1,0 +1,152 @@
+services:
+  prepare-node:
+    image: python:3.12-alpine
+    restart: "no"
+    volumes:
+      - ${PRIMARY_CONF_DIR:-../conf}:/primary-conf
+      - cluster-bootstrap:/bootstrap
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        python3 - <<'PY'
+        import json
+        import pathlib
+        from datetime import datetime, timezone
+
+        default_node_id = "55cb7b15-2c94-4fc5-9d3e-25d6507c9d9a"
+        default_node_token = "cluster-smoke-node-token"
+        config_dir = pathlib.Path("/primary-conf/nodes")
+        bootstrap_dir = pathlib.Path("/bootstrap")
+        config_dir.mkdir(parents=True, exist_ok=True)
+        bootstrap_dir.mkdir(parents=True, exist_ok=True)
+        config_path = config_dir / f"{default_node_id}.config"
+        env_path = bootstrap_dir / "node.env"
+        json_path = bootstrap_dir / "node.json"
+
+        node_info = None
+        if config_path.exists():
+            try:
+                current = json.loads(config_path.read_text())
+                if isinstance(current, dict) and current.get("id") and current.get("token"):
+                    node_info = current
+            except Exception:
+                node_info = None
+
+        if node_info is None:
+            node_info = {
+                "id": default_node_id,
+                "token": default_node_token,
+                "registered_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                "host": "",
+                "zoraxy_version": "",
+                "config_version": "",
+            }
+
+        config_path.write_text(json.dumps(node_info, indent=2) + "\n")
+        json_path.write_text(json.dumps(node_info, indent=2) + "\n")
+        env_path.write_text(
+            "NODE_ID={}\nNODE_TOKEN={}\n".format(
+                node_info["id"],
+                node_info["token"],
+            )
+        )
+        PY
+
+  primary:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: zoraxy-primary
+    depends_on:
+      prepare-node:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    ports:
+      - "18080:80"
+      - "18443:443"
+      - "18000:8000"
+    volumes:
+      - ${PRIMARY_SYS_DB:-../sys.db}:/opt/zoraxy/config/sys.db
+      - ${PRIMARY_SYS_UUID:-../sys.uuid}:/opt/zoraxy/config/sys.uuid
+      - ${PRIMARY_CONF_DIR:-../conf}:/opt/zoraxy/config/conf
+      - ${PRIMARY_TMP_DIR:-../tmp}:/opt/zoraxy/config/tmp
+      - ${PRIMARY_LOG_DIR:-../log}:/opt/zoraxy/config/log
+      - ${PRIMARY_PLUGIN_DIR:-../plugins}:/opt/zoraxy/plugin/
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        exec zoraxy \
+          -docker=true \
+          -plugin=/opt/zoraxy/plugin/ \
+          -port=:8000
+    healthcheck:
+      test: ["CMD-SHELL", "nc -vz 127.0.0.1 8000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  node:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: zoraxy-node
+    depends_on:
+      primary:
+        condition: service_healthy
+      prepare-node:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    ports:
+      - "18180:80"
+      - "18444:443"
+      - "18001:8000"
+    volumes:
+      - cluster-node-config:/opt/zoraxy/config/
+      - cluster-node-plugin:/opt/zoraxy/plugin/
+      - cluster-bootstrap:/bootstrap:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        while [ ! -f /bootstrap/node.env ]; do
+          sleep 1
+        done
+        . /bootstrap/node.env
+        export ZORAXY_NODE_SERVER=http://primary:8000
+        export ZORAXY_NODE_TOKEN="$$NODE_TOKEN"
+        exec zoraxy \
+          -docker=true \
+          -plugin=/opt/zoraxy/plugin/ \
+          -port=:8000
+    healthcheck:
+      test: ["CMD-SHELL", "nc -vz 127.0.0.1 8000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  primary-echo:
+    image: hashicorp/http-echo:1.0.0
+    container_name: zoraxy-primary-echo
+    command:
+      - "-listen=:5678"
+      - "-text=PRIMARY"
+
+  node-echo:
+    image: hashicorp/http-echo:1.0.0
+    container_name: zoraxy-node-echo
+    command:
+      - "-listen=:5678"
+      - "-text=NODE"
+
+volumes:
+  cluster-node-config:
+  cluster-node-plugin:
+  cluster-bootstrap:

@@ -171,6 +171,24 @@ func (d *Database) listTable(tableName string) ([][][]byte, error) {
 	return results, nil
 }
 
+func (d *Database) getAllTables() ([]string, error) {
+	//Get all file objects from root
+	rootfiles, err := filepath.Glob(filepath.Join(d.Db.(string), "/*"))
+	if err != nil {
+		return []string{}, err
+	}
+
+	//Filter out the folders
+	rootFolders := []string{}
+	for _, file := range rootfiles {
+		if isDirectory(file) {
+			rootFolders = append(rootFolders, filepath.Base(file))
+		}
+	}
+
+	return rootFolders, nil
+}
+
 func (d *Database) close() {
 	//Nothing to close as it is file system
 }

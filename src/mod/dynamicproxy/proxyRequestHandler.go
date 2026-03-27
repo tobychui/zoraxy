@@ -26,6 +26,9 @@ func (router *Router) getTargetProxyEndpointFromRequestURI(requestURI string) *P
 		rootname := key.(string)
 		if strings.HasPrefix(requestURI, rootname) {
 			thisProxyEndpoint := value.(*ProxyEndpoint)
+			if !router.isLocallyAssigned(thisProxyEndpoint.AssignedNodeID) {
+				return true
+			}
 			targetProxyEndpoint = thisProxyEndpoint
 		}
 		return true
@@ -42,7 +45,7 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	if ok {
 		//Exact hit
 		targetSubdomainEndpoint = ep.(*ProxyEndpoint)
-		if !targetSubdomainEndpoint.Disabled {
+		if !targetSubdomainEndpoint.Disabled && router.isLocallyAssigned(targetSubdomainEndpoint.AssignedNodeID) {
 			return targetSubdomainEndpoint
 		}
 	}
@@ -51,7 +54,7 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 	matchProxyEndpoints := []*ProxyEndpoint{}
 	router.ProxyEndpoints.Range(func(k, v interface{}) bool {
 		ep := v.(*ProxyEndpoint)
-		if ep.Disabled {
+		if ep.Disabled || !router.isLocallyAssigned(ep.AssignedNodeID) {
 			//Skip disabled endpoint
 			return true
 		}

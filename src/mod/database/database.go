@@ -138,6 +138,11 @@ func (d *Database) ListTable(tableName string) ([][][]byte, error) {
 	return d.listTable(tableName)
 }
 
+// GetAllTables returns all the tables in the database
+func (d *Database) GetAllTables() ([]string, error) {
+	return d.getAllTables()
+}
+
 /*
 Close the database connection
 */

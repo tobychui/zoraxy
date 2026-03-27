@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -40,6 +41,7 @@ type ProxyRelayOptions struct {
 	UseUDP               bool
 	ProxyProtocolVersion ProxyProtocolVersion
 	EnableLogging        bool
+	AssignedNodeID       string
 }
 
 // ProxyRuleUpdateConfig is used to update the proxy rule config
@@ -53,6 +55,7 @@ type ProxyRuleUpdateConfig struct {
 	ProxyProtocolVersion int    //Enable Proxy Protocol v1/v2, default to disabled
 	EnableLogging        bool   //Enable Logging TCP/UDP Message, default to true
 	NewTimeout           int    //New timeout for the connection, leave -1 for no change
+	AssignedNodeID       string //Assigned node ID, empty means serve locally on primary
 }
 
 type ProxyRelayInstance struct {
@@ -68,6 +71,7 @@ type ProxyRelayInstance struct {
 	ProxyProtocolVersion ProxyProtocolVersion //Proxy Protocol v1/v2
 	EnableLogging        bool                 //Enable logging for ProxyInstance
 	Timeout              int                  //Timeout for connection in sec
+	AssignedNodeID       string               //Assigned node ID, empty means serve locally on primary
 
 	/* Internal */
 	tcpStopChan                 chan bool    //Stop channel for TCP listener
@@ -78,9 +82,19 @@ type ProxyRelayInstance struct {
 	parent                      *Manager     `json:"-"`
 }
 
+type RemoteRuntimeState struct {
+	Running    bool   `json:"running"`
+	Online     bool   `json:"online"`
+	Status     string `json:"status,omitempty"`
+	LastUpdate string `json:"last_update,omitempty"`
+}
+
 type Options struct {
 	DefaultTimeout       int
 	AccessControlHandler func(net.Conn) bool
+	IsLocallyAssigned    func(string) bool
+	ResolveRemoteStatus  func(string, string) *RemoteRuntimeState
+	RuntimeStateChanged  func()
 	ConfigStore          string         //Folder to store the config files, will be created if not exists
 	Logger               *logger.Logger //Logger for the stream proxy
 }
@@ -136,6 +150,11 @@ func NewStreamProxy(options *Options) (*Manager, error) {
 			return true
 		}
 	}
+	if options.IsLocallyAssigned == nil {
+		options.IsLocallyAssigned = func(assignedNodeID string) bool {
+			return strings.TrimSpace(assignedNodeID) == ""
+		}
+	}
 
 	//Create a new proxy manager for TCP
 	thisManager := Manager{
@@ -146,10 +165,12 @@ func NewStreamProxy(options *Options) (*Manager, error) {
 	//Inject manager into the rules
 	for _, rule := range previousRules {
 		rule.parent = &thisManager
-		if rule.Running {
+		if rule.Running && thisManager.isLocallyAssigned(rule.AssignedNodeID) {
 			//This was previously running. Start it again
 			thisManager.logf("Resuming stream proxy rule "+rule.Name, nil)
 			rule.Start()
+		} else if rule.Running {
+			rule.Running = false
 		}
 	}
 
@@ -171,6 +192,22 @@ func (m *Manager) logf(message string, originalError error) {
 	m.Options.Logger.PrintAndLog("stream-prox", message, originalError)
 }
 
+func (m *Manager) isLocallyAssigned(assignedNodeID string) bool {
+	if m == nil || m.Options == nil || m.Options.IsLocallyAssigned == nil {
+		return strings.TrimSpace(assignedNodeID) == ""
+	}
+
+	return m.Options.IsLocallyAssigned(assignedNodeID)
+}
+
+func (m *Manager) getRemoteRuntimeState(config *ProxyRelayInstance) *RemoteRuntimeState {
+	if m == nil || m.Options == nil || m.Options.ResolveRemoteStatus == nil || config == nil {
+		return nil
+	}
+
+	return m.Options.ResolveRemoteStatus(strings.TrimSpace(config.AssignedNodeID), config.UUID)
+}
+
 // NewConfig creates a new proxy relay config with the given options
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 	//Generate two zero value for atomic int64
@@ -190,6 +227,7 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		ProxyProtocolVersion:        config.ProxyProtocolVersion,
 		EnableLogging:               config.EnableLogging,
 		Timeout:                     config.Timeout,
+		AssignedNodeID:              strings.TrimSpace(config.AssignedNodeID),
 		tcpStopChan:                 nil,
 		udpStopChan:                 nil,
 		aTobAccumulatedByteTransfer: aAcc,
@@ -259,6 +297,7 @@ func (m *Manager) EditConfig(newConfig *ProxyRuleUpdateConfig) error {
 	foundConfig.UseUDP = newConfig.UseUDP
 	foundConfig.ProxyProtocolVersion = convertIntToProxyProtocolVersion(newConfig.ProxyProtocolVersion)
 	foundConfig.EnableLogging = newConfig.EnableLogging
+	foundConfig.AssignedNodeID = strings.TrimSpace(newConfig.AssignedNodeID)
 
 	if newConfig.NewTimeout != -1 {
 		if newConfig.NewTimeout < 0 {
@@ -271,7 +310,11 @@ func (m *Manager) EditConfig(newConfig *ProxyRuleUpdateConfig) error {
 
 	//Check if config is running. If yes, restart it
 	if foundConfig.IsRunning() {
-		foundConfig.Restart()
+		if !m.isLocallyAssigned(foundConfig.AssignedNodeID) {
+			foundConfig.Stop()
+		} else {
+			foundConfig.Restart()
+		}
 	}
 	return nil
 }

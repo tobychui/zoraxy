@@ -13,10 +13,14 @@
     }
 </style>
 <script src="script/jsrsasign-all-min.js"></script>
-<div class="standardContainer">
+<div class="standardContainer nodeWriteProtectedScope" id="certPage">
     <div class="ui basic segment">
         <h2>TLS / SSL Certificates</h2>
         <p>Setup TLS cert for different domains of your reverse proxy server names</p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>TLS and ACME changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
     </div>
     
     <div class="ui divider"></div>
@@ -102,7 +106,7 @@
             </table>
         </div>
         <br>
-        <button class="ui basic button" onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
+        <button class="ui basic button" data-node-lock-exempt onclick="initManagedDomainCertificateList();"><i class="green refresh icon"></i> Refresh List</button>
         <br>
         <div class="ui blue message">
             <h4>What is a Fallback Certificate?</h4>
@@ -113,6 +117,10 @@
     <div tourstep="acmeSettings">
         <h3>Certificate Authority (CA) and Auto Renew (ACME)</h3>
         <p>Management features regarding CA and ACME</p>
+        <div id="acmeManagedByPrimaryNotice" class="ui info message" style="display:none;">
+            <div class="header">Managed by Primary Node</div>
+            <p id="acmeManagedByPrimaryText">ACME renewal and certificate issuance are disabled in node mode. Certificates are synchronized from the primary node.</p>
+        </div>
         <h4>Prefered Certificate Authority</h4>
         <p>The default CA to use when create a new subdomain proxy endpoint with TLS certificate</p>
         <div class="ui fluid form">
@@ -146,14 +154,60 @@
             </h4>
         </div>
         <p>This tool provide you a graphical interface to setup auto certificate renew on your (sub)domains. You can also manually generate a certificate if one of your domain do not have certificate.</p>
-        <button class="ui basic button" tourstep="openACMEManager" onclick="openACMEManager();"><i class="yellow external icon"></i> Open ACME Tool</button>
+        <button id="acmeOpenButton" class="ui basic button" tourstep="openACMEManager" onclick="openACMEManager();"><i class="yellow external icon"></i> Open ACME Tool</button>
     </div>
 </div>
 <script>
     var uploadPendingPublicKey = undefined;
     var uploadPendingPrivateKey = undefined;
+    var nodeModeDisablesACME = false;
+    var nodeModeACMEMessage = "ACME renewal and certificate issuance are disabled in node mode. Certificates are synchronized from the primary node.";
 
     $("#defaultCA").dropdown();
+
+    function applyNodeModeAcmeState(data){
+        nodeModeDisablesACME = !!(data && data.acme_managed_by_primary);
+        if (data && data.acme_message){
+            nodeModeACMEMessage = data.acme_message;
+        }
+
+        if (nodeModeDisablesACME){
+            $("#acmeManagedByPrimaryText").text(nodeModeACMEMessage);
+            $("#acmeManagedByPrimaryNotice").show();
+            $("#prefACMEEmail").prop("disabled", true);
+            $("#defaultCA").addClass("disabled");
+            $("#acmeOpenButton").addClass("disabled");
+            $(".renewButton").addClass("disabled");
+            setACMEEnableStates(false);
+        }else{
+            $("#acmeManagedByPrimaryNotice").hide();
+            $("#prefACMEEmail").prop("disabled", false);
+            $("#defaultCA").removeClass("disabled");
+            $("#acmeOpenButton").removeClass("disabled");
+        }
+    }
+
+    function loadNodeModeAcmeState(callback=undefined){
+        $.get("/api/node/localstate", function(data){
+            applyNodeModeAcmeState(data);
+            if (callback != undefined){
+                callback();
+            }
+        }).fail(function(){
+            if (callback != undefined){
+                callback();
+            }
+        });
+    }
+
+    function rejectACMEActionIfNodeMode(){
+        if (!nodeModeDisablesACME){
+            return false;
+        }
+
+        msgbox(nodeModeACMEMessage, false, 6000);
+        return true;
+    }
 
     function getPossibleCommonNameFromSelectedCertificate(){
         const fileInput = document.getElementById('pubkeySelector');
@@ -210,6 +264,10 @@
 
     //Renew certificate by button press
     function renewCertificate(domain, dns, btn=undefined){
+        if (rejectACMEActionIfNodeMode()){
+            return;
+        }
+
         let defaultCA = $("#defaultCA").dropdown("get value");
         if (defaultCA.trim() == ""){
             defaultCA = "Let's Encrypt";
@@ -262,6 +320,14 @@
 
    // Obtain certificate from API, only support one domain
    function obtainCertificate(domains, dns, usingCa = "Let's Encrypt", callback=undefined) {
+        if (nodeModeDisablesACME){
+            if (callback != undefined){
+                callback(false);
+            }
+            rejectACMEActionIfNodeMode();
+            return;
+        }
+
         //Load the ACME email from server side
         let acmeEmail = "";
         $.get("/api/acme/autoRenew/email", function(data){
@@ -356,7 +422,9 @@
         //Initialize the current default CA options
         $.get("/api/acme/autoRenew/email", function(data){
             $("#prefACMEEmail").val(data);
-            if (data.trim() == ""){
+            if (nodeModeDisablesACME){
+                $(".renewButton").addClass('disabled');
+            }else if (data.trim() == ""){
                 //acme email is not yet set
                 $(".renewButton").addClass('disabled');
             }else{
@@ -383,9 +451,12 @@
         
         $("#acmeAutoRenewer").find("i").attr("class", enabled?"white circle check icon":"white circle times icon");
     }
-    initAcmeStatus();
 
     function saveDefaultCA(){
+        if (rejectACMEActionIfNodeMode()){
+            return;
+        }
+
         let newDefaultEmail = $("#prefACMEEmail").val().trim();
         let newDefaultCA = $("#defaultCA").dropdown("get value");
 
@@ -448,7 +519,7 @@
                         <td><i class="${entry.UseDNS?"green check": "red times"} icon"></i></td>
                         <td>
                             <button title="Set as Default / Fallback Certificate" class="ui mini basic button ${(entry.IsFallback?"disabled":"")} " onclick="setSelectedCertAsFallbackCertificate('${entry.Filename}');"><i class="ui blue home icon"></i> Set Fallback</button>
-                            <button title="Renew Certificate" class="ui mini basic icon button renewButton" onclick="renewCertificate('${entryDomainRenewKey}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button>
+                            <button title="${nodeModeDisablesACME ? "Managed by primary node" : "Renew Certificate"}" class="ui mini basic icon button renewButton ${nodeModeDisablesACME ? "disabled" : ""}" onclick="renewCertificate('${entryDomainRenewKey}', '${entry.UseDNS}', this);"><i class="ui green refresh icon"></i></button>
                             <button title="Delete key-pair" class="ui mini basic icon red button" onclick="deleteCertificate('${entry.Filename}');"><i class="ui red trash icon"></i></button>
                         </td>
                     </tr>`);
@@ -459,14 +530,23 @@
                         <td colspan="4"><i class="ui times red circle icon"></i> No valid keypairs found</td>
                     </tr>`);
                 }
+                applyNodeWriteLockState($("#certPage"));
             }
         })
     }
-    initManagedDomainCertificateList();
 
     function openACMEManager(){
+        if (rejectACMEActionIfNodeMode()){
+            return;
+        }
         showSideWrapper('snippet/acme.html');
     }
+
+    loadNodeModeAcmeState(function(){
+        applyNodeWriteLockState($("#certPage"));
+        initAcmeStatus();
+        initManagedDomainCertificateList();
+    });
 
     function handleDomainUploadByKeypress(){
         handleDomainKeysUpload(function(){

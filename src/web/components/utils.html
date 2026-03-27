@@ -11,12 +11,16 @@
     </div>
 
     <div class="ui bottom attached tab segment utilitiesTabs active" data-tab="utiltab1">
+        <div class="ui warning message nodeWriteLockNotice" id="utilsAccountLockNotice" style="display:none;">
+            <div class="header">Managed by Primary Node</div>
+            <p>Account and SMTP changes are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
+        </div>
         <div class="extAuthOnly" style="display:none;">
             <div class="ui basic segment">
                 <i class="ui green circle check icon"></i> Account options are not available due to -noauth flag is set to true.
             </div>
         </div>
-        <div class="selfauthOnly">
+        <div class="selfauthOnly nodeWriteProtectedScope" id="utilsAccountsPage">
             <h3>Change Password</h3>
             <p>Update the current account credentials</p>
             <div class="ui basic segment">
@@ -230,6 +234,12 @@
         $('.utilitiesTabs.tab.segment').removeClass('active');
         $('div[data-tab="' + tab + '"]').addClass('active');
     }); 
+
+    applyNodeWriteLockState($("#utilsAccountsPage"), {
+        onChange: function(state, locked) {
+            $("#utilsAccountLockNotice").toggle(locked);
+        }
+    });
 
     /*
         Account Password utilities

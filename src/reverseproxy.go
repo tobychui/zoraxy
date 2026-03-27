@@ -75,6 +75,24 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 	}, nil
 }
 
+func getRootConfigForUpdate() *dynamicproxy.ProxyEndpoint {
+	if dynamicProxyRouter != nil && dynamicProxyRouter.Root != nil {
+		rootConfig := dynamicproxy.CopyEndpoint(dynamicProxyRouter.Root)
+		if rootConfig != nil {
+			if rootConfig.NodeDefaultSites == nil {
+				rootConfig.NodeDefaultSites = map[string]*dynamicproxy.NodeDefaultSiteConfig{}
+			}
+			return rootConfig
+		}
+	}
+
+	defaultRootConfig := dynamicproxy.GetDefaultProxyEndpoint()
+	defaultRootConfig.ProxyType = dynamicproxy.ProxyTypeRoot
+	defaultRootConfig.RootOrMatchingDomain = "/"
+	defaultRootConfig.NodeDefaultSites = map[string]*dynamicproxy.NodeDefaultSiteConfig{}
+	return &defaultRootConfig
+}
+
 // Add user customizable reverse proxy
 func ReverseProxyInit() {
 	/*
@@ -163,17 +181,18 @@ func ReverseProxyInit() {
 		ForceHttpsRedirect: forceHttpsRedirect,
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
-		TlsManager:         tlsCertManager,
-		RedirectRuleTable:  redirectTable,
-		GeodbStore:         geodbStore,
-		StatisticCollector: statisticCollector,
-		WebDirectory:       *path_webserver,
-		AccessController:   accessController,
-		ForwardAuthRouter:  forwardAuthRouter,
-		OAuth2Router:       oauth2Router,
+		NodeManager:         nodeManager,
+		TlsManager:          tlsCertManager,
+		RedirectRuleTable:   redirectTable,
+		GeodbStore:          geodbStore,
+		StatisticCollector:  statisticCollector,
+		WebDirectory:        *path_webserver,
+		AccessController:    accessController,
+		ForwardAuthRouter:   forwardAuthRouter,
+		OAuth2Router:        oauth2Router,
 		ZorxAuthAgentRouter: zorxAuthRouter,
-		LoadBalancer:       loadBalancer,
-		PluginManager:      pluginManager,
+		LoadBalancer:        loadBalancer,
+		PluginManager:       pluginManager,
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -333,6 +352,8 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	//Use sticky session?
 	useStickySession, _ := utils.PostBool(r, "stickysess")
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
+	assignedNodeID = strings.TrimSpace(assignedNodeID)
 
 	// Require Rate Limiting?
 	requireRateLimit := false
@@ -466,6 +487,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			ProxyType:            dynamicproxy.ProxyTypeHost,
 			RootOrMatchingDomain: rootOrMatchingDomain,
 			MatchingDomainAlias:  aliasHostnames,
+			AssignedNodeID:       assignedNodeID,
 			ActiveOrigins: []*loadbalance.Upstream{
 				{
 					OriginIpOrDomain:         endpoint,
@@ -543,12 +565,33 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "target not defined")
 			return
 		}
+		targetNodeID, _ := utils.PostPara(r, "targetNodeId")
+		targetNodeID = strings.TrimSpace(targetNodeID)
+		clearNodeOverride, _ := utils.PostBool(r, "clearNodeOverride")
 
-		//Write the root options to file
-		rootRoutingEndpoint := dynamicproxy.ProxyEndpoint{
-			ProxyType:            dynamicproxy.ProxyTypeRoot,
-			RootOrMatchingDomain: "/",
-			ActiveOrigins: []*loadbalance.Upstream{
+		rootRoutingEndpoint := getRootConfigForUpdate()
+		rootRoutingEndpoint.ProxyType = dynamicproxy.ProxyTypeRoot
+		rootRoutingEndpoint.RootOrMatchingDomain = "/"
+		rootRoutingEndpoint.RequireCaptcha = requireCaptcha
+		rootRoutingEndpoint.CaptchaConfig = captchaConfig
+		if rootRoutingEndpoint.NodeDefaultSites == nil {
+			rootRoutingEndpoint.NodeDefaultSites = map[string]*dynamicproxy.NodeDefaultSiteConfig{}
+		}
+
+		if targetNodeID != "" {
+			if clearNodeOverride {
+				delete(rootRoutingEndpoint.NodeDefaultSites, targetNodeID)
+			} else {
+				rootRoutingEndpoint.NodeDefaultSites[targetNodeID] = &dynamicproxy.NodeDefaultSiteConfig{
+					DefaultSiteOption:   defaultSiteOption,
+					DefaultSiteValue:    dsVal,
+					OriginIpOrDomain:    endpoint,
+					RequireTLS:          useTLS,
+					SkipCertValidations: true,
+				}
+			}
+		} else {
+			rootRoutingEndpoint.ActiveOrigins = []*loadbalance.Upstream{
 				{
 					OriginIpOrDomain:         endpoint,
 					RequireTLS:               useTLS,
@@ -556,15 +599,13 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 					SkipWebSocketOriginCheck: true,
 					Weight:                   1,
 				},
-			},
-			InactiveOrigins:   []*loadbalance.Upstream{},
-			BypassGlobalTLS:   false,
-			DefaultSiteOption: defaultSiteOption,
-			DefaultSiteValue:  dsVal,
-			RequireCaptcha:    requireCaptcha,
-			CaptchaConfig:     captchaConfig,
+			}
+			rootRoutingEndpoint.InactiveOrigins = []*loadbalance.Upstream{}
+			rootRoutingEndpoint.BypassGlobalTLS = false
+			rootRoutingEndpoint.DefaultSiteOption = defaultSiteOption
+			rootRoutingEndpoint.DefaultSiteValue = dsVal
 		}
-		preparedRootProxyRoute, err := dynamicProxyRouter.PrepareProxyRoute(&rootRoutingEndpoint)
+		preparedRootProxyRoute, err := dynamicProxyRouter.PrepareProxyRoute(rootRoutingEndpoint)
 		if err != nil {
 			utils.SendErrorResponse(w, "unable to prepare root routing: "+err.Error())
 			return
@@ -575,7 +616,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "unable to update default site: "+err.Error())
 			return
 		}
-		proxyEndpointCreated = &rootRoutingEndpoint
+		proxyEndpointCreated = rootRoutingEndpoint
 	default:
 		//Invalid eptype
 		utils.SendErrorResponse(w, "invalid endpoint type")
@@ -700,6 +741,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagStr, _ := utils.PostPara(r, "tags")
+	assignedNodeID, _ := utils.PostPara(r, "assignedNodeId")
+	assignedNodeID = strings.TrimSpace(assignedNodeID)
 	tags := []string{}
 	if tagStr != "" {
 		tags = strings.Split(tagStr, ",")
@@ -748,6 +791,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.BlockAICrawlers = blockAICrawlers
 	newProxyEndpoint.MitigationAction = mitigationAction
 	newProxyEndpoint.Tags = tags
+	newProxyEndpoint.AssignedNodeID = assignedNodeID
 
 	//Prepare to replace the current routing rule
 	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
@@ -1339,7 +1383,35 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 // Report the current status of the reverse proxy server
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
-	js, err := json.Marshal(dynamicProxyRouter)
+	status := struct {
+		Running bool `json:"Running"`
+		Option  struct {
+			Port               int    `json:"Port"`
+			UseTls             bool   `json:"UseTls"`
+			ListenOnPort80     bool   `json:"ListenOnPort80"`
+			ForceHttpsRedirect bool   `json:"ForceHttpsRedirect"`
+			NoCache            bool   `json:"NoCache"`
+			UseProxyProtocol   bool   `json:"UseProxyProtocol"`
+			HostUUID           string `json:"HostUUID"`
+			HostVersion        string `json:"HostVersion"`
+		} `json:"Option"`
+	}{}
+
+	if dynamicProxyRouter != nil {
+		status.Running = dynamicProxyRouter.Running
+		if dynamicProxyRouter.Option != nil {
+			status.Option.Port = dynamicProxyRouter.Option.Port
+			status.Option.UseTls = dynamicProxyRouter.Option.UseTls
+			status.Option.ListenOnPort80 = dynamicProxyRouter.Option.ListenOnPort80
+			status.Option.ForceHttpsRedirect = dynamicProxyRouter.Option.ForceHttpsRedirect
+			status.Option.NoCache = dynamicProxyRouter.Option.NoCache
+			status.Option.UseProxyProtocol = dynamicProxyRouter.Option.UseProxyProtocol
+			status.Option.HostUUID = dynamicProxyRouter.Option.HostUUID
+			status.Option.HostVersion = dynamicProxyRouter.Option.HostVersion
+		}
+	}
+
+	js, err := json.Marshal(status)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to marshal status data", err)
 		utils.SendErrorResponse(w, "Unable to marshal status data")

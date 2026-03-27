@@ -1,7 +1,11 @@
-<div class="sso standardContainer">
+<div class="sso standardContainer nodeWriteProtectedScope" id="ssoPage">
     <div class="ui basic segment">
         <h2>SSO</h2>
         <p>Single Sign-On (SSO) and authentication providers settings </p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>OAuth2 settings are locked on worker nodes until Emergency Local Override is enabled in Status. Forward Auth and Zoraxy Auth stay editable locally on the worker.</p>
     </div>
     <div class="ui divider"></div>
     <div class="ui top attached tabular menu ssoTabs">
@@ -749,6 +753,9 @@
 
     /* Bind UI events */
     $(".sso .advanceSettings").accordion();
+    applyNodeWriteLockState($("#ssoPage"), {
+        keepEnabledSelector: "#forwardAuthSettings, #zorxAuthGatewaySettings, #zorxAuthSettings, [data-node-lock-exempt]"
+    });
 
     /*
         Logout all users handler.

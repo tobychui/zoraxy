@@ -1,6 +1,10 @@
 package dockerux
 
-import "imuslab.com/zoraxy/mod/info/logger"
+import (
+	"sync"
+
+	"imuslab.com/zoraxy/mod/info/logger"
+)
 
 /*
 	Docker Optimizer
@@ -13,9 +17,12 @@ import "imuslab.com/zoraxy/mod/info/logger"
 type UXOptimizer struct {
 	RunninInDocker   bool
 	SystemWideLogger *logger.Logger
+	imageDetectMutex sync.Mutex
+	detectedImage    string
+	imageChecked     bool
 }
 
-//Create a new docker optimizer
+// Create a new docker optimizer
 func NewDockerOptimizer(IsRunningInDocker bool, logger *logger.Logger) *UXOptimizer {
 	return &UXOptimizer{
 		RunninInDocker:   IsRunningInDocker,

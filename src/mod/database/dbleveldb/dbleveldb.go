@@ -143,6 +143,15 @@ func (d *DB) ListTable(tableName string) ([][][]byte, error) {
 	return result, nil
 }
 
+func (d *DB) GetAllTables() ([]string, error) {
+	var tables []string
+	d.Table.Range(func(key, value interface{}) bool {
+		tables = append(tables, key.(string))
+		return true
+	})
+	return tables, nil
+}
+
 func (d *DB) Close() {
 	//Write the remaining data in batch back into disk
 	d.writeFlushStop <- true

@@ -1,7 +1,7 @@
 package dbinc
 
 /*
-	dbinc is the interface for all database backend
+dbinc is the interface for all database backend
 */
 type BackendType int
 
@@ -22,6 +22,7 @@ type Backend interface {
 	KeyExists(tableName string, key string) bool
 	Delete(tableName string, key string) error
 	ListTable(tableName string) ([][][]byte, error)
+	GetAllTables() ([]string, error)
 	Close()
 }
 

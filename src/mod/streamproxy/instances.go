@@ -25,6 +25,14 @@ func (c *ProxyRelayInstance) LogMsg(message string, originalError error) {
 	}
 }
 
+func (c *ProxyRelayInstance) notifyRuntimeStateChanged() {
+	if c == nil || c.parent == nil || c.parent.Options == nil || c.parent.Options.RuntimeStateChanged == nil {
+		return
+	}
+
+	c.parent.Options.RuntimeStateChanged()
+}
+
 // Start a proxy if stopped
 func (c *ProxyRelayInstance) Start() error {
 	if c.IsRunning() {
@@ -46,6 +54,7 @@ func (c *ProxyRelayInstance) Start() error {
 					c.Running = false
 					c.udpStopChan = nil
 					c.parent.SaveConfigToDatabase()
+					c.notifyRuntimeStateChanged()
 				}
 				c.parent.logf("[proto:udp] Error starting stream proxy "+c.Name+"("+c.UUID+")", err)
 			}
@@ -61,6 +70,7 @@ func (c *ProxyRelayInstance) Start() error {
 				c.Running = false
 				c.tcpStopChan = nil
 				c.parent.SaveConfigToDatabase()
+				c.notifyRuntimeStateChanged()
 				c.parent.logf("[proto:tcp] Error starting stream proxy "+c.Name+"("+c.UUID+")", err)
 			}
 		}()
@@ -69,6 +79,7 @@ func (c *ProxyRelayInstance) Start() error {
 	//Successfully spawned off the proxy routine
 	c.Running = true
 	c.parent.SaveConfigToDatabase()
+	c.notifyRuntimeStateChanged()
 	return nil
 }
 
@@ -107,4 +118,5 @@ func (c *ProxyRelayInstance) Stop() {
 
 	//Update the running status
 	c.parent.SaveConfigToDatabase()
+	c.notifyRuntimeStateChanged()
 }

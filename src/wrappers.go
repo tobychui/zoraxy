@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -87,10 +88,16 @@ func UpdateUptimeMonitorTargets() {
 // Generate uptime monitor targets from reverse proxy rules
 func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Target {
 	hosts := dp.GetProxyEndpointsAsMap()
+	isLocallyAssigned := func(assignedNodeID string) bool {
+		if nodeManager == nil {
+			return strings.TrimSpace(assignedNodeID) == ""
+		}
+		return nodeManager.MatchesLocalNode(assignedNodeID)
+	}
 
 	UptimeTargets := []*uptime.Target{}
 	for hostid, target := range hosts {
-		if target.Disabled || target.DisableUptimeMonitor {
+		if target.Disabled || target.DisableUptimeMonitor || !isLocallyAssigned(target.AssignedNodeID) {
 			//Skip those proxy rules that is disabled
 			continue
 		}
@@ -119,6 +126,9 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 
 			//Add each virtual directory into the list
 			for _, vdir := range target.VirtualDirectories {
+				if !isLocallyAssigned(vdir.AssignedNodeID) {
+					continue
+				}
 				url := "http://" + vdir.Domain
 				protocol := "http"
 				if origin.RequireTLS {
@@ -144,12 +154,50 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 
 // Handle rendering up time monitor data
 func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
-	if uptimeMonitor != nil {
-		uptimeMonitor.HandleUptimeLogRead(w, r)
-	} else {
+	if uptimeMonitor == nil {
 		http.Error(w, "500 - Internal Server Error (Still initializing)", http.StatusInternalServerError)
 		return
 	}
+
+	results := uptimeMonitor.ExportOnlineStatusLog()
+	if *mode == "primary" && nodeManager != nil {
+		for _, currentNode := range nodeManager.Nodes {
+			if currentNode == nil {
+				continue
+			}
+
+			telemetry, err := nodeManager.LoadNodeTelemetry(currentNode.ID)
+			if err != nil || telemetry == nil {
+				continue
+			}
+
+			for targetID, records := range telemetry.UptimeLogs {
+				if len(records) == 0 {
+					continue
+				}
+
+				clonedRecords := make([]*uptime.Record, 0, len(records))
+				for _, record := range records {
+					if record == nil {
+						continue
+					}
+					clonedRecord := *record
+					clonedRecords = append(clonedRecords, &clonedRecord)
+				}
+				if len(clonedRecords) > 0 {
+					results[targetID] = clonedRecords
+				}
+			}
+		}
+	}
+
+	js, err := json.Marshal(results)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	utils.SendJSONResponse(w, string(js))
 }
 
 /*
@@ -328,6 +376,9 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 	type ZoraxyInfo struct {
 		Version           string
 		NodeUUID          string
+		Hostname          string
+		NodeName          string
+		Mode              string
 		Development       bool
 		BootTime          int64
 		EnableSshLoopback bool
@@ -337,6 +388,8 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 	displayUUID := nodeUUID
 	displayAllowSSHLB := *allowSshLoopback
 	displayBootTime := bootTime
+	displayHostname, _ := os.Hostname()
+	displayNodeName := getEffectiveLocalNodeName()
 
 	if !authAgent.CheckAuth(r) {
 		displayUUID = "Unauthorized"
@@ -347,6 +400,9 @@ func HandleZoraxyInfo(w http.ResponseWriter, r *http.Request) {
 	info := ZoraxyInfo{
 		Version:           SYSTEM_VERSION,
 		NodeUUID:          displayUUID,
+		Hostname:          displayHostname,
+		NodeName:          displayNodeName,
+		Mode:              *mode,
 		Development:       *development_build,
 		BootTime:          displayBootTime,
 		EnableSshLoopback: displayAllowSSHLB,
