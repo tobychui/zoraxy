@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
+	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -20,23 +21,12 @@ import (
 	Plugin Store
 */
 
-// See https://github.com/aroz-online/zoraxy-official-plugins/blob/main/directories/index.json for the standard format
-
-type Checksums struct {
-	LinuxAmd64   string `json:"linux_amd64"`
-	Linux386     string `json:"linux_386"`
-	LinuxArm     string `json:"linux_arm"`
-	LinuxArm64   string `json:"linux_arm64"`
-	LinuxMipsle  string `json:"linux_mipsle"`
-	LinuxRiscv64 string `json:"linux_riscv64"`
-	WindowsAmd64 string `json:"windows_amd64"`
-}
+// See https://github.com/aroz-online/zoraxy-official-plugins/blob/main/directories/index2.json for the standard format
 
 type DownloadablePlugin struct {
-	IconPath         string
-	PluginIntroSpect zoraxy_plugin.IntroSpect //Plugin introspect information
-	ChecksumsSHA256  Checksums                //Checksums for the plugin binary
-	DownloadURLs     map[string]string        //Download URLs for different platforms
+	IconPath         string                   `json:"IconPath"`         //Icon path or URL for the plugin
+	PluginIntroSpect zoraxy_plugin.IntroSpect `json:"PluginIntroSpect"` //Plugin introspect information
+	DownloadURLs     map[string]string        `json:"DownloadURLs"`     //Download URLs for different platforms
 }
 
 /* Plugin Store Index List Sync */
@@ -80,6 +70,13 @@ func (m *Manager) getPluginListFromURL(url string) ([]*DownloadablePlugin, error
 	err = json.Unmarshal(content, &pluginList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plugin list from %s: %w", url, err)
+	}
+
+	// Filter out if IconPath is empty string, set it to "/img/plugin_icon.png"
+	for _, plugin := range pluginList {
+		if strings.TrimSpace(plugin.IconPath) == "" {
+			plugin.IconPath = "/img/plugin_icon.png"
+		}
 	}
 
 	return pluginList, nil
@@ -148,15 +145,6 @@ func (m *Manager) InstallPlugin(plugin *DownloadablePlugin) error {
 		return fmt.Errorf("failed to set executable permissions: %w", err)
 	}
 
-	// Verify the checksum of the downloaded plugin binary
-	checksums, err := plugin.ChecksumsSHA256.GetCurrentPlatformChecksum()
-	if err == nil {
-		if !verifyChecksumForFile(pluginPath, checksums) {
-			out.Close()
-			return fmt.Errorf("checksum verification failed for plugin binary")
-		}
-	}
-
 	//Ok, also download the icon if exists
 	if plugin.IconPath != "" {
 		iconURL := strings.TrimSpace(plugin.IconPath)
@@ -216,55 +204,6 @@ func (m *Manager) UninstallPlugin(pluginID string) error {
 	//Reload the plugin list
 	m.ReloadPluginFromDisk()
 	return nil
-}
-
-// GetCurrentPlatformChecksum returns the checksum for the current platform
-func (c *Checksums) GetCurrentPlatformChecksum() (string, error) {
-	switch runtime.GOOS {
-	case "linux":
-		switch runtime.GOARCH {
-		case "amd64":
-			return c.LinuxAmd64, nil
-		case "386":
-			return c.Linux386, nil
-		case "arm":
-			return c.LinuxArm, nil
-		case "arm64":
-			return c.LinuxArm64, nil
-		case "mipsle":
-			return c.LinuxMipsle, nil
-		case "riscv64":
-			return c.LinuxRiscv64, nil
-		default:
-			return "", fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
-		}
-	case "windows":
-		switch runtime.GOARCH {
-		case "amd64":
-			return c.WindowsAmd64, nil
-		default:
-			return "", fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
-		}
-	default:
-		return "", fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
-	}
-}
-
-// VerifyChecksum verifies the checksum of the downloaded plugin binary.
-func verifyChecksumForFile(filePath string, checksum string) bool {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return false
-	}
-	calculatedChecksum := fmt.Sprintf("%x", hash.Sum(nil))
-
-	return calculatedChecksum == checksum
 }
 
 /*
@@ -350,6 +289,42 @@ func (m *Manager) HandleUninstallPlugin(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		utils.SendErrorResponse(w, "Failed to uninstall plugin: "+err.Error())
 		return
+	}
+
+	utils.SendOK(w)
+}
+
+// HandleEmitCustomEvent is the handler for emitting a custom event from a plugin to other plugins
+func (m *Manager) HandleEmitCustomEvent(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.SendErrorResponse(w, "Method not allowed")
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "" || !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+		utils.SendErrorResponse(w, "Invalid or missing Content-Type, expected application/json")
+		return
+	}
+
+	// parse the event payload from the request body
+	var payload events.CustomEvent
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		utils.SendErrorResponse(w, "Failed to parse event: "+err.Error())
+		return
+	}
+
+	// collect the recipients
+	if len(payload.Recipients) > 0 {
+		recipients := make([]eventsystem.ListenerID, 0, len(payload.Recipients))
+		for _, rid := range payload.Recipients {
+			recipients = append(recipients, eventsystem.ListenerID(rid))
+		}
+		// Emit the event to subscribers and specified recipients
+		eventsystem.Publisher.EmitToSubscribersAnd(recipients, &payload)
+	} else {
+		// Emit the event to all subscribers
+		eventsystem.Publisher.Emit(&payload)
 	}
 
 	utils.SendOK(w)

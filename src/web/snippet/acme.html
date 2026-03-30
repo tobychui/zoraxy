@@ -117,7 +117,7 @@
         <div class="default text">Let's Encrypt</div>
         <div class="menu">
           <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
-          <div class="item" data-value="Buypass">Buypass</div>
+          <!-- <div class="item" data-value="Buypass">Buypass</div> -->
           <div class="item" data-value="ZeroSSL">ZeroSSL</div>
           <div class="item" data-value="Custom ACME Server">Custom ACME Server</div>
         </div>
@@ -408,13 +408,17 @@
         $("#kidInput").show();
         $("#hmacInput").show();
         $("#skipTLS").show();
-        $("#dnsChallenge").hide();
-        $(".dnsChallengeOnly").hide();
+        $("#dnsChallenge").show();
+        if ($("#useDnsChallenge")[0].checked){
+            $(".dnsChallengeOnly").show();
+        }
       } else if (this.value == "ZeroSSL") {
         $("#kidInput").show();
         $("#hmacInput").show();
-        $("#dnsChallenge").hide();
-        $(".dnsChallengeOnly").hide();
+        $("#dnsChallenge").show();
+        if ($("#useDnsChallenge")[0].checked){
+          $(".dnsChallengeOnly").show();
+        }
         $("#skipTLS").hide();
       } else if (this.value == "Buypass") {
         $("#kidInput").show();
@@ -468,7 +472,7 @@
               defaultIntValue = 2;
               defaultMinValue = 1;
             }else if (key == "PropagationTimeout"){
-              defaultIntValue = 120;
+              defaultIntValue = 600;
               defaultMinValue = 30;
             }
             optionalFieldsHTML += (`<div class="ui fluid labeled dnsConfigField small input" key="${key}" style="margin-top: 0.2em;">

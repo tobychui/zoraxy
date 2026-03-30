@@ -19,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -43,12 +44,10 @@ import (
 
 const (
 	/* Build Constants */
-	SYSTEM_NAME       = "Zoraxy"
-	SYSTEM_VERSION    = "3.2.6"
-	DEVELOPMENT_BUILD = false
+	SYSTEM_NAME    = "Zoraxy"
+	SYSTEM_VERSION = "3.3.2"
 
 	/* System Constants */
-	TMP_FOLDER                   = "./tmp"
 	WEBSERV_DEFAULT_PORT         = 5487
 	MDNS_HOSTNAME_PREFIX         = "zoraxy_" /* Follow by node UUID */
 	MDNS_IDENTIFY_DEVICE_TYPE    = "Network Gateway"
@@ -57,25 +56,10 @@ const (
 	MDNS_SCAN_TIMEOUT            = 30 /* Seconds */
 	MDNS_SCAN_UPDATE_INTERVAL    = 15 /* Minutes */
 	GEODB_CACHE_CLEAR_INTERVAL   = 15 /* Minutes */
-	ACME_AUTORENEW_CONFIG_PATH   = "./conf/acme_conf.json"
 	CSRF_COOKIENAME              = "zoraxy_csrf"
 	LOG_PREFIX                   = "zr"
 	LOG_EXTENSION                = ".log"
 	STATISTIC_AUTO_SAVE_INTERVAL = 600 /* Seconds */
-
-	/*
-		Configuration Folder Storage Path Constants
-		Note: No tailing slash in the path
-	*/
-	CONF_FOLDER        = "./conf"
-	CONF_HTTP_PROXY    = CONF_FOLDER + "/proxy"
-	CONF_STREAM_PROXY  = CONF_FOLDER + "/streamproxy"
-	CONF_CERT_STORE    = CONF_FOLDER + "/certs"
-	CONF_REDIRECTION   = CONF_FOLDER + "/redirect"
-	CONF_ACCESS_RULE   = CONF_FOLDER + "/access"
-	CONF_PATH_RULE     = CONF_FOLDER + "/rules/pathrules"
-	CONF_PLUGIN_GROUPS = CONF_FOLDER + "/plugin_groups.json"
-	CONF_GEODB_PATH    = CONF_FOLDER + "/geodb"
 )
 
 /* System Startup Flags */
@@ -88,24 +72,25 @@ var (
 	allowMdnsScanning          = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
 	mdnsName                   = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
 	runningInDocker            = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
-	acmeAutoRenewInterval      = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
-	acmeCertAutoRenewDays      = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
 	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
-	allowWebFileManager        = flag.Bool("webfm", true, "Enable web file manager for static web server root folder")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
+	/* Acme Configuration Flags */
+	acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
+	acmeCertAutoRenewDays = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
+	acmeTestMode          = flag.Bool("acmetestmode", false, "Run ACME in test/staging mode")
+
 	/* Logging Configuration Flags */
-	enableLog            = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
-	enableLogCompression = flag.Bool("enablelogcompress", true, "Enable log compression for rotated log files")
-	logRotate            = flag.Int("logrotate", 0, "Enable log rotation and set the maximum log file size in KB (e.g. 25 for 25KB), set to 0 for disable")
+	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
 
 	/* Path Configuration Flags */
-	//path_database  = flag.String("dbpath", "./sys.db", "Database path")
-	//path_conf      = flag.String("conf", "./conf", "Configuration folder path")
+	path_database  = flag.String("dbpath", "./sys.db", "Database path")
+	path_conf      = flag.String("conf", "./conf", "Configuration folder path")
+	path_tmp       = flag.String("tmp", "./tmp", "Temporary folder path")
 	path_uuid      = flag.String("uuid", "./sys.uuid", "sys.uuid file path")
 	path_logFile   = flag.String("log", "./log", "Log folder path")
 	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
@@ -113,14 +98,35 @@ var (
 
 	/* Maintaince & Development Function Flags */
 	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")
-	development_build = flag.Bool("dev", false, "Use external web folder for UI development")
+	development_build = flag.Bool("dev", false, "Use external web folder for UI development and enable verbose logging")
+	reset_account     = flag.Bool("reset_ac", false, "Reset admin account username and password to default and exit")
 )
 
 /* Global Variables and Handlers */
 var (
+	/* System */
 	nodeUUID    = "generic" //System uuid in uuidv4 format, load from database on startup
 	bootTime    = time.Now().Unix()
 	requireAuth = true //Require authentication for webmin panel, override from flag
+
+	/* Path variables initialized after flag parsing */
+	TMP_FOLDER                 string //Temporary folder path
+	ACME_AUTORENEW_CONFIG_PATH string //ACME auto renew configuration path
+	CONF_FOLDER                string //Configuration folder path
+	CONF_HTTP_PROXY            string //HTTP proxy configuration path
+	CONF_STREAM_PROXY          string //Stream proxy configuration path
+	CONF_CERT_STORE            string //Certificate store path
+	CONF_REDIRECTION           string //Redirection configuration path
+	CONF_ACCESS_RULE           string //Access rule configuration path
+	CONF_PATH_RULE             string //Path rule configuration path
+	CONF_PLUGIN_GROUPS         string //Plugin groups configuration path
+	CONF_GEODB_PATH            string //GeoIP database path
+	CONF_LOG_CONFIG            string //Log configuration path
+	CONF_TRUSTED_PROXIES       string //Trusted proxy IPs configuration path
+
+	/* mDNS */
+	previousmdnsScanResults = []*mdns.NetworkHost{}
+	mdnsTickerStop          chan bool
 
 	/*
 		Binary Embedding File System
@@ -160,6 +166,7 @@ var (
 	//Authentication Provider
 	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication
 	oauth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
+	zorxAuthRouter    *zorxauth.AuthRouter //ZorxAuth router for ZorxAuth SSO authentication
 
 	//Helper modules
 	EmailSender       *email.Sender         //Email sender that handle email sending

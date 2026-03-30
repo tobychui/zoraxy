@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,7 +13,11 @@ import (
 	"sync"
 	"time"
 
+	proxyproto "github.com/c0va23/go-proxyprotocol"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/netutils"
 )
 
 /*
@@ -23,13 +27,16 @@ import (
 func NewDynamicProxy(option RouterOption) (*Router, error) {
 	proxyMap := sync.Map{}
 	thisRouter := Router{
-		Option:           &option,
-		ProxyEndpoints:   &proxyMap,
-		Running:          false,
-		server:           nil,
-		routingRules:     []*RoutingRule{},
-		loadBalancer:     option.LoadBalancer,
-		rateLimitCounter: RequestCountPerIpTable{},
+		Option:              &option,
+		ProxyEndpoints:      &proxyMap,
+		Running:             false,
+		server:              nil,
+		routingRules:        []*RoutingRule{},
+		loadBalancer:        option.LoadBalancer,
+		rateLimitCounter:    RequestCountPerIpTable{},
+		captchaSessionStore: captcha.NewSessionStore(),
+		secondaryServers:    make(map[string]*http.Server),
+		secondaryStopChans:  make(map[string]chan bool),
 	}
 
 	thisRouter.mux = &ProxyHandler{
@@ -48,8 +55,8 @@ func (router *Router) UpdateTLSSetting(tlsEnabled bool) {
 
 // Update TLS Version in runtime. Will restart proxy server if running.
 // Set this to true to force TLS 1.2 or above
-func (router *Router) UpdateTLSVersion(requireLatest bool) {
-	router.Option.ForceTLSLatest = requireLatest
+func (router *Router) SetTlsMinVersion(minTlsVersion uint16) {
+	router.Option.MinTLSVersion = minTlsVersion
 	router.Restart()
 }
 
@@ -57,6 +64,15 @@ func (router *Router) UpdateTLSVersion(requireLatest bool) {
 func (router *Router) UpdatePort80ListenerState(useRedirect bool) {
 	router.Option.ListenOnPort80 = useRedirect
 	router.Restart()
+}
+
+// Get the current port 80 listener state (whether it's actually running)
+func (router *Router) GetPort80ListenerState() bool {
+	if !router.Running {
+		return false
+	}
+	// Check if port 80 listener is enabled in config and actually running
+	return router.Option.ListenOnPort80 && router.tlsRedirectStop != nil
 }
 
 // Update https redirect, which will require updates
@@ -77,10 +93,11 @@ func (router *Router) StartProxyService() error {
 		return errors.New("reverse proxy router root not set")
 	}
 
-	minVersion := tls.VersionTLS10
-	if router.Option.ForceTLSLatest {
-		minVersion = tls.VersionTLS12
+	minVersion := tls.VersionTLS12 //Default to TLS 1.2
+	if router.Option.MinTLSVersion != 0 {
+		minVersion = int(router.Option.MinTLSVersion)
 	}
+
 	config := &tls.Config{
 		GetCertificate: router.Option.TlsManager.GetCert,
 		MinVersion:     uint16(minVersion),
@@ -91,7 +108,6 @@ func (router *Router) StartProxyService() error {
 	if err != nil {
 		return err
 	}
-
 	if router.Option.UseTls {
 		router.server = &http.Server{
 			Addr:      ":" + strconv.Itoa(router.Option.Port),
@@ -99,8 +115,7 @@ func (router *Router) StartProxyService() error {
 			TLSConfig: config,
 		}
 		router.Running = true
-
-		if router.Option.Port != 80 && router.Option.ListenOnPort80 {
+		if router.Option.Port != 80 && router.Option.ListenOnPort80 && !netutils.CheckIfPortOccupied(80) {
 			//Add a 80 to 443 redirector
 			httpServer := &http.Server{
 				Addr: ":80",
@@ -114,64 +129,7 @@ func (router *Router) StartProxyService() error {
 					sep := router.GetProxyEndpointFromHostname(domainOnly)
 					if sep != nil && sep.BypassGlobalTLS {
 						//Allow routing via non-TLS handler
-						originalHostHeader := r.Host
-						if r.URL != nil {
-							r.Host = r.URL.Host
-						} else {
-							//Fallback when the upstream proxy screw something up in the header
-							r.URL, _ = url.Parse(originalHostHeader)
-						}
-
-						//Access Check (blacklist / whitelist)
-						ruleID := sep.AccessFilterUUID
-						if sep.AccessFilterUUID == "" {
-							//Use default rule
-							ruleID = "default"
-						}
-						accessRule, err := router.Option.AccessController.GetAccessRuleByID(ruleID)
-						if err == nil {
-							isBlocked, _ := accessRequestBlocked(accessRule, router.Option.WebDirectory, w, r)
-							if isBlocked {
-								return
-							}
-						}
-
-						// Rate Limit
-						if sep.RequireRateLimit {
-							if err := router.handleRateLimit(w, r, sep); err != nil {
-								return
-							}
-						}
-
-						//Validate basic auth
-						if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
-							err := handleBasicAuth(w, r, sep)
-							if err != nil {
-								return
-							}
-						}
-
-						selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession)
-						if err != nil {
-							http.ServeFile(w, r, "./web/hosterror.html")
-							router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
-							router.logRequest(r, false, 404, "vdir-http", r.Host, "")
-						}
-
-						endpointProxyRewriteRules := GetDefaultHeaderRewriteRules()
-						if sep.HeaderRewriteRules != nil {
-							endpointProxyRewriteRules = sep.HeaderRewriteRules
-						}
-
-						selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
-							ProxyDomain:         selectedUpstream.OriginIpOrDomain,
-							OriginalHost:        originalHostHeader,
-							UseTLS:              selectedUpstream.RequireTLS,
-							HostHeaderOverwrite: endpointProxyRewriteRules.RequestHostOverwrite,
-							NoRemoveHopByHop:    endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
-							PathPrefix:          "",
-							Version:             sep.parent.Option.HostVersion,
-						})
+						router.handleNonTLSRequest(w, r, sep)
 						return
 					}
 
@@ -238,7 +196,11 @@ func (router *Router) StartProxyService() error {
 				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					//Unable to startup port 80 listener. Handle shutdown process gracefully
 					stopChan <- true
-					log.Fatalf("Could not start redirection server: %v\n", err)
+					// Disable port 80 listening to avoid terminating the whole process
+					router.Option.ListenOnPort80 = false
+					router.tlsRedirectStop = nil
+					router.Option.Logger.PrintAndLog("dprouter", "Could not start HTTP-to-HTTPS redirector (port 80); disabling port 80 listener", err)
+					return
 				}
 			}()
 			router.tlsRedirectStop = stopChan
@@ -247,9 +209,27 @@ func (router *Router) StartProxyService() error {
 		//Start the TLS server
 		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (TLS mode)", nil)
 		go func() {
-			if err := router.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+			ln, err := net.Listen("tcp", router.server.Addr)
+			if err != nil {
+				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server (listen failed)", err)
+				return
+			}
+
+			// Conditionally use PROXY protocol based on the experimental flag
+			var finalListener net.Listener
+			if router.Option.UseProxyProtocol {
+				// Wrapper Proxy Protocol v1/v2
+				finalListener = proxyproto.NewDefaultListener(ln)
+				router.Option.Logger.PrintAndLog("dprouter", "PROXY protocol v1/v2 enabled for TLS listener", nil)
+			} else {
+				// Use direct TCP listener without PROXY protocol
+				finalListener = ln
+			}
+
+			if err := router.server.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
 				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
 			}
+
 		}()
 	} else {
 		//Serve with non TLS mode
@@ -262,66 +242,352 @@ func (router *Router) StartProxyService() error {
 		}()
 	}
 
+	// Start secondary listeners for alternative listening ports
+	router.startSecondaryListeners()
+
 	return nil
 }
 
+// handleNonTLSRequest handles HTTP requests for endpoints that allow plain HTTP access
+// This is the common handler logic used by both port 80 listener and secondary listeners
+func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) {
+	originalHostHeader := r.Host
+	if r.URL != nil {
+		r.Host = r.URL.Host
+	} else {
+		//Fallback when the upstream proxy screw something up in the header
+		r.URL, _ = url.Parse(originalHostHeader)
+	}
+
+	//Access Check (blacklist / whitelist)
+	ruleID := sep.AccessFilterUUID
+	if sep.AccessFilterUUID == "" {
+		//Use default rule
+		ruleID = "default"
+	}
+	accessRule, err := router.Option.AccessController.GetAccessRuleByID(ruleID)
+	if err == nil {
+		isBlocked, _ := accessRequestBlocked(accessRule, router.Option.WebDirectory, w, r)
+		if isBlocked {
+			return
+		}
+	}
+
+	// Rate Limit
+	if sep.RequireRateLimit {
+		if err := router.handleRateLimit(w, r, sep); err != nil {
+			return
+		}
+	}
+
+	// CAPTCHA Gating
+	if sep.RequireCaptcha && sep.CaptchaConfig.IsConfigured() {
+		// Check if CAPTCHA verification endpoint
+		if r.URL.Path == captcha.VerifyPath {
+			captcha.HandleVerification(w, r, sep.CaptchaConfig, router.captchaSessionStore)
+			return
+		}
+
+		// Check for exception rules
+		if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
+			// Allow passthrough
+		} else if !captcha.CheckSession(r, router.captchaSessionStore) {
+			// No valid session, serve CAPTCHA challenge
+			domain := r.Host
+			if domain == "" {
+				domain = sep.RootOrMatchingDomain
+			}
+			captcha.RenderChallenge(w, r, sep.CaptchaConfig, domain, router.Option.WebDirectory)
+			return
+		}
+	}
+
+	//Validate basic auth
+	if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
+		err := handleBasicAuth(w, r, sep)
+		if err != nil {
+			return
+		}
+	}
+
+	//Check if any virtual directory rules matches
+	proxyingPath := strings.TrimSpace(r.RequestURI)
+	targetProxyEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
+	if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
+		//Virtual directory routing rule found. Route via vdir mode
+		router.mux.(*ProxyHandler).vdirRequest(w, r, targetProxyEndpoint)
+		return
+	} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyTypeRoot {
+		potentialProxtEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
+		if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
+			//Missing tailing slash. Redirect to target proxy endpoint
+			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+			if !sep.DisableLogging {
+				router.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
+			}
+			return
+		}
+	}
+
+	selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession, sep.DisableAutoFallback)
+	if err != nil {
+		serveProxyRequestError(w, 404, router, ErrorTemplateHostError)
+		router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
+		router.logRequest(r, false, 404, "vdir-http", r.Host, "", sep)
+		return
+	}
+
+	endpointProxyRewriteRules := GetDefaultHeaderRewriteRules()
+	if sep.HeaderRewriteRules != nil {
+		endpointProxyRewriteRules = sep.HeaderRewriteRules
+	}
+
+	selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+		ProxyDomain:             selectedUpstream.OriginIpOrDomain,
+		OriginalHost:            originalHostHeader,
+		UseTLS:                  selectedUpstream.RequireTLS,
+		HostHeaderOverwrite:     endpointProxyRewriteRules.RequestHostOverwrite,
+		NoRemoveHopByHop:        endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
+		NoRemoveUserAgentHeader: endpointProxyRewriteRules.DisableUserAgentHeaderRemoval,
+		PathPrefix:              "",
+		Version:                 sep.parent.Option.HostVersion,
+		DevelopmentMode:         sep.parent.Option.DevelopmentMode,
+	})
+}
+
+// startSecondaryListeners starts HTTP servers on secondary listening ports defined in proxy endpoints
+func (router *Router) startSecondaryListeners() {
+	commonPorts := router.GetCommonListeningPorts()
+
+	for addr, domains := range commonPorts {
+		// Skip if already listening on this address
+		router.secondaryServerMutex.RLock()
+		_, exists := router.secondaryServers[addr]
+		router.secondaryServerMutex.RUnlock()
+
+		if exists {
+			continue
+		}
+
+		router.Option.Logger.PrintAndLog("dprouter", "Starting secondary listener on "+addr+" for domains: "+strings.Join(domains, ", "), nil)
+
+		// Create HTTP server for this secondary port
+		secondaryServer := &http.Server{
+			Addr: addr,
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Extract domain from request
+				domainOnly := r.Host
+				if strings.Contains(r.Host, ":") {
+					hostPath := strings.Split(r.Host, ":")
+					domainOnly = hostPath[0]
+				}
+
+				// Get the proxy endpoint for this domain
+				sep := router.GetProxyEndpointFromHostname(domainOnly)
+
+				// Check if this domain has this port in its listening ports
+				if sep != nil && router.isDomainListeningOnPort(sep, addr) {
+					// Handle the request through the common handler
+					router.handleNonTLSRequest(w, r, sep)
+					return
+				}
+
+				// No matching proxy rule for this domain+port combination
+				// Use default site behavior
+				// TODO: Make this behave like the primary listening port
+				if router.Root.DefaultSiteOption == DefaultSite_NoResponse {
+					// No response. Just close the connection
+					hijacker, ok := w.(http.Hijacker)
+					if !ok {
+						w.Header().Set("Connection", "close")
+						return
+					}
+					conn, _, err := hijacker.Hijack()
+					if err != nil {
+						w.Header().Set("Connection", "close")
+						return
+					}
+					conn.Close()
+				} else {
+					// Default behavior - return 404
+					http.NotFound(w, r)
+				}
+			}),
+			ReadTimeout:  3 * time.Second,
+			WriteTimeout: 3 * time.Second,
+			IdleTimeout:  120 * time.Second,
+		}
+
+		// Create stop channel
+		stopChan := make(chan bool)
+
+		// Store in maps
+		router.secondaryServerMutex.Lock()
+		router.secondaryServers[addr] = secondaryServer
+		router.secondaryStopChans[addr] = stopChan
+		router.secondaryServerMutex.Unlock()
+
+		// Start shutdown handler
+		go func(addr string) {
+			<-stopChan
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			secondaryServer.Shutdown(ctx)
+		}(addr)
+
+		// Start the server
+		go func(addr string) {
+			if err := secondaryServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				router.Option.Logger.PrintAndLog("dprouter", "Secondary listener on "+addr+" failed", err)
+			}
+		}(addr)
+	}
+}
+
+// isDomainListeningOnPort checks if a proxy endpoint has the specified address in its listening ports
+func (router *Router) isDomainListeningOnPort(endpoint *ProxyEndpoint, addr string) bool {
+	if endpoint == nil || endpoint.ListeningPorts == nil {
+		return false
+	}
+
+	for _, port := range endpoint.ListeningPorts {
+		if strings.TrimSpace(port) == addr {
+			return true
+		}
+	}
+
+	return false
+}
+
+// UpdateSecondaryListeners updates the secondary listeners based on current proxy endpoint configurations
+// This is called when proxy endpoints are added, removed, or their listening ports are changed
+func (router *Router) UpdateSecondaryListeners() {
+	if !router.Running {
+		return
+	}
+
+	// Get current listening ports from all endpoints
+	newCommonPorts := router.GetCommonListeningPorts()
+
+	// Stop listeners that are no longer needed
+	router.secondaryServerMutex.Lock()
+	for addr := range router.secondaryServers {
+		if _, exists := newCommonPorts[addr]; !exists {
+			// This port is no longer needed, stop it
+			if stopChan, ok := router.secondaryStopChans[addr]; ok {
+				stopChan <- true
+			}
+			delete(router.secondaryServers, addr)
+			delete(router.secondaryStopChans, addr)
+			router.Option.Logger.PrintAndLog("dprouter", "Stopped secondary listener on "+addr, nil)
+		}
+	}
+	router.secondaryServerMutex.Unlock()
+
+	// Start new listeners for new ports
+	router.startSecondaryListeners()
+}
+
+// StopProxyService stops the proxy server and waits for all listeners to close
 func (router *Router) StopProxyService() error {
-	if router.server == nil {
+	if router.server == nil && router.tlsListener == nil && router.tlsRedirectStop == nil && len(router.secondaryServers) == 0 {
 		return errors.New("reverse proxy server already stopped")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	err := router.server.Shutdown(ctx)
-	if err != nil {
+
+	var wg sync.WaitGroup
+
+	// Stop main TLS/HTTP server
+	if router.server != nil {
+		wg.Add(1)
+		go func(srv *http.Server) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				router.Option.Logger.PrintAndLog("dprouter", "Graceful shutdown timeout, forcing close", err)
+				// Force close if graceful shutdown times out
+				srv.Close()
+			}
+		}(router.server)
+	}
+
+	// Stop TLS redirect server
+	if router.tlsRedirectStop != nil {
+		wg.Add(1)
+		go func(ch chan bool) {
+			defer wg.Done()
+			ch <- true
+		}(router.tlsRedirectStop)
+	}
+
+	// Stop all secondary listening servers
+	router.secondaryServerMutex.Lock()
+	for addr, stopChan := range router.secondaryStopChans {
+		wg.Add(1)
+		go func(address string, ch chan bool) {
+			defer wg.Done()
+			ch <- true
+			router.Option.Logger.PrintAndLog("dprouter", "Secondary listener on "+address+" stopped", nil)
+		}(addr, stopChan)
+	}
+	router.secondaryServerMutex.Unlock()
+
+	// Stop rate limiter ticker if exists
+	if router.rateLimterStop != nil {
+		wg.Add(1)
+		go func(ch chan bool) {
+			defer wg.Done()
+			ch <- true
+		}(router.rateLimterStop)
+	}
+
+	// Wait for all shutdown goroutines to finish
+	wg.Wait()
+	// Clear server references
+	router.server = nil
+	router.tlsListener = nil
+	router.tlsRedirectStop = nil
+	router.rateLimterStop = nil
+
+	router.secondaryServerMutex.Lock()
+	router.secondaryServers = make(map[string]*http.Server)
+	router.secondaryStopChans = make(map[string]chan bool)
+	router.secondaryServerMutex.Unlock()
+
+	router.Running = false
+
+	router.Option.Logger.PrintAndLog("dprouter", "Proxy service stopped successfully", nil)
+
+	return nil
+}
+
+// Restart safely restarts the proxy server
+func (router *Router) Restart() error {
+	if router.restarting {
+		//Already restarting
+		return errors.New("proxy server is restarting in progress")
+	}
+	router.restarting = true
+	defer func() {
+		router.restarting = false
+	}()
+	if router.Running {
+
+		router.Option.Logger.PrintAndLog("dprouter", "Restarting proxy server...", nil)
+		if err := router.StopProxyService(); err != nil {
+			return err
+		}
+		// Ensure ports are released
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if err := router.StartProxyService(); err != nil {
+		router.Option.Logger.PrintAndLog("dprouter", "Failed to restart proxy server", err)
 		return err
 	}
 
-	//Stop TLS listener
-	if router.tlsListener != nil {
-		router.tlsListener.Close()
-	}
-
-	//Stop rate limiter
-	if router.rateLimterStop != nil {
-		go func() {
-			// As the rate timer loop has a 1 sec ticker
-			// stop the rate limiter in go routine can prevent
-			// front end from freezing for 1 sec
-			router.rateLimterStop <- true
-		}()
-
-	}
-
-	//Stop TLS redirection (from port 80)
-	if router.tlsRedirectStop != nil {
-		router.tlsRedirectStop <- true
-	}
-
-	//Discard the server object
-	router.tlsListener = nil
-	router.server = nil
-	router.Running = false
-	router.tlsRedirectStop = nil
-	return nil
-}
-
-// Restart the current router if it is running.
-func (router *Router) Restart() error {
-	//Stop the router if it is already running
-	if router.Running {
-		err := router.StopProxyService()
-		if err != nil {
-			return err
-		}
-
-		time.Sleep(100 * time.Millisecond)
-		// Start the server
-		err = router.StartProxyService()
-		if err != nil {
-			return err
-		}
-	}
-
+	router.Option.Logger.PrintAndLog("dprouter", "Proxy server restarted successfully", nil)
 	return nil
 }
 
@@ -375,6 +641,8 @@ func CopyEndpoint(endpoint *ProxyEndpoint) *ProxyEndpoint {
 	if err != nil {
 		return nil
 	}
+	// Initialize the exploit detector for the copied endpoint
+	newProxyEndpoint.InitializeExploitDetector()
 	return &newProxyEndpoint
 }
 
@@ -393,4 +661,41 @@ func (r *Router) GetProxyEndpointsAsMap() map[string]*ProxyEndpoint {
 		return true
 	})
 	return m
+}
+
+// GetCommonListeningPorts extracts all unique listening ports from proxy endpoints
+// Returns a map where keys are listening addresses (e.g., ":8080", "192.168.1.1:8080")
+// and values are lists of domains using that port
+func (r *Router) GetCommonListeningPorts() map[string][]string {
+	portMap := make(map[string][]string)
+
+	r.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		domain, ok := key.(string)
+		if !ok {
+			return true
+		}
+		endpoint, ok := value.(*ProxyEndpoint)
+		if !ok {
+			return true
+		}
+
+		// Skip disabled endpoints
+		if endpoint.Disabled {
+			return true
+		}
+
+		// Add listening ports for this endpoint
+		if endpoint.ListeningPorts != nil {
+			for _, port := range endpoint.ListeningPorts {
+				port = strings.TrimSpace(port)
+				if port != "" {
+					portMap[port] = append(portMap[port], domain)
+				}
+			}
+		}
+
+		return true
+	})
+
+	return portMap
 }

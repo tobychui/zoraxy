@@ -134,12 +134,13 @@ func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint)
 		return nil, err
 	}
 
-	if ep.ProxyType == ProxyTypeRoot {
+	switch ep.ProxyType {
+	case ProxyTypeRoot:
 		parentRouter.Root = readyRoutingRule
-	} else if ep.ProxyType == ProxyTypeHost {
+	case ProxyTypeHost:
 		ep.Remove()
 		parentRouter.AddProxyRouteToRuntime(readyRoutingRule)
-	} else {
+	default:
 		return nil, errors.New("unsupported proxy type")
 	}
 
@@ -270,6 +271,11 @@ func (ep *ProxyEndpoint) Remove() error {
 	lookupHostname := strings.ToLower(ep.RootOrMatchingDomain)
 	ep.parent.ProxyEndpoints.Delete(lookupHostname)
 	return nil
+}
+
+// Check if the proxy endpoint is enabled
+func (ep *ProxyEndpoint) IsEnabled() bool {
+	return !ep.Disabled
 }
 
 // Write changes to runtime without respawning the proxy handler

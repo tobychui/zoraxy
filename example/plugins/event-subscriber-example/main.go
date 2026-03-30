@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	plugin "aroz.org/zoraxy/event-subscriber-example/mod/zoraxy_plugin"
+	"aroz.org/zoraxy/event-subscriber-example/mod/zoraxy_plugin/events"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 )
 
 var (
-	EventLog      = make([]plugin.Event, 0) // A slice to store events
+	EventLog      = make([]events.Event, 0) // A slice to store events
 	EventLogMutex = &sync.Mutex{}           // Mutex to protect access to the event log
 )
 
@@ -38,11 +39,12 @@ func main() {
 
 		/* Subscriptions Settings */
 		SubscriptionPath: "/notifyme",
-		SubscriptionsEvents: map[plugin.EventName]string{
+		SubscriptionsEvents: map[string]string{
 			// for this example, we will subscribe to all events that exist at time of writing
-			plugin.EventBlacklistedIPBlocked: "This event is triggered when a blacklisted IP is blocked",
-			plugin.EventBlacklistToggled:     "This event is triggered when the blacklist is toggled for an access rule",
-			plugin.EventAccessRuleCreated:    "This event is triggered when a new access ruleset is created",
+			string(events.EventBlacklistedIPBlocked): "This event is triggered when a blacklisted IP is blocked",
+			string(events.EventBlacklistToggled):     "This event is triggered when the blacklist is toggled for an access rule",
+			string(events.EventAccessRuleCreated):    "This event is triggered when a new access ruleset is created",
+			string(events.EventCustom):               "This event is a custom event that can be emitted by any plugin, we subscribe to it to demonstrate a \"monitor\" plugin that can see all custom events emitted by other plugins",
 		},
 	})
 
@@ -57,7 +59,7 @@ func main() {
 	})
 	http.HandleFunc(EVENT_PATH, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			var event plugin.Event
+			var event events.Event
 
 			// read the request body
 			if r.Body == nil || r.ContentLength == 0 {
@@ -73,7 +75,7 @@ func main() {
 			}
 
 			// parse the event from the request body
-			if err := plugin.ParseEvent(buffer.Bytes(), &event); err != nil {
+			if err := events.ParseEvent(buffer.Bytes(), &event); err != nil {
 				http.Error(w, fmt.Sprintf("Failed to parse event: %v", err), http.StatusBadRequest)
 				return
 			}

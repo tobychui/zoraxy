@@ -64,6 +64,20 @@ func ExtractIssuerName(certBytes []byte) (string, error) {
 	return issuer, nil
 }
 
+// ExtractDomainsFromPEM reads a PEM certificate file and returns all SANs
+func ExtractDomainsFromPEM(pemFilePath string) ([]string, error) {
+
+	certBytes, err := os.ReadFile(pemFilePath)
+	if err != nil {
+		return nil, err
+	}
+	domains, err := ExtractDomains(certBytes)
+	if err != nil {
+		return nil, err
+	}
+	return domains, nil
+}
+
 // Check if a cert is expired by public key
 func CertIsExpired(certBytes []byte) bool {
 	block, _ := pem.Decode(certBytes)

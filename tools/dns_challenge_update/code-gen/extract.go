@@ -19,6 +19,7 @@ import (
 */
 
 var legoProvidersSourceFolder string = "./lego/providers/dns/"
+var legoProvidersInternalSourceFolder string = legoProvidersSourceFolder + "internal/"
 var outputDir string = "./acmedns"
 var defTemplate string = `package acmedns
 /*
@@ -75,21 +76,14 @@ func getExcludedDNSProviders() []string {
 		"edgedns",      //Too complex data structure
 		"exec",         //Not a DNS provider
 		"httpreq",      //Not a DNS provider
+		"manual",       //Not a DNS provider
 		"hurricane",    //Multi-credentials arch
 		"dnshomede",    //Multi-credentials arch
 		"myaddr",    //Multi-credentials arch
 		"oraclecloud",  //Evil company
-		"acmedns",      //Not a DNS provider
 		"selectelv2",   //Not sure why not working with our code generator
 		"designate",    //OpenStack, if you are using this you shd not be using zoraxy
 		"mythicbeasts", //Module require url.URL, which cannot be automatically parsed
-
-		//The following are incomaptible with Zoraxy due to dependencies issue,
-		//might be resolved in future
-		"corenetworks",
-		"timewebcloud",
-		"volcengine",
-		"exoscale",
 	}
 }
 
@@ -147,11 +141,38 @@ func extractConfigStruct(sourceCode string) (string, string) {
 		}
 
 		if structName != "Config" {
-			panic("Unable to find Config for this provider")
+			structName, structContent =  extractInternalConfigStruct(sourceCode)
 		}
 	}
 
 	return structName, structContent
+}
+
+func extractInternalConfigStruct(sourceCode string) (string, string) {
+	// Regex for match the type Config = xxxx.Config
+	configRegex := regexp.MustCompile(`type\s+Config\s*=\s*([A-Za-z0-9_.]+)\.Config`)
+
+	// Find the first match
+	match := configRegex.FindStringSubmatch(sourceCode)
+	if len(match) < 2 {
+			panic("Unable to find Config for this provider")
+	}
+
+	// extract Internal package name
+	internalPackageName := match[1]
+	internalProviderSrcFileName := filepath.Join(legoProvidersInternalSourceFolder, internalPackageName, "provider.go")
+
+	if !fileExists(internalProviderSrcFileName) {
+			panic("internal package not found")
+	}
+
+	internalProviderSrc, err := os.ReadFile(internalProviderSrcFileName)
+	if err != nil {
+		fmt.Println(err.Error())
+		panic("Read internal provider source Error")
+	}
+
+	return extractConfigStruct(string(internalProviderSrc))
 }
 
 func main() {
@@ -297,6 +318,16 @@ func main() {
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return ` + providerName + `.NewDNSProviderConfig(cfg)`
+		if providerName == "acmedns" {
+			codeSegment = `
+	case "` + providerName + `":
+		cfg := ` + providerName + `.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		return ` + providerName + `.NewDNSProviderConfig(cfg)`
+		}
 		generatedConvertcode += codeSegment
 		importList += `	"github.com/go-acme/lego/v4/providers/dns/` + providerName + "\"\n"
 	}

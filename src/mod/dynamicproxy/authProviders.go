@@ -53,6 +53,12 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
+	case AuthMethodZorxAuth:
+		err := h.handleZorxAuth(w, r)
+		if err != nil {
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			return true
+		}
 	}
 
 	//No authentication provider, do not need to handle
@@ -145,4 +151,8 @@ func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request)
 
 func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
 	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r)
+}
+
+func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request) error {
+	return h.Parent.Option.ZorxAuthAgentRouter.HandleAuthRouting(w, r)
 }

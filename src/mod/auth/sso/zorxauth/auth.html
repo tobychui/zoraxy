@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Secure authentication gateway for Zoraxy Auth.">
+    <meta name="author" content="Zoraxy">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Sign In - </title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            max-width: 450px;
+            width: 100%;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .icon {
+            text-align: center;
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #2d3748;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 15px;
+            color: #2d3748;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        input[type="text"]::placeholder,
+        input[type="password"]::placeholder {
+            color: #a0aec0;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        .checkbox-label {
+            color: #4a5568;
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .btn-submit {
+            width: 100%;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #38a169 0%, #319795 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .error-message {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .error-message p {
+            color: #c53030;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info-box {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-top: 24px;
+            display: none;
+        }
+        
+        .info-box.show {
+            display: block;
+        }
+        
+        .info-box.secure p {
+            color: #2c5282;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .info-box.warning p {
+            color: #9c4221;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .icon {
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🔐</div>
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Sign in to continue to your application</p>
+        
+        <div class="error-message" id="errorMessage">
+            <p id="errorText"></p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username or Email</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Enter your username or email"
+                    required
+                    autocomplete="username"
+                    autofocus
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Enter your password"
+                    required
+                    autocomplete="current-password"
+                >
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="rememberMe" name="rememberMe">
+                <label for="rememberMe" class="checkbox-label">Remember me</label>
+            </div>
+            
+            <button type="submit" class="btn-submit" id="submitBtn">
+                Sign In
+            </button>
+        </form>
+        
+        <div class="info-box secure" id="secureInfo">
+            <p>🔒 This is a secure authentication gateway powered by Zoraxy Auth. Your credentials are encrypted and protected.</p>
+        </div>
+        
+        <div class="info-box warning" id="warningInfo">
+            <p>⚠️ Warning: You are connecting over HTTP (unencrypted). Your credentials may be visible to others. Please use HTTPS for secure authentication.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Get redirect URL from query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect') || '/';
+        
+        
+        // Show appropriate security info box based on connection protocol
+        const isSecure = window.location.protocol === 'https:';
+        const secureInfo = document.getElementById('secureInfo');
+        const warningInfo = document.getElementById('warningInfo');
+        
+        if (isSecure) {
+            secureInfo.classList.add('show');
+        } else {
+            warningInfo.classList.add('show');
+        }
+        const loginForm = document.getElementById('loginForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.add('show');
+        }
+        
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+        
+        function setLoading(isLoading) {
+            if (isLoading) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = 'Signing In<span class="spinner"></span>';
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+            }
+        }
+        
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideError();
+            setLoading(true);
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: username,
+                        password: password,
+                        rememberMe: rememberMe.toString(),
+                        redirect: redirectUrl
+                    })
+                });
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch {
+                    data = null;
+                }
+
+                if (response.ok && data && data.success) {
+                    if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
+                        showError('Invalid login response from server. Please try again.');
+                        setLoading(false);
+                        return;
+                    }
+
+                    const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
+                    const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
+                    window.location.href = finalRedirectURL;
+                    return;
+                }
+
+                showError((data && data.error) || 'Invalid username or password. Please try again.');
+                setLoading(false);
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('An error occurred during login. Please try again.');
+                setLoading(false);
+            }
+        });
+
+        // Update the site title based on the redirect parameter
+        const redirectHostname = redirectUrl ? new URL(redirectUrl, window.location.origin).hostname : null;
+        document.title = redirectHostname ? `Sign In - ${redirectHostname}` : 'Sign In Required';
+        
+        // Clear error when user starts typing
+        document.getElementById('username').addEventListener('input', hideError);
+        document.getElementById('password').addEventListener('input', hideError);
+    </script>
+</body>
+</html>

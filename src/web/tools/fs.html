@@ -829,7 +829,7 @@
                 ajax.addEventListener("error", errorHandler, false);
                 ajax.addEventListener("abort", abortHandler, false);
                 ajax.open("POST", "/api/fs/upload?dir=" + dir);
-                ajax.setRequestHeader("X-CSRF-Token", document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content"));
+                ajax.setRequestHeader("X-CSRF-Token", document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content"));
                 ajax.send(formdata);
             }
 

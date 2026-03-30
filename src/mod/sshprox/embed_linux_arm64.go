@@ -16,3 +16,7 @@ var (
 	//go:embed gotty/LICENSE
 	gotty embed.FS
 )
+
+// UseWinTTY indicates whether this platform should use wintty
+// instead of the gotty binary
+const UseWinTTY = false

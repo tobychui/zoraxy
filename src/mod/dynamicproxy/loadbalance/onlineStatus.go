@@ -61,7 +61,20 @@ func (m *RouteManager) NotifyHostUnreachableWithTimeout(upstreamIp string, timeo
 */
 
 // FilterOfflineOrigins return only online origins from a list of origins
-func (m *RouteManager) FilterOfflineOrigins(origins []*Upstream) []*Upstream {
+// If originalUpstreamCount is 1 (only one upstream), or disableAutoFallback is true, return all origins unchanged
+func (m *RouteManager) FilterOfflineOrigins(origins []*Upstream, originalUpstreamCount int, disableAutoFallback bool) []*Upstream {
+	// If there's only one upstream, don't filter it out even if it's offline
+	// This prevents the 521 error when upgrading/restarting the only upstream server
+	if originalUpstreamCount == 1 {
+		return origins
+	}
+
+	// If auto-fallback is disabled, don't filter offline origins
+	// This allows uptime monitoring to continue without automatically disabling upstreams
+	if disableAutoFallback {
+		return origins
+	}
+
 	var onlineOrigins []*Upstream
 	for _, origin := range origins {
 		if m.IsTargetOnline(origin.OriginIpOrDomain) {

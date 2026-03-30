@@ -116,6 +116,15 @@
                                     <small>This should be ON by default</small></label>
                                 </div>
 
+                                 <div class="ui divider"></div>
+                                <h4>Remove User-Agent Header</h4>
+                                <p>Remove User-Agent header from upstream before sending to downstream. Set to ON by default.</p>
+                                <div class="ui toggle checkbox">
+                                    <input type="checkbox" id="removeUserAgent" name="">
+                                    <label>Remove User-Agent Header<br>
+                                    <small>This should be ON by default</small></label>
+                                </div>
+
                                 <div class="ui divider"></div>
                                 <h4> WebSocket Custom Headers</h4>
                                 <p>Copy custom headers from HTTP requests to WebSocket connections.
@@ -648,6 +657,42 @@
                 })
             }
             initHopByHopRemoverState();
+
+            /* User-Agent headers */
+            function initUserAgentRemoverState(){
+                $.get("/api/proxy/header/handleUserAgent?domain=" + editingEndpoint.ep, function(data){
+                    if (data.error != undefined){
+                        parent.msgbox(data.error);
+                    }else{
+                        if (data == true){
+                            $("#removeUserAgent").parent().checkbox("set checked");
+                        }else{
+                            $("#removeUserAgent").parent().checkbox("set unchecked");
+                        }
+                        
+                        //Bind event to the checkbox
+                        $("#removeUserAgent").on("change", function(evt){
+                            let isChecked = $(this)[0].checked;
+                            $.cjax({
+                                url: "/api/proxy/header/handleUserAgent",
+                                method: "POST",
+                                data: {
+                                    "domain": editingEndpoint.ep,
+                                    "removeUserAgent": isChecked,
+                                },
+                                success: function(data){
+                                    if (data.error != undefined){
+                                        parent.msgbox(data.error, false);
+                                    }else{
+                                        parent.msgbox("User-Agent header rule updated");
+                                    }
+                                }
+                            })
+                        })
+                    }
+                })
+            }
+            initUserAgentRemoverState();
 
             /* WebSocket Custom Headers */
             function initWebSocketCustomHeaderState(){

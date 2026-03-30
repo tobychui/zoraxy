@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
-	"imuslab.com/zoraxy/mod/webserv/filemanager"
 )
 
 /*
@@ -36,14 +36,16 @@ type WebServerOptions struct {
 	Port                        string             //Port for listening
 	EnableDirectoryListing      bool               //Enable listing of directory
 	WebRoot                     string             //Folder for stroing the static web folders
-	EnableWebDirManager         bool               //Enable web file manager to handle files in web directory
 	DisableListenToAllInterface bool               // Disable listening to all interfaces, only listen to localhost
+	EnableWebDAV                bool               //Enable WebDAV server
+	WebDAVPort                  string             //Port for WebDAV server (default: 5488)
 	Logger                      *logger.Logger     //System logger
 	Sysdb                       *database.Database //Database for storing configs
+	AuthAgent                   *auth.AuthAgent    //Authentication agent for WebDAV basic auth
 }
 
 type WebServer struct {
-	FileManager *filemanager.FileManager
+	WebDAV *WebDAVServer
 
 	mux       *http.ServeMux
 	server    *http.Server
@@ -70,21 +72,20 @@ func NewWebServer(options *WebServerOptions) *WebServer {
 
 	}
 
-	//Create a new file manager if it is enabled
-	var newDirManager *filemanager.FileManager
-	if options.EnableWebDirManager {
-		fm := filemanager.NewFileManager(filepath.Join(options.WebRoot, "/html"))
-		newDirManager = fm
+	//Create a new WebDAV server if AuthAgent is provided
+	var newWebDAV *WebDAVServer
+	if options.AuthAgent != nil {
+		newWebDAV = NewWebDAVServer(options, options.AuthAgent)
 	}
 
 	//Create new table to store the config
 	options.Sysdb.NewTable("webserv")
 	return &WebServer{
-		mux:         http.NewServeMux(),
-		FileManager: newDirManager,
-		option:      options,
-		isRunning:   false,
-		mu:          sync.Mutex{},
+		mux:       http.NewServeMux(),
+		WebDAV:    newWebDAV,
+		option:    options,
+		isRunning: false,
+		mu:        sync.Mutex{},
 	}
 }
 
@@ -105,6 +106,19 @@ func (ws *WebServer) RestorePreviousState() {
 	ws.option.Sysdb.Read("webserv", "disableListenToAllInterface", &disableListenToAll)
 	ws.option.DisableListenToAllInterface = disableListenToAll
 
+	//Set WebDAV enable state
+	enableWebDAV := ws.option.EnableWebDAV
+	ws.option.Sysdb.Read("webserv", "enableWebDAV", &enableWebDAV)
+	ws.option.EnableWebDAV = enableWebDAV
+
+	//Set WebDAV port
+	webdavPort := "5488"
+	if ws.option.WebDAVPort != "" {
+		webdavPort = ws.option.WebDAVPort
+	}
+	ws.option.Sysdb.Read("webserv", "webdavPort", &webdavPort)
+	ws.option.WebDAVPort = webdavPort
+
 	//Check the running state
 	webservRunning := true
 	ws.option.Sysdb.Read("webserv", "enabled", &webservRunning)
@@ -114,11 +128,16 @@ func (ws *WebServer) RestorePreviousState() {
 		ws.Stop()
 	}
 
+	//Start WebDAV if enabled
+	if enableWebDAV && ws.WebDAV != nil {
+		ws.WebDAV.Start(webdavPort)
+	}
+
 }
 
 // ChangePort changes the server's port.
 func (ws *WebServer) ChangePort(port string) error {
-	if IsPortInUse(port) {
+	if isPortInUse(port) {
 		return errors.New("selected port is used by another process")
 	}
 
@@ -158,7 +177,7 @@ func (ws *WebServer) Start() error {
 	}
 
 	//Check if the port is usable
-	if IsPortInUse(ws.option.Port) {
+	if isPortInUse(ws.option.Port) {
 		return errors.New("port already in use or access denied by host OS")
 	}
 
@@ -237,7 +256,61 @@ func (ws *WebServer) UpdateDirectoryListing(enable bool) {
 	ws.option.Sysdb.Write("webserv", "dirlist", enable)
 }
 
+// StartWebDAV starts the WebDAV server
+func (ws *WebServer) StartWebDAV() error {
+	if ws.WebDAV == nil {
+		return fmt.Errorf("WebDAV server is not initialized")
+	}
+	err := ws.WebDAV.Start(ws.option.WebDAVPort)
+	if err != nil {
+		return err
+	}
+	ws.option.EnableWebDAV = true
+	ws.option.Sysdb.Write("webserv", "enableWebDAV", true)
+	return nil
+}
+
+// StopWebDAV stops the WebDAV server
+func (ws *WebServer) StopWebDAV() error {
+	if ws.WebDAV == nil {
+		return fmt.Errorf("WebDAV server is not initialized")
+	}
+	err := ws.WebDAV.Stop()
+	if err != nil {
+		return err
+	}
+	ws.option.EnableWebDAV = false
+	ws.option.Sysdb.Write("webserv", "enableWebDAV", false)
+	return nil
+}
+
+// ChangeWebDAVPort changes the WebDAV server's port
+func (ws *WebServer) ChangeWebDAVPort(port string) error {
+	if ws.WebDAV == nil {
+		return fmt.Errorf("WebDAV server is not initialized")
+	}
+
+	if isPortInUse(port) {
+		return errors.New("selected port is used by another process")
+	}
+
+	if ws.WebDAV.IsRunning() {
+		if err := ws.WebDAV.Restart(port); err != nil {
+			return err
+		}
+	}
+
+	ws.option.WebDAVPort = port
+	ws.option.Sysdb.Write("webserv", "webdavPort", port)
+	ws.option.Logger.PrintAndLog("webdav", "WebDAV port updated to "+port, nil)
+
+	return nil
+}
+
 // Close stops the web server without returning an error.
 func (ws *WebServer) Close() {
 	ws.Stop()
+	if ws.WebDAV != nil {
+		ws.WebDAV.Close()
+	}
 }

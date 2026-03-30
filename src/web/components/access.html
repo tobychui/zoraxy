@@ -36,6 +36,10 @@
                 <button class="ui basic circular button" onclick="openAccessRuleEditor();" title="Edit Access Rules"><i class="ui edit icon"></i> Access Rule Editor</button>
                 <button class="ui basic circular icon button" onclick="reloadAccessRulesWithFeedback();"><i class="ui green refresh icon"></i></button>
             </div>
+            <div class="ui divider"></div>
+            <div style="width: 100%;" align="center">
+                <button class="ui basic circular button" onclick="openTrustedProxyEditor();" title="Edit Trusted Proxy Settings"><i class="ui green shield icon"></i> Trusted Proxy Settings</button>
+            </div>
         </div>
         <div class="twelve wide column">
             <!-- Black / White list menu-->
@@ -330,7 +334,7 @@
                 </table>
 
                 <h4>IP Blacklist</h4>
-                <p>Black a certain IP or IP range</p>
+                <p>Block a certain IP or IP range</p>
                 <div class="ui form">
                     <div class="field">
                     <label>IP Address</label>
@@ -737,6 +741,10 @@
         showSideWrapper('snippet/accessRuleEditor.html');
     }
 
+    function openTrustedProxyEditor(){
+        showSideWrapper('snippet/trustedProxyEditor.html');
+    }
+
     function reloadAccessRulesWithFeedback(){
         reloadAccessRules(function(){
             msgbox("Access Rules Reloaded", true);
@@ -834,9 +842,10 @@
     
     //Load all the black white lists
     function initBlackWhitelistTables(){
-        //Remove event listener on both toggle buttons
+        //Remove event listener on toggle buttons
         $("#enableWhitelist").off("change");
         $("#enableBlacklist").off("change");
+        $("#enableWhitelistLoopback").off("change");
 
         //Initialize the button states
         initBlacklistEnableState();
@@ -1096,7 +1105,7 @@
             }
         });
     }
-    
+
     /*
         Blacklist API Calls
     */
@@ -1568,6 +1577,15 @@
     var access_ip_country_map = {};
 
     function initIpAccessTable(ipAccessCounts){
+        // Filter out IPs with less than 100 requests
+        var filteredCounts = {};
+        for (var ip in ipAccessCounts) {
+            if (ipAccessCounts[ip] >= 100) {
+                filteredCounts[ip] = ipAccessCounts[ip];
+            }
+        }
+        ipAccessCounts = filteredCounts;
+        blacklist_currentPage = 1; // Reset to first page
         blacklist_totalPages = Math.ceil(Object.keys(ipAccessCounts).length / blacklist_entriesPerPage);
 
         function sortkv(obj) {

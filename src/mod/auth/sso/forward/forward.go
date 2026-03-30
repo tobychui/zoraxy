@@ -140,11 +140,11 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 
 	// Write changes to runtime
 	ar.options.Address = address
-	ar.options.ResponseHeaders = strings.Split(responseHeaders, ",")
-	ar.options.ResponseClientHeaders = strings.Split(responseClientHeaders, ",")
-	ar.options.RequestHeaders = strings.Split(requestHeaders, ",")
-	ar.options.RequestIncludedCookies = strings.Split(requestIncludedCookies, ",")
-	ar.options.RequestExcludedCookies = strings.Split(requestExcludedCookies, ",")
+	ar.options.ResponseHeaders = cleanSplit(responseHeaders)
+	ar.options.ResponseClientHeaders = cleanSplit(responseClientHeaders)
+	ar.options.RequestHeaders = cleanSplit(requestHeaders)
+	ar.options.RequestIncludedCookies = cleanSplit(requestIncludedCookies)
+	ar.options.RequestExcludedCookies = cleanSplit(requestExcludedCookies)
 	ar.options.RequestIncludeBody, _ = strconv.ParseBool(requestIncludeBody)
 	ar.options.UseXOriginalHeaders, _ = strconv.ParseBool(useXOriginalHeaders)
 
@@ -239,7 +239,7 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 		if len(ar.options.ResponseHeaders) != 0 {
 			// Copy specific user-specified headers from the response of the forward auth request to the request sent to the
 			// upstream server/next hop.
-			headerCopyIncluded(respForwarded.Header, w.Header(), ar.options.ResponseHeaders, false)
+			headerCopyIncluded(respForwarded.Header, r.Header, ar.options.ResponseHeaders, false)
 		}
 
 		// Return the request to the proxy for forwarding to the backend.

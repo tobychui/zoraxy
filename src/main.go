@@ -39,10 +39,10 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
+	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/update"
 	"imuslab.com/zoraxy/mod/utils"
@@ -63,6 +63,21 @@ func main() {
 	//Parse startup flags
 	flag.Parse()
 
+	//Initialize path variables from flags
+	TMP_FOLDER = *path_tmp
+	CONF_FOLDER = *path_conf
+	CONF_HTTP_PROXY = CONF_FOLDER + "/proxy"
+	CONF_STREAM_PROXY = CONF_FOLDER + "/streamproxy"
+	CONF_CERT_STORE = CONF_FOLDER + "/certs"
+	CONF_REDIRECTION = CONF_FOLDER + "/redirect"
+	CONF_ACCESS_RULE = CONF_FOLDER + "/access"
+	CONF_PATH_RULE = CONF_FOLDER + "/rules/pathrules"
+	CONF_PLUGIN_GROUPS = CONF_FOLDER + "/plugin_groups.json"
+	CONF_GEODB_PATH = CONF_FOLDER + "/geodb"
+	CONF_LOG_CONFIG = CONF_FOLDER + "/log_conf.json"
+	ACME_AUTORENEW_CONFIG_PATH = CONF_FOLDER + "/acme_conf.json"
+	CONF_TRUSTED_PROXIES = CONF_FOLDER + "/trusted_proxies.json"
+
 	/* Maintaince Function Modes */
 	if *showver {
 		fmt.Println(SYSTEM_NAME + " - Version " + SYSTEM_VERSION)
@@ -70,6 +85,11 @@ func main() {
 	}
 	if *geoDbUpdate {
 		geodb.DownloadGeoDBUpdate(CONF_GEODB_PATH)
+		os.Exit(0)
+	}
+	if *reset_account {
+		//Reset admin account by removing all users from the system
+		auth.ResetAccount(databaseBackend, path_database)
 		os.Exit(0)
 	}
 
@@ -99,8 +119,9 @@ func main() {
 	}
 	nodeUUID = string(uuidBytes)
 
-	//Create a new webmin mux and csrf middleware layer
+	//Create a new webmin mux, plugin mux and csrf middleware layer
 	webminPanelMux = http.NewServeMux()
+	pluginAPIMux := http.NewServeMux()
 	csrfMiddleware = csrf.Protect(
 		[]byte(nodeUUID),
 		csrf.CookieName(CSRF_COOKIENAME),
@@ -112,17 +133,24 @@ func main() {
 	//Startup all modules, see start.go
 	startupSequence()
 
-	//Initiate management interface APIs
+	//Initiate APIs
 	requireAuth = !(*noauth)
 	initAPIs(webminPanelMux)
-	initRestAPI(webminPanelMux)
+	initRestAPI(pluginAPIMux)
 
-	//Start the reverse proxy server in go routine
+	// Create a entry mux to accept all management interface requests
+	entryMux := http.NewServeMux()
+	entryMux.Handle("/plugin/", pluginAPIMux)            //For plugins API access
+	entryMux.Handle("/", csrfMiddleware(webminPanelMux)) //For webmin UI access, require csrf token
+
+	// Start the reverse proxy server in go routine
 	go func() {
-		ReverseProxtInit()
+		ReverseProxyInit()
 	}()
 
-	time.Sleep(500 * time.Millisecond)
+	// Wait for dynamicProxyRouter to be initialized before proceeding
+	// See ReverseProxyInit() in reverseproxy.go
+	<-dynamicProxyRouterReady
 
 	//Start the finalize sequences
 	finalSequence()
@@ -134,7 +162,7 @@ func main() {
 		SystemWideLogger.Println(SYSTEM_NAME + " started. Visit control panel at http://" + *webUIPort)
 	}
 
-	err = http.ListenAndServe(*webUIPort, csrfMiddleware(webminPanelMux))
+	err = http.ListenAndServe(*webUIPort, entryMux)
 
 	if err != nil {
 		log.Fatal(err)

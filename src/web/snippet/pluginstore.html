@@ -30,6 +30,39 @@
                 right: 0.4em;
             }
 
+            /* Dark theme support for modal */
+            body.darkTheme .ui.modal {
+                background-color: #1b1c1d;
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            body.darkTheme .ui.modal > .header {
+                background-color: #1b1c1d;
+                color: rgba(255, 255, 255, 0.9);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            body.darkTheme .ui.modal > .content {
+                background-color: #1b1c1d;
+            }
+
+            body.darkTheme .ui.modal .table {
+                background-color: #1b1c1d;
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            body.darkTheme .ui.modal .table td {
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+
+            body.darkTheme .ui.modal .actions {
+                background-color: #1b1c1d;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            body.darkTheme .ui.modal a{
+                color: #2185d0;
+            }
 
             @media screen and (max-width: 768px) {
                 #pluginList .item .image {
@@ -86,6 +119,24 @@
             </div>
             <br><br><br><br>
         </div>
+        
+        <!-- Plugin Info Modal -->
+        <div class="ui modal" id="pluginInfoModal">
+            <i class="close icon"></i>
+            <div class="header">
+                Plugin Information
+            </div>
+            <div class="content">
+                <table class="ui celled table">
+                    <tbody id="pluginInfoTable">
+                    </tbody>
+                </table>
+            </div>
+            <div class="actions">
+                <button class="ui button" onclick="$('#pluginInfoModal').modal('hide');">Close</button>
+            </div>
+        </div>
+        
         <script>
             let availablePlugins = [];
             let installedPlugins = [];
@@ -196,6 +247,7 @@
                                     ${thisPluginIsInstalled 
                                         ? `<button class="ui basic circular disabled button">Installed</button>` 
                                         : `<button class="ui basic circular button" onclick="installPlugin('${plugin.PluginIntroSpect.id}', this);",><i class="ui download icon"></i> Install</button>`}
+                                        <button class="ui basic circular icon button" onclick="showPluginInfo('${plugin.PluginIntroSpect.id}');"><i class="info icon"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -241,6 +293,88 @@
                         parent.msgbox("An error occurred while installing the plugin", false);
                     }
                 });
+            }
+
+            function showPluginInfo(pluginId) {
+                // Find the plugin by ID
+                const plugin = availablePlugins.find(p => p.PluginIntroSpect.id === pluginId);
+                if (!plugin) {
+                    parent.msgbox("Plugin not found", false);
+                    return;
+                }
+
+                const spec = plugin.PluginIntroSpect;
+                const tableBody = $('#pluginInfoTable');
+                tableBody.empty();
+
+                // Build table rows with plugin information
+                const infoRows = [
+                    { label: 'Plugin ID', value: spec.id },
+                    { label: 'Name', value: spec.name },
+                    { label: 'Author', value: spec.author },
+                    { label: 'Author Contact', value: spec.author_contact || 'N/A' },
+                    { label: 'Description', value: spec.description },
+                    { label: 'URL', value: spec.url ? `<a href="${spec.url}" target="_blank">${spec.url}</a>` : 'N/A' },
+                    { label: 'Type', value: spec.type },
+                    { label: 'Version', value: `${spec.version_major}.${spec.version_minor}.${spec.version_patch}` },
+                    { label: 'Icon Path', value: plugin.IconPath || 'N/A' },
+                    { label: 'UI Path', value: spec.ui_path || 'N/A' },
+                    { label: 'Subscription Path', value: spec.subscription_path || 'N/A' },
+                    { label: 'Static Capture Ingress', value: spec.static_capture_ingress || 'N/A' },
+                    { label: 'Dynamic Capture Sniff', value: spec.dynamic_capture_sniff || 'N/A' },
+                    { label: 'Dynamic Capture Ingress', value: spec.dynamic_capture_ingress || 'N/A' }
+                ];
+
+                // Add static capture paths if available
+                if (spec.static_capture_paths && spec.static_capture_paths.length > 0) {
+                    infoRows.push({ 
+                        label: 'Static Capture Paths', 
+                        value: spec.static_capture_paths.join(', ') 
+                    });
+                }
+
+                // Add subscribed events if available
+                if (spec.subscriptions_events && spec.subscriptions_events.length > 0) {
+                    infoRows.push({ 
+                        label: 'Subscribed Events', 
+                        value: spec.subscriptions_events.join(', ') 
+                    });
+                }
+
+                // Add permitted API endpoints if available
+                if (spec.permitted_api_endpoints && spec.permitted_api_endpoints.length > 0) {
+                    const endpoints = spec.permitted_api_endpoints.map(ep => 
+                        `<div><strong>${ep.method}</strong> ${ep.endpoint}${ep.reason ? ` - ${ep.reason}` : ''}</div>`
+                    ).join('');
+                    infoRows.push({ 
+                        label: 'Permitted API Endpoints', 
+                        value: endpoints 
+                    });
+                }
+
+                // Add download URLs if available
+                if (plugin.DownloadURLs && Object.keys(plugin.DownloadURLs).length > 0) {
+                    const downloadLinks = Object.entries(plugin.DownloadURLs).map(([platform, url]) => 
+                        `<div><strong>${platform}:</strong> <a href="${url}" target="_blank">${url}</a></div>`
+                    ).join('');
+                    infoRows.push({ 
+                        label: 'Download URLs', 
+                        value: downloadLinks 
+                    });
+                }
+
+                // Populate the table
+                infoRows.forEach(row => {
+                    tableBody.append(`
+                        <tr>
+                            <td class="collapsing"><strong>${row.label}</strong></td>
+                            <td>${row.value}</td>
+                        </tr>
+                    `);
+                });
+
+                // Show the modal
+                $('#pluginInfoModal').modal('show');
             }
 
             function closeThisWrapper(){

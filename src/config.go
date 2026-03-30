@@ -15,6 +15,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
+	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -238,7 +239,7 @@ func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Open the file on disk
-		file, err := os.Open("./sys.db")
+		file, err := os.Open(*path_database)
 		if err != nil {
 			SystemWideLogger.PrintAndLog("Backup", "Unable to open sysdb", err)
 			return
@@ -317,26 +318,35 @@ func ImportConfigFromZip(w http.ResponseWriter, r *http.Request) {
 		}
 		defer rc.Close()
 
-		// Create the corresponding file on disk
-		zipFile.Name = strings.ReplaceAll(zipFile.Name, "../", "")
-		fmt.Println("Restoring: " + strings.ReplaceAll(zipFile.Name, "\\", "/"))
-		if zipFile.Name == "sys.db" {
+		// Sanitize the file name to prevent path traversal (zip-slip)
+		cleanedName := filepath.Clean(filepath.FromSlash(zipFile.Name))
+		cleanedNameSlash := filepath.ToSlash(cleanedName)
+		fmt.Println("Restoring: " + cleanedNameSlash)
+		if cleanedNameSlash == "sys.db" {
 			//Sysdb replacement. Close the database and restore
 			sysdb.Close()
 			restoreDatabase = true
-		} else if !strings.HasPrefix(strings.ReplaceAll(zipFile.Name, "\\", "/"), "conf/") {
+		} else if !strings.HasPrefix(cleanedNameSlash, "conf/") {
 			//Malformed zip file.
-			http.Error(w, fmt.Sprintf("Invalid zip file structure or version too old"), http.StatusInternalServerError)
+			http.Error(w, "Invalid zip file structure or version too old", http.StatusInternalServerError)
+			return
+		}
+
+		// Resolve to absolute path and verify it stays within the target directory
+		absTargetDir, _ := filepath.Abs(targetDir)
+		absFilePath, _ := filepath.Abs(cleanedName)
+		if cleanedNameSlash != "sys.db" && !strings.HasPrefix(absFilePath, absTargetDir+string(os.PathSeparator)) {
+			http.Error(w, "Invalid file path in zip", http.StatusBadRequest)
 			return
 		}
 
 		//Check if parent dir exists
-		if !utils.FileExists(filepath.Dir(zipFile.Name)) {
-			os.MkdirAll(filepath.Dir(zipFile.Name), 0775)
+		if !utils.FileExists(filepath.Dir(cleanedName)) {
+			os.MkdirAll(filepath.Dir(cleanedName), 0775)
 		}
 
 		//Create the file
-		newFile, err := os.Create(zipFile.Name)
+		newFile, err := os.Create(cleanedName)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to create file: %v", err), http.StatusInternalServerError)
 			return
@@ -365,4 +375,15 @@ func ImportConfigFromZip(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+}
+
+func handleLoggerConfig(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		logger.HandleGetLogConfig(CONF_LOG_CONFIG)(w, r)
+	case http.MethodPost:
+		logger.HandleUpdateLogConfig(CONF_LOG_CONFIG, SystemWideLogger)(w, r)
+	default:
+		utils.SendErrorResponse(w, "Method not allowed")
+	}
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"html"
 	"log"
 	"net"
 	"net/http"
@@ -79,6 +80,26 @@ func PostPara(r *http.Request, key string) (string, error) {
 		return "", errors.New("invalid " + key + " given")
 	}
 	return x, nil
+}
+
+// Get POST parameter as time.Duration
+func PostDuration(r *http.Request, key string) (*time.Duration, error) {
+	// Try to parse the form
+	if err := r.ParseForm(); err != nil {
+		return nil, err
+	}
+	// Get first value from the form
+	x := r.Form.Get(key)
+	if len(x) == 0 {
+		return nil, errors.New("invalid " + key + " given")
+	}
+
+	duration, err := time.ParseDuration(x)
+
+	if err != nil {
+		return nil, errors.Join(errors.New("invalid "+key+" duration"), err)
+	}
+	return &duration, nil
 }
 
 // Get POST paramter as boolean, accept 1 or true
@@ -199,4 +220,10 @@ func ValidateListeningAddress(address string) bool {
 	}
 
 	return true
+}
+
+// SanitizeLogContent escapes special HTML characters in log content to prevent XSS attacks.
+// See #1028
+func SanitizeLogContent(content string) string {
+	return html.EscapeString(content)
 }

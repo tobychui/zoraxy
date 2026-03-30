@@ -11,7 +11,6 @@ services:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
       - /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/
       - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/localtime:/etc/localtime
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:

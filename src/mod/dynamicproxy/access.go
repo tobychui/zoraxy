@@ -7,13 +7,12 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/eventsystem"
-	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
 // Handle access check (blacklist / whitelist), return true if request is handled (aka blocked)
 // if the return value is false, you can continue process the response writer
-func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter, r *http.Request) bool {
+func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) bool {
 	accessRule, err := h.Parent.Option.AccessController.GetAccessRuleByID(ruleID)
 	if err != nil {
 		//Unable to load access rule. Target rule not found?
@@ -25,7 +24,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 
 	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.Option.WebDirectory, w, r)
 	if isBlocked {
-		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "")
+		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "", sep)
 	}
 	return isBlocked
 }
@@ -34,7 +33,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 // For string, it will return the blocked reason (if any)
 func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory string, w http.ResponseWriter, r *http.Request) (bool, string) {
 	//Check if this ip is in blacklist
-	clientIpAddr := netutils.GetRequesterIP(r)
+	clientIpAddr := accessRule.GetClientIP(r)
 	if accessRule.IsBlacklisted(clientIpAddr) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/netip"
@@ -18,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
@@ -50,14 +52,6 @@ import (
 	Don't touch this function unless you know what you are doing
 */
 
-var (
-	/*
-		MDNS related
-	*/
-	previousmdnsScanResults = []*mdns.NetworkHost{}
-	mdnsTickerStop          chan bool
-)
-
 func startupSequence() {
 	//Start a system wide logger and log viewer
 	l, err := logger.NewLogger(LOG_PREFIX, *path_logFile)
@@ -76,20 +70,33 @@ func startupSequence() {
 		SystemWideLogger = l
 		SystemWideLogger.Println("System wide logging is disabled, all logs will be printed to STDOUT only")
 	} else {
-		l.SetRotateOption(&logger.RotateOption{
-			Enabled:    *logRotate != 0,
-			MaxSize:    int64(*logRotate) * 1024, //Convert to bytes
-			MaxBackups: 10,
-			Compress:   *enableLogCompression,
-			BackupDir:  "",
-		})
+		// Load log configuration from file
+		logConfig, err := logger.LoadLogConfig(CONF_LOG_CONFIG)
+		if err != nil {
+			SystemWideLogger.Println("Failed to load log config, using defaults: " + err.Error())
+			logConfig = &logger.LogConfig{
+				Enabled:  false,
+				MaxSize:  "0",
+				Compress: true,
+			}
+		}
+
+		// Apply the configuration
+		if err := l.ApplyLogConfig(logConfig); err != nil {
+			SystemWideLogger.Println("Failed to apply log config: " + err.Error())
+		}
+
 		SystemWideLogger = l
+		if !logConfig.Enabled {
+			SystemWideLogger.Println("Log rotation is disabled")
+		} else {
+			SystemWideLogger.Println("Log rotation is enabled, max log file size " + logConfig.MaxSize)
+		}
 		SystemWideLogger.Println("System wide logging is enabled")
 	}
 
 	LogViewer = logviewer.NewLogViewer(&logviewer.ViewerOption{
 		RootFolder: *path_logFile,
-		Extension:  LOG_EXTENSION,
 	})
 
 	//Create database
@@ -101,7 +108,7 @@ func startupSequence() {
 		backendType = dbinc.BackendBoltDB
 	}
 	l.PrintAndLog("database", "Using "+backendType.String()+" as the database backend", nil)
-	db, err := database.NewDatabase("./sys.db", backendType)
+	db, err := database.NewDatabase(*path_database, backendType)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,7 +143,9 @@ func startupSequence() {
 	db.NewTable("redirect")
 	redirectAllowRegexp := false
 	db.Read("redirect", "regex", &redirectAllowRegexp)
-	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, SystemWideLogger)
+	redirectCaseSensitive := false
+	db.Read("redirect", "case_sensitive", &redirectCaseSensitive)
+	redirectTable, err = redirection.NewRuleTable(CONF_REDIRECTION, redirectAllowRegexp, redirectCaseSensitive, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -161,9 +170,10 @@ func startupSequence() {
 
 	//Create the access controller
 	accessController, err = access.NewAccessController(&access.Options{
-		Database:     sysdb,
-		GeoDB:        geodbStore,
-		ConfigFolder: CONF_ACCESS_RULE,
+		Database:           sysdb,
+		GeoDB:              geodbStore,
+		ConfigFolder:       CONF_ACCESS_RULE,
+		TrustedProxiesFile: CONF_TRUSTED_PROXIES,
 	})
 	if err != nil {
 		panic(err)
@@ -181,6 +191,8 @@ func startupSequence() {
 		Database: sysdb,
 	})
 
+	zorxAuthRouter = zorxauth.NewAuthRouter(sysdb, SystemWideLogger)
+
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{
 		Database: sysdb,
@@ -196,8 +208,10 @@ func startupSequence() {
 		Port:                   strconv.Itoa(WEBSERV_DEFAULT_PORT), //Default Port
 		WebRoot:                *path_webserver,
 		EnableDirectoryListing: true,
-		EnableWebDirManager:    *allowWebFileManager,
+		EnableWebDAV:           false,  //WebDAV disabled by default, can be enabled via UI
+		WebDAVPort:             "5488", //Default WebDAV port
 		Logger:                 SystemWideLogger,
+		AuthAgent:              authAgent,
 	})
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()
@@ -340,11 +354,24 @@ func startupSequence() {
 	*/
 	pluginFolder := *path_plugin
 	pluginFolder = strings.TrimSuffix(pluginFolder, "/")
-	ZoraxyAddrPort, err := netip.ParseAddrPort(*webUIPort)
+
 	ZoraxyPort := 8000
+	ZoraxyAddrPort, err := netip.ParseAddrPort(*webUIPort)
+
+	if err != nil {
+		// check for ":<port>" parameter
+		webUIPortNoPrefix, hadPrefix := strings.CutPrefix(*webUIPort, ":")
+		if hadPrefix {
+			ZoraxyAddrPort, err = netip.ParseAddrPort("0.0.0.0:" + webUIPortNoPrefix)
+		}
+	}
+
 	if err == nil && ZoraxyAddrPort.IsValid() && ZoraxyAddrPort.Port() > 0 {
 		ZoraxyPort = int(ZoraxyAddrPort.Port())
+	} else {
+		SystemWideLogger.PrintAndLog("plugin-manager", fmt.Sprintf("Could not set port for plugin communication (webUI/-port); fallback to default port '%d'", ZoraxyPort), err)
 	}
+
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir:          pluginFolder,
 		Database:           sysdb,
@@ -362,7 +389,7 @@ func startupSequence() {
 		},
 		/* Plugin Store URLs */
 		PluginStoreURLs: []string{
-			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index.json",
+			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json",
 			//TO BE ADDED
 		},
 		/* Developer Options */
@@ -432,10 +459,12 @@ func ShutdownSeq() {
 	if mdnsScanner != nil {
 		mdnsScanner.Close()
 	}
+
 	SystemWideLogger.Println("Shutting down load balancer")
 	if loadBalancer != nil {
 		loadBalancer.Close()
 	}
+
 	SystemWideLogger.Println("Closing Certificates Auto Renewer")
 	if acmeAutoRenewer != nil {
 		acmeAutoRenewer.Close()
@@ -446,13 +475,21 @@ func ShutdownSeq() {
 		accessController.Close()
 	}
 
+	//Close the zorxauth router to save browser sessions
+	if zorxAuthRouter != nil {
+		SystemWideLogger.Println("Shutting down Zoraxy Auth Router")
+		zorxAuthRouter.Close()
+	}
+
 	//Close the plugin manager
 	SystemWideLogger.Println("Shutting down plugin manager")
-	pluginManager.Close()
+	if pluginManager != nil {
+		pluginManager.Close()
+	}
 
 	//Remove the tmp folder
 	SystemWideLogger.Println("Cleaning up tmp files")
-	os.RemoveAll("./tmp")
+	os.RemoveAll(TMP_FOLDER)
 
 	//Close database
 	SystemWideLogger.Println("Stopping system database")

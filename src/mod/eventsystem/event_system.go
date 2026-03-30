@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/info/logger"
-	// "imuslab.com/zoraxy/mod/plugins"
 
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
@@ -86,8 +86,39 @@ func (em *eventManager) UnregisterSubscriber(listenerID ListenerID) error {
 	return nil
 }
 
+// EmitToSubscribersAnd dispatches an event to the specific listeners in addition to the events subscribers.
+//
+// The primary use-case of this function is for plugin-to-plugin communication
+func (em *eventManager) EmitToSubscribersAnd(listenerIDs []ListenerID, payload events.EventPayload) {
+	eventName := payload.GetName()
+
+	if len(listenerIDs) == 0 {
+		return // No listeners specified
+	}
+
+	// Create the event
+	event := events.Event{
+		Name:      eventName,
+		Timestamp: time.Now().Unix(),
+		UUID:      uuid.New().String(),
+		Data:      payload,
+	}
+
+	// Dispatch to all specified listeners asynchronously
+	em.emitTo(listenerIDs, event)
+
+	// Also emit to all subscribers of the event as usual
+	em.mutex.RLock()
+	defer em.mutex.RUnlock()
+	subscribers, exists := em.subscriptions[eventName]
+	if !exists || len(subscribers) == 0 {
+		return // No subscribers
+	}
+	em.emitTo(subscribers, event)
+}
+
 // Emit dispatches an event to all subscribed listeners
-func (em *eventManager) Emit(payload events.EventPayload) error {
+func (em *eventManager) Emit(payload events.EventPayload) {
 	eventName := payload.GetName()
 
 	em.mutex.RLock()
@@ -95,22 +126,38 @@ func (em *eventManager) Emit(payload events.EventPayload) error {
 	subscribers, exists := em.subscriptions[eventName]
 
 	if !exists || len(subscribers) == 0 {
-		return nil // No subscribers
+		return // No subscribers
 	}
 
 	// Create the event
 	event := events.Event{
 		Name:      eventName,
 		Timestamp: time.Now().Unix(),
+		UUID:      uuid.New().String(),
 		Data:      payload,
 	}
 
 	// Dispatch to all subscribers asynchronously
-	for _, listenerID := range subscribers {
+	em.emitTo(subscribers, event)
+}
+
+// Dispatch event to all specified listeners asynchronously
+func (em *eventManager) emitTo(listenerIDs []ListenerID, event events.Event) {
+	if len(listenerIDs) == 0 {
+		return
+	}
+
+	// Dispatch to all specified listeners asynchronously
+	em.mutex.RLock()
+	defer em.mutex.RUnlock()
+	listenersToUnregister := []ListenerID{}
+	for _, listenerID := range listenerIDs {
 		listener, exists := em.subscribers[listenerID]
 
 		if !exists {
 			em.logger.PrintAndLog("event-system", "Failed to get listener for event dispatch, removing "+string(listenerID)+" from subscriptions", nil)
+			// Mark for removal
+			listenersToUnregister = append(listenersToUnregister, listenerID)
 			continue
 		}
 
@@ -121,5 +168,10 @@ func (em *eventManager) Emit(payload events.EventPayload) error {
 		}(listener)
 	}
 
-	return nil
+	// Unregister any listeners that no longer exist, asynchronously
+	go func() {
+		for _, id := range listenersToUnregister {
+			em.UnregisterSubscriber(id)
+		}
+	}()
 }

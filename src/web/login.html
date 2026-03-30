@@ -136,7 +136,6 @@
                 min-height:40px;
             }
         }
-        
     </style>
     </head>
     <body>
@@ -153,6 +152,19 @@
                     $("body").addClass("night");
                 }
             });
+
+            // csrf Ajax wrapper
+            $.cjax = function(payload){
+                let requireTokenMethod = ["POST", "PUT", "DELETE"];
+                if (requireTokenMethod.includes(payload.method) || requireTokenMethod.includes(payload.type)){
+                    //csrf token is required
+                    let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");                    payload.headers = {
+                        "X-CSRF-Token": csrfToken,
+                    }
+                }
+
+                $.ajax(payload);
+            }
         </script>
         <div id="loginForm" class="ui middle aligned center aligned grid" data-aos="fade-up">
             <div class="column" style="padding-top: 0 !important;">
@@ -300,7 +312,7 @@
             let username = $("#username").val();
             let magic = $("#magic").val();
             let repeatMagic = $("#repeatMagic").val();
-            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+            let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
             if (magic !== repeatMagic) {
                 alert("Password does not match");
                 return;
@@ -350,10 +362,10 @@
             let username = $("#username").val();
             let magic = $("#magic").val();
             let rmbme = document.getElementById("rmbme").checked;
-            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+            let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
             $("#errmsg").stop().finish().slideUp("fast");
             $("input").addClass('disabled');
-            $.ajax({
+            $.cjax({
                 url: loginAddress, 
                 type: "POST",
                 beforeSend: function(request) {

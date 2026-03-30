@@ -1,11 +1,14 @@
 package streamproxy
 
 import (
+	"bytes"
 	"errors"
 	"log"
 	"net"
 	"strings"
 	"time"
+
+	proxyproto "github.com/pires/go-proxyproto"
 )
 
 /*
@@ -82,6 +85,24 @@ func (c *ProxyRelayInstance) CloseAllUDPConnections() {
 	})
 }
 
+// Write Proxy Protocol v2 header to UDP connection
+func WriteProxyProtocolHeaderUDP(conn *net.UDPConn, srcAddr, dstAddr *net.UDPAddr) error {
+	header := proxyproto.Header{
+		Version:           byte(convertProxyProtocolVersionToInt(ProxyProtocolV2)),
+		Command:           proxyproto.PROXY,
+		TransportProtocol: proxyproto.UDPv4,
+		SourceAddr:        srcAddr,
+		DestinationAddr:   dstAddr,
+	}
+	var buf bytes.Buffer
+	_, err := header.WriteTo(&buf)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write(buf.Bytes())
+	return err
+}
+
 func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan bool) error {
 	//By default the incoming listen Address is int
 	//We need to add the loopback address into it
@@ -142,6 +163,10 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 			// Fire up routine to manage new connection
 			go c.RunUDPConnectionRelay(conn, lisener)
 
+			// Send Proxy Protocol header if enabled
+			if c.ProxyProtocolVersion == ProxyProtocolV2 {
+				_ = WriteProxyProtocolHeaderUDP(conn.ServerConn, cliaddr, targetAddr)
+			}
 		} else {
 			c.LogMsg("[UDP] Found connection for client "+saddr, nil)
 			conn = rawConn.(*udpClientServerConn)

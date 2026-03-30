@@ -74,14 +74,6 @@
                     <small>Forward UDP request on this listening socket</small></label>
                 </div>
             </div>
-           <div class="field">
-                <div class="ui toggle checkbox">
-                    <input type="checkbox" tabindex="0" name="useProxyProtocol" class="hidden">
-                    <label>Enable Proxy Protocol V1<br>
-                        <small>Enable TCP Proxy Protocol header V1</small>
-                    </label>
-                </div>
-            </div>
             <div class="field">
                 <div class="ui toggle checkbox">
                     <input type="checkbox" tabindex="0" name="enableLogging" class="hidden">
@@ -89,6 +81,18 @@
                         <small>Enable logging of connection status and errors for this rule</small>
                     </label>
                 </div>
+            </div>
+            <div class="field">
+                <label>Proxy Protocol</label>
+                <select name="proxyProtocolVersion" class="ui dropdown">
+                    <option value="0">Disabled</option>
+                    <option value="1">Proxy Protocol V1</option>
+                    <option value="2">Proxy Protocol V2</option>
+                </select>
+                <small>Select Proxy Protocol v1 / v2 to use (if any)</small>
+                    <div id="proxyProtocolUdpWarning" style="display:none; color:#bd7100; margin-top:0.5em;">
+                        <i class="exclamation triangle icon"></i> Proxy Protocol V1 is not supported for UDP. The proxy protocol header will not be included in UDP packets if selected.
+                    </div>
             </div>
             <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
             <button id="editStreamProxyButton" class="ui basic button" onclick="confirmEditTCPProxyConfig(event, this);" style="display:none;"><i class="ui green check icon"></i> Update</button>  
@@ -98,6 +102,21 @@
 </div>
     <script>
         let editingStreamProxyConfigUUID = ""; //The current editing TCP Proxy config UUID
+
+        // Show/hide warning for Proxy Protocol V1 + UDP
+        function updateProxyProtocolUdpWarning() {
+            const proxyProtocolVersion = $("#streamProxyForm select[name=proxyProtocolVersion]").val();
+            const useUDP = $("#streamProxyForm input[name=useUDP]")[0].checked;
+            if (proxyProtocolVersion === "1" && useUDP) {
+                $("#proxyProtocolUdpWarning").show();
+            } else {
+                $("#proxyProtocolUdpWarning").hide();
+            }
+        }
+
+        $("#streamProxyForm select[name=proxyProtocolVersion]").on("change", updateProxyProtocolUdpWarning);
+        $("#streamProxyForm input[name=useUDP]").on("change", updateProxyProtocolUdpWarning);
+        $(document).ready(updateProxyProtocolUdpWarning);
 
         $("#streamProxyForm .dropdown").dropdown();
         $('#streamProxyForm').on('submit', function(event) {
@@ -138,7 +157,7 @@
             
         function clearStreamProxyAddEditForm(){
             $('#streamProxyForm').find('input:not([type=checkbox]), select').val('');
-            $('#streamProxyForm select').dropdown('clear');
+            $('#streamProxyForm select[name=proxyProtocolVersion]').dropdown('set selected', '0');
             $("#streamProxyForm input[name=timeout]").val(10);
             $("#streamProxyForm .toggle.checkbox").checkbox("set unchecked");
         }
@@ -212,8 +231,10 @@
                         modeText.push("UDP")
                     }
 
-                    if (config.UseProxyProtocol){
-                        modeText.push("ProxyProtocol V1")
+                    if (config.ProxyProtocolVersion === 1) {
+                        modeText.push("ProxyProtocol V1");
+                    } else if (config.ProxyProtocolVersion === 2) {
+                        modeText.push("ProxyProtocol V2");
                     }
 
                     modeText = modeText.join(" & ")
@@ -277,13 +298,8 @@
                             $(checkboxEle).checkbox("set unchecked");
                         }
                         return;
-                    }else if (key == "UseProxyProtocol"){
-                        let checkboxEle = $("#streamProxyForm input[name=useProxyProtocol]").parent();
-                        if (value === true){
-                            $(checkboxEle).checkbox("set checked");
-                        }else{
-                            $(checkboxEle).checkbox("set unchecked");
-                        }
+                    }else if (key == "ProxyProtocolVersion") {
+                        $("#streamProxyForm select[name=proxyProtocolVersion]").dropdown("set selected", value);
                         return;
                     }else if (key == "EnableLogging"){
                         let checkboxEle = $("#streamProxyForm input[name=enableLogging]").parent();
@@ -342,7 +358,7 @@
                     proxyAddr: $("#streamProxyForm input[name=proxyAddr]").val().trim(),
                     useTCP: $("#streamProxyForm input[name=useTCP]")[0].checked ,
                     useUDP: $("#streamProxyForm input[name=useUDP]")[0].checked ,
-                    useProxyProtocol: $("#streamProxyForm input[name=useProxyProtocol]")[0].checked ,
+                    proxyProtocolVersion: parseInt($("#streamProxyForm select[name=proxyProtocolVersion]").val(), 10),
                     enableLogging: $("#streamProxyForm input[name=enableLogging]")[0].checked ,
                     timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
                 },

@@ -1,13 +1,20 @@
 #!/bin/bash
 # This script builds all the plugins in the current directory
 
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+cd "${SCRIPT_DIR}"
+
 echo "Copying zoraxy_plugin to all mods"
 for dir in ./*; do
-    if [ -d "$dir" ]; then
-        cp -r ../../src/mod/plugins/zoraxy_plugin "$dir/mod"
+  if [ -d "$dir" ]; then
+    # remove existing zoraxy_plugin module, if it exists
+    if [ -d "${dir}/mod/zoraxy_plugin" ]; then
+      rm -r "${dir}"/mod/zoraxy_plugin
     fi
+    # copy over updated module
+    cp -r ../../src/mod/plugins/zoraxy_plugin "$dir/mod"
+  fi
 done
-
 
 # Initialize error flag
 build_failed=0

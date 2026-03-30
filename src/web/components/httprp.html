@@ -39,6 +39,27 @@
             border: 0px solid transparent !important;
         }
 
+        /* Detail view toggle - hide by default */
+        th.details-view,
+        td.details-view {
+            display: none;
+        }
+
+        /* Table wrapper styling for detail view */
+        #httpProxyTableWrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        #httpProxyTableWrapper.detail-view-enabled {
+            width: calc(100vw - 280px); /* Account for sidebar width */
+            max-width: none;
+        }
+
+        #httpProxyTableWrapper.detail-view-enabled table {
+            min-width: 1400px; /* Ensure table expands to accommodate all detail columns */
+        }
+
         /* Custom, non overlaying modal for proxy rule editing */
         #httprpEditModal{
             position: fixed;
@@ -57,6 +78,9 @@
 
         #httprpEditModal .rpconfig_content{
             height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.5em;
         }
 
         #httprpEditModal .editor_side_wrapper{
@@ -72,7 +96,7 @@
             width: 100%;
             border: 1px solid var(--divider_color);
             border-radius: 0.5em;
-            height: calc(100%);
+            height: calc(99%);
         }
 
         #httprpEditModal .editor_side_wrapper .wrapper_frame{
@@ -114,6 +138,7 @@
             }
 
             #httprpEditModalContentWindow{
+                height: 100% !important;
                 width: 84% !important;
             }
 
@@ -192,15 +217,20 @@
             <input type="password"  autocomplete="off" hidden/>
             <input type="text" id="searchInput"  placeholder="Quick Search" onkeydown="handleSearchInput(event);" onchange="handleSearchInput(event);" onblur="handleSearchInput(event);">
         </div>
+        <button class="ui basic button" id="detailViewToggle" onclick="toggleDetailViewButton();" style="float: right;">
+            Basics View
+        </button>
     </div>
     
-    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
+    <div id="httpProxyTableWrapper" style="width: 100%; overflow-x: auto; margin-bottom: 1em; min-height: 300px;">
         <table class="ui unstackable sortable compact celled definition table">
             <thead>
                 <tr>
                     <th></th>
                     <th>Host</th>
+                    <th class="details-view">Alt. Listening Addr</th>
                     <th>Destination</th>
+                    <th class="details-view">Authentication</th>
                     <th>Virtual Directory</th>
                     <th class="no-sort">Tags</th>
                     <th class="no-sort" style="width:100px; cursor: default !important;"></th>
@@ -254,7 +284,7 @@
                 <button class="ui basic fluid button httpProxyEditClosePC" onclick="closeHttpRuleEditor();">Close</button>
                 <button class="ui basic icon circular button httpProxyEditCloseMobile"  onclick="closeHttpRuleEditor();"><i class="ui times icon"></i></button>
             </div>
-            <div id="httprpEditModalContentWindow" class="twelve wide column">
+            <div id="httprpEditModalContentWindow" class="twelve wide column" style="height: 100%">
                 <div style="height:100%;">
                     <!-- Host -->
                     <div class="rpconfig_content" rpcfg="downstream">
@@ -284,6 +314,31 @@
                                     <label>Allow plain HTTP access<br>
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
+                                <br>
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="DisableLogging">
+                                    <label>Disable Requests Logging<br>
+                                        <small>Disable logging for all incoming requests for this hostname</small></label>
+                                </div>
+                                <br>
+                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                    <input type="checkbox" class="DisableStatisticCollection">
+                                    <label>Disable Statistic Collection<br>
+                                        <small>Disable collecting statistics for this hostname but keep request logging</small></label>
+                                </div>
+                                <br>
+                            </div>
+                            <div class="ui divider"></div>
+                            <b>Alternative Listening Ports</b>
+                            <p style="margin-top: 0.4em;"><small>Define additional ports this proxy rule should listen on (e.g., :8080, 192.168.1.1:8080)</small></p>
+                            <div class="listening_ports_list" style="margin-top:0.4em;">
+                                <!-- Listening ports will be populated here -->
+                            </div>
+                            <div class="ui action small fluid input" style="margin-top: 0.4em;">
+                                <input type="text" class="new_listening_port_input" placeholder=":8080 or 192.168.1.1:8080">
+                                <button class="ui green basic icon button addListeningPortBtn">
+                                    <i class="ui plus icon"></i>
+                                </button>
                             </div>
                            
                         </div>
@@ -313,7 +368,13 @@
                                 <input type="checkbox" class="DisableChunkedTransferEncoding">
                                 <label>Disable Chunked Transfer Encoding<br>
                                     <small>Enable this option if your upstream uses a legacy HTTP server implementation (e.g. Proxmox / opencloud)</small></label>
-                            </div>    
+                            </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="ForceHTTP11">
+                                <label>Force HTTP/1.1<br>
+                                    <small>Force the proxy to use HTTP/1.1 for upstream connections, disabling HTTP/2</small></label>
+                            </div>
                         </div>
                     </div>
                     <!-- Virtual Directories-->
@@ -421,10 +482,46 @@
                                         <label>OAuth2</label>
                                     </div>
                                 </div>
+                                <div class="field">
+                                    <div class="ui radio checkbox">
+                                        <input type="radio" value="4" name="authProviderType">
+                                        <label>Zoraxy Auth</label>
+                                    </div>
+                                </div>
                             </div>
                             <br>
                             <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
-                            
+                            <div class="ui divider"></div>
+                            <!-- Block Common Exploits -->
+                            <label><b>Exploits Prevention</b></label>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="BlockCommonExploits">
+                                <label>Block Common Exploits<br>
+                                    <small>Detect and block common exploit payloads (SQLi, XSS, path traversal, etc.)</small>
+                                </label>
+                            </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="BlockAICrawlers">
+                                <label>Block AI and Crawlers (Experimental)<br>
+                                    <small>Block known crawlers and large-scale automated agents</small>
+                                </label>
+                            </div>
+                            <br>
+                            <label>Mitigation Action</label>
+                            <div class="ui fluid selection dropdown mitigationActionDropdown" style="margin-top: 0.4em;">
+                                <input type="hidden" value="0" name="mitigationAction">
+                                <i class="dropdown icon"></i>
+                                <div class="default text">Choose action when exploit / crawler detected</div>
+                                <div class="menu">
+                                    <div class="item" data-value="0">404 Not Found</div>
+                                    <div class="item" data-value="1">403 Forbidden</div>
+                                    <div class="item" data-value="2">400 Bad Request</div>
+                                    <div class="item" data-value="3">Drop Connection</div>
+                                </div>
+                            </div>
+                             <small style="opacity:0.7;">Select how the system should respond when malicious or automated traffic is detected.</small>
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
@@ -437,6 +534,58 @@
                                 <label class="ui basic label">
                                     req / sec / IP
                                 </label>
+                            </div>
+                            <div class="ui divider"></div>
+                            <!-- CAPTCHA Gating -->
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="RequireCaptcha">
+                                <label>Require CAPTCHA Challenge<br>
+                                <small>Gate access to this endpoint with CAPTCHA verification</small></label>
+                            </div>
+                            <div class="captchaSettings" style="margin-top: 1em; padding-left: 1.5em;">
+                                <label>CAPTCHA Provider</label>
+                                <div class="ui fluid selection dropdown captchaProviderDropdown" style="margin-bottom: 0.8em;">
+                                    <input type="hidden" value="0" name="captchaProvider">
+                                    <i class="dropdown icon"></i>
+                                    <div class="default text">Select CAPTCHA Provider</div>
+                                    <div class="menu">
+                                        <div class="item" data-value="0"><i class="cloud icon"></i> Cloudflare Turnstile</div>
+                                        <div class="item" data-value="1"><i class="google icon"></i> Google reCAPTCHA</div>
+                                    </div>
+                                </div>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="text" class="CaptchaSiteKey" placeholder="Site Key / Public Key">
+                                </div>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="password" class="CaptchaSecretKey" placeholder="Secret Key / Private Key">
+                                </div>
+                                <div class="ui small right labeled fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="number" class="CaptchaSessionDuration" value="3600" min="60" max="86400">
+                                    <label class="ui basic label">seconds</label>
+                                </div>
+                                <small style="opacity:0.7;">Session duration: how long users can access after solving CAPTCHA</small>
+                                <!-- Google reCAPTCHA specific settings -->
+                                <div class="googleRecaptchaSettings" style="margin-top: 0.8em; display: none;">
+                                    <label>reCAPTCHA Version</label>
+                                    <div class="ui fluid selection dropdown recaptchaVersionDropdown" style="margin-bottom: 0.8em;">
+                                        <input type="hidden" value="v2" name="recaptchaVersion">
+                                        <i class="dropdown icon"></i>
+                                        <div class="default text">Select Version</div>
+                                        <div class="menu">
+                                            <div class="item" data-value="v2">v2 (Checkbox)</div>
+                                            <div class="item" data-value="v3">v3 (Invisible)</div>
+                                        </div>
+                                    </div>
+                                    <!-- v3 Score slider -->
+                                    <div class="recaptchaV3Settings" style="display: none;">
+                                        <label>Minimum Score (0.0 - 1.0)</label>
+                                        <div class="ui small right labeled fluid input" style="margin-bottom: 0.8em;">
+                                            <input type="number" class="RecaptchaScore" value="0.5" min="0" max="1" step="0.1">
+                                            <label class="ui basic label">score</label>
+                                        </div>
+                                        <small style="opacity:0.7;">Higher score = stricter verification (0.5 recommended)</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -519,17 +668,40 @@
         return tagList;
     }
 
+    function renderListeningPortsList(subd){
+        let portsList = "";
+        let ports = [];
+        
+        // Only show alternative listening ports (not primary or redirect ports)
+        if (subd.ListeningPorts && subd.ListeningPorts.length > 0) {
+            subd.ListeningPorts.forEach(port => {
+                ports.push(port);
+            });
+            portsList = ports.join("<br>");
+        } else {
+            portsList = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">None</small>`;
+        }
+        
+        return portsList;
+    }
+
+    function renderAccessRuleName(subd){
+        // Return a placeholder that will be filled by resolveAccessRuleNameOnHostRPlist
+        let accessRuleID = subd.AccessFilterUUID || "default";
+        return `<span class="accessRuleNameInTable" ruleid="${accessRuleID}"></span>`;
+    }
+
     /* List all proxy endpoints */
     function listProxyEndpoints(){
         $.get("/api/proxy/list?type=host", function(data){
             $("#httpProxyList").html(``);
             if (data.error !== undefined){
                     $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="5"><i class="remove icon"></i> ${data.error}</td>
+                    <td data-label="" colspan="9"><i class="remove icon"></i> ${data.error}</td>
                 </tr>`);
             }else if (data.length == 0){
                 $("#httpProxyList").append(`<tr>
-                    <td data-label="" colspan="5"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
+                    <td data-label="" colspan="9"><i class="green check circle icon"></i> No HTTP Proxy Record</td>
                 </tr>`);
             }else{
                 //Sort by RootOrMatchingDomain field
@@ -612,6 +784,27 @@
                     let tagList = renderTagList(subd);
                     let tagListEmpty = (subd.Tags.length == 0);
                     
+                    //Build listening ports list
+                    let listeningPortsList = renderListeningPortsList(subd);
+                    
+                    //Build access rule display (will be populated later)
+                    let accessRuleDisplay = renderAccessRuleName(subd);
+                    
+                    //Build authentication display
+                    let authDisplay = "";
+                    if (subd.AuthenticationProvider.AuthMethod == 0x1) {
+                        authDisplay = `<i class="ui grey key icon"></i> Basic Auth`;
+                    } else if (subd.AuthenticationProvider.AuthMethod == 0x2) {
+                        authDisplay = `<i class="ui blue key icon"></i> Forward Auth`;
+                    } else if (subd.AuthenticationProvider.AuthMethod == 0x3) {
+                        authDisplay = `<i class="ui yellow key icon"></i> OAuth2`;
+                    } else if (subd.AuthenticationProvider.AuthMethod == 0x4) {
+                        authDisplay = `<i class="ui purple key icon"></i> Zoraxy Auth`;
+                    } else {
+                        authDisplay = `<small style="opacity: 0.3; pointer-events: none; user-select: none;">None</small>`;
+                    }
+                    let authDisplayEmpty = (subd.AuthenticationProvider.AuthMethod == 0x0);
+                    
                     $("#httpProxyList").append(`<tr eptuuid="${subd.RootOrMatchingDomain}" payload="${subdData}" class="subdEntry">
                         <td class="collapsing ignoremw" datatype="enable">
                             <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
@@ -624,10 +817,16 @@
                             ${aliasDomains}
                             <small class="accessRuleNameUnderHost" ruleid="${subd.AccessFilterUUID}"></small>
                         </td>
+                        <td data-label="listening-ports" datatype="ports" class="details-view">
+                            ${listeningPortsList}
+                        </td>
                         <td data-label="" editable="true" datatype="domain" data-sort-value="${destSortValue}" style="word-break: break-all;">
                             <div class="upstreamList">
                                 ${upstreams}        
                             </div>
+                        </td>
+                        <td data-label="auth" datatype="auth" class="details-view" style="${authDisplayEmpty?"text-align: center;":""}">
+                            ${authDisplay}
                         </td>
                         <td data-label="" editable="true" datatype="vdir" style="${vdIsEmpty?"text-align: center;":""}">${vdList}</td>
                         <td data-label="tags" payload="${encodeURIComponent(JSON.stringify(subd.Tags))}" datatype="tags" style="${tagListEmpty?"text-align: center;":""}">
@@ -639,6 +838,7 @@
                             ${subd.AuthenticationProvider.AuthMethod == 0x1?`<i class="ui grey key icon"></i> Basic Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x2?`<i class="ui blue key icon"></i> Forward Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x3?`<i class="ui yellow key icon"></i> OAuth2`:``}
+                            ${subd.AuthenticationProvider.AuthMethod == 0x4?`<i class="ui purple key icon"></i> Zoraxy Auth`:``}
                             ${subd.AuthenticationProvider.AuthMethod != 0x0 && subd.RequireRateLimit?"<br>":""}
                             ${subd.RequireRateLimit?`<i class="ui green check icon"></i> Rate Limit @ ${subd.RateLimit} req/s`:``}
                             ${subd.AuthenticationProvider.AuthMethod == 0x0 && !subd.RequireRateLimit?`<small style="opacity: 0.3; pointer-events: none; user-select: none;">No Special Settings</small>`:""}
@@ -653,6 +853,7 @@
             }
 
             resolveAccessRuleNameOnHostRPlist();
+            initDetailView();
         });
     }
 
@@ -690,16 +891,23 @@
                     accessRuleMap[data[i].ID] = data[i];
                 }
                 
-                
-                $(".accessRuleNameUnderHost").each(function(){
+                // Update both the under-host display and the details-view column
+                $(".accessRuleNameUnderHost, .accessRuleNameInTable").each(function(){
                     let thisAccessRuleID = $(this).attr("ruleid");
                     if (thisAccessRuleID== ""){
                         thisAccessRuleID = "default"
                     }
 
+                    // Check if this is in the details-view column
+                    let isDetailsColumn = $(this).hasClass("accessRuleNameInTable");
+
                     if (thisAccessRuleID == "default"){
-                        //No need to label default access rules
-                        $(this).html("");
+                        // Show "default" in details-view column, hide in under-host display
+                        if (isDetailsColumn) {
+                            $(this).html("default");
+                        } else {
+                            $(this).html("");
+                        }
                         return;
                     }
 
@@ -734,6 +942,7 @@
     //Update the access rule name on given epuuid, call by hostAccessEditor.html
     function updateAccessRuleNameUnderHost(epuuid, newruleUID){
         $(`tr[eptuuid='${epuuid}'].subdEntry`).find(".accessRuleNameUnderHost").attr("ruleid", newruleUID);
+        $(`tr[eptuuid='${epuuid}'].subdEntry`).find(".accessRuleNameInTable").attr("ruleid", newruleUID);
         resolveAccessRuleNameOnHostRPlist();
     }
 
@@ -880,11 +1089,28 @@
         let epttype = "host";
         let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
         let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
+        let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
+        let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
+        let disableLogging = $(editor).find(".DisableLogging")[0].checked;
+        let disableStatisticCollection = $(editor).find(".DisableStatisticCollection")[0].checked;
+        let blockCommonExploits = $(editor).find(".BlockCommonExploits")[0].checked;
+        let blockAICrawlers = $(editor).find(".BlockAICrawlers")[0].checked;
+        let mitigationAction = $(editor).find(".mitigationActionDropdown").dropdown("get value");
+
+        // CAPTCHA Gating
+        let requireCaptcha = $(editor).find(".RequireCaptcha")[0].checked;
+        let captchaProvider = $(editor).find(".captchaProviderDropdown").dropdown("get value");
+        let captchaSiteKey = $(editor).find(".CaptchaSiteKey").val();
+        let captchaSecretKey = $(editor).find(".CaptchaSecretKey").val();
+        let captchaSessionDuration = $(editor).find(".CaptchaSessionDuration").val();
+        let captchaRecaptchaVersion = $(editor).find(".recaptchaVersionDropdown").dropdown("get value");
+        let captchaRecaptchaScore = $(editor).find(".RecaptchaScore").val();
+
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
@@ -897,11 +1123,25 @@
                 "rootname": uuid,
                 "ss":useStickySession,
                 "dutm": DisableUptimeMonitor,
+                "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
+                "forceHTTP11": forceHTTP11,
+                "dLogging": disableLogging,
+                "dStatisticCollection": disableStatisticCollection,
+                "blockCommonExploits": blockCommonExploits,
+                "blockAICrawlers": blockAICrawlers,
+                "mitigationAction": mitigationAction,
                 "ratenum" :rateLimit,
+                "captcha": requireCaptcha,
+                "captchaProvider": captchaProvider,
+                "captchaSiteKey": captchaSiteKey,
+                "captchaSecretKey": captchaSecretKey,
+                "captchaSessionDuration": captchaSessionDuration,
+                "captchaRecaptchaVersion": captchaRecaptchaVersion,
+                "captchaRecaptchaScore": captchaRecaptchaScore,
                 "tags": tags,
             };
         console.log("updating proxy config:", cfgPayload);
@@ -1043,7 +1283,116 @@
         });
     }
 
+    /* Listening Ports Management */
+    function renderListeningPorts(uuid, ports){
+        let editor = $("#httprpEditModalWrapper");
+        let html = "";
+        if (ports.length == 0) {
+            html = '<small style="opacity: 0.3;">No alternative listening ports configured</small>';
+        } else {
+            html = '<div class="ui list">';
+            ports.forEach(function(port, index){
+                html += `<div class="item">
+                    <i class="angle double right blue icon"></i>
+                    <div class="content">
+                        <div class="description">
+                            ${port}
+                            <button class="ui mini red basic icon button removeListeningPortBtn" style="float: right; margin-left: 0.5em;" data-port="${port}">
+                                <i class="trash icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+        }
+        editor.find(".listening_ports_list").html(html);
+        
+        // Bind remove button events
+        editor.find(".removeListeningPortBtn").off("click").on("click", function(){
+            let portToRemove = $(this).attr("data-port");
+            if (confirm("Remove listening port " + portToRemove + "?")) {
+                let newPorts = ports.filter(p => p !== portToRemove);
+                saveListeningPorts(uuid, newPorts, function(){
+                    renderListeningPorts(uuid, newPorts);
+                    msgbox("Listening port removed");
+                });
+            }
+        });
+    }
+    
+    function saveListeningPorts(uuid, ports, callback){
+        $.cjax({
+            url: "/api/proxy/listeningPorts/set",
+            method: "POST",
+            data: {
+                "domain": uuid,
+                "ports": JSON.stringify(ports)
+            },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false);
+                }else{
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
     /* Tags & Search */
+    function toggleDetailViewButton() {
+        // Check current state
+        let currentState = localStorage.getItem("httprp_detailView");
+        let isDetailsView = currentState === "true";
+        
+        // Toggle the state
+        if (isDetailsView) {
+            // Switch to Basics view
+            $(".standardContainer th.details-view, .standardContainer td.details-view").hide();
+            $("#httpProxyTableWrapper").removeClass("detail-view-enabled");
+            localStorage.setItem("httprp_detailView", "false");
+            $("#detailViewToggle").text("Basics View");
+        } else {
+            // Switch to Details view
+            $(".standardContainer th.details-view, .standardContainer td.details-view").show();
+            $("#httpProxyTableWrapper").addClass("detail-view-enabled");
+            localStorage.setItem("httprp_detailView", "true");
+            $("#detailViewToggle").text("Details View");
+        }
+    }
+
+    function toggleDetailView(isChecked) {
+        if (isChecked) {
+            // Show detail view columns (only in the proxy list table, not in the editor)
+            $(".standardContainer th.details-view, .standardContainer td.details-view").show();
+            $("#httpProxyTableWrapper").addClass("detail-view-enabled");
+            // Save to localStorage
+            localStorage.setItem("httprp_detailView", "true");
+        } else {
+            // Hide detail view columns
+            $(".standardContainer th.details-view, .standardContainer td.details-view").hide();
+            $("#httpProxyTableWrapper").removeClass("detail-view-enabled");
+            // Save to localStorage
+            localStorage.setItem("httprp_detailView", "false");
+        }
+    }
+
+    function initDetailView() {
+        // Load detail view preference from localStorage
+        let detailViewEnabled = localStorage.getItem("httprp_detailView");
+        if (detailViewEnabled === "true") {
+            // Show details view
+            $(".standardContainer th.details-view, .standardContainer td.details-view").show();
+            $("#httpProxyTableWrapper").addClass("detail-view-enabled");
+            $("#detailViewToggle").text("Details View");
+        } else {
+            // Show basics view (default)
+            $(".standardContainer th.details-view, .standardContainer td.details-view").hide();
+            $("#httpProxyTableWrapper").removeClass("detail-view-enabled");
+            $("#detailViewToggle").text("Basics View");
+        }
+    }
+
     function handleSearchInput(event){
         if (event.key == "Escape"){
             $("#searchInput").val("");
@@ -1238,6 +1587,53 @@
         editor.find(".BypassGlobalTLS").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
+
+        editor.find(".DisableLogging").off('change');
+        editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
+        editor.find(".DisableLogging").on("change", function() {
+            // When logging is disabled, also disable statistic collection
+            if ($(this).is(':checked')) {
+                editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
+            } else {
+                editor.find(".DisableStatisticCollection").prop("disabled", false);
+            }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".DisableStatisticCollection").off('change');
+        editor.find(".DisableStatisticCollection").prop("checked", subd.DisableStatisticCollection);
+        editor.find(".DisableStatisticCollection").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        // Handle initial state: if logging is disabled, disable statistic collection
+        if (subd.DisableLogging) {
+            editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
+        }
+
+        // Exploit Detection
+        editor.find(".BlockCommonExploits").off('change');
+        editor.find(".BlockCommonExploits").prop("checked", subd.BlockCommonExploits || false);
+        editor.find(".BlockCommonExploits").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".BlockAICrawlers").off('change');
+        editor.find(".BlockAICrawlers").prop("checked", subd.BlockAICrawlers || false);
+        editor.find(".BlockAICrawlers").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".mitigationActionDropdown").off('change');
+        editor.find(".mitigationActionDropdown input[type='hidden']").val((subd.MitigationAction || 0).toString());
+        setTimeout(function(){
+              editor.find(".mitigationActionDropdown").dropdown({
+                onChange: function(value) {
+                    saveProxyInlineEdit(uuid);
+                }
+            });
+        }, 100);
+      
         
         //Bind the edit button
         editor.find(".downstream_primary_hostname_edit_btn").off("click").on("click", function(){
@@ -1298,6 +1694,42 @@
         });
         editor.find(".downstream_alias_hostname").html(aliasHTML);
 
+        /* ------------ Listening Ports ------------ */
+        // Populate listening ports
+        let listeningPorts = subd.ListeningPorts || [];
+        renderListeningPorts(uuid, listeningPorts);
+        
+        // Bind add listening port button
+        editor.find(".addListeningPortBtn").off("click").on("click", function(){
+            let newPort = editor.find(".new_listening_port_input").val().trim();
+            if (newPort == "") {
+                msgbox("Please enter a valid port", false);
+                return;
+            }
+            
+            // Validate format
+            if (!newPort.includes(":")) {
+                msgbox("Port format must be :port or ip:port (e.g., :8080 or 192.168.1.1:8080)", false);
+                return;
+            }
+            
+            // Check if already exists
+            if (listeningPorts.includes(newPort)) {
+                msgbox("This port is already added", false);
+                return;
+            }
+            
+            // Add to array
+            listeningPorts.push(newPort);
+            
+            // Save to server
+            saveListeningPorts(uuid, listeningPorts, function(){
+                renderListeningPorts(uuid, listeningPorts);
+                editor.find(".new_listening_port_input").val("");
+                msgbox("Listening port added");
+            });
+        });
+
         /* ------------ Upstreams ------------ */
         editor.find(".upstream_list").html(renderUpstreamList(subd));
         editor.find(".editUpstreamButton").off("click").on("click", function(){
@@ -1307,6 +1739,19 @@
         editor.find(".EnableUptimeMonitor").off("change");
         editor.find(".EnableUptimeMonitor").prop("checked", !subd.DisableUptimeMonitor);
         editor.find(".EnableUptimeMonitor").on("change", function() {
+            // Enable/disable the auto fallback option based on uptime monitor state
+            var isUptimeMonitorEnabled = $(this).is(":checked");
+            editor.find(".DisableAutoFallback").prop("disabled", !isUptimeMonitorEnabled);
+            if (!isUptimeMonitorEnabled) {
+                editor.find(".DisableAutoFallback").prop("checked", false);
+            }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".DisableAutoFallback").off("change");
+        editor.find(".DisableAutoFallback").prop("checked", subd.DisableAutoFallback);
+        editor.find(".DisableAutoFallback").prop("disabled", subd.DisableUptimeMonitor);
+        editor.find(".DisableAutoFallback").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 
@@ -1319,6 +1764,12 @@
         editor.find(".DisableChunkedTransferEncoding").off("change");
         editor.find(".DisableChunkedTransferEncoding").prop("checked", subd.DisableChunkedTransferEncoding);
         editor.find(".DisableChunkedTransferEncoding").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".ForceHTTP11").off("change");
+        editor.find(".ForceHTTP11").prop("checked", subd.ForceHTTP11);
+        editor.find(".ForceHTTP11").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 
@@ -1373,6 +1824,9 @@
         case 0x3:
             editor.find(".authProviderPicker input[value='3']").prop("checked", true);
             break;
+        case 0x4:
+            editor.find(".authProviderPicker input[value='4']").prop("checked", true);
+            break;
         default:
             editor.find(".authProviderPicker input[value='0']").prop("checked", true);
             break;
@@ -1423,6 +1877,99 @@
         });
         editor.find(".RateLimit").attr("value", subd.RateLimit);
         editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
+
+        // CAPTCHA Gating
+        if (subd.RequireCaptcha) {
+            editor.find(".RequireCaptcha").prop("checked", true);
+            editor.find(".captchaSettings").show();
+        } else {
+            editor.find(".RequireCaptcha").prop("checked", false);
+            editor.find(".captchaSettings").hide();
+        }
+
+        // Populate CAPTCHA config if it exists
+        if (subd.CaptchaConfig) {
+            editor.find(".captchaProviderDropdown input[type='hidden']").val((subd.CaptchaConfig.Provider || 0).toString());
+            editor.find(".CaptchaSiteKey").val(subd.CaptchaConfig.SiteKey || "");
+            editor.find(".CaptchaSecretKey").val(subd.CaptchaConfig.SecretKey || "");
+            editor.find(".CaptchaSessionDuration").val(subd.CaptchaConfig.SessionDuration || 3600);
+            editor.find(".recaptchaVersionDropdown input[type='hidden']").val(subd.CaptchaConfig.RecaptchaVersion || "v2");
+            editor.find(".RecaptchaScore").val(subd.CaptchaConfig.RecaptchaScore || 0.5);
+
+            // Show/hide Google reCAPTCHA specific settings
+            if (subd.CaptchaConfig.Provider == 1) {
+                editor.find(".googleRecaptchaSettings").show();
+                if (subd.CaptchaConfig.RecaptchaVersion == "v3") {
+                    editor.find(".recaptchaV3Settings").show();
+                } else {
+                    editor.find(".recaptchaV3Settings").hide();
+                }
+            } else {
+                editor.find(".googleRecaptchaSettings").hide();
+            }
+        } else {
+            // Set defaults
+            editor.find(".captchaProviderDropdown input[type='hidden']").val("0");
+            editor.find(".CaptchaSiteKey").val("");
+            editor.find(".CaptchaSecretKey").val("");
+            editor.find(".CaptchaSessionDuration").val("3600");
+            editor.find(".recaptchaVersionDropdown input[type='hidden']").val("v2");
+            editor.find(".RecaptchaScore").val("0.5");
+            editor.find(".googleRecaptchaSettings").hide();
+        }
+
+        // Initialize CAPTCHA dropdowns
+        editor.find(".captchaProviderDropdown").dropdown('destroy');
+        editor.find(".captchaProviderDropdown").dropdown({
+            onChange: function(value) {
+                if (value == "1") { // Google reCAPTCHA
+                    editor.find(".googleRecaptchaSettings").show();
+                    let version = editor.find(".recaptchaVersionDropdown").dropdown("get value");
+                    if (version == "v3") {
+                        editor.find(".recaptchaV3Settings").show();
+                    }
+                } else { // Cloudflare Turnstile
+                    editor.find(".googleRecaptchaSettings").hide();
+                }
+                saveProxyInlineEdit(uuid);
+            }
+        });
+
+        editor.find(".recaptchaVersionDropdown").dropdown('destroy');
+        editor.find(".recaptchaVersionDropdown").dropdown({
+            onChange: function(value) {
+                if (value == "v3") {
+                    editor.find(".recaptchaV3Settings").show();
+                } else {
+                    editor.find(".recaptchaV3Settings").hide();
+                }
+                saveProxyInlineEdit(uuid);
+            }
+        });
+
+        // Bind CAPTCHA checkbox change event
+        editor.find(".RequireCaptcha").off("change").on("change", function() {
+            if ($(this).is(":checked")) {
+                editor.find(".captchaSettings").show();
+            } else {
+                editor.find(".captchaSettings").hide();
+            }
+            saveProxyInlineEdit(uuid);
+        });
+
+        // Bind CAPTCHA input change events
+        editor.find(".CaptchaSiteKey").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+        editor.find(".CaptchaSecretKey").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+        editor.find(".CaptchaSessionDuration").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+        editor.find(".RecaptchaScore").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
 
         /* ------------ TLS ------------ */
         updateTlsResolveList(uuid);

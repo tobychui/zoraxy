@@ -397,6 +397,15 @@ func (a *AutoRenewer) renewExpiredDomains(certs []*ExpiredCerts) ([]string, erro
 			dnsServers = strings.Join(certInfo.DNSServers, ",")
 		}
 
+		// Extract SANs from the existing PEM to ensure all domains are included
+		sanDomains, errSan := ExtractDomainsFromPEM(expiredCert.Filepath)
+		if errSan == nil && len(sanDomains) > 0 {
+			expiredCert.Domains = sanDomains
+			a.Logf("Using SANs from PEM for renewal: "+strings.Join(sanDomains, ","), nil)
+		} else {
+			a.Logf("Could not extract SANs from PEM for "+fileName+", using original domains", errSan)
+		}
+
 		_, err = a.AcmeHandler.ObtainCert(expiredCert.Domains, certName, a.RenewerConfig.Email, certInfo.AcmeName, certInfo.AcmeUrl, certInfo.SkipTLS, certInfo.UseDNS, certInfo.PropTimeout, dnsServers)
 		if err != nil {
 			a.Logf("Renew "+fileName+"("+strings.Join(expiredCert.Domains, ",")+") failed", err)

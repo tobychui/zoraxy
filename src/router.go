@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -68,13 +67,13 @@ func FSHandler(handler http.Handler) http.Handler {
 			if len(parts) > 2 {
 				//Extract the instance ID from the request path
 				instanceUUID := parts[2]
-				fmt.Println(instanceUUID)
+				//fmt.Println(instanceUUID)
 
 				//Rewrite the url so the proxy knows how to serve stuffs
 				r.URL, _ = sshprox.RewriteURL("/web.ssh/"+instanceUUID, r.RequestURI)
 				webSshManager.HandleHttpByInstanceId(instanceUUID, w, r)
 			} else {
-				fmt.Println(parts)
+				//fmt.Println(parts)
 				http.Error(w, "Invalid Usage", http.StatusInternalServerError)
 			}
 			return

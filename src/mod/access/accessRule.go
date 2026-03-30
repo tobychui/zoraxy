@@ -43,6 +43,12 @@ func (s *AccessRule) ToggleAllowLoopback(enabled bool) {
 	s.SaveChanges()
 }
 
+// Toggle trust proxy headers only
+func (s *AccessRule) ToggleTrustProxy(enabled bool) {
+	s.TrustProxyHeadersOnly = enabled
+	s.SaveChanges()
+}
+
 /*
 Check if a IP address is blacklisted, in either country or IP blacklist
 IsBlacklisted default return is false (allow access)

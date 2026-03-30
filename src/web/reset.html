@@ -256,7 +256,7 @@
             }
 
             // Send POST request with input values as data
-            let csrfToken = document.getElementsByTagName("meta")["zoraxy.csrf.Token"].getAttribute("content");
+            let csrfToken = document.querySelector('meta[name="zoraxy.csrf.Token"]').getAttribute("content");
             $.ajax({
                 url: "/api/account/new",
                 method: "POST",

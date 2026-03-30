@@ -173,7 +173,7 @@
         </div>
         <br><br>
         <div class="ui divider"></div>
-        <div class="ui container" style="color: grey; font-size: 90%">
+        <div class="ui container" style="color: grey; font-size: 90%; padding-bottom: 1em;">
             <p><a href="https://zoraxy.aroz.org" target="_blank">Zoraxy</a> <span class="zrversion"></span> © 2021 - <span class="year"></span> tobychui. Licensed under AGPL</p>
         </div>
         
@@ -441,7 +441,7 @@
                     icon = `<i class="ui red circle times icon"></i>`;
                 }
                 $("#messageBox").html(`${icon} ${message}`);
-                $("#messageBox").stop().finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
+                $("#messageBox").finish().fadeIn("fast").delay(delayDuration).fadeOut("fast");
             }
 
             function confirmBox(question_to_confirm, callback, delaytime=15) {

@@ -1,61 +1,122 @@
-<html>
-    <head>
-        <title>Hello Zoraxy</title>
-        <style>
-            body {
-                font-family: Tahoma, sans-serif;
-                background-color: #f6f6f6;
-                color: #2d2e30;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello Zoraxy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .info-message {
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+        
+        .info-message p {
+            color: #22543d;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .info-message p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-message code {
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #1f1bd8;
+        }
+        
+        .info-message strong {
+            font-weight: 600;
+        }
+        
+        .info-message a {
+            color: #3182ce;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .info-message a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer {
+            text-align: center;
+            color: #718096;
+            font-size: 14px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
             }
-            .sectionHeader{
-                background-color: #c4d0d9;
-                padding: 0.1em;
+            
+            h1 {
+                font-size: 24px;
             }
-
-            .sectionHeader h3{
-                text-align: center;
-            }
-            .container{
-                margin: 4em;
-                margin-left: 10em;
-                margin-right: 10em;
-                background-color: #fefefe;
-            }
-
-            @media (max-width:960px) {
-                .container{
-                    margin-left: 1em;
-                    margin-right: 1em;
-                }
-
-                .sectionHeader{
-                    padding-left: 1em;
-                    padding-right: 1em;
-                }
-            }
-
-            .textcontainer{
-                padding: 1em;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="sectionHeader">
-                <h3>Welcome to Zoraxy Static Web Server!</h3>
-            </div>
-            <div class="textcontainer">
-                <p>If you see this page, that means your static web server is running.<br> 
-                    By default, all the html files are stored under <code>./web/html/</code> 
-                    relative to the zoraxy runtime directory.<br>
-                    You can upload your html files to your web directory via the <b>Web Directory Manager</b>.
-                </p>
-                <p>
-                    For online documentation, please refer to <a href="//zoraxy.aroz.org">zoraxy.aroz.org</a> or the <a href="https://github.com/tobychui/zoraxy/wiki">project wiki</a>.<br>
-                    Thank you for using Zoraxy!
-                </p>
-            </div>
-           
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Zoraxy Static Web Server!</h1>
+        <p class="subtitle">Your static web server is up and running</p>
+        
+        <div class="info-message">
+            <p>If you see this page, that means your static web server is running. By default, all the html files are stored under <code>./web/html/</code> relative to the Zoraxy runtime directory.</p>
+            <p>To manage your website files and customize error pages, use the <strong>WebDAV File Server</strong> feature in Zoraxy. You can see more details in the <code>Static Web Server > WebDAV Server</code> section of the Zoraxy admin panel.</p>
+            <p>For online documentation, please refer to <a href="//zoraxy.aroz.org">zoraxy.aroz.org</a> or the <a href="https://github.com/tobychui/zoraxy/wiki">project wiki</a>.</p>
         </div>
-    </body>
+        
+        <div class="footer">
+            Thank you for using Zoraxy!
+        </div>
+    </div>
+</body>
 </html>

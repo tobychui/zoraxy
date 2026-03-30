@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Plugin2Plugin Comms</title>
+    <meta charset="UTF-8">
+    <!-- CSRF token, if your plugin need to make POST request to backend -->
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <link rel="stylesheet" href="/script/semantic/semantic.min.css">
+    <script src="/script/jquery-3.6.0.min.js"></script>
+    <script src="/script/semantic/semantic.min.js"></script>
+    <script src="/script/utils.js"></script>
+    <link rel="stylesheet" href="/main.css">
+    <style>
+        body {
+            background: none;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .sent-message {
+            background-color: var(--theme_bg_primary);
+            border-left: 5px solid #155724;
+            animation: fadeIn 0.5s;
+        }
+        .received-message {
+            background-color: var(--theme_bg_secondary);
+            border-left: 5px solid #004085;
+            animation: fadeIn 0.5s;
+        }
+    </style>
+</head>
+<body>
+<!-- Dark theme script must be included after body tag-->
+<link rel="stylesheet" href="/darktheme.css">
+<script src="/script/darktheme.js"></script>
+<div class="ui container">
+    
+    <!-- Toast container -->
+    <div class="toast-container"></div>
+    <script>
+        // Function to show toast message
+        function showToast(message, type = 'success') {
+            const toast = $('<div class="ui message ' + type + '" style="opacity: 0;">' + message + '</div>');
+            $('.toast-container').append(toast);
+            toast.animate({opacity: 1}, 300);
+            
+            // Auto-hide after 3 seconds
+            setTimeout(function() {
+                toast.animate({opacity: 0}, 300, function() {
+                    toast.remove();
+                });
+            }, 3000);
+        }
+    </script>
+
+    <div class="ui basic segment">
+        <h1 class="ui header">Welcome to the Plugin2Plugin Comms Peer 2 UI</h1>
+    </div>
+    <div class="ui divider"></div>
+
+    <!-- Message Form -->
+    <div class="ui segment">
+        <h2 class="ui header">Send Message to Peer Plugin</h2>
+        <div class="ui form" id="messageForm">
+            <div class="field">
+                <label for="messageInput">Message:</label>
+                <input type="text" id="messageInput" name="message" placeholder="Enter your message" required>
+            </div>
+            <button class="ui primary button" id="sendMessageButton">Send Message</button>
+        </div>
+    </div>
+
+    <script>
+        // Handle form submission
+        $('#sendMessageButton').click(function(event) {
+            event.preventDefault();
+            const message = $('#messageInput').val();
+            $.cjax({
+                url: './api/send_message',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ message: message }),
+                success: function(response) {
+                    showToast('Message sent!');
+                    // Log the sent message
+                    const sentMessage = $('<div class="item sent-message"><div class="content"><div class="header">Sent:</div><div class="description">' + message + '</div></div></div>');
+                    $('#messageLog').prepend(sentMessage);
+                    $('#messageInput').val(''); // Clear input field
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error sending message!', 'error');
+                    console.error('Error:', error);
+                }
+            });
+        });
+    </script>
+
+    <div class="ui divider"></div>
+
+    <!-- Message Log -->
+    <div class="ui segment">
+        <h2 class="ui header">Messages</h2>
+        <div id="messageLog" class="ui relaxed divided list" style="max-height: 300px; overflow-y: auto;">
+            <!-- Messages will be appended here -->
+        </div>
+    </div>
+    <script>
+        // Set up EventSource to listen for incoming messages
+        const eventSource = new EventSource('./api/events');
+        eventSource.onmessage = function(e) {
+            const event = JSON.parse(e.data);
+            if (event && event.payload && event.payload.message) {
+                const receivedMessage = $('<div class="item received-message"><div class="content"><div class="header">Received:</div><div class="description">' + event.payload.message + '</div></div></div>');
+                $('#messageLog').prepend(receivedMessage);
+            }
+            showToast('New message received!');
+        };
+        eventSource.onerror = function(err) {
+            console.error('EventSource failed:', err);
+            eventSource.close();
+        };
+        // Clean up EventSource on page unload
+        window.addEventListener('beforeunload', function() {
+            eventSource.close();
+        });
+
+        // Fetch and display message history on page load
+        $(document).ready(function() {
+            $.cjax({
+                url: './api/message_history',
+                type: 'GET',
+                success: function(response) {
+                    if (response && response.messages) {
+                        response.messages.forEach(function(msg) {
+                            const messageClass = msg.sent ? 'sent-message' : 'received-message';
+                            const messageItem = $('<div class="item ' + messageClass + '"><div class="content"><div class="header">' + (msg.sent ? 'Sent:' : 'Received:') + '</div><div class="description">' + msg.message + '</div></div></div>');
+                            $('#messageLog').append(messageItem);
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching message history:', error);
+                }
+            });
+        });
+    </script>
+</div>
+</body>
+</html>

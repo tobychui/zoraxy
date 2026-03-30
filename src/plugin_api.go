@@ -7,6 +7,16 @@ import (
 	"imuslab.com/zoraxy/mod/netstat"
 )
 
+/*
+	plugin_api.go
+
+	Module to register all the REST API endpoints for various management functions
+
+	**Important Notes**
+	These APIs are for plugin use only. If you are implementing a new feature for the
+	webmin UI, add them in api.go instead of this file.
+*/
+
 // Register the APIs for HTTP proxy management functions
 func RegisterHTTPProxyRestAPI(authMiddleware *auth.PluginAuthMiddleware) {
 	/* Reverse Proxy Settings & Status */
@@ -16,6 +26,10 @@ func RegisterHTTPProxyRestAPI(authMiddleware *auth.PluginAuthMiddleware) {
 	authMiddleware.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	/* Reverse proxy upstream (load balance) */
 	authMiddleware.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
+	authMiddleware.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
+	authMiddleware.HandleFunc("/api/proxy/upstream/setPriority", ReverseProxyUpstreamSetPriority)
+	authMiddleware.HandleFunc("/api/proxy/upstream/update", ReverseProxyUpstreamUpdate)
+	authMiddleware.HandleFunc("/api/proxy/upstream/remove", ReverseProxyUpstreamDelete)
 	/* Reverse proxy virtual directory */
 	authMiddleware.HandleFunc("/api/proxy/vdir/list", ReverseProxyListVdir)
 	/* Reverse proxy user-defined header */
@@ -75,6 +89,7 @@ func RegisterStatisticalRestAPI(authRouter *auth.PluginAuthMiddleware) {
 	authRouter.HandleFunc("/api/analytic/loadRange", AnalyticLoader.HandleLoadTargetRangeSummary)
 	authRouter.HandleFunc("/api/analytic/exportRange", AnalyticLoader.HandleRangeExport)
 	authRouter.HandleFunc("/api/analytic/resetRange", AnalyticLoader.HandleRangeReset)
+	authRouter.HandleFunc("/api/analytic/resetAll", AnalyticLoader.HandleResetAllStats)
 	/* UpTime Monitor */
 	authRouter.HandleFunc("/api/utm/list", HandleUptimeMonitorListing)
 }
@@ -95,10 +110,7 @@ func RegisterStaticWebServerRestAPI(authRouter *auth.PluginAuthMiddleware) {
 	/* Static Web Server Controls */
 	authRouter.HandleFunc("/api/webserv/status", staticWebServer.HandleGetStatus)
 
-	/* File Manager */
-	if *allowWebFileManager {
-		authRouter.HandleFunc("/api/fs/list", staticWebServer.FileManager.HandleList)
-	}
+	// File manager list api removed due to WebDAV implementation
 }
 
 func RegisterPluginRestAPI(authRouter *auth.PluginAuthMiddleware) {
@@ -108,6 +120,10 @@ func RegisterPluginRestAPI(authRouter *auth.PluginAuthMiddleware) {
 	authRouter.HandleFunc("/api/plugins/groups/list", pluginManager.HandleListPluginGroups)
 
 	authRouter.HandleFunc("/api/plugins/store/list", pluginManager.HandleListDownloadablePlugins)
+
+	// recall that these plugin APIs are under the /plugin path, so
+	// the full path to this endpoint is /plugin/event/emit
+	authRouter.HandleFunc("/event/emit", pluginManager.HandleEmitCustomEvent)
 }
 
 /* Register all the APIs */

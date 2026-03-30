@@ -27,6 +27,7 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -75,19 +76,21 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 
 // ACMEHandler handles ACME-related operations.
 type ACMEHandler struct {
-	DefaultAcmeServer string
 	Port              string
 	Database          *database.Database
 	Logger            *logger.Logger
+	TestMode          bool
 }
 
 // NewACME creates a new ACMEHandler instance.
-func NewACME(defaultAcmeServer string, port string, database *database.Database, logger *logger.Logger) *ACMEHandler {
+func NewACME(
+			port string, database *database.Database,
+			logger *logger.Logger, testMode bool) *ACMEHandler {
 	return &ACMEHandler{
-		DefaultAcmeServer: defaultAcmeServer,
 		Port:              port,
 		Database:          database,
 		Logger:            logger,
+		TestMode:          testMode,
 	}
 }
 
@@ -154,14 +157,14 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	if caName == "custom" {
 		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
 	} else {
-		caLinkOverwrite, err := loadCAApiServerFromName(caName)
+		caLinkOverwrite, err := loadCAApiServerFromName(caName, a.TestMode)
 		if err == nil {
 			config.CADirURL = caLinkOverwrite
 			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
 		} else {
-			// (caName == "" || caUrl == "") will use default acme
-			config.CADirURL = a.DefaultAcmeServer
-			a.Logf("Using Default ACME "+a.DefaultAcmeServer+" for CA Directory URL", nil)
+			// wrong caName => use default acme
+			config.CADirURL, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
+			a.Logf("Using Default ACME " + config.CADirURL + " for CA Directory URL", nil)
 		}
 	}
 
@@ -432,6 +435,21 @@ func (a *ACMEHandler) HandleGetExpiredDomains(w http.ResponseWriter, r *http.Req
 // to renew the certificate, and sends a JSON response indicating the result of the renewal process.
 func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
 	domainPara, err := utils.PostPara(r, "domains")
+
+	//Clean each domain
+	cleanedDomains := []string{}
+	if domainPara != "" {
+		for _, d := range strings.Split(domainPara, ",") {
+			// Apply normalization on each domain
+			nd, err := netutils.NormalizeDomain(d)
+			if err != nil {
+				utils.SendErrorResponse(w, jsonEscape(err.Error()))
+				return
+			}
+			cleanedDomains = append(cleanedDomains, nd)
+		}
+	}
+
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
@@ -492,10 +510,8 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		dns = true
 	}
 
-	domains := strings.Split(domainPara, ",")
-
-	// Default propagation timeout is 300 seconds
-	propagationTimeout := 300
+	// Default propagation timeout is 600 seconds (10 minutes)
+	propagationTimeout := 600
 	if dns {
 		ppgTimeout, err := utils.PostPara(r, "ppgTimeout")
 		if err == nil {
@@ -511,10 +527,28 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	//Clean spaces in front or behind each domain
-	cleanedDomains := []string{}
-	for _, domain := range domains {
-		cleanedDomains = append(cleanedDomains, strings.TrimSpace(domain))
+	// Extract SANs from existing PEM to ensure all domains are included
+	pemPath := fmt.Sprintf("./conf/certs/%s.pem", filename)
+	sanDomains, err := ExtractDomainsFromPEM(pemPath)
+	if err == nil {
+		// Merge domainPara + SANs
+		domainSet := map[string]struct{}{}
+		for _, d := range cleanedDomains {
+			domainSet[d] = struct{}{}
+		}
+		for _, d := range sanDomains {
+			domainSet[d] = struct{}{}
+		}
+
+		// Rebuild cleanedDomains with all unique domains
+		cleanedDomains = []string{}
+		for d := range domainSet {
+			cleanedDomains = append(cleanedDomains, d)
+		}
+
+		a.Logf("Renewal domains including SANs from PEM: "+strings.Join(cleanedDomains, ","), nil)
+	} else {
+		a.Logf("Could not extract SANs from PEM, using domainPara only", err)
 	}
 
 	// Extract DNS servers from the request

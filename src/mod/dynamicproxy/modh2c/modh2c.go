@@ -28,10 +28,13 @@ func (h2c *H2CRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, req.Method, req.RequestURI, nil)
+	req, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), req.Body)
 	if err != nil {
 		return nil, err
 	}
+
+	// Copy headers
+	req.Header = req.Header.Clone()
 
 	tr := &http2.Transport{
 		AllowHTTP: true,
@@ -42,4 +45,21 @@ func (h2c *H2CRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	}
 
 	return tr.RoundTrip(req)
+}
+
+func (h2c *H2CRoundTripper) CheckServerSupportsH2C(serverURL string) bool {
+	req, err := http.NewRequest("GET", serverURL, nil)
+	if err != nil {
+		return false
+	}
+
+	tr := &http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, network, addr)
+		},
+	}
+	_, err = tr.RoundTrip(req)
+	return err == nil
 }

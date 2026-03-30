@@ -19,7 +19,7 @@ const (
 
 // GetRequestUpstreamTarget return the upstream target where this
 // request should be routed
-func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.Request, origins []*Upstream, useStickySession bool) (*Upstream, error) {
+func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.Request, origins []*Upstream, useStickySession bool, disableAutoFallback bool) (*Upstream, error) {
 	if len(origins) == 0 {
 		return nil, errors.New("no upstream is defined for this host")
 	}
@@ -30,8 +30,9 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 		targetOriginId, err := m.getSessionHandler(r, origins)
 		if err != nil {
 			// No valid session found or origin is offline
-			// Filter the offline origins
-			origins = m.FilterOfflineOrigins(origins)
+			// Filter the offline origins (but only if there's more than 1 upstream and auto-fallback is not disabled)
+			originalUpstreamCount := len(origins)
+			origins = m.FilterOfflineOrigins(origins, originalUpstreamCount, disableAutoFallback)
 			if len(origins) == 0 {
 				return nil, errors.New("no online upstream is available for origin: " + r.Host)
 			}
@@ -55,8 +56,9 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 	}
 
 	//No sticky session, get a random origin
-	//Filter the offline origins
-	origins = m.FilterOfflineOrigins(origins)
+	//Filter the offline origins (but only if there's more than 1 upstream and auto-fallback is not disabled)
+	originalUpstreamCount := len(origins)
+	origins = m.FilterOfflineOrigins(origins, originalUpstreamCount, disableAutoFallback)
 	if len(origins) == 0 {
 		return nil, errors.New("no online upstream is available for origin: " + r.Host)
 	}
@@ -73,8 +75,9 @@ func (m *RouteManager) GetRequestUpstreamTarget(w http.ResponseWriter, r *http.R
 }
 
 // GetUsableUpstreamCounts return the number of usable upstreams
-func (m *RouteManager) GetUsableUpstreamCounts(origins []*Upstream) int {
-	origins = m.FilterOfflineOrigins(origins)
+func (m *RouteManager) GetUsableUpstreamCounts(origins []*Upstream, disableAutoFallback bool) int {
+	originalUpstreamCount := len(origins)
+	origins = m.FilterOfflineOrigins(origins, originalUpstreamCount, disableAutoFallback)
 	return len(origins)
 }
 

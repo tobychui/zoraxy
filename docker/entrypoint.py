@@ -87,22 +87,21 @@ def start_zoraxy():
 
   zoraxy_args = [
     "zoraxy",
-    f"-autorenew={getenv('AUTORENEW', '86400')}",
-    f"-cfgupgrade={getenv('CFGUPGRADE', 'true')}",
-    f"-db={getenv('DB', 'auto')}",
-    f"-docker={getenv('DOCKER', 'true')}",
-    f"-earlyrenew={getenv('EARLYRENEW', '30')}",
-    f"-fastgeoip={getenv('FASTGEOIP', 'false')}",
-    f"-mdns={getenv('MDNS', 'true')}",
-    f"-mdnsname={getenv('MDNSNAME', "''")}",
-    f"-noauth={getenv('NOAUTH', 'false')}",
-    f"-plugin={getenv('PLUGIN', '/opt/zoraxy/plugin/')}",
-    f"-port=:{getenv('PORT', '8000')}",
-    f"-sshlb={getenv('SSHLB', 'false')}",
-    f"-update_geoip={getenv('UPDATE_GEOIP', 'false')}",
-    f"-version={getenv('VERSION', 'false')}",
-    f"-webfm={getenv('WEBFM', 'true')}",
-    f"-webroot={getenv('WEBROOT', './www')}",
+    f"-autorenew={ getenv('AUTORENEW', '86400') }",
+    f"-cfgupgrade={ getenv('CFGUPGRADE', 'true') }",
+    f"-db={ getenv('DB', 'auto') }",
+    f"-docker={ getenv('DOCKER', 'true') }",
+    f"-earlyrenew={ getenv('EARLYRENEW', '30') }",
+    f"-enablelog={ getenv('ENABLELOG', 'true') }",
+    f"-fastgeoip={ getenv('FASTGEOIP', 'false') }",
+    f"-mdns={ getenv('MDNS', 'true') }",
+    f"-mdnsname={ getenv('MDNSNAME', "''") }",
+    f"-noauth={ getenv('NOAUTH', 'false') }",
+    f"-plugin={ getenv('PLUGIN', '/opt/zoraxy/plugin/') }",
+    f"-port=:{ getenv('PORT', '8000') }",
+    f"-sshlb={ getenv('SSHLB', 'false') }",
+    f"-version={ getenv('VERSION', 'false') }",
+    f"-webroot={ getenv('WEBROOT', './www') }",
   ]
 
   zoraxy_proc = popen(zoraxy_args)
@@ -114,8 +113,9 @@ def main():
   print("Updating CA certificates...")
   run(["update-ca-certificates"])
 
-  print("Updating GeoIP data...")
-  run(["zoraxy", "-update_geoip=true"])
+  if getenv("UPDATE_GEOIP", "false").lower() == "true":
+    print("Updating GeoIP data...")
+    run(["zoraxy", "-update_geoip=true"])
 
   os.chdir("/opt/zoraxy/config/")
 

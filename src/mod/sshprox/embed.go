@@ -1,5 +1,5 @@
-//go:build (windows && amd64) || (linux && mipsle) || (linux && riscv64) || (freebsd && amd64) || (darwin && arm64)
-// +build windows,amd64 linux,mipsle linux,riscv64 freebsd,amd64 darwin,arm64
+//go:build (linux && mipsle) || (linux && riscv64) || (freebsd && amd64) || (darwin && arm64)
+// +build linux,mipsle linux,riscv64 freebsd,amd64 darwin,arm64
 
 package sshprox
 
@@ -14,3 +14,7 @@ var (
 	//go:embed gotty/LICENSE
 	gotty embed.FS
 )
+
+// UseWinTTY indicates whether this platform should use wintty
+// instead of the gotty binary
+const UseWinTTY = false

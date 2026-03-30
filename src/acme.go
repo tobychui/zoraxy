@@ -38,7 +38,7 @@ func initACME() *acme.ACMEHandler {
 		port = getRandomPort(30000)
 	}
 
-	return acme.NewACME("https://acme-v02.api.letsencrypt.org/directory", strconv.Itoa(port), sysdb, SystemWideLogger)
+	return acme.NewACME(strconv.Itoa(port), sysdb, SystemWideLogger, *acmeTestMode)
 }
 
 // Restart ACME handler and auto renewer
@@ -104,12 +104,13 @@ func acmeDeregisterSpecialRoutingRule() {
 
 // This function check if the renew setup is satisfied. If not, toggle them automatically
 func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
-	isForceHttpsRedirectEnabledOriginally := false
+	requireRestoreHttpsRedirect := false
 	requireRestorePort80 := false
 	dnsPara, _ := utils.PostBool(r, "dns")
 	if !dnsPara {
-
-		if dynamicProxyRouter.Option.Port == 443 {
+		//HTTP-01 challenge
+		switch dynamicProxyRouter.Option.Port {
+		case 443:
 			//Check if port 80 is enabled
 			if !dynamicProxyRouter.Option.ListenOnPort80 {
 				//Enable port 80 temporarily
@@ -123,15 +124,14 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 			if !dynamicProxyRouter.Option.ForceHttpsRedirect {
 				SystemWideLogger.Println("Temporary enabling HTTP to HTTPS redirect for ACME certificate renew requests")
 				dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(true)
-			} else {
-				//Set this to true, so after renew, do not turn it off
-				isForceHttpsRedirectEnabledOriginally = true
+				//Mark that we need to restore this setting after renewal
+				requireRestoreHttpsRedirect = true
 			}
 
-		} else if dynamicProxyRouter.Option.Port == 80 {
+		case 80:
 			//Go ahead
 
-		} else {
+		default:
 			//This port do not support ACME
 			utils.SendErrorResponse(w, "ACME renew only support web server listening on port 80 (http) or 443 (https)")
 			return
@@ -147,14 +147,14 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 	//Update the TLS cert store buffer
 	tlsCertManager.UpdateLoadedCertList()
 
-	//Restore original settings
+	//Restore original settings only if they were changed
 	if requireRestorePort80 {
 		//Restore port 80 listener
 		SystemWideLogger.PrintAndLog("ACME", "Restoring previous port 80 listener settings", nil)
 		dynamicProxyRouter.UpdatePort80ListenerState(false)
 	}
-	if !isForceHttpsRedirectEnabledOriginally {
-		//Default is off. Turn the redirection off
+	if requireRestoreHttpsRedirect {
+		//Restore HTTP to HTTPS redirect setting that was temporarily enabled
 		SystemWideLogger.PrintAndLog("ACME", "Restoring HTTP to HTTPS redirect settings", nil)
 		dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
 	}
@@ -172,7 +172,7 @@ func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSONResponse(w, string(js))
 	} else {
 		//Check if the CA is supported
-		acme.IsSupportedCA(ca)
+		acme.IsSupportedCA(ca, *acmeTestMode)
 		//Set the new config
 		sysdb.Write("acmepref", "prefca", ca)
 		SystemWideLogger.Println("Updating prefered ACME CA to " + ca)

@@ -1,8 +1,11 @@
 package uptime
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"strconv"
@@ -45,7 +48,7 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 			case <-done:
 				return
 			case t := <-ticker.C:
-				thisMonitor.Config.Logger.PrintAndLog(logModuleName, "Uptime updated - "+strconv.Itoa(int(t.Unix())), nil)
+				thisMonitor.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Uptime updated - "+strconv.Itoa(int(t.Unix())), nil)
 				thisMonitor.ExecuteUptimeCheck()
 			}
 		}
@@ -55,11 +58,20 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 }
 
 func (m *Monitor) ExecuteUptimeCheck() {
+	if m.runningUptimeChecks {
+		//Prevent overlapping uptime checks
+		m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Another uptime check is running in the background. Skipped", nil)
+		return
+	}
+	m.runningUptimeChecks = true
+	defer func() {
+		m.runningUptimeChecks = false
+	}()
 	for _, target := range m.Config.Targets {
 		//For each target to check online, do the following
 		var thisRecord Record
 		if target.Protocol == "http" || target.Protocol == "https" {
-			online, laterncy, statusCode := m.getWebsiteStatusWithLatency(target.URL)
+			online, laterncy, statusCode := m.getWebsiteStatusWithLatency(target)
 			thisRecord = Record{
 				Timestamp:  time.Now().Unix(),
 				ID:         target.ID,
@@ -72,10 +84,11 @@ func (m *Monitor) ExecuteUptimeCheck() {
 			}
 
 		} else {
-			m.Config.Logger.PrintAndLog(logModuleName, "Unknown protocol: "+target.Protocol, errors.New("unsupported protocol"))
+			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Unknown protocol: "+target.Protocol, errors.New("unsupported protocol"))
 			continue
 		}
 
+		m.logMutex.Lock()
 		thisRecords, ok := m.OnlineStatusLog[target.ID]
 		if !ok {
 			//First record. Create the array
@@ -91,6 +104,7 @@ func (m *Monitor) ExecuteUptimeCheck() {
 
 			m.OnlineStatusLog[target.ID] = thisRecords
 		}
+		m.logMutex.Unlock()
 	}
 }
 
@@ -99,7 +113,9 @@ func (m *Monitor) AddTargetToMonitor(target *Target) {
 	m.Config.Targets = append(m.Config.Targets, target)
 
 	// Add target to OnlineStatusLog
+	m.logMutex.Lock()
 	m.OnlineStatusLog[target.ID] = []*Record{}
+	m.logMutex.Unlock()
 }
 
 func (m *Monitor) RemoveTargetFromMonitor(targetId string) {
@@ -112,7 +128,9 @@ func (m *Monitor) RemoveTargetFromMonitor(targetId string) {
 	}
 
 	// Remove target from OnlineStatusLog
+	m.logMutex.Lock()
 	delete(m.OnlineStatusLog, targetId)
+	m.logMutex.Unlock()
 }
 
 // Scan the config target. If a target exists in m.OnlineStatusLog no longer
@@ -126,15 +144,14 @@ func (m *Monitor) CleanRecords() {
 
 	// Iterate over all log entries and remove any that have a target ID that
 	// is not in the set of current target IDs
-	newStatusLog := m.OnlineStatusLog
-	for id, _ := range m.OnlineStatusLog {
+	m.logMutex.Lock()
+	for id := range m.OnlineStatusLog {
 		_, idExistsInTargets := targetIDs[id]
 		if !idExistsInTargets {
-			delete(newStatusLog, id)
+			delete(m.OnlineStatusLog, id)
 		}
 	}
-
-	m.OnlineStatusLog = newStatusLog
+	m.logMutex.Unlock()
 }
 
 /*
@@ -144,12 +161,16 @@ func (m *Monitor) CleanRecords() {
 func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 	id, _ := utils.GetPara(r, "id")
 	if id == "" {
+		m.logMutex.RLock()
 		js, _ := json.Marshal(m.OnlineStatusLog)
+		m.logMutex.RUnlock()
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(js)
 	} else {
 		//Check if that id exists
+		m.logMutex.RLock()
 		log, ok := m.OnlineStatusLog[id]
+		m.logMutex.RUnlock()
 		if !ok {
 			http.NotFound(w, r)
 			return
@@ -167,52 +188,73 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 */
 
 // Get website stauts with latency given URL, return is conn succ and its latency and status code
-func (m *Monitor) getWebsiteStatusWithLatency(url string) (bool, int64, int) {
+func (m *Monitor) getWebsiteStatusWithLatency(target *Target) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
-	statusCode, err := getWebsiteStatus(url)
+	statusCode, err := m.getWebsiteStatus(target.URL, target.SkipTlsValidation)
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
-		m.Config.Logger.PrintAndLog(logModuleName, "Ping upstream timeout. Assume offline", err)
-		m.Config.OnlineStateNotify(url, false)
-		return false, 0, 0
-	} else {
-		diff := end - start
-		succ := false
-		if statusCode >= 200 && statusCode < 300 {
-			//OK
-			succ = true
-		} else if statusCode >= 300 && statusCode < 400 {
-			//Redirection code
-			succ = true
-		} else {
-			succ = false
+		m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Ping upstream timeout. Assume offline", err)
+
+		// Check if this is the first record
+		// sometime after startup the first check may fail due to network issues
+		// we will log it as failed but not notify dynamic proxy to take down the upstream
+		m.logMutex.RLock()
+		records, ok := m.OnlineStatusLog[target.ID]
+		m.logMutex.RUnlock()
+		if !ok || len(records) == 0 {
+			return false, 0, 0
 		}
-		m.Config.OnlineStateNotify(url, true)
-		return succ, diff, statusCode
+
+		// Otherwise assume offline
+		m.Config.OnlineStateNotify(target.URL, false)
+		return false, 0, 0
 	}
+
+	diff := end - start
+	succ := false
+	if statusCode >= 200 && statusCode < 300 {
+		//OK
+		succ = true
+	} else if statusCode >= 300 && statusCode < 400 {
+		//Redirection code
+		succ = true
+	} else {
+		succ = false
+	}
+	m.Config.OnlineStateNotify(target.URL, true)
+	return succ, diff, statusCode
 
 }
 
-func getWebsiteStatus(url string) (int, error) {
+func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool) (int, error) {
 	// Create a one-time use cookie jar to store cookies
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return 0, err
 	}
 
+	transport := &http.Transport{}
+	if skipTLSVerification {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport.DialTLS = func(network, addr string) (net.Conn, error) {
+			return tls.Dial(network, addr, &tls.Config{InsecureSkipVerify: true})
+		}
+	}
+
 	client := http.Client{
-		Jar:     jar,
-		Timeout: 5 * time.Second,
+		Jar:       jar,
+		Timeout:   5 * time.Second,
+		Transport: transport,
 	}
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header = http.Header{
-		"User-Agent": {"zoraxy-uptime/1.1"},
+		"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 	}
 
 	resp, err := client.Do(req)
-	//resp, err := client.Get(url)
 	if err != nil {
+
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
 		if strings.Contains(url, "https://") {
@@ -221,9 +263,13 @@ func getWebsiteStatus(url string) (int, error) {
 			rewriteURL = strings.ReplaceAll(url, "http://", "https://")
 		}
 
+		if m.Config.Verbal {
+			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
+		}
+
 		req, _ := http.NewRequest("GET", rewriteURL, nil)
 		req.Header = http.Header{
-			"User-Agent": {"zoraxy-uptime/1.1"},
+			"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 		}
 
 		resp, err := client.Do(req)

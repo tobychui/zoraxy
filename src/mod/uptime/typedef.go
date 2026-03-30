@@ -1,9 +1,14 @@
 package uptime
 
-import "imuslab.com/zoraxy/mod/info/logger"
+import (
+	"sync"
+
+	"imuslab.com/zoraxy/mod/info/logger"
+)
 
 const (
-	logModuleName = "uptime-monitor"
+	LOG_MODULE_NAME           = "uptime-monitor"
+	UPTIME_MONITOR_USER_AGENT = "zoraxy-uptime/1.3"
 )
 
 type Record struct {
@@ -25,11 +30,12 @@ const (
 )
 
 type Target struct {
-	ID        string
-	Name      string
-	URL       string
-	Protocol  string
-	ProxyType ProxyType
+	ID                string
+	Name              string
+	URL               string
+	Protocol          string
+	ProxyType         ProxyType
+	SkipTlsValidation bool
 }
 
 type Config struct {
@@ -38,11 +44,14 @@ type Config struct {
 	MaxRecordsStore   int
 	OnlineStateNotify func(upstreamIP string, isOnline bool)
 	Logger            *logger.Logger
+	Verbal            bool
 }
 
 type Monitor struct {
-	Config          *Config
-	OnlineStatusLog map[string][]*Record
+	Config              *Config
+	OnlineStatusLog     map[string][]*Record
+	logMutex            sync.RWMutex //Mutex for OnlineStatusLog map access
+	runningUptimeChecks bool         //To prevent overlapping uptime checks
 }
 
 // Default configs

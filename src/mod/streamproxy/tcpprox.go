@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	proxyproto "github.com/pires/go-proxyproto"
 )
 
 func isValidIP(ip string) bool {
@@ -44,20 +46,22 @@ func (c *ProxyRelayInstance) connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.W
 	wg.Done()
 }
 
-func writeProxyProtocolHeaderV1(dst net.Conn, src net.Conn) error {
+func WriteProxyProtocolHeader(dst net.Conn, src net.Conn, version ProxyProtocolVersion) error {
 	clientAddr, ok1 := src.RemoteAddr().(*net.TCPAddr)
 	proxyAddr, ok2 := src.LocalAddr().(*net.TCPAddr)
 	if !ok1 || !ok2 {
 		return errors.New("invalid TCP address for proxy protocol")
 	}
 
-	header := fmt.Sprintf("PROXY TCP4 %s %s %d %d\r\n",
-		clientAddr.IP.String(),
-		proxyAddr.IP.String(),
-		clientAddr.Port,
-		proxyAddr.Port)
+	header := proxyproto.Header{
+		Version:           byte(convertProxyProtocolVersionToInt(version)),
+		Command:           proxyproto.PROXY,
+		TransportProtocol: proxyproto.TCPv4,
+		SourceAddr:        clientAddr,
+		DestinationAddr:   proxyAddr,
+	}
 
-	_, err := dst.Write([]byte(header))
+	_, err := header.WriteTo(dst)
 	return err
 }
 
@@ -161,9 +165,9 @@ func (c *ProxyRelayInstance) Port2host(allowPort string, targetAddress string, s
 			}
 			c.LogMsg("[→] connect target address ["+targetAddress+"] success.", nil)
 
-			if c.UseProxyProtocol {
+			if c.ProxyProtocolVersion != ProxyProtocolDisabled {
 				c.LogMsg("[+] write proxy protocol header to target address ["+targetAddress+"]", nil)
-				err = writeProxyProtocolHeaderV1(target, conn)
+				err = WriteProxyProtocolHeader(target, conn, c.ProxyProtocolVersion)
 				if err != nil {
 					c.LogMsg("[x] Write proxy protocol header failed: "+err.Error(), nil)
 					target.Close()
