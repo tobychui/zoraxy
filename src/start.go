@@ -374,6 +374,7 @@ func startupSequence() {
 
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir:          pluginFolder,
+		PluginDataDir:      filepath.Join(CONF_FOLDER, "plugins"),
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,

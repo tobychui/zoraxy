@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -42,6 +43,12 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	pluginConfiguration := zoraxyPlugin.ConfigureSpec{
 		Port:         getRandomPortNumber(),
 		RuntimeConst: *m.Options.SystemConst,
+	}
+	if strings.TrimSpace(m.Options.PluginDataDir) != "" {
+		pluginConfiguration.DataDir = filepath.Join(m.Options.PluginDataDir, thisPlugin.Spec.ID)
+		if err := os.MkdirAll(pluginConfiguration.DataDir, 0o775); err != nil {
+			return err
+		}
 	}
 
 	// Generate API key if the plugin has permitted endpoints
