@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	urlpkg "net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,26 +24,103 @@ import (
 
 // See https://github.com/aroz-online/zoraxy-official-plugins/blob/main/directories/index2.json for the standard format
 
+var defaultPluginStoreURLs = []string{
+	"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json",
+}
+
 type DownloadablePlugin struct {
 	IconPath         string                   `json:"IconPath"`         //Icon path or URL for the plugin
 	PluginIntroSpect zoraxy_plugin.IntroSpect `json:"PluginIntroSpect"` //Plugin introspect information
 	DownloadURLs     map[string]string        `json:"DownloadURLs"`     //Download URLs for different platforms
 }
 
+func GetDefaultPluginStoreURLs() []string {
+	return append([]string{}, defaultPluginStoreURLs...)
+}
+
+func normalizePluginStoreURLs(rawURLs []string) []string {
+	seen := map[string]bool{}
+	normalized := []string{}
+	for _, rawURL := range rawURLs {
+		trimmed := strings.TrimSpace(rawURL)
+		if trimmed == "" || seen[trimmed] {
+			continue
+		}
+		seen[trimmed] = true
+		normalized = append(normalized, trimmed)
+	}
+	if len(normalized) == 0 {
+		return GetDefaultPluginStoreURLs()
+	}
+	return normalized
+}
+
+func (m *Manager) GetPluginStoreURLs() []string {
+	return normalizePluginStoreURLs(m.Options.PluginStoreURLs)
+}
+
+func (m *Manager) LoadPluginStoreURLs() error {
+	if m.Options.Database == nil {
+		m.Options.PluginStoreURLs = normalizePluginStoreURLs(m.Options.PluginStoreURLs)
+		return nil
+	}
+
+	loaded := []string{}
+	if err := m.Options.Database.Read("plugins", "store_urls", &loaded); err != nil {
+		m.Options.PluginStoreURLs = normalizePluginStoreURLs(m.Options.PluginStoreURLs)
+		return nil
+	}
+
+	m.Options.PluginStoreURLs = normalizePluginStoreURLs(loaded)
+	return nil
+}
+
+func (m *Manager) SavePluginStoreURLs(urls []string) error {
+	normalized := normalizePluginStoreURLs(urls)
+	m.Options.PluginStoreURLs = normalized
+	if m.Options.Database == nil {
+		return nil
+	}
+	return m.Options.Database.Write("plugins", "store_urls", normalized)
+}
+
 /* Plugin Store Index List Sync */
 //Update the plugin list from the plugin store URLs
 func (m *Manager) UpdateDownloadablePluginList() error {
 	//Get downloadable plugins from each of the plugin store URLS
-	m.Options.DownloadablePluginCache = []*DownloadablePlugin{}
-	for _, url := range m.Options.PluginStoreURLs {
-		pluginList, err := m.getPluginListFromURL(url)
+	m.Options.PluginStoreURLs = normalizePluginStoreURLs(m.Options.PluginStoreURLs)
+	combined := []*DownloadablePlugin{}
+	seenPluginIDs := map[string]bool{}
+	errors := []string{}
+	successfulSources := 0
+	for _, sourceURL := range m.Options.PluginStoreURLs {
+		pluginList, err := m.getPluginListFromURL(sourceURL)
 		if err != nil {
-			return fmt.Errorf("failed to get plugin list from %s: %w", url, err)
+			errors = append(errors, fmt.Sprintf("%s: %s", sourceURL, err.Error()))
+			continue
 		}
-		m.Options.DownloadablePluginCache = append(m.Options.DownloadablePluginCache, pluginList...)
+		successfulSources++
+		for _, plugin := range pluginList {
+			if plugin == nil || plugin.PluginIntroSpect.ID == "" {
+				continue
+			}
+			if seenPluginIDs[plugin.PluginIntroSpect.ID] {
+				continue
+			}
+			seenPluginIDs[plugin.PluginIntroSpect.ID] = true
+			combined = append(combined, plugin)
+		}
 	}
 
-	m.Options.LastSuccPluginSyncTime = time.Now().Unix()
+	m.Options.DownloadablePluginCache = combined
+
+	if successfulSources > 0 {
+		m.Options.LastSuccPluginSyncTime = time.Now().Unix()
+	}
+
+	if successfulSources == 0 && len(errors) > 0 {
+		return fmt.Errorf("failed to sync any plugin repository: %s", strings.Join(errors, "; "))
+	}
 
 	return nil
 }
@@ -72,14 +150,40 @@ func (m *Manager) getPluginListFromURL(url string) ([]*DownloadablePlugin, error
 		return nil, fmt.Errorf("failed to unmarshal plugin list from %s: %w", url, err)
 	}
 
+	baseURL, _ := urlpkg.Parse(url)
+
 	// Filter out if IconPath is empty string, set it to "/img/plugin_icon.png"
 	for _, plugin := range pluginList {
 		if strings.TrimSpace(plugin.IconPath) == "" {
 			plugin.IconPath = "/img/plugin_icon.png"
+		} else if resolvedURL := resolvePluginStoreAssetURL(baseURL, plugin.IconPath); resolvedURL != "" {
+			plugin.IconPath = resolvedURL
+		}
+
+		for platform, downloadURL := range plugin.DownloadURLs {
+			if resolvedURL := resolvePluginStoreAssetURL(baseURL, downloadURL); resolvedURL != "" {
+				plugin.DownloadURLs[platform] = resolvedURL
+			}
 		}
 	}
 
 	return pluginList, nil
+}
+
+func resolvePluginStoreAssetURL(baseURL *urlpkg.URL, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	parsed, err := urlpkg.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	if parsed.IsAbs() || baseURL == nil {
+		return raw
+	}
+	return baseURL.ResolveReference(parsed).String()
 }
 
 func (m *Manager) ListDownloadablePlugins() []*DownloadablePlugin {
@@ -215,6 +319,43 @@ func (m *Manager) HandleListDownloadablePlugins(w http.ResponseWriter, r *http.R
 	plugins := m.ListDownloadablePlugins()
 	js, _ := json.Marshal(plugins)
 	utils.SendJSONResponse(w, string(js))
+}
+
+func (m *Manager) HandlePluginStoreURLs(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		payload := map[string]any{
+			"urls":               m.GetPluginStoreURLs(),
+			"default_urls":       GetDefaultPluginStoreURLs(),
+			"last_sync_unix":     m.Options.LastSuccPluginSyncTime,
+			"repository_count":   len(m.GetPluginStoreURLs()),
+			"downloadable_count": len(m.Options.DownloadablePluginCache),
+		}
+		js, _ := json.Marshal(payload)
+		utils.SendJSONResponse(w, string(js))
+	case http.MethodPost:
+		rawURLs, err := utils.PostPara(r, "urls")
+		if err != nil && !strings.Contains(err.Error(), "invalid urls") {
+			utils.SendErrorResponse(w, "urls not found")
+			return
+		}
+		urls := []string{}
+		if strings.TrimSpace(rawURLs) != "" {
+			for _, line := range strings.Split(rawURLs, "\n") {
+				line = strings.TrimSpace(line)
+				if line != "" {
+					urls = append(urls, line)
+				}
+			}
+		}
+		if err := m.SavePluginStoreURLs(urls); err != nil {
+			utils.SendErrorResponse(w, "failed to save plugin store URLs: "+err.Error())
+			return
+		}
+		utils.SendOK(w)
+	default:
+		utils.SendErrorResponse(w, "Method not allowed")
+	}
 }
 
 // HandleResyncPluginList is the handler for resyncing the plugin list from the plugin store URLs
