@@ -16,6 +16,7 @@ const (
 	DB_BROWSER_SESSION_KEY_PREFIX = "session_"
 	DB_GATEWAY_SESSIONS_TABLE     = "zorxauth_gateway_sessions"
 	DB_GATEWAY_SESSION_KEY_PREFIX = "gateway_"
+	defaultConfigFolderPath       = "./conf/sso/zorxauth"
 )
 
 type User struct {
@@ -44,7 +45,7 @@ type AuthRouterOptions struct {
 	CookieDuration           int    `json:"cookie_duration"`             //Duration in seconds for the session cookie
 	CookieDurationRememberMe int    `json:"cookie_duration_remember_me"` //Duration in seconds for the session cookie when "Remember Me" is selected
 	/* Storage Options */
-	ConfigFolderPath string `json:"config_folder_path"` //Path to the config folder for storing group policy files. Default: ./conf/sso/zorxauth
+	ConfigFolderPath string `json:"config_folder_path"` //Path to the config folder for storing group policy files. Set during startup to <conf>/sso/zorxauth
 }
 
 type BrowserSession struct {
@@ -90,6 +91,6 @@ func getDefaultOptions() *AuthRouterOptions {
 		CookieName:               "zr_xauth_session",
 		CookieDuration:           3600,
 		CookieDurationRememberMe: 604800, // 7 days
-		ConfigFolderPath:         "./conf/sso/zorxauth",
+		ConfigFolderPath:         defaultConfigFolderPath,
 	}
 }

@@ -147,38 +147,84 @@
                                     </div>
                                     <small>Allow regional access control using blacklist or whitelist. Use "default" for "allow all".</small>
                                 </div>
-                                <div class="field">
-                                    <div class="ui checkbox">
-                                        <input type="checkbox" id="requireBasicAuth">
-                                        <label>Require Basic Auth<br><small>Require client to login in order to view the page</small></label>
+                                <div class="grouped fields authProviderPicker">
+                                    <label><b>Authentication Provider</b></label>
+                                    <div class="field">
+                                        <div class="ui radio checkbox">
+                                            <input type="radio" name="newProxyAuthProviderType" value="0" checked>
+                                            <label>None</label>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <div class="ui radio checkbox">
+                                            <input type="radio" name="newProxyAuthProviderType" value="1">
+                                            <label>Basic Auth</label>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <div class="ui radio checkbox">
+                                            <input type="radio" name="newProxyAuthProviderType" value="2">
+                                            <label>Forward Auth</label>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <div class="ui radio checkbox">
+                                            <input type="radio" name="newProxyAuthProviderType" value="3">
+                                            <label>OAuth2</label>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <div class="ui radio checkbox">
+                                            <input type="radio" name="newProxyAuthProviderType" value="4">
+                                            <label>Zoraxy Auth</label>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="basicAuthCredentials" class="field">
-                                    <p>Enter the username and password for allowing them to access this proxy endpoint</p>
+                                <div class="field" id="newProxyBasicAuthGroupsField" style="display:none;">
+                                    <label>Basic Auth Groups</label>
+                                    <div class="ui segment" id="newProxyBasicAuthGroupList" style="max-height: 180px; overflow-y: auto;"></div>
+                                    <small>Select which Basic Auth groups can access this host.</small>
+                                    <div style="margin-top: 0.6em;">
+                                        <button class="ui basic mini button" type="button" onclick="openTabById('basicauth');"><i class="ui users icon"></i> Manage Users & Groups</button>
+                                    </div>
+                                </div>
+                                <div class="field" id="newProxyOAuth2TenantField" style="display:none;">
+                                    <label>OAuth2 Tenant</label>
+                                    <div class="ui fluid selection dropdown" id="newProxyOAuth2TenantDropdown">
+                                        <input type="hidden" name="oauth2TenantId" value="default">
+                                        <i class="dropdown icon"></i>
+                                        <div class="default text">Default</div>
+                                        <div class="menu"></div>
+                                    </div>
+                                    <small>Select the OAuth2 tenant that should protect this host.</small>
+                                </div>
+                                <div class="field" id="newProxyOAuth2ClaimsField" style="display:none;">
+                                    <label>Required OAuth2 Claims</label>
+                                    <p>Each row must match. Leave values empty to require only claim presence.</p>
                                     <table class="ui very basic celled table">
                                         <thead>
-                                        <tr>
-                                            <th>Username</th>
-                                            <th>Password</th>
-                                            <th>Remove</th>
-                                        </tr></thead>
-                                        <tbody id="basicAuthCredentialTable">
-                                        <tr>
-                                            <td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td>
-                                        </tr>
+                                            <tr>
+                                                <th>Claim</th>
+                                                <th>Allowed Values</th>
+                                                <th>Remove</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="newProxyOAuth2ClaimsTable">
+                                            <tr>
+                                                <td colspan="3"><i class="ui green circle check icon"></i> No Claim Requirement</td>
+                                            </tr>
                                         </tbody>
                                     </table>
-                                    <div class="three small fields credentialEntry">
+                                    <div class="two small fields">
                                         <div class="field">
-                                            <input id="basicAuthCredUsername" type="text" placeholder="Username" autocomplete="off">
+                                            <input id="newProxyOAuth2ClaimName" type="text" placeholder="groups or realm_access.roles" autocomplete="off">
                                         </div>
                                         <div class="field">
-                                            <input id="basicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
-                                        </div>
-                                        <div class="field">
-                                            <button class="ui basic button" onclick="addCredentials();"><i class="blue add icon"></i> Add Credential</button>
+                                            <input id="newProxyOAuth2ClaimValues" type="text" placeholder="admins,devops" autocomplete="off">
                                         </div>
                                     </div>
+                                    <button class="ui basic button" onclick="addNewProxyOAuth2ClaimRequirement();"><i class="green add icon"></i> Add Claim Rule</button>
+                                    <small style="display:block; margin-top: 0.6em;">Dot notation is supported for nested claims. Allowed values are comma-separated.</small>
                                 </div>
                                 <div class="field">
                                     <div class="ui checkbox">
@@ -312,7 +358,7 @@
         let useTLS = $("#reqTls")[0].checked;
         let skipTLSValidation = $("#skipTLSValidation")[0].checked;
         let bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
-        let requireBasicAuth = $("#requireBasicAuth")[0].checked;
+        let authProviderType = $("input[name='newProxyAuthProviderType']:checked").val() || "0";
         let proxyRateLimit = $("#proxyRateLimit").val();
         let requireRateLimit = $("#requireRateLimit")[0].checked;
         let skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
@@ -325,6 +371,9 @@
         let blockCommonExploits = $("#blockCommonExploits")[0].checked;
         let blockAICrawlers = $("#blockAICrawlers")[0].checked;
         let mitigationAction = $("#mitigationAction").val();
+        let oauth2TenantId = $("#newProxyOAuth2TenantDropdown input[name='oauth2TenantId']").val() || "default";
+        let oauth2RequiredClaims = serializeNewProxyOAuth2ClaimRequirements();
+        let basicAuthGroupIds = JSON.stringify(getNewProxySelectedBasicAuthGroupIDs());
 
         if (rootname.trim() == ""){
             $("#rootname").parent().addClass("error");
@@ -352,7 +401,11 @@
                 tlsval: skipTLSValidation,
                 bpwsorg: skipWebSocketOriginCheck,
                 bypassGlobalTLS: bypassGlobalTLS,
-                bauth: requireBasicAuth,
+                authprovider: authProviderType,
+                bauth: authProviderType === "1",
+                oauth2TenantId: oauth2TenantId,
+                oauth2RequiredClaims: oauth2RequiredClaims,
+                basicAuthGroupIds: basicAuthGroupIds,
                 rate: requireRateLimit,
                 ratenum: proxyRateLimit,
                 cred: JSON.stringify(credentials),
@@ -378,6 +431,12 @@
                     $("#blockAICrawlers").prop("checked", false);
                     $("#mitigationAction").parent().dropdown("set selected", "0");
                     $("#disableStatisticCollection").prop("checked", false);
+                    $("input[name='newProxyAuthProviderType'][value='0']").parent().checkbox("set checked");
+                    toggleBasicAuth();
+                    initNewProxyOAuth2TenantDropdown("default");
+                    initNewProxyBasicAuthGroupChecklist(["default"]);
+                    newProxyOAuth2ClaimRequirements = [];
+                    renderNewProxyOAuth2ClaimRequirements();
                     credentials = [];
                     updateTable();
                     reloadUptimeList();
@@ -458,18 +517,165 @@
        })
     }
 
+    function initNewProxyOAuth2TenantDropdown(selectedTenantId = "default"){
+        $.cjax({
+            url: '/api/sso/OAuth2/tenants',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                const tenants = Array.isArray(data) && data.length > 0 ? data : [{
+                    id: "default",
+                    name: "Default",
+                    isDefault: true
+                }];
+                const menu = $("#newProxyOAuth2TenantDropdown .menu");
+                menu.empty();
+                tenants.forEach(function(tenant){
+                    const label = tenant.isDefault ? `${tenant.name} (${tenant.id})` : tenant.name;
+                    menu.append(`<div class="item" data-value="${tenant.id}">${label}</div>`);
+                });
+                $("#newProxyOAuth2TenantDropdown").dropdown('destroy');
+                $("#newProxyOAuth2TenantDropdown").dropdown();
+                $("#newProxyOAuth2TenantDropdown").dropdown('set selected', selectedTenantId || "default");
+            },
+            error: function() {
+                const menu = $("#newProxyOAuth2TenantDropdown .menu");
+                menu.html('<div class="item" data-value="default">Default (default)</div>');
+                $("#newProxyOAuth2TenantDropdown").dropdown('destroy');
+                $("#newProxyOAuth2TenantDropdown").dropdown();
+                $("#newProxyOAuth2TenantDropdown").dropdown('set selected', "default");
+            }
+        });
+    }
+
+    function initNewProxyBasicAuthGroupChecklist(selectedGroupIDs = ["default"]){
+        $.cjax({
+            url: '/api/basicauth/groups/list',
+            method: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                const groups = Array.isArray(data) && data.length > 0 ? data : [{
+                    id: "default",
+                    name: "Default",
+                    is_default: true
+                }];
+                const selectedSet = new Set((selectedGroupIDs || []).map(function(groupID){
+                    return String(groupID);
+                }));
+                let html = "";
+                groups.forEach(function(group) {
+                    const checked = selectedSet.has(String(group.id)) ? "checked" : "";
+                    const escapedGroupId = $("<div>").text(group.id || "").html();
+                    const escapedGroupName = $("<div>").text(group.name || "").html();
+                    html += `<div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" name="newProxyBasicAuthGroupIds" value="${escapedGroupId}" ${checked}>
+                            <label>${escapedGroupName}</label>
+                        </div>
+                    </div>`;
+                });
+                $("#newProxyBasicAuthGroupList").html(html);
+                $("#newProxyBasicAuthGroupList .ui.checkbox").checkbox();
+            },
+            error: function() {
+                $("#newProxyBasicAuthGroupList").html(`<div class="field">
+                    <div class="ui checkbox">
+                        <input type="checkbox" name="newProxyBasicAuthGroupIds" value="default" checked>
+                        <label>Default</label>
+                    </div>
+                </div>`);
+                $("#newProxyBasicAuthGroupList .ui.checkbox").checkbox();
+            }
+        });
+    }
+
+    function getNewProxySelectedBasicAuthGroupIDs(){
+        return $("#newProxyBasicAuthGroupList input[name='newProxyBasicAuthGroupIds']:checked").map(function(){
+            return $(this).val();
+        }).get();
+    }
 
     function toggleBasicAuth() {
-        var basicAuthDiv = document.getElementById('basicAuthOnly');
-        if ($("#requireBasicAuth").parent().checkbox("is checked")) {
-            $("#basicAuthCredentials").removeClass("disabled");
+        const selectedAuthProvider = $("input[name='newProxyAuthProviderType']:checked").val() || "0";
+        if (selectedAuthProvider === "1") {
+            $("#newProxyBasicAuthGroupsField").show();
         } else {
-            $("#basicAuthCredentials").addClass("disabled");
+            $("#newProxyBasicAuthGroupsField").hide();
+        }
+
+        if (selectedAuthProvider === "3") {
+            $("#newProxyOAuth2TenantField").show();
+            $("#newProxyOAuth2ClaimsField").show();
+        } else {
+            $("#newProxyOAuth2TenantField").hide();
+            $("#newProxyOAuth2ClaimsField").hide();
         }
     }
-    $("#requireBasicAuth").on('change', toggleBasicAuth);
+    $(".authProviderPicker .ui.radio.checkbox").checkbox();
+    $("input[name='newProxyAuthProviderType']").on('change', toggleBasicAuth);
     toggleBasicAuth();
-    
+    initNewProxyOAuth2TenantDropdown();
+    initNewProxyBasicAuthGroupChecklist();
+
+    let newProxyOAuth2ClaimRequirements = [];
+
+    function renderNewProxyOAuth2ClaimRequirements() {
+        const tableBody = $("#newProxyOAuth2ClaimsTable");
+        tableBody.empty();
+
+        if (newProxyOAuth2ClaimRequirements.length === 0) {
+            tableBody.append('<tr><td colspan="3"><i class="ui green circle check icon"></i> No Claim Requirement</td></tr>');
+            return;
+        }
+
+        newProxyOAuth2ClaimRequirements.forEach(function(requirement, index) {
+            const values = requirement.values.length > 0
+                ? $('<div>').text(requirement.values.join(", ")).html()
+                : '<span style="opacity:0.6;">Claim must exist</span>';
+            tableBody.append('<tr>' +
+                '<td><code>' + $('<div>').text(requirement.claim).html() + '</code></td>' +
+                '<td>' + values + '</td>' +
+                '<td><button class="ui basic button" onclick="removeNewProxyOAuth2ClaimRequirement(' + index + ');"><i class="red remove icon"></i> Remove</button></td>' +
+                '</tr>');
+        });
+    }
+
+    function addNewProxyOAuth2ClaimRequirement() {
+        let claim = $("#newProxyOAuth2ClaimName").val().trim();
+        let values = $("#newProxyOAuth2ClaimValues").val().split(",").map(function(value) {
+            return value.trim();
+        }).filter(function(value) {
+            return value !== "";
+        });
+
+        if (claim === "") {
+            msgbox("Claim name cannot be empty", false, 5000);
+            return;
+        }
+
+        newProxyOAuth2ClaimRequirements.push({
+            claim: claim,
+            values: values
+        });
+        $("#newProxyOAuth2ClaimName").val("");
+        $("#newProxyOAuth2ClaimValues").val("");
+        renderNewProxyOAuth2ClaimRequirements();
+    }
+
+    function removeNewProxyOAuth2ClaimRequirement(index) {
+        newProxyOAuth2ClaimRequirements.splice(index, 1);
+        renderNewProxyOAuth2ClaimRequirements();
+    }
+
+    function serializeNewProxyOAuth2ClaimRequirements() {
+        return newProxyOAuth2ClaimRequirements.map(function(requirement) {
+            let values = requirement.values.join(",");
+            return values ? `${requirement.claim}=${values}` : requirement.claim;
+        }).join("\n");
+    }
+
+    renderNewProxyOAuth2ClaimRequirements();
+
     function toggleRateLimit() {
         if ($("#requireRateLimit").parent().checkbox("is checked")) {
             $("#proxyRateLimit").parent().parent().removeClass("disabled");

@@ -14,6 +14,7 @@ package zorxauth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -56,9 +57,95 @@ func (ar *AuthRouter) initGroupPolicyStore() {
 func (ar *AuthRouter) groupPolicyFolder() string {
 	base := ar.Options.ConfigFolderPath
 	if base == "" {
-		base = "./conf/sso/zorxauth"
+		base = defaultConfigFolderPath
 	}
 	return filepath.Join(base, GROUP_POLICY_FOLDER)
+}
+
+// migrateLegacyGroupPolicyFolder moves legacy group policy files from the old
+// relative ./conf path into the configured config folder when possible.
+func (ar *AuthRouter) migrateLegacyGroupPolicyFolder(targetBase string) {
+	sourceFolder := filepath.Clean(filepath.Join(defaultConfigFolderPath, GROUP_POLICY_FOLDER))
+	targetFolder := filepath.Clean(filepath.Join(targetBase, GROUP_POLICY_FOLDER))
+
+	if sourceFolder == targetFolder {
+		return
+	}
+
+	entries, err := os.ReadDir(sourceFolder)
+	if err != nil {
+		if !os.IsNotExist(err) && ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to inspect legacy group policy folder: "+err.Error(), err)
+		}
+		return
+	}
+
+	groupPolicyFiles := []os.DirEntry{}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), GROUP_POLICY_FILE_EXT) {
+			groupPolicyFiles = append(groupPolicyFiles, entry)
+		}
+	}
+
+	if len(groupPolicyFiles) == 0 {
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(targetFolder), 0755); err != nil {
+		if ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to prepare target group policy folder: "+err.Error(), err)
+		}
+		return
+	}
+
+	if _, err := os.Stat(targetFolder); os.IsNotExist(err) {
+		if err := os.Rename(sourceFolder, targetFolder); err == nil {
+			if ar.Logger != nil {
+				ar.Logger.PrintAndLog("zorxauth", "Migrated legacy group policies to "+targetFolder, nil)
+			}
+			return
+		}
+	}
+
+	if err := os.MkdirAll(targetFolder, 0755); err != nil {
+		if ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to create target group policy folder: "+err.Error(), err)
+		}
+		return
+	}
+
+	copied := 0
+	skipped := 0
+	for _, entry := range groupPolicyFiles {
+		sourceFile := filepath.Join(sourceFolder, entry.Name())
+		targetFile := filepath.Join(targetFolder, entry.Name())
+
+		if _, err := os.Stat(targetFile); err == nil {
+			skipped++
+			continue
+		}
+
+		data, err := os.ReadFile(sourceFile)
+		if err != nil {
+			if ar.Logger != nil {
+				ar.Logger.PrintAndLog("zorxauth", "Failed to read legacy group policy file "+entry.Name()+": "+err.Error(), err)
+			}
+			continue
+		}
+
+		if err := os.WriteFile(targetFile, data, 0644); err != nil {
+			if ar.Logger != nil {
+				ar.Logger.PrintAndLog("zorxauth", "Failed to copy legacy group policy file "+entry.Name()+": "+err.Error(), err)
+			}
+			continue
+		}
+
+		copied++
+	}
+
+	if ar.Logger != nil && (copied > 0 || skipped > 0) {
+		ar.Logger.PrintAndLog("zorxauth", fmt.Sprintf("Migrated %d legacy group policy files to %s (%d skipped)", copied, targetFolder, skipped), nil)
+	}
 }
 
 // groupPolicyFilePath returns the file path for a given group policy ID

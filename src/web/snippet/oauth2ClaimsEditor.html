@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
+    </head>
+    <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
+        <br>
+        <div class="ui container">
+            <div class="scrolling content ui form">
+                <div class="field">
+                    <p>Define required OAuth2 claims for <code class="epname"></code>. Each row must match. Leave values empty to require only claim presence.</p>
+                    <table class="ui basic very compact unstackable celled table">
+                        <thead>
+                            <tr>
+                                <th>Claim</th>
+                                <th>Allowed Values</th>
+                                <th>Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody id="oauth2ClaimsTable">
+                            <tr>
+                                <td colspan="3"><i class="ui green circle check icon"></i> No Claim Requirement</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="ui divider"></div>
+                    <div class="two small fields">
+                        <div class="field">
+                            <label>Claim</label>
+                            <input id="oauth2ClaimName" type="text" placeholder="groups or realm_access.roles" autocomplete="off">
+                            <small>Dot notation is supported for nested claims.</small>
+                        </div>
+                        <div class="field">
+                            <label>Allowed Values</label>
+                            <input id="oauth2ClaimValues" type="text" placeholder="admins,devops" autocomplete="off">
+                            <small>Optional. Separate multiple values with commas.</small>
+                        </div>
+                    </div>
+                    <button class="ui basic button" onclick="addClaimRequirement();"><i class="green add icon"></i> Add Claim Rule</button>
+                </div>
+            </div>
+        </div>
+        <br><br><br><br>
+        <script>
+            let editingEndpoint = {};
+            let claimRequirements = [];
+
+            function parseClaimRequirements(raw) {
+                const lines = String(raw || "").split("\n");
+                const parsed = [];
+                lines.forEach(function(line) {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith("#")) {
+                        return;
+                    }
+
+                    const firstEquals = trimmed.indexOf("=");
+                    let claim = trimmed;
+                    let values = [];
+                    if (firstEquals >= 0) {
+                        claim = trimmed.substring(0, firstEquals).trim();
+                        values = trimmed.substring(firstEquals + 1).split(",").map(function(value) {
+                            return value.trim();
+                        }).filter(function(value) {
+                            return value !== "";
+                        });
+                    }
+
+                    if (claim !== "") {
+                        parsed.push({
+                            claim: claim,
+                            values: values
+                        });
+                    }
+                });
+                return parsed;
+            }
+
+            function formatClaimRequirements(requirements) {
+                return requirements.map(function(requirement) {
+                    const values = Array.isArray(requirement.values) ? requirement.values.join(",") : "";
+                    return values ? `${requirement.claim}=${values}` : requirement.claim;
+                }).join("\n");
+            }
+
+            function saveClaimRequirements() {
+                const rawValue = formatClaimRequirements(claimRequirements);
+                parent.$("#httprpEditModal .OAuth2RequiredClaims").val(rawValue);
+                parent.saveProxyInlineEdit(editingEndpoint.ep);
+            }
+
+            function renderClaimRequirements() {
+                const tableBody = $("#oauth2ClaimsTable");
+                tableBody.empty();
+
+                if (claimRequirements.length === 0) {
+                    tableBody.append(`<tr>
+                        <td colspan="3"><i class="ui green circle check icon"></i> No Claim Requirement</td>
+                    </tr>`);
+                    return;
+                }
+
+                claimRequirements.forEach(function(requirement, index) {
+                    const values = requirement.values.length > 0
+                        ? $("<div>").text(requirement.values.join(", ")).html()
+                        : `<span style="opacity:0.6;">Claim must exist</span>`;
+                    tableBody.append(`<tr>
+                        <td><code>${$("<div>").text(requirement.claim).html()}</code></td>
+                        <td>${values}</td>
+                        <td><button class="ui basic mini circular icon button" onclick="removeClaimRequirement(${index});"><i class="red trash icon"></i></button></td>
+                    </tr>`);
+                });
+            }
+
+            function addClaimRequirement() {
+                const claim = $("#oauth2ClaimName").val().trim();
+                const values = $("#oauth2ClaimValues").val().split(",").map(function(value) {
+                    return value.trim();
+                }).filter(function(value) {
+                    return value !== "";
+                });
+
+                if (claim === "") {
+                    parent.msgbox("Claim name cannot be empty", false, 4000);
+                    return;
+                }
+
+                claimRequirements.push({
+                    claim: claim,
+                    values: values
+                });
+                $("#oauth2ClaimName").val("");
+                $("#oauth2ClaimValues").val("");
+                renderClaimRequirements();
+                saveClaimRequirements();
+            }
+
+            function removeClaimRequirement(index) {
+                claimRequirements.splice(index, 1);
+                renderClaimRequirements();
+                saveClaimRequirements();
+            }
+
+            if (window.location.hash.length > 1) {
+                let payloadHash = window.location.hash.substr(1);
+                try {
+                    payloadHash = JSON.parse(decodeURIComponent(payloadHash));
+                    $(".epname").text(payloadHash.ep);
+                    editingEndpoint = payloadHash;
+                    const rawRequirements = parent.$("#httprpEditModal .OAuth2RequiredClaims").val() || "";
+                    claimRequirements = parseClaimRequirements(rawRequirements);
+                    renderClaimRequirements();
+                } catch (ex) {
+                    console.log("Unable to load endpoint data from hash");
+                }
+            }
+        </script>
+    </body>
+</html>

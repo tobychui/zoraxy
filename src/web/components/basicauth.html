@@ -1,0 +1,386 @@
+<div class="standardContainer nodeWriteProtectedScope" id="basicAuthPage">
+    <div class="ui basic segment">
+        <h2>Basic Auth</h2>
+        <p>Manage reusable Basic Auth users and groups for HTTP proxy rules. Assign users to groups here, then select those groups on protected hosts.</p>
+    </div>
+    <div class="ui warning message nodeWriteLockNotice" style="display:none;">
+        <div class="header">Managed by Primary Node</div>
+        <p>Basic Auth users and groups are locked on worker nodes until Emergency Local Override is enabled in Status.</p>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui top attached tabular menu basicAuthTabs">
+        <a class="item active" data-tab="basic_auth_users_tab">Users</a>
+        <a class="item" data-tab="basic_auth_groups_tab">Groups</a>
+    </div>
+
+    <div class="ui bottom attached tab segment active" data-tab="basic_auth_users_tab">
+        <div class="ui stackable grid">
+            <div class="ten wide column">
+                <h3>Users</h3>
+                <p>These accounts are used by HTTP proxy rules that select Basic Auth groups.</p>
+                <table class="ui compact celled unstackable table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Groups</th>
+                            <th style="width: 140px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="basicAuthUsersTable">
+                        <tr>
+                            <td colspan="3"><i class="ui loading spinner icon"></i> Loading users</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="six wide column">
+                <h3 id="basicAuthUserFormTitle">Create User</h3>
+                <form class="ui form" id="basicAuthUserForm">
+                    <input type="hidden" id="basicAuthUserEditingUsername">
+                    <div class="field">
+                        <label>Username</label>
+                        <input type="text" id="basicAuthUsername" placeholder="proxy-admin" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" id="basicAuthPassword" placeholder="Enter password" autocomplete="new-password">
+                        <small id="basicAuthPasswordHint">Required when creating a new user.</small>
+                    </div>
+                    <div class="field">
+                        <label>Groups</label>
+                        <div class="ui segment" id="basicAuthUserGroupSelector" style="max-height: 220px; overflow-y: auto;"></div>
+                    </div>
+                    <button class="ui basic button" type="submit"><i class="green check icon"></i> Save User</button>
+                    <button class="ui basic button" type="button" onclick="resetBasicAuthUserForm();"><i class="ui undo icon"></i> Reset</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="ui bottom attached tab segment" data-tab="basic_auth_groups_tab">
+        <div class="ui stackable grid">
+            <div class="ten wide column">
+                <h3>Groups</h3>
+                <p>Groups are attached to HTTP proxy rules. A user can belong to multiple groups.</p>
+                <table class="ui compact celled unstackable table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Users</th>
+                            <th>Hosts</th>
+                            <th style="width: 140px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="basicAuthGroupsTable">
+                        <tr>
+                            <td colspan="5"><i class="ui loading spinner icon"></i> Loading groups</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="six wide column">
+                <h3 id="basicAuthGroupFormTitle">Create Group</h3>
+                <form class="ui form" id="basicAuthGroupForm">
+                    <input type="hidden" id="basicAuthEditingGroupId">
+                    <div class="field">
+                        <label>Group Name</label>
+                        <input type="text" id="basicAuthGroupName" placeholder="Developers" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label>Group ID</label>
+                        <input type="text" id="basicAuthGroupId" placeholder="developers" autocomplete="off">
+                        <small id="basicAuthGroupIdHint">Optional on create. Used internally by HTTP proxy rules.</small>
+                    </div>
+                    <button class="ui basic button" type="submit"><i class="green check icon"></i> Save Group</button>
+                    <button class="ui basic button" type="button" onclick="resetBasicAuthGroupForm();"><i class="ui undo icon"></i> Reset</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let basicAuthGroupsCache = [];
+    let basicAuthUsersCache = [];
+
+    function escapeBasicAuthValue(value){
+        return $("<div>").text(value || "").html();
+    }
+
+    function getBasicAuthSelectedGroupIDs(containerSelector){
+        return $(containerSelector).find("input[name='basicAuthGroupSelection']:checked").map(function(){
+            return $(this).val();
+        }).get();
+    }
+
+    function renderBasicAuthUserGroupSelector(selectedGroupIDs){
+        const container = $("#basicAuthUserGroupSelector");
+        const groups = Array.isArray(basicAuthGroupsCache) && basicAuthGroupsCache.length > 0 ? basicAuthGroupsCache : [{
+            id: "default",
+            name: "Default",
+            is_default: true
+        }];
+        const selectedSet = new Set((selectedGroupIDs && selectedGroupIDs.length > 0 ? selectedGroupIDs : ["default"]).map(function(groupID){
+            return String(groupID);
+        }));
+        let html = "";
+        groups.forEach(function(group){
+            const checked = selectedSet.has(String(group.id)) ? "checked" : "";
+            html += `<div class="field">
+                <div class="ui checkbox">
+                    <input type="checkbox" name="basicAuthGroupSelection" value="${group.id}" ${checked}>
+                    <label>${escapeBasicAuthValue(group.name)}</label>
+                </div>
+            </div>`;
+        });
+        container.html(html);
+        container.find(".ui.checkbox").checkbox();
+    }
+
+    function resetBasicAuthUserForm(){
+        $("#basicAuthUserEditingUsername").val("");
+        $("#basicAuthUsername").val("").prop("readonly", false);
+        $("#basicAuthPassword").val("");
+        $("#basicAuthPasswordHint").text("Required when creating a new user.");
+        $("#basicAuthUserFormTitle").text("Create User");
+        renderBasicAuthUserGroupSelector(["default"]);
+    }
+
+    function resetBasicAuthGroupForm(){
+        $("#basicAuthEditingGroupId").val("");
+        $("#basicAuthGroupName").val("");
+        $("#basicAuthGroupId").val("").prop("readonly", false);
+        $("#basicAuthGroupIdHint").text("Optional on create. Used internally by HTTP proxy rules.");
+        $("#basicAuthGroupFormTitle").text("Create Group");
+    }
+
+    function loadBasicAuthGroups(callback){
+        $.cjax({
+            url: "/api/basicauth/groups/list",
+            method: "GET",
+            dataType: "json",
+            success: function(data){
+                basicAuthGroupsCache = Array.isArray(data) ? data : [];
+                renderBasicAuthGroupsTable();
+                if ($("#basicAuthUserEditingUsername").val() === "") {
+                    renderBasicAuthUserGroupSelector(["default"]);
+                }
+                if (callback) {
+                    callback();
+                }
+            },
+            error: function(jqXHR){
+                msgbox(jqXHR.responseText || "Unable to load Basic Auth groups", false);
+            }
+        });
+    }
+
+    function loadBasicAuthUsers(){
+        $.cjax({
+            url: "/api/basicauth/users/list",
+            method: "GET",
+            dataType: "json",
+            success: function(data){
+                basicAuthUsersCache = Array.isArray(data) ? data : [];
+                renderBasicAuthUsersTable();
+            },
+            error: function(jqXHR){
+                msgbox(jqXHR.responseText || "Unable to load Basic Auth users", false);
+            }
+        });
+    }
+
+    function renderBasicAuthGroupsTable(){
+        const table = $("#basicAuthGroupsTable");
+        table.html("");
+
+        if (!basicAuthGroupsCache.length) {
+            table.html(`<tr><td colspan="5"><i class="ui green circle check icon"></i> No Basic Auth Groups</td></tr>`);
+            return;
+        }
+
+        basicAuthGroupsCache.forEach(function(group){
+            const actionButtons = group.is_default
+                ? `<button class="ui basic mini disabled button"><i class="ui lock icon"></i> Default</button>`
+                : `<button class="ui basic mini button" onclick="editBasicAuthGroup('${encodeURIComponent(group.id || "")}');"><i class="ui edit icon"></i> Edit</button>
+                   <button class="ui basic mini red button" onclick="deleteBasicAuthGroup('${encodeURIComponent(group.id || "")}');"><i class="ui trash icon"></i> Delete</button>`;
+            table.append(`<tr>
+                <td>${escapeBasicAuthValue(group.name)}</td>
+                <td><code>${escapeBasicAuthValue(group.id)}</code></td>
+                <td>${group.user_count || 0}</td>
+                <td>${group.host_count || 0}</td>
+                <td>${actionButtons}</td>
+            </tr>`);
+        });
+    }
+
+    function renderBasicAuthUsersTable(){
+        const table = $("#basicAuthUsersTable");
+        table.html("");
+
+        if (!basicAuthUsersCache.length) {
+            table.html(`<tr><td colspan="3"><i class="ui green circle check icon"></i> No Basic Auth Users</td></tr>`);
+            return;
+        }
+
+        basicAuthUsersCache.forEach(function(user){
+            const groups = Array.isArray(user.group_names) && user.group_names.length > 0
+                ? user.group_names.map(function(groupName){
+                    return `<span class="ui tiny label">${escapeBasicAuthValue(groupName)}</span>`;
+                }).join(" ")
+                : `<small style="opacity:0.6;">No groups</small>`;
+            table.append(`<tr>
+                <td>${escapeBasicAuthValue(user.username)}</td>
+                <td>${groups}</td>
+                <td>
+                    <button class="ui basic mini button" onclick="editBasicAuthUser('${encodeURIComponent(user.username || "")}');"><i class="ui edit icon"></i> Edit</button>
+                    <button class="ui basic mini red button" onclick="deleteBasicAuthUser('${encodeURIComponent(user.username || "")}');"><i class="ui trash icon"></i> Delete</button>
+                </td>
+            </tr>`);
+        });
+    }
+
+    function editBasicAuthGroup(groupId){
+        groupId = decodeURIComponent(groupId);
+        const targetGroup = basicAuthGroupsCache.find(function(group){
+            return String(group.id) === String(groupId);
+        });
+        if (!targetGroup) {
+            return;
+        }
+
+        $("#basicAuthEditingGroupId").val(targetGroup.id);
+        $("#basicAuthGroupName").val(targetGroup.name);
+        $("#basicAuthGroupId").val(targetGroup.id).prop("readonly", true);
+        $("#basicAuthGroupIdHint").text("Group ID is immutable after creation.");
+        $("#basicAuthGroupFormTitle").text("Edit Group");
+        $('.basicAuthTabs .item[data-tab="basic_auth_groups_tab"]').click();
+    }
+
+    function deleteBasicAuthGroup(groupId){
+        groupId = decodeURIComponent(groupId);
+        if (!confirm("Delete Basic Auth group '" + groupId + "'?")) {
+            return;
+        }
+
+        $.cjax({
+            url: "/api/basicauth/groups/delete",
+            method: "POST",
+            data: { id: groupId },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox("Basic Auth group deleted");
+                resetBasicAuthGroupForm();
+                loadBasicAuthGroups(function(){
+                    loadBasicAuthUsers();
+                });
+            }
+        });
+    }
+
+    function editBasicAuthUser(username){
+        username = decodeURIComponent(username);
+        const targetUser = basicAuthUsersCache.find(function(user){
+            return String(user.username) === String(username);
+        });
+        if (!targetUser) {
+            return;
+        }
+
+        $("#basicAuthUserEditingUsername").val(targetUser.username);
+        $("#basicAuthUsername").val(targetUser.username).prop("readonly", true);
+        $("#basicAuthPassword").val("");
+        $("#basicAuthPasswordHint").text("Leave blank to keep the current password.");
+        $("#basicAuthUserFormTitle").text("Edit User");
+        renderBasicAuthUserGroupSelector(Array.isArray(targetUser.group_ids) ? targetUser.group_ids : ["default"]);
+        $('.basicAuthTabs .item[data-tab="basic_auth_users_tab"]').click();
+    }
+
+    function deleteBasicAuthUser(username){
+        username = decodeURIComponent(username);
+        if (!confirm("Delete Basic Auth user '" + username + "'?")) {
+            return;
+        }
+
+        $.cjax({
+            url: "/api/basicauth/users/delete",
+            method: "POST",
+            data: { username: username },
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox("Basic Auth user deleted");
+                resetBasicAuthUserForm();
+                loadBasicAuthUsers();
+            }
+        });
+    }
+
+    $("#basicAuthGroupForm").on("submit", function(event){
+        event.preventDefault();
+
+        const editingGroupId = $("#basicAuthEditingGroupId").val();
+        const endpoint = editingGroupId ? "/api/basicauth/groups/update" : "/api/basicauth/groups/create";
+        const payload = {
+            id: editingGroupId || $("#basicAuthGroupId").val(),
+            name: $("#basicAuthGroupName").val()
+        };
+
+        $.cjax({
+            url: endpoint,
+            method: "POST",
+            data: payload,
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox(editingGroupId ? "Basic Auth group updated" : "Basic Auth group created");
+                resetBasicAuthGroupForm();
+                loadBasicAuthGroups(function(){
+                    loadBasicAuthUsers();
+                });
+            }
+        });
+    });
+
+    $("#basicAuthUserForm").on("submit", function(event){
+        event.preventDefault();
+
+        const editingUsername = $("#basicAuthUserEditingUsername").val();
+        const payload = {
+            username: editingUsername || $("#basicAuthUsername").val(),
+            password: $("#basicAuthPassword").val(),
+            groupIds: JSON.stringify(getBasicAuthSelectedGroupIDs("#basicAuthUserGroupSelector"))
+        };
+        const endpoint = editingUsername ? "/api/basicauth/users/update" : "/api/basicauth/users/create";
+
+        $.cjax({
+            url: endpoint,
+            method: "POST",
+            data: payload,
+            success: function(data){
+                if (data.error !== undefined){
+                    msgbox(data.error, false);
+                    return;
+                }
+                msgbox(editingUsername ? "Basic Auth user updated" : "Basic Auth user created");
+                resetBasicAuthUserForm();
+                loadBasicAuthUsers();
+            }
+        });
+    });
+
+    $('.basicAuthTabs .item').tab();
+    resetBasicAuthGroupForm();
+    resetBasicAuthUserForm();
+    loadBasicAuthGroups(function(){
+        loadBasicAuthUsers();
+    });
+</script>

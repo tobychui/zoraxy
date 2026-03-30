@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"time"
 
+	"imuslab.com/zoraxy/mod/auth/basicauth"
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 
 	"imuslab.com/zoraxy/mod/access"
@@ -164,6 +165,7 @@ var (
 	pluginApiKeyManager *auth.APIKeyManager //API key manager for plugin authentication
 
 	//Authentication Provider
+	basicAuthManager  *basicauth.Manager   // Basic Auth manager for global basic auth users and groups
 	forwardAuthRouter *forward.AuthRouter  // Forward Auth router for Authelia/Authentik/etc authentication
 	oauth2Router      *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
 	zorxAuthRouter    *zorxauth.AuthRouter //ZorxAuth router for ZorxAuth SSO authentication

@@ -2,6 +2,7 @@ package dynamicproxy
 
 import (
 	"github.com/google/uuid"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 )
@@ -26,6 +27,8 @@ func GetDefaultAuthenticationProvider() *AuthenticationProvider {
 		ForwardAuthResponseClientHeaders:  []string{},
 		ForwardAuthRequestHeaders:         []string{},
 		ForwardAuthRequestExcludedCookies: []string{},
+		OAuth2TenantID:                    "",
+		OAuth2RequiredClaims:              []*oauth2.ClaimRequirement{},
 	}
 }
 

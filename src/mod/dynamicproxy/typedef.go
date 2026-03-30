@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"sync"
 
+	"imuslab.com/zoraxy/mod/auth/basicauth"
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 
@@ -69,6 +70,7 @@ type RouterOption struct {
 	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
 
 	/* Authentication Providers */
+	BasicAuthManager    *basicauth.Manager
 	ForwardAuthRouter   *forward.AuthRouter
 	OAuth2Router        *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
 	ZorxAuthAgentRouter *zorxauth.AuthRouter //ZorxAuthAgent for handling zorxauth SSO authentication
@@ -190,6 +192,10 @@ type AuthenticationProvider struct {
 	ForwardAuthResponseClientHeaders  []string // List of headers to copy from the forward auth server response to the client response.
 	ForwardAuthRequestHeaders         []string // List of headers to copy from the original request to the auth server. If empty all are copied.
 	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
+
+	/* OAuth2 Settings */
+	OAuth2TenantID       string                     // OAuth2 tenant ID, empty means use the default tenant
+	OAuth2RequiredClaims []*oauth2.ClaimRequirement // Required OAuth2 claims for this host
 }
 
 /* CAPTCHA Provider Configuration */

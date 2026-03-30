@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -11,6 +13,8 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth"
+	authbasicauth "imuslab.com/zoraxy/mod/auth/basicauth"
+	ssooauth2 "imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -73,6 +77,138 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 		RecaptchaVersion: captchaRecaptchaVersion,
 		RecaptchaScore:   captchaRecaptchaScore,
 	}, nil
+}
+
+func listOAuth2TenantUsers(tenantID string) []string {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" || dynamicProxyRouter == nil || dynamicProxyRouter.ProxyEndpoints == nil {
+		return []string{}
+	}
+
+	usedBy := []string{}
+	dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		endpoint, ok := value.(*dynamicproxy.ProxyEndpoint)
+		if !ok || endpoint == nil || endpoint.ProxyType != dynamicproxy.ProxyTypeHost || endpoint.AuthenticationProvider == nil {
+			return true
+		}
+
+		if endpoint.AuthenticationProvider.AuthMethod != dynamicproxy.AuthMethodOauth2 {
+			return true
+		}
+
+		effectiveTenantID := strings.TrimSpace(endpoint.AuthenticationProvider.OAuth2TenantID)
+		if effectiveTenantID == "" {
+			effectiveTenantID = "default"
+		}
+
+		if effectiveTenantID == tenantID {
+			usedBy = append(usedBy, endpoint.RootOrMatchingDomain)
+		}
+
+		return true
+	})
+
+	sort.Strings(usedBy)
+	return usedBy
+}
+
+func listBasicAuthGroupUsers(groupID string) []string {
+	groupID = strings.TrimSpace(groupID)
+	if groupID == "" || dynamicProxyRouter == nil || dynamicProxyRouter.ProxyEndpoints == nil {
+		return []string{}
+	}
+
+	usedBy := []string{}
+	dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		endpoint, ok := value.(*dynamicproxy.ProxyEndpoint)
+		if !ok || endpoint == nil || endpoint.ProxyType != dynamicproxy.ProxyTypeHost || endpoint.AuthenticationProvider == nil {
+			return true
+		}
+		if endpoint.AuthenticationProvider.AuthMethod != dynamicproxy.AuthMethodBasic {
+			return true
+		}
+
+		for _, assignedGroupID := range endpoint.AuthenticationProvider.BasicAuthGroupIDs {
+			if assignedGroupID == groupID {
+				usedBy = append(usedBy, endpoint.RootOrMatchingDomain)
+				break
+			}
+		}
+
+		return true
+	})
+
+	sort.Strings(usedBy)
+	return usedBy
+}
+
+func parseBasicAuthGroupIDs(raw string) ([]string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return []string{}, nil
+	}
+
+	if basicAuthManager == nil {
+		groupIDs := []string{}
+		if strings.HasPrefix(raw, "[") {
+			if err := json.Unmarshal([]byte(raw), &groupIDs); err != nil {
+				return nil, errors.New("invalid basic auth group selection")
+			}
+		} else {
+			groupIDs = strings.Split(raw, ",")
+		}
+		normalized := []string{}
+		seen := map[string]bool{}
+		for _, groupID := range groupIDs {
+			groupID = strings.TrimSpace(groupID)
+			if groupID == "" || seen[groupID] {
+				continue
+			}
+			seen[groupID] = true
+			normalized = append(normalized, groupID)
+		}
+		return normalized, nil
+	}
+
+	return basicAuthManager.ParseGroupIDs(raw)
+}
+
+func parseOAuth2ClaimRequirements(raw string) ([]*ssooauth2.ClaimRequirement, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return []*ssooauth2.ClaimRequirement{}, nil
+	}
+
+	requirements := []*ssooauth2.ClaimRequirement{}
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		claimName := strings.TrimSpace(parts[0])
+		if claimName == "" {
+			return nil, fmt.Errorf("invalid OAuth2 claim requirement: %q", line)
+		}
+
+		values := []string{}
+		if len(parts) == 2 {
+			for _, value := range strings.Split(parts[1], ",") {
+				value = strings.TrimSpace(value)
+				if value != "" {
+					values = append(values, value)
+				}
+			}
+		}
+
+		requirements = append(requirements, &ssooauth2.ClaimRequirement{
+			Claim:  claimName,
+			Values: values,
+		})
+	}
+
+	return ssooauth2.NormalizeClaimRequirements(requirements), nil
 }
 
 // Add user customizable reverse proxy
@@ -163,17 +299,18 @@ func ReverseProxyInit() {
 		ForceHttpsRedirect: forceHttpsRedirect,
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
-		TlsManager:         tlsCertManager,
-		RedirectRuleTable:  redirectTable,
-		GeodbStore:         geodbStore,
-		StatisticCollector: statisticCollector,
-		WebDirectory:       *path_webserver,
-		AccessController:   accessController,
-		ForwardAuthRouter:  forwardAuthRouter,
-		OAuth2Router:       oauth2Router,
+		TlsManager:          tlsCertManager,
+		RedirectRuleTable:   redirectTable,
+		GeodbStore:          geodbStore,
+		StatisticCollector:  statisticCollector,
+		WebDirectory:        *path_webserver,
+		AccessController:    accessController,
+		BasicAuthManager:    basicAuthManager,
+		ForwardAuthRouter:   forwardAuthRouter,
+		OAuth2Router:        oauth2Router,
 		ZorxAuthAgentRouter: zorxAuthRouter,
-		LoadBalancer:       loadBalancer,
-		PluginManager:      pluginManager,
+		LoadBalancer:        loadBalancer,
+		PluginManager:       pluginManager,
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -205,6 +342,8 @@ func ReverseProxyInit() {
 			continue
 		}
 	}
+
+	migrateLegacyBasicAuthConfigs()
 
 	if dynamicProxyRouter.Root == nil {
 		//Root config not set (new deployment?), use internal static web server as root
@@ -328,8 +467,41 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Require basic auth?
-	requireBasicAuth, _ := utils.PostBool(r, "bauth")
+	authProviderType := dynamicproxy.AuthMethodNone
+	authProviderTypeStr, _ := utils.PostPara(r, "authprovider")
+	if authProviderTypeStr != "" {
+		authProviderTypeInt, err := strconv.Atoi(authProviderTypeStr)
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid auth provider type")
+			return
+		}
+		authProviderType = dynamicproxy.AuthMethod(authProviderTypeInt)
+	} else {
+		// Backward compatibility for the old create flow that only supported basic auth.
+		requireBasicAuthLegacy, _ := utils.PostBool(r, "bauth")
+		if requireBasicAuthLegacy {
+			authProviderType = dynamicproxy.AuthMethodBasic
+		}
+	}
+	oauth2TenantID, _ := utils.PostPara(r, "oauth2TenantId")
+	oauth2TenantID = strings.TrimSpace(oauth2TenantID)
+	if oauth2TenantID == "default" {
+		oauth2TenantID = ""
+	}
+	oauth2RequiredClaimsRaw, _ := utils.PostPara(r, "oauth2RequiredClaims")
+	oauth2RequiredClaims, err := parseOAuth2ClaimRequirements(oauth2RequiredClaimsRaw)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	basicAuthGroupIDsRaw, _ := utils.PostPara(r, "basicAuthGroupIds")
+	basicAuthGroupIDs, err := parseBasicAuthGroupIDs(basicAuthGroupIDsRaw)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	requireBasicAuth := authProviderType == dynamicproxy.AuthMethodBasic
 
 	//Use sticky session?
 	useStickySession, _ := utils.PostBool(r, "stickysess")
@@ -375,7 +547,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Prase the basic auth to correct structure
 	cred, _ := utils.PostPara(r, "cred")
 	basicAuthCredentials := []*dynamicproxy.BasicAuthCredentials{}
-	if requireBasicAuth {
+	if requireBasicAuth && strings.TrimSpace(cred) != "" {
 		preProcessCredentials := []*dynamicproxy.BasicAuthUnhashedCredentials{}
 		err = json.Unmarshal([]byte(cred), &preProcessCredentials)
 		if err != nil {
@@ -398,6 +570,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 				PasswordHash: auth.Hash(credObj.Password),
 			})
 		}
+	}
+	if requireBasicAuth && len(basicAuthGroupIDs) == 0 && len(basicAuthCredentials) == 0 {
+		basicAuthGroupIDs = []string{authbasicauth.DefaultGroupID}
 	}
 
 	tagStr, _ := utils.PostPara(r, "tags")
@@ -458,6 +633,21 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			AuthMethod:              authMethod,
 			BasicAuthCredentials:    basicAuthCredentials,
 			BasicAuthExceptionRules: []*dynamicproxy.BasicAuthExceptionRule{},
+			BasicAuthGroupIDs:       basicAuthGroupIDs,
+		}
+		switch authProviderType {
+		case dynamicproxy.AuthMethodForward:
+			thisAuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
+		case dynamicproxy.AuthMethodOauth2:
+			thisAuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
+			thisAuthenticationProvider.OAuth2TenantID = oauth2TenantID
+			thisAuthenticationProvider.OAuth2RequiredClaims = oauth2RequiredClaims
+		case dynamicproxy.AuthMethodZorxAuth:
+			thisAuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodZorxAuth
+		case dynamicproxy.AuthMethodBasic:
+			thisAuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
+		default:
+			thisAuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
 		}
 
 		//Generate a proxy endpoint object
@@ -633,6 +823,23 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	if authProviderTypeStr == "" {
 		authProviderTypeStr = "0"
 	}
+	oauth2TenantID, _ := utils.PostPara(r, "oauth2TenantId")
+	oauth2TenantID = strings.TrimSpace(oauth2TenantID)
+	if oauth2TenantID == "default" {
+		oauth2TenantID = ""
+	}
+	oauth2RequiredClaimsRaw, _ := utils.PostPara(r, "oauth2RequiredClaims")
+	oauth2RequiredClaims, err := parseOAuth2ClaimRequirements(oauth2RequiredClaimsRaw)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	basicAuthGroupIDsRaw, _ := utils.PostPara(r, "basicAuthGroupIds")
+	basicAuthGroupIDs, err := parseBasicAuthGroupIDs(basicAuthGroupIDsRaw)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
 
 	authProviderType, err := strconv.Atoi(authProviderTypeStr)
 	if err != nil {
@@ -721,14 +928,32 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	switch authProviderType {
 	case 1:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
+		if len(basicAuthGroupIDs) == 0 && len(newProxyEndpoint.AuthenticationProvider.BasicAuthCredentials) == 0 {
+			basicAuthGroupIDs = []string{authbasicauth.DefaultGroupID}
+		}
+		newProxyEndpoint.AuthenticationProvider.BasicAuthGroupIDs = basicAuthGroupIDs
+		newProxyEndpoint.AuthenticationProvider.OAuth2TenantID = ""
+		newProxyEndpoint.AuthenticationProvider.OAuth2RequiredClaims = []*ssooauth2.ClaimRequirement{}
 	case 2:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
+		newProxyEndpoint.AuthenticationProvider.BasicAuthGroupIDs = []string{}
+		newProxyEndpoint.AuthenticationProvider.OAuth2TenantID = ""
+		newProxyEndpoint.AuthenticationProvider.OAuth2RequiredClaims = []*ssooauth2.ClaimRequirement{}
 	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
+		newProxyEndpoint.AuthenticationProvider.BasicAuthGroupIDs = []string{}
+		newProxyEndpoint.AuthenticationProvider.OAuth2TenantID = oauth2TenantID
+		newProxyEndpoint.AuthenticationProvider.OAuth2RequiredClaims = oauth2RequiredClaims
 	case 4:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodZorxAuth
+		newProxyEndpoint.AuthenticationProvider.BasicAuthGroupIDs = []string{}
+		newProxyEndpoint.AuthenticationProvider.OAuth2TenantID = ""
+		newProxyEndpoint.AuthenticationProvider.OAuth2RequiredClaims = []*ssooauth2.ClaimRequirement{}
 	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
+		newProxyEndpoint.AuthenticationProvider.BasicAuthGroupIDs = []string{}
+		newProxyEndpoint.AuthenticationProvider.OAuth2TenantID = ""
+		newProxyEndpoint.AuthenticationProvider.OAuth2RequiredClaims = []*ssooauth2.ClaimRequirement{}
 	}
 
 	disableAutoFallback, _ := utils.PostBool(r, "dAutoFallback")

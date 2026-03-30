@@ -3,6 +3,7 @@ package zorxauth
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -38,7 +39,7 @@ import (
 */
 
 // NewAuthRouter creates a new AuthRouter instance
-func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
+func NewAuthRouter(db *database.Database, log *logger.Logger, configFolderPath string) *AuthRouter {
 	// Create a new table for zorxauth settings if it doesn't exist
 	db.NewTable(DB_NAME)
 	db.NewTable(DB_USERS_TABLE)
@@ -61,6 +62,8 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 		Options:            &options,
 		rateLimitResetStop: make(chan bool, 1),
 	}
+
+	authRouter.ensureConfigFolderPath(configFolderPath)
 
 	// Load browser sessions from database
 	authRouter.loadBrowserSessions()
@@ -87,6 +90,29 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 	}
 
 	return authRouter
+}
+
+func (ar *AuthRouter) ensureConfigFolderPath(configFolderPath string) {
+	desiredConfigFolder := strings.TrimSpace(configFolderPath)
+	if desiredConfigFolder == "" {
+		desiredConfigFolder = defaultConfigFolderPath
+	}
+	desiredConfigFolder = filepath.Clean(desiredConfigFolder)
+
+	currentConfigFolder := strings.TrimSpace(ar.Options.ConfigFolderPath)
+	currentConfigFolderClean := filepath.Clean(currentConfigFolder)
+	legacyConfigFolderClean := filepath.Clean(defaultConfigFolderPath)
+
+	if currentConfigFolder == "" || currentConfigFolderClean == legacyConfigFolderClean {
+		ar.migrateLegacyGroupPolicyFolder(desiredConfigFolder)
+		ar.Options.ConfigFolderPath = desiredConfigFolder
+		if err := ar.Database.Write(DB_NAME, "options", ar.Options); err != nil && ar.Logger != nil {
+			ar.Logger.PrintAndLog("zorxauth", "Failed to persist ZorxAuth config folder path: "+err.Error(), err)
+		}
+		return
+	}
+
+	ar.Options.ConfigFolderPath = currentConfigFolderClean
 }
 
 // GenerateValidationCodeForSession generates a one-time validation code for the given session ID and stores the mapping in sessionIdStore.

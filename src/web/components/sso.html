@@ -95,10 +95,37 @@
         </div>
         <div class="ui bottom attached tab segment" data-tab="oauth2_tab">
         <!-- OAuth 2.0 -->
-        <h2>OAuth 2.0</h2>
+        <div style="display:flex; gap:0.75em; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+            <h2 style="margin:0;">OAuth 2.0</h2>
+            <button class="ui basic button" type="button" id="oauth2TenantCreate"><i class="green plus icon"></i> Create Tenant</button>
+        </div>
         <p>Configuration settings for OAuth 2.0 authentication provider.</p>
+        <div class="ui segment">
+            <div class="fields">
+                <div class="eight wide field">
+                    <label>Tenant</label>
+                    <div class="ui fluid selection dropdown" id="oauth2TenantSelect">
+                        <input type="hidden" name="oauth2TenantSelect">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select OAuth2 tenant</div>
+                        <div class="menu"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.6em; align-items:center; flex-wrap:wrap;">
+                <span id="oauth2TenantMeta" style="opacity:0.7;">Tenant ID: <code>default</code></span>
+            </div>
+        </div>
 
         <form class="ui form" action="#" id="oauth2Settings">
+            <input type="hidden" id="oauth2TenantId" name="tenantId" value="default">
+            <div class="field">
+                <label for="oauth2TenantName">Tenant Name</label>
+                <div class="ui fluid input">
+                    <input type="text" id="oauth2TenantName" name="tenantName" placeholder="Example: Google Workspace">
+                </div>
+                <small>Friendly name shown in the UI and HTTP proxy tenant selector.</small>
+            </div>
             <div class="field">
                 <label for="oauth2ClientId">Client ID</label>
                 <input type="text" id="oauth2ClientId" name="oauth2ClientId" placeholder="Enter Client ID">
@@ -148,8 +175,8 @@
             </div>
 
             <div class="field">
-                <label for="oauth2UserInfoURL">User Info URL</label>
-                <input type="text" id="oauth2UserInfoURL" name="oauth2UserInfoURL" placeholder="Enter User Info URL">
+                <label for="oauth2UserInfoUrl">User Info URL</label>
+                <input type="text" id="oauth2UserInfoUrl" name="oauth2UserInfoUrl" placeholder="Enter User Info URL">
                 <small>URL used by the OAuth2 provider to validate generated token. Optional if Well-Known url is configured.</small>
             </div>
 
@@ -166,7 +193,8 @@
             </div>
 
             <button class="ui basic button" type="submit"><i class="green check icon"></i> Apply Change</button>
-            <button class="ui basic button" type="button" id="oauth2Clear"><i class="red trash icon"></i> Clear</button>
+            <button class="ui basic button" type="button" id="oauth2Clear"><i class="red trash icon"></i> Clear Tenant Config</button>
+            <button class="ui basic button" type="button" id="oauth2TenantDelete"><i class="red trash icon"></i> Delete Tenant</button>
         </form>
         </div>
         <div class="ui bottom attached tab segment" data-tab="zoraxy_sso_tab">
@@ -306,11 +334,13 @@
     $(".advancedSSOZorxAuthOptions.accordion").accordion();
     $(".zorxAuthGatewayInstructions.accordion").accordion();
     $(document).ready(function() {
+        $('#oauth2CodeChallengeMethod').dropdown();
+
         /* Load Forward Authz settings from backend */
         getForwardAuthSettings();
 
         /* Load OAuth 2.0 settings from backend */
-        getOAuth20Settings();
+        loadOAuth2Tenants("default");
 
         /* Load Zoraxy Auth settings from backend */
         getZorxAuthSettings();
@@ -445,62 +475,205 @@
         });
     });
 
+    let currentOAuth2TenantId = "default";
+    let oauth2TenantSelectionUpdating = false;
+
+    function selectOAuth2Tenant(tenantId, shouldLoad) {
+        tenantId = tenantId || "default";
+        currentOAuth2TenantId = tenantId;
+        oauth2TenantSelectionUpdating = true;
+        $('#oauth2TenantSelect').dropdown('set selected', tenantId);
+        $('#oauth2TenantSelect input[name="oauth2TenantSelect"]').val(tenantId);
+        oauth2TenantSelectionUpdating = false;
+
+        if (shouldLoad) {
+            getOAuth20Settings(tenantId);
+        }
+    }
+
+    function bindOAuth2TenantSelectEvents() {
+        const dropdown = $('#oauth2TenantSelect');
+        const hiddenInput = $('#oauth2TenantSelect input[name="oauth2TenantSelect"]');
+        hiddenInput.off('change.oauth2tenant').on('change.oauth2tenant', function() {
+            const value = $(this).val();
+            if (oauth2TenantSelectionUpdating || !value) {
+                return;
+            }
+            selectOAuth2Tenant(value, true);
+        });
+
+        dropdown.off('click.oauth2tenant', '.menu .item').on('click.oauth2tenant', '.menu .item', function() {
+            const value = $(this).attr('data-value');
+            if (oauth2TenantSelectionUpdating || !value) {
+                return;
+            }
+            setTimeout(function() {
+                selectOAuth2Tenant(String(value), true);
+            }, 0);
+        });
+    }
+
     /*
-        OAuth 2.0 settings fetcher.
+        OAuth 2.0 tenant list fetcher.
     */
-    function getOAuth20Settings() {
+    function loadOAuth2Tenants(selectedTenantId) {
         $.cjax({
-            url: '/api/sso/OAuth2',
+            url: '/api/sso/OAuth2/tenants',
             method: 'GET',
             dataType: 'json',
             success: function(data) {
-                $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl);
-                $('#oauth2ServerUrl').val(data.oauth2ServerUrl);
-                $('#oauth2TokenUrl').val(data.oauth2TokenUrl);
-                $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl);
-                $('#oauth2ClientId').val(data.oauth2ClientId);
-                $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
-                $('#oauth2Scopes').val(data.oauth2Scopes);
-                $('#oauth2ConfigurationCacheTime').val(data.oauth2ConfigurationCacheTime);
-                $('[data-value="'+data.oauth2CodeChallengeMethod+'"]').click();
+                const tenants = Array.isArray(data) && data.length > 0 ? data : [{
+                    id: "default",
+                    name: "Default",
+                    isDefault: true
+                }];
+
+                const menu = $("#oauth2TenantSelect .menu");
+                menu.empty();
+                tenants.forEach(function(tenant) {
+                    const label = tenant.isDefault ? `${tenant.name} (${tenant.id})` : tenant.name;
+                    menu.append(`<div class="item" data-value="${tenant.id}">${label}</div>`);
+                });
+
+                const targetTenantId = selectedTenantId || currentOAuth2TenantId || "default";
+                $('#oauth2TenantSelect').dropdown('destroy');
+                $('#oauth2TenantSelect').dropdown({
+                    onChange: function(value) {
+                        if (oauth2TenantSelectionUpdating || !value) {
+                            return;
+                        }
+                        selectOAuth2Tenant(value, true);
+                    }
+                });
+                bindOAuth2TenantSelectEvents();
+                selectOAuth2Tenant(targetTenantId, true);
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error fetching SSO settings:', textStatus, errorThrown);
+                console.error('Error fetching OAuth2 tenants:', textStatus, errorThrown);
             }
         });
     }
 
     /*
+        OAuth 2.0 tenant settings fetcher.
+    */
+    function getOAuth20Settings(tenantId) {
+        tenantId = tenantId || "default";
+        $.cjax({
+            url: '/api/sso/OAuth2/tenant',
+            method: 'GET',
+            data: { id: tenantId },
+            dataType: 'json',
+            success: function(data) {
+                currentOAuth2TenantId = data.id || "default";
+                $('#oauth2TenantId').val(currentOAuth2TenantId);
+                $('#oauth2TenantName').val(data.name || '');
+                $('#oauth2TenantMeta').html(`Tenant ID: <code>${currentOAuth2TenantId}</code>`);
+                $('#oauth2TenantDelete').html(data.isDefault ? '<i class="red trash icon"></i> Reset Default Tenant' : '<i class="red trash icon"></i> Delete Tenant');
+                $('#oauth2WellKnownUrl').val(data.oauth2WellKnownUrl || '');
+                $('#oauth2ServerUrl').val(data.oauth2ServerUrl || '');
+                $('#oauth2TokenUrl').val(data.oauth2TokenUrl || '');
+                $('#oauth2UserInfoUrl').val(data.oauth2UserInfoUrl || '');
+                $('#oauth2ClientId').val(data.oauth2ClientId || '');
+                $('#oauth2ClientSecret').val(data.oauth2ClientSecret || '');
+                $('#oauth2Scopes').val(data.oauth2Scopes || '');
+                $('#oauth2ConfigurationCacheTime').val(data.oauth2ConfigurationCacheTime || '1m0s');
+                $('#oauth2CodeChallengeMethod').dropdown('set selected', data.oauth2CodeChallengeMethod || 'plain');
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error fetching OAuth2 tenant settings:', textStatus, errorThrown);
+            }
+        });
+    }
+
+    $("#oauth2TenantCreate").on("click", function() {
+        const tenantName = prompt("New OAuth2 tenant name");
+        if (tenantName === null) {
+            return;
+        }
+
+        $.cjax({
+            url: '/api/sso/OAuth2/tenants',
+            method: 'POST',
+            data: { name: tenantName },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                msgbox('OAuth2 tenant created', true);
+                loadOAuth2Tenants(data.id || "default");
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error creating OAuth2 tenant:', textStatus, errorThrown);
+                msgbox('Error creating OAuth2 tenant, check console', false);
+            }
+        });
+    });
+
+    $("#oauth2TenantDelete").on("click", function(event) {
+        event.preventDefault();
+
+        const targetTenantId = $('#oauth2TenantId').val() || "default";
+        const isDefaultTenant = targetTenantId === "default";
+        const confirmMessage = isDefaultTenant
+            ? "Reset the default OAuth2 tenant configuration?"
+            : `Delete OAuth2 tenant '${targetTenantId}'?`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        $.cjax({
+            url: '/api/sso/OAuth2/tenant',
+            method: 'DELETE',
+            data: { id: targetTenantId },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    msgbox(data.error, false);
+                    return;
+                }
+
+                msgbox(isDefaultTenant ? 'Default OAuth2 tenant reset' : 'OAuth2 tenant deleted', true);
+                loadOAuth2Tenants("default");
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('Error deleting OAuth2 tenant:', textStatus, errorThrown);
+                msgbox('Error deleting OAuth2 tenant, check console', false);
+            }
+        });
+    });
+
+    /*
         OAuth 2.0 settings update handler.
     */
-    $( "#oauth2Settings" ).on( "submit", function( event ) {
+    $("#oauth2Settings").on("submit", function(event) {
         event.preventDefault();
 
         if ($('#oauth2ClientId').val().length === 0 || $('#oauth2ClientSecret').val().length === 0) {
             msgbox("You must specify the Client ID and Client Secret.", false);
-
             return;
         }
 
         if ($('#oauth2WellKnownUrl').val().length === 0) {
-            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoURL').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
+            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoUrl').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
                 msgbox("You must specify either the Well Known URL or configure the Authorization URL, Token URL, User Info URL, and Scopes.", false);
-
                 return;
             }
         }
 
         $.cjax({
-            url: '/api/sso/OAuth2',
+            url: '/api/sso/OAuth2/tenant',
             method: 'POST',
-            data: $( this ).serialize(),
+            data: $(this).serialize() + '&tenantName=' + encodeURIComponent($('#oauth2TenantName').val() || ''),
             success: function(data) {
                 if (data.error != undefined) {
                     msgbox(data.error, false);
                     return;
                 }
-                msgbox('OAuth2 settings updated', true);
-                console.log('OAuth2 settings updated:', data);
+                msgbox('OAuth2 tenant updated', true);
+                loadOAuth2Tenants($('#oauth2TenantId').val() || "default");
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error updating OAuth2 settings:', textStatus, errorThrown);
@@ -509,22 +682,36 @@
         });
     });
 
-    $( "#oauth2Clear" ).on( "click", function( event ) {
+    $("#oauth2Clear").on("click", function(event) {
         event.preventDefault();
 
+        const targetTenantId = $('#oauth2TenantId').val() || "default";
+        const isDefaultTenant = targetTenantId === "default";
+        const confirmMessage = isDefaultTenant
+            ? "Clear the default OAuth2 tenant configuration?"
+            : `Clear OAuth2 configuration for tenant '${targetTenantId}'?`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
         $.cjax({
-            url: '/api/sso/OAuth2',
+            url: '/api/sso/OAuth2/tenant',
             method: 'DELETE',
+            data: { id: targetTenantId },
             success: function(data) {
                 if (data.error != undefined) {
                     msgbox(data.error, false);
                     return;
                 }
 
-                getOAuth20Settings();
-
-                msgbox('OAuth2 settings cleared', true);
-                console.log('OAuth2 settings cleared:', data);
+                if (isDefaultTenant) {
+                    getOAuth20Settings(targetTenantId);
+                    loadOAuth2Tenants(targetTenantId);
+                } else {
+                    loadOAuth2Tenants("default");
+                }
+                msgbox(isDefaultTenant ? 'Default OAuth2 tenant cleared' : 'OAuth2 tenant cleared', true);
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error clearing OAuth2 settings:', textStatus, errorThrown);

@@ -66,5 +66,7 @@ func (d *Database) listTable(tableName string) ([][][]byte, error) {
 }
 
 func (d *Database) close() {
-	d.Backend.Close()
+	if d.Backend != nil {
+		d.Backend.Close()
+	}
 }
