@@ -7,8 +7,11 @@ name: Build and push Docker image
 
 env:
   DOCKER_ACCOUNT: ${{ vars.DOCKER_ACCOUNT || 'zoraxydocker' }}
+  DOCKER_MAIN_IMAGE_WITH_ZEROTIER: ${{ vars.DOCKER_MAIN_IMAGE_WITH_ZEROTIER || 'true' }}
+  DOCKER_BUILD_ZEROTIER: ${{ vars.DOCKER_BUILD_ZEROTIER || 'true' }}
   DOCKER_REPO: ${{ vars.DOCKER_REPO || 'zoraxy' }}
-  DOCKER_REPO_TAG_CACHE_NAME: ${{ vars.DOCKER_REPO_TAG_CACHE_NAME || 'buildcache' }}
+  DOCKER_REPO_TAG_CACHE_NAME_BASE: ${{ vars.DOCKER_REPO_TAG_CACHE_NAME_BASE || 'buildcache-base' }}
+  DOCKER_REPO_TAG_CACHE_NAME_ZEROTIER: ${{ vars.DOCKER_REPO_TAG_CACHE_NAME_ZEROTIER || 'buildcache-zerotier' }}
   DOCKER_PLATFORMS: ${{ vars.DOCKER_PLATFORMS || 'linux/amd64,linux/arm64' }}
 permissions:
   contents: read
@@ -41,21 +44,67 @@ jobs:
       - name: Create tag list for docker image
         id: tags
         run: |
+          VERSION_TAG="${{ github.event.release.tag_name }}"
+          BASE_IMAGE="${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}"
           if [ "${{ github.event.release.prerelease }}" = true ]; then
-            echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            ZEROTIER_TAG_ARGS="-t ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}-zerotier"
           elif [[ "${{ github.event.release.tag_name }}" == *"-rc"* ]]; then
-            echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            ZEROTIER_TAG_ARGS="-t ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}-zerotier"
           else
-            echo "docker=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest, ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            ZEROTIER_TAG_ARGS="-t ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest-zerotier -t ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}-zerotier"
+          fi
+          if [ "${{ github.event.release.prerelease }}" = true ]; then
+            echo "base=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+            echo "zerotier=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}-zerotier" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.release.tag_name }}" == *"-rc"* ]]; then
+            echo "base=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+            echo "zerotier=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}-zerotier" >> $GITHUB_OUTPUT
+          else
+            echo "base=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest, ${BASE_IMAGE}" >> $GITHUB_OUTPUT
+            echo "zerotier=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest-zerotier, ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${VERSION_TAG}-zerotier" >> $GITHUB_OUTPUT
+          fi
+          echo "base_ref=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+          echo "zerotier_tag_args=${ZEROTIER_TAG_ARGS}" >> $GITHUB_OUTPUT
+
+      - name: Select main Docker build configuration
+        id: buildconfig
+        run: |
+          if [ "${{ env.DOCKER_MAIN_IMAGE_WITH_ZEROTIER }}" = "true" ]; then
+            echo "main_file=./docker/Dockerfile.zerotier" >> $GITHUB_OUTPUT
+            echo "main_cache=${{ env.DOCKER_REPO_TAG_CACHE_NAME_ZEROTIER }}" >> $GITHUB_OUTPUT
+          else
+            echo "main_file=./docker/Dockerfile" >> $GITHUB_OUTPUT
+            echo "main_cache=${{ env.DOCKER_REPO_TAG_CACHE_NAME_BASE }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push Docker image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294  # v7.0.0
         with:
           context: ./docker
+          file: ${{ steps.buildconfig.outputs.main_file }}
           push: true
           platforms: ${{ env.DOCKER_PLATFORMS }}
-          tags: ${{ steps.tags.outputs.docker }}
-          cache-from: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }}
-          cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME }},mode=max
+          tags: ${{ steps.tags.outputs.base }}
+          cache-from: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ steps.buildconfig.outputs.main_cache }}
+          cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ steps.buildconfig.outputs.main_cache }},mode=max
 
+      - name: Build and push Docker image with ZeroTier
+        if: ${{ env.DOCKER_BUILD_ZEROTIER == 'true' && env.DOCKER_MAIN_IMAGE_WITH_ZEROTIER != 'true' }}
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294  # v7.0.0
+        with:
+          context: ./docker
+          file: ./docker/Dockerfile.zerotier
+          push: true
+          platforms: ${{ env.DOCKER_PLATFORMS }}
+          build-args: |
+            ZORAXY_BASE_IMAGE=${{ steps.tags.outputs.base_ref }}
+          tags: ${{ steps.tags.outputs.zerotier }}
+          cache-from: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME_ZEROTIER }}
+          cache-to: type=registry,ref=${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.DOCKER_REPO_TAG_CACHE_NAME_ZEROTIER }},mode=max
+
+      - name: Tag main Docker image as ZeroTier variant
+        if: ${{ env.DOCKER_BUILD_ZEROTIER == 'true' && env.DOCKER_MAIN_IMAGE_WITH_ZEROTIER == 'true' }}
+        run: |
+          docker buildx imagetools create \
+            ${{ steps.tags.outputs.zerotier_tag_args }} \
+            ${{ steps.tags.outputs.base_ref }}
