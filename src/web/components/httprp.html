@@ -1591,12 +1591,6 @@
         editor.find(".DisableLogging").off('change');
         editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
         editor.find(".DisableLogging").on("change", function() {
-            // When logging is disabled, also disable statistic collection
-            if ($(this).is(':checked')) {
-                editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
-            } else {
-                editor.find(".DisableStatisticCollection").prop("disabled", false);
-            }
             saveProxyInlineEdit(uuid);
         });
 
@@ -1605,11 +1599,6 @@
         editor.find(".DisableStatisticCollection").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
-
-        // Handle initial state: if logging is disabled, disable statistic collection
-        if (subd.DisableLogging) {
-            editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
-        }
 
         // Exploit Detection
         editor.find(".BlockCommonExploits").off('change');
