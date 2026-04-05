@@ -275,6 +275,7 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/groups/deleteTag", pluginManager.HandleRemovePluginGroup)
 
 	authRouter.HandleFunc("/api/plugins/store/list", pluginManager.HandleListDownloadablePlugins)
+	authRouter.HandleFunc("/api/plugins/store/urls", pluginManager.HandlePluginStoreURLs)
 	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
 	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
 	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)

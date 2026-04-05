@@ -54,7 +54,13 @@ func (m *Manager) GetPluginSpec(entryPoint string) (*zoraxyPlugin.IntroSpect, er
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, entryPoint, "-introspect")
+	absoluteEntryPoint, err := filepath.Abs(entryPoint)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.CommandContext(ctx, absoluteEntryPoint, "-introspect")
+	cmd.Dir = filepath.Dir(absoluteEntryPoint)
 	output, err := cmd.Output()
 	if ctx.Err() == context.DeadlineExceeded {
 		return nil, fmt.Errorf("plugin introspect timed out")
