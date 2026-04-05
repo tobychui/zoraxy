@@ -39,19 +39,25 @@ type Target struct {
 }
 
 type Config struct {
-	Targets           []*Target
-	Interval          int
-	MaxRecordsStore   int
-	OnlineStateNotify func(upstreamIP string, isOnline bool)
-	Logger            *logger.Logger
-	Verbal            bool
+	Targets              []*Target
+	Interval             int //Check interval for online targets in seconds (default 300)
+	MaxRecordsStore      int
+	OnlineStateNotify    func(upstreamIP string, isOnline bool)
+	Logger               *logger.Logger
+	Verbal               bool
+	OfflineCheckInterval int //Check interval for offline targets in seconds (default 30)
+	OfflineCheckTimeout  int //HTTP timeout for offline target checks in seconds (default 10)
 }
 
 type Monitor struct {
-	Config              *Config
-	OnlineStatusLog     map[string][]*Record
-	logMutex            sync.RWMutex //Mutex for OnlineStatusLog map access
-	runningUptimeChecks bool         //To prevent overlapping uptime checks
+	Config          *Config
+	OnlineStatusLog map[string][]*Record
+	logMutex        sync.RWMutex //Mutex for OnlineStatusLog map access
+
+	// Separate lists for online and offline targets with dedicated tickers
+	onlineTargets  []*Target
+	offlineTargets []*Target
+	targetMutex    sync.Mutex //Mutex for online/offline target list access
 }
 
 // Default configs
