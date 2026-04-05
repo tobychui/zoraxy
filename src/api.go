@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/pprof"
@@ -367,7 +368,12 @@ func initAPIs(targetMux *http.ServeMux) {
 
 	// Register the standard web services URLs
 	var staticWebRes http.Handler
-	if *development_build {
+	webFolderExists := utils.FileExists("web")
+	if *development_build && !webFolderExists {
+		fmt.Println("Warning: Development build is enabled but 'web' folder does not exist. Falling back to embedded static resources.")
+		fmt.Println("If you are developing the web UI, please make sure to have the 'web' folder in the same directory as the executable for a better development experience with hot reload.")
+	}
+	if *development_build && webFolderExists {
 		staticWebRes = http.FileServer(http.Dir("web/"))
 	} else {
 		subFS, err := fs.Sub(webres, "web")
