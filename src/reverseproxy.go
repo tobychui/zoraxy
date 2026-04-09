@@ -45,6 +45,7 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 	captchaSessionDurationStr, _ := utils.PostPara(r, "captchaSessionDuration")
 	captchaRecaptchaVersion, _ := utils.PostPara(r, "captchaRecaptchaVersion")
 	captchaRecaptchaScoreStr, _ := utils.PostPara(r, "captchaRecaptchaScore")
+	captchaPathPrefixesStr, _ := utils.PostPara(r, "captchaPathPrefixes")
 
 	captchaProvider := 0
 	if captchaProviderStr != "" {
@@ -65,6 +66,26 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 		captchaRecaptchaVersion = "v2"
 	}
 
+	protectedPathPrefixes := []string{}
+	for _, thisPath := range strings.FieldsFunc(captchaPathPrefixesStr, func(r rune) bool {
+		return r == '\n' || r == '\r' || r == ',' || r == ';'
+	}) {
+		normalizedPath := strings.TrimSpace(thisPath)
+		if normalizedPath == "" {
+			continue
+		}
+
+		if !strings.HasPrefix(normalizedPath, "/") {
+			normalizedPath = "/" + normalizedPath
+		}
+
+		if normalizedPath != "/" {
+			normalizedPath = strings.TrimSuffix(normalizedPath, "/")
+		}
+
+		protectedPathPrefixes = append(protectedPathPrefixes, normalizedPath)
+	}
+
 	return &dynamicproxy.CaptchaConfig{
 		Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
 		SiteKey:          captchaSiteKey,
@@ -72,6 +93,7 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 		SessionDuration:  captchaSessionDuration,
 		RecaptchaVersion: captchaRecaptchaVersion,
 		RecaptchaScore:   captchaRecaptchaScore,
+		ProtectedPathPrefixes: protectedPathPrefixes,
 	}, nil
 }
 

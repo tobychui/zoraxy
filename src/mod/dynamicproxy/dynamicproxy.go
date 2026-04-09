@@ -288,8 +288,10 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		// Check for exception rules
-		if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
+		// If specific path prefixes are configured, only enforce on matched paths.
+		if !captcha.ShouldEnforcePath(r.URL.Path, sep.CaptchaConfig) {
+			// Allow passthrough
+		} else if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
 			// Allow passthrough
 		} else if !captcha.CheckSession(r, router.captchaSessionStore) {
 			// No valid session, serve CAPTCHA challenge
