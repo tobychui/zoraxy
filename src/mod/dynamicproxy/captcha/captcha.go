@@ -68,6 +68,7 @@ type Config struct {
 	SessionDuration  int              `json:"SessionDuration"`
 	RecaptchaVersion string           `json:"RecaptchaVersion"` // v2 or v3
 	RecaptchaScore   float64          `json:"RecaptchaScore"`   // v3 only, 0.0-1.0
+	ProtectedPathPrefixes []string    `json:"ProtectedPathPrefixes"` // Empty means protect all paths on this endpoint
 	ExceptionRules   []*ExceptionRule `json:"ExceptionRules"`
 }
 
@@ -321,6 +322,55 @@ func CheckException(r *http.Request, rules []*ExceptionRule) bool {
 					}
 				}
 			}
+		}
+	}
+
+	return false
+}
+
+func normalizeProtectedPathPrefix(pathPrefix string) string {
+	pathPrefix = strings.TrimSpace(pathPrefix)
+	if pathPrefix == "" {
+		return ""
+	}
+
+	if !strings.HasPrefix(pathPrefix, "/") {
+		pathPrefix = "/" + pathPrefix
+	}
+
+	if pathPrefix != "/" {
+		pathPrefix = strings.TrimSuffix(pathPrefix, "/")
+	}
+
+	return pathPrefix
+}
+
+func pathPrefixMatch(requestPath string, pathPrefix string) bool {
+	normalizedPath := normalizeProtectedPathPrefix(requestPath)
+	normalizedPrefix := normalizeProtectedPathPrefix(pathPrefix)
+	if normalizedPath == "" {
+		normalizedPath = "/"
+	}
+	if normalizedPrefix == "" {
+		return false
+	}
+	if normalizedPrefix == "/" {
+		return true
+	}
+
+	return normalizedPath == normalizedPrefix || strings.HasPrefix(normalizedPath, normalizedPrefix+"/")
+}
+
+// ShouldEnforcePath returns true when CAPTCHA should apply to the request path.
+// If no protected path prefixes are configured, CAPTCHA applies to all paths.
+func ShouldEnforcePath(requestPath string, config *Config) bool {
+	if config == nil || len(config.ProtectedPathPrefixes) == 0 {
+		return true
+	}
+
+	for _, pathPrefix := range config.ProtectedPathPrefixes {
+		if pathPrefixMatch(requestPath, pathPrefix) {
+			return true
 		}
 	}
 
