@@ -59,7 +59,7 @@ func rewriteUserAgent(header http.Header, UA string) {
 }
 
 // Add X-Forwarded-For Header and rewrite X-Real-Ip according to sniffing logics
-func addXForwardedForHeader(req *http.Request) {
+func AddXForwardedForHeader(req *http.Request) {
 	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
 		// If we aren't the first proxy retain prior
 		// X-Forwarded-For information as a comma+space

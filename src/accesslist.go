@@ -10,6 +10,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 	"imuslab.com/zoraxy/mod/utils"
@@ -60,7 +61,7 @@ func handleAttachRuleToHost(w http.ResponseWriter, r *http.Request) {
 	//Update the proxy host acess rule id
 	targetProxyEndpoint.AccessFilterUUID = ruleid
 	targetProxyEndpoint.UpdateToRuntime()
-	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -143,7 +144,7 @@ func handleRemoveAccessRule(w http.ResponseWriter, r *http.Request) {
 			//set it to default
 			proxyEndpoint.AccessFilterUUID = "default"
 			proxyEndpoint.UpdateToRuntime()
-			err = SaveReverseProxyConfig(proxyEndpoint)
+			err = dynamicproxy.SaveReverseProxyConfig(proxyEndpoint)
 			if err != nil {
 				SystemWideLogger.PrintAndLog("Access", "Unable to save updated proxy endpoint "+proxyEndpoint.RootOrMatchingDomain, err)
 			} else {

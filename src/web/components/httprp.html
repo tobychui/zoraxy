@@ -587,6 +587,57 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- Anubis Gating -->
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="EnableAnubis">
+                                <label>Enable Anubis Challenge<br>
+                                <small>Gate access to this endpoint with verification powered by Anubis</small></label>
+                            </div>
+                            <div class="anubisSettings" style="margin-top: 1em; padding-left: 1.5em;">
+                                <label>ED25519 Key</label>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="text" class="AnubisEd25519KeyHex" placeholder="ED25519 Key">
+                                </div>
+                                <label>Difficulty</label>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="number" step="1" min="0" max="100" class="AnubisDifficulty" placeholder="Difficulty">
+                                </div>
+                                <div class="ui small fluid checkbox" style="margin-top: 0.8em; margin-bottom: 1.6em;">
+                                    <input type="checkbox" class="AnubisServeRobotsTxt">
+                                    <label>Serve robots.txt</label>
+                                </div>
+                                <label>Webmaster Email</label>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="email" class="AnubisWebmasterEmail" placeholder="webmaster@localhost">
+                                </div>
+                                <label>Cookie Domain</label>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="text" class="AnubisCookieDomain" placeholder="example.com">
+                                </div>
+                                <div class="ui small fluid checkbox" style="margin-top: 0.8em; margin-bottom: 1.6em;">
+                                    <input type="checkbox" class="AnubisCookieDynamicDomain">
+                                    <label>Cookie Dynamic Domain</label>
+                                </div>
+                                <div class="ui small right labeled fluid input" style="margin-bottom: 0.8em;">
+                                    <input type="number" class="AnubisCookieExpiration" value="604800" min="60" max="2678400">
+                                    <label class="ui basic label">seconds</label>
+                                </div>
+                                <small style="opacity:0.7;">Cookie expiration: how long users can access before needing to be re-verified</small>
+                                <br />
+                                <div class="ui small fluid checkbox" style="margin-top: 0.8em;">
+                                    <input type="checkbox" class="AnubisCookiePartitioned">
+                                    <label>Cookie Partitioned</label>
+                                </div>
+                                <br />
+                                <div class="ui small fluid checkbox" style="margin-top: 0.8em; margin-bottom: 1.6em;">
+                                    <input type="checkbox" class="AnubisCookieSecure">
+                                    <label>Cookie Secure</label>
+                                </div>
+                                <label>Policy</label>
+                                <div class="ui small fluid input" style="margin-bottom: 0.8em;">
+                                    <textarea class="AnubisPolicy" placeholder="Policy YAML"></textarea>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Tags -->
@@ -1111,6 +1162,19 @@
         let captchaRecaptchaVersion = $(editor).find(".recaptchaVersionDropdown").dropdown("get value");
         let captchaRecaptchaScore = $(editor).find(".RecaptchaScore").val();
 
+        // Anubis Gating
+        let enableAnubis = $(editor).find(".EnableAnubis")[0].checked;
+        let anubisPolicy = $(editor).find(".AnubisPolicy")[0].value;
+        let anubisKey = $(editor).find(".AnubisEd25519KeyHex")[0].value;
+        let anubisDifficulty = $(editor).find(".AnubisDifficulty")[0].value;
+        let anubisServeRobotsTxt = $(editor).find(".AnubisServeRobotsTxt")[0].checked;
+        let anubisWebmasterEmail = $(editor).find(".AnubisWebmasterEmail")[0].value;
+        let anubisCookieDomain = $(editor).find(".AnubisCookieDomain")[0].value;
+        let anubisCookieDynamicDomain = $(editor).find(".AnubisCookieDynamicDomain")[0].checked;
+        let anubisCookieExpiration = $(editor).find(".AnubisCookieExpiration")[0].value;
+        let anubisCookiePartitioned = $(editor).find(".AnubisCookiePartitioned")[0].checked;
+        let anubisCookieSecure = $(editor).find(".AnubisCookieSecure")[0].checked;
+
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
             tags = tags.join(",");
@@ -1142,6 +1206,17 @@
                 "captchaSessionDuration": captchaSessionDuration,
                 "captchaRecaptchaVersion": captchaRecaptchaVersion,
                 "captchaRecaptchaScore": captchaRecaptchaScore,
+                "anubis": enableAnubis,
+                "anubisPolicy": anubisPolicy,
+                "anubisEd25519KeyHex": anubisKey,
+                "anubisDifficulty": anubisDifficulty,
+                "anubisServeRobotsTxt": anubisServeRobotsTxt,
+                "anubisWebmasterEmail": anubisWebmasterEmail,
+                "anubisCookieDomain": anubisCookieDomain,
+                "anubisCookieDynamicDomain": anubisCookieDynamicDomain,
+                "anubisCookieExpiration": anubisCookieExpiration + "s",
+                "anubisCookiePartitioned": anubisCookiePartitioned,
+                "anubisCookieSecure": anubisCookieSecure,
                 "tags": tags,
             };
         console.log("updating proxy config:", cfgPayload);
@@ -1918,6 +1993,51 @@
             editor.find(".googleRecaptchaSettings").hide();
         }
 
+        // Anubis Gating
+        if (subd.EnableAnubis) {
+            editor.find(".EnableAnubis").prop("checked", true);
+            editor.find(".anubisSettings").show();
+        } else {
+            editor.find(".EnableAnubis").prop("checked", false);
+            editor.find(".anubisSettings").hide();
+        }
+
+        function boolOr(a, b) {
+            if (a == undefined || a == null) return b;
+            return a;
+        }
+
+        // Populate Anubis config if it exists
+        if (subd.AnubisConfig) {
+            editor.find(".AnubisPolicy").val(subd.AnubisConfig.Policy || "");
+            editor.find(".AnubisEd25519KeyHex").val(subd.AnubisConfig.Ed25519KeyHex || "");
+            editor.find(".AnubisDifficulty").val((subd.AnubisConfig.Difficulty || 0).toString());
+            editor.find(".AnubisServeRobotsTxt").prop("checked", boolOr(subd.AnubisConfig.ServeRobotsTXT, false));
+            editor.find(".AnubisWebmasterEmail").val(subd.AnubisConfig.WebmasterEmail || "");
+            editor.find(".AnubisCookieDomain").val(subd.AnubisConfig.CookieDomain || "");
+            editor.find(".AnubisCookieDynamicDomain").prop("checked", boolOr(subd.AnubisConfig.CookieDynamicDomain, false));
+            editor.find(".AnubisCookiePartitioned").prop("checked", boolOr(subd.AnubisConfig.CookiePartitioned, false));
+            editor.find(".AnubisCookieSecure").prop("checked", boolOr(subd.AnubisConfig.CookieSecure, true));
+
+            if (subd.AnubisConfig.CookieExpiration) {
+                editor.find(".AnubisCookieExpiration").val(subd.AnubisConfig.CookieExpiration / 1000 / 1000 / 1000);
+            } else {
+                editor.find(".AnubisCookieExpiration").val(0);
+            }
+        } else {
+            // Set defaults
+            editor.find(".AnubisPolicy").val("");
+            editor.find(".AnubisEd25519KeyHex").val("");
+            editor.find(".AnubisDifficulty").val("4");
+            editor.find(".AnubisServeRobotsTxt").prop("checked", false);
+            editor.find(".AnubisWebmasterEmail").val("");
+            editor.find(".AnubisCookieDomain").val("");
+            editor.find(".AnubisCookieDynamicDomain").prop("checked", false);
+            editor.find(".AnubisCookieExpiration").val("604800");
+            editor.find(".AnubisCookiePartitioned").prop("checked", false);
+            editor.find(".AnubisCookieSecure").prop("checked", true);
+        }
+
         // Initialize CAPTCHA dropdowns
         editor.find(".captchaProviderDropdown").dropdown('destroy');
         editor.find(".captchaProviderDropdown").dropdown({
@@ -1968,6 +2088,56 @@
             saveProxyInlineEdit(uuid);
         });
         editor.find(".RecaptchaScore").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        // Bind CAPTCHA checkbox change event
+        editor.find(".EnableAnubis").off("change").on("change", function() {
+            if ($(this).is(":checked")) {
+                editor.find(".anubisSettings").show();
+            } else {
+                editor.find(".anubisSettings").hide();
+            }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisEd25519KeyHex").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisDifficulty").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisServeRobotsTxt").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisWebmasterEmail").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisCookieDomain").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisCookieDynamicDomain").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisCookieExpiration").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisCookiePartitioned").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisCookieSecure").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".AnubisPolicy").off("change").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

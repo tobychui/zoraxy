@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/eventsystem"
 
 	"github.com/gorilla/csrf"
@@ -118,7 +119,7 @@ func startupSequence() {
 
 	//Create tmp folder and conf folder
 	os.MkdirAll(TMP_FOLDER, 0775)
-	os.MkdirAll(CONF_HTTP_PROXY, 0775)
+	os.MkdirAll(dynamicproxy.CONF_HTTP_PROXY, 0775)
 
 	//Create an auth agent
 	sessionKey, err := auth.GetSessionKey(sysdb, SystemWideLogger)

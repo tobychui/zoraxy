@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -200,7 +201,7 @@ func handleSetDomainPreferredCertificate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = SaveReverseProxyConfig(ept)
+	err = dynamicproxy.SaveReverseProxyConfig(ept)
 	if err != nil {
 		utils.SendErrorResponse(w, "failed to save reverse proxy config: "+err.Error())
 		return

@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -35,7 +35,7 @@ func (d *UXOptimizer) HandleDockerContainersList(w http.ResponseWriter, r *http.
 		return
 	}
 
-	networks, err := apiClient.NetworkList(context.Background(), types.NetworkListOptions{})
+	networks, err := apiClient.NetworkList(context.Background(), network.ListOptions{})
 	if err != nil {
 		d.SystemWideLogger.PrintAndLog("Docker", "List docker network failed", err)
 		utils.SendErrorResponse(w, "List docker network failed")

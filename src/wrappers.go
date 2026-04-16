@@ -187,7 +187,7 @@ func HandleStaticWebServerPortChange(w http.ResponseWriter, r *http.Request) {
 		//Replace the root
 		dynamicProxyRouter.Root = activatedNewRoot
 
-		SaveReverseProxyConfig(newDraftingRoot)
+		dynamicproxy.SaveReverseProxyConfig(newDraftingRoot)
 	}
 
 	err = staticWebServer.ChangePort(strconv.Itoa(newPort))

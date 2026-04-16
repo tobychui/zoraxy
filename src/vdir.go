@@ -140,7 +140,7 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save it to file
-	SaveReverseProxyConfig(activatedProxyEndpoint)
+	dynamicproxy.SaveReverseProxyConfig(activatedProxyEndpoint)
 
 	// Update uptime monitor
 	UpdateUptimeMonitorTargets()
@@ -190,7 +190,7 @@ func ReverseProxyDeleteVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = SaveReverseProxyConfig(targetEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetEndpoint)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("Config", "Fail to write vdir rules update to config file", err)
 		utils.SendErrorResponse(w, "unable to write changes to file")
@@ -284,7 +284,7 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save changes to file
-	SaveReverseProxyConfig(activatedProxyEndpoint)
+	dynamicproxy.SaveReverseProxyConfig(activatedProxyEndpoint)
 
 	UpdateUptimeMonitorTargets()
 
