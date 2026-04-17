@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TecharoHQ/anubis"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
@@ -72,6 +73,44 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 		SessionDuration:  captchaSessionDuration,
 		RecaptchaVersion: captchaRecaptchaVersion,
 		RecaptchaScore:   captchaRecaptchaScore,
+	}, nil
+}
+
+// parseAnubisConfigFromRequest extracts and parses Anubis configuration from POST request parameters
+func parseAnubisConfigFromRequest(r *http.Request) (*dynamicproxy.AnubisConfig, error) {
+	enableAnubis, _ := utils.PostBool(r, "anubis")
+	if !enableAnubis {
+		return nil, nil
+	}
+
+	policy, _ := utils.PostPara(r, "anubisPolicy")
+	ed25519keyHex, _ := utils.PostPara(r, "anubisEd25519KeyHex")
+	difficulty, _ := utils.PostInt(r, "anubisDifficulty")
+	serveRobotsTxt, _ := utils.PostBool(r, "anubisServeRobotsTxt")
+	webmasterEmail, _ := utils.PostPara(r, "anubisWebmasterEmail")
+	cookieDomain, _ := utils.PostPara(r, "anubisCookieDomain")
+	cookieDynamicDomain, _ := utils.PostBool(r, "anubisCookieDynamicDomain")
+	cookieExpiration, _ := utils.PostDuration(r, "anubisCookieExpiration")
+	cookiePartitioned, _ := utils.PostBool(r, "anubisCookiePartitioned")
+	cookieSecure, _ := utils.PostBool(r, "anubisCookieSecure")
+
+	cookieExpiry := anubis.CookieDefaultExpirationTime
+
+	if cookieExpiration != nil {
+		cookieExpiry = *cookieExpiration
+	}
+
+	return &dynamicproxy.AnubisConfig{
+		Policy:              policy,
+		Ed25519KeyHex:       ed25519keyHex,
+		Difficulty:          difficulty,
+		ServeRobotsTXT:      serveRobotsTxt,
+		WebmasterEmail:      webmasterEmail,
+		CookieDomain:        cookieDomain,
+		CookieDynamicDomain: cookieDynamicDomain,
+		CookieExpiration:    cookieExpiry,
+		CookiePartitioned:   cookiePartitioned,
+		CookieSecure:        cookieSecure,
 	}, nil
 }
 
@@ -163,17 +202,17 @@ func ReverseProxyInit() {
 		ForceHttpsRedirect: forceHttpsRedirect,
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
-		TlsManager:         tlsCertManager,
-		RedirectRuleTable:  redirectTable,
-		GeodbStore:         geodbStore,
-		StatisticCollector: statisticCollector,
-		WebDirectory:       *path_webserver,
-		AccessController:   accessController,
-		ForwardAuthRouter:  forwardAuthRouter,
-		OAuth2Router:       oauth2Router,
+		TlsManager:          tlsCertManager,
+		RedirectRuleTable:   redirectTable,
+		GeodbStore:          geodbStore,
+		StatisticCollector:  statisticCollector,
+		WebDirectory:        *path_webserver,
+		AccessController:    accessController,
+		ForwardAuthRouter:   forwardAuthRouter,
+		OAuth2Router:        oauth2Router,
 		ZorxAuthAgentRouter: zorxAuthRouter,
-		LoadBalancer:       loadBalancer,
-		PluginManager:      pluginManager,
+		LoadBalancer:        loadBalancer,
+		PluginManager:       pluginManager,
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -197,7 +236,7 @@ func ReverseProxyInit() {
 		Load all conf from files
 
 	*/
-	confs, _ := filepath.Glob(CONF_HTTP_PROXY + "/*.config")
+	confs, _ := filepath.Glob(dynamicproxy.CONF_HTTP_PROXY + "/*.config")
 	for _, conf := range confs {
 		err := LoadReverseProxyConfig(conf)
 		if err != nil {
@@ -365,6 +404,14 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	requireCaptcha := captchaConfig != nil
 
+	// Anubis Gating
+	anubisConfig, err := parseAnubisConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse Anubis config: "+err.Error())
+		return
+	}
+	enableAnubis := anubisConfig != nil
+
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
 	if strbpwsorg == "" {
@@ -503,6 +550,10 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireCaptcha: requireCaptcha,
 			CaptchaConfig:  captchaConfig,
 
+			// Anubis Gating
+			EnableAnubis: enableAnubis,
+			AnubisConfig: anubisConfig,
+
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
 			DisableAutoFallback:  false, // Default to false for new endpoints
@@ -583,7 +634,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save the config to file
-	err = SaveReverseProxyConfig(proxyEndpointCreated)
+	err = dynamicproxy.SaveReverseProxyConfig(proxyEndpointCreated)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to save new proxy rule to file", err)
 		return
@@ -671,6 +722,14 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	requireCaptcha := captchaConfig != nil
 
+	// Anubis Gating
+	anubisConfig, err := parseAnubisConfigFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse Anubis config: "+err.Error())
+		return
+	}
+	enableAnubis := anubisConfig != nil
+
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
 
@@ -737,6 +796,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.RateLimit = proxyRateLimit
 	newProxyEndpoint.RequireCaptcha = requireCaptcha
 	newProxyEndpoint.CaptchaConfig = captchaConfig
+	newProxyEndpoint.EnableAnubis = enableAnubis
+	newProxyEndpoint.AnubisConfig = anubisConfig
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
@@ -760,7 +821,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
 
 	//Save it to file
-	SaveReverseProxyConfig(newProxyEndpoint)
+	dynamicproxy.SaveReverseProxyConfig(newProxyEndpoint)
 
 	//Update uptime monitor targets
 	UpdateUptimeMonitorTargets()
@@ -815,7 +876,7 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
 
 	// Save it to file
-	err = SaveReverseProxyConfig(newProxyEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(newProxyEndpoint)
 	if err != nil {
 		utils.SendErrorResponse(w, "Alias update failed")
 		SystemWideLogger.PrintAndLog("proxy-config", "Unable to save alias update", err)
@@ -879,7 +940,7 @@ func ReverseProxyHandleSetTlsConfig(w http.ResponseWriter, r *http.Request) {
 	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
 
 	//Save it to file
-	err = SaveReverseProxyConfig(ept)
+	err = dynamicproxy.SaveReverseProxyConfig(ept)
 	if err != nil {
 		utils.SendErrorResponse(w, "Failed to save TLS config: "+err.Error())
 		return
@@ -947,7 +1008,7 @@ func ReverseProxyHandleSetHostname(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Remove the config from file
-	err = RemoveReverseProxyConfig(originalRootnameOrMatchingDomain)
+	err = dynamicproxy.RemoveReverseProxyConfig(originalRootnameOrMatchingDomain)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -957,7 +1018,7 @@ func ReverseProxyHandleSetHostname(w http.ResponseWriter, r *http.Request) {
 	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
 
 	//Save it to file
-	SaveReverseProxyConfig(newEndpoint)
+	dynamicproxy.SaveReverseProxyConfig(newEndpoint)
 
 	//Update uptime monitor targets
 	UpdateUptimeMonitorTargets()
@@ -980,7 +1041,7 @@ func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Remove the config from file
-	err = RemoveReverseProxyConfig(ep)
+	err = dynamicproxy.RemoveReverseProxyConfig(ep)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -1088,7 +1149,7 @@ func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
 		targetProxy.AuthenticationProvider.BasicAuthCredentials = mergedCredentials
 
 		//Save it to file
-		SaveReverseProxyConfig(targetProxy)
+		dynamicproxy.SaveReverseProxyConfig(targetProxy)
 
 		//Replace runtime configuration
 		targetProxy.UpdateToRuntime()
@@ -1126,8 +1187,6 @@ func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 	}
 	js, _ := json.Marshal(results)
 	utils.SendJSONResponse(w, string(js))
-
-	return
 }
 
 func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
@@ -1246,7 +1305,7 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 
 	//Save configs to runtime and file
 	targetProxy.UpdateToRuntime()
-	SaveReverseProxyConfig(targetProxy)
+	dynamicproxy.SaveReverseProxyConfig(targetProxy)
 
 	utils.SendOK(w)
 }
@@ -1332,7 +1391,7 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 
 	// Save configs to runtime and file
 	targetProxy.UpdateToRuntime()
-	SaveReverseProxyConfig(targetProxy)
+	dynamicproxy.SaveReverseProxyConfig(targetProxy)
 
 	utils.SendOK(w)
 }
@@ -1370,7 +1429,7 @@ func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
 
 	//Flip the enable and disabled tag state
 	targetProxyRule.Disabled = !isEnabled
-	err = SaveReverseProxyConfig(targetProxyRule)
+	err = dynamicproxy.SaveReverseProxyConfig(targetProxyRule)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to save updated rule")
 		return
@@ -1783,7 +1842,7 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save it (no need reload as header are not handled by dpcore)
-	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to save update")
 		return
@@ -1818,7 +1877,7 @@ func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 	if err != nil {
 		utils.SendErrorResponse(w, "unable to save update")
 		return
@@ -1857,7 +1916,7 @@ func HandleHostOverwrite(w http.ResponseWriter, r *http.Request) {
 		newProxyEndpoint := targetProxyEndpoint.Clone()
 		newProxyEndpoint.HeaderRewriteRules.RequestHostOverwrite = newHostname
 		//Save proxy endpoint
-		err = SaveReverseProxyConfig(newProxyEndpoint)
+		err = dynamicproxy.SaveReverseProxyConfig(newProxyEndpoint)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -1931,7 +1990,7 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 		newProxyEndpoint.HeaderRewriteRules.DisableHopByHopHeaderRemoval = !enableHopByHopRemover
 
 		//Save proxy endpoint
-		err = SaveReverseProxyConfig(newProxyEndpoint)
+		err = dynamicproxy.SaveReverseProxyConfig(newProxyEndpoint)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -2005,7 +2064,7 @@ func HandleUserAgent(w http.ResponseWriter, r *http.Request) {
 		newProxyEndpoint.HeaderRewriteRules.DisableUserAgentHeaderRemoval = !enableUserAgentRemover
 
 		//Save proxy endpoint
-		err = SaveReverseProxyConfig(newProxyEndpoint)
+		err = dynamicproxy.SaveReverseProxyConfig(newProxyEndpoint)
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
 			return
@@ -2078,7 +2137,7 @@ func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 
 		if newMaxAge == 0 || newMaxAge >= 31536000 {
 			targetProxyEndpoint.HeaderRewriteRules.HSTSMaxAge = int64(newMaxAge)
-			err = SaveReverseProxyConfig(targetProxyEndpoint)
+			err = dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 			if err != nil {
 				utils.SendErrorResponse(w, "save HSTS state failed: "+err.Error())
 				return
@@ -2139,7 +2198,7 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 		}
 
 		targetProxyEndpoint.HeaderRewriteRules.EnablePermissionPolicyHeader = enableState
-		SaveReverseProxyConfig(targetProxyEndpoint)
+		dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 		targetProxyEndpoint.UpdateToRuntime()
 		utils.SendOK(w)
 		return
@@ -2161,7 +2220,7 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 
 		//Save it to file
 		targetProxyEndpoint.HeaderRewriteRules.PermissionPolicy = newPermissionPolicy
-		SaveReverseProxyConfig(targetProxyEndpoint)
+		dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 		targetProxyEndpoint.UpdateToRuntime()
 		utils.SendOK(w)
 		return
@@ -2197,7 +2256,7 @@ func HandleWsHeaderBehavior(w http.ResponseWriter, r *http.Request) {
 		}
 
 		targetProxyEndpoint.EnableWebsocketCustomHeaders = enableWsHeader
-		SaveReverseProxyConfig(targetProxyEndpoint)
+		dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 		targetProxyEndpoint.UpdateToRuntime()
 		utils.SendOK(w)
 
@@ -2290,7 +2349,7 @@ func HandleSetListeningPorts(w http.ResponseWriter, r *http.Request) {
 	targetProxyEndpoint.ListeningPorts = newPorts
 
 	// Save to file
-	err = SaveReverseProxyConfig(targetProxyEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetProxyEndpoint)
 	if err != nil {
 		utils.SendErrorResponse(w, "failed to save config: "+err.Error())
 		return

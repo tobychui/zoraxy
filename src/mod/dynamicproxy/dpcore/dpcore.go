@@ -284,7 +284,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Add X-Forwarded-For Header.
-	addXForwardedForHeader(outreq)
+	AddXForwardedForHeader(outreq)
 
 	// Add user defined headers (to upstream)
 	injectUserDefinedHeaders(outreq.Header, rrr.UpstreamHeaders)

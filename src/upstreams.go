@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -116,7 +117,7 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save changes to configs
-	err = SaveReverseProxyConfig(targetEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetEndpoint)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("INFO", "Unable to save new upstream to proxy config", err)
 		utils.SendErrorResponse(w, "Failed to save new upstream config")
@@ -191,7 +192,7 @@ func ReverseProxyUpstreamUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save changes to configs
-	err = SaveReverseProxyConfig(targetEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetEndpoint)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("INFO", "Unable to save upstream update to proxy config", err)
 		utils.SendErrorResponse(w, "Failed to save updated upstream config")
@@ -246,7 +247,7 @@ func ReverseProxyUpstreamSetPriority(w http.ResponseWriter, r *http.Request) {
 	// and the change of weight do not requre a respawn of the proxy object
 	// so no need to remove & re-prepare the upstream on weight changes
 
-	err = SaveReverseProxyConfig(targetEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetEndpoint)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("INFO", "Unable to update upstream weight", err)
 		utils.SendErrorResponse(w, "Failed to update upstream weight")
@@ -288,7 +289,7 @@ func ReverseProxyUpstreamDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//Save changes to configs
-	err = SaveReverseProxyConfig(targetEndpoint)
+	err = dynamicproxy.SaveReverseProxyConfig(targetEndpoint)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("INFO", "Unable to remove upstream", err)
 		utils.SendErrorResponse(w, "Failed to remove upstream from proxy rule")

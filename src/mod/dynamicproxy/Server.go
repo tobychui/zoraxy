@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/anubis"
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 )
 
 /*
@@ -31,6 +33,49 @@ import (
 		- Subdomain Proxy
 	- Root router (default site router)
 */
+
+type FinalProxyHandler struct {
+	Parent   *Router
+	Handler  *ProxyHandler
+	Endpoint *ProxyEndpoint
+}
+
+func (h *FinalProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	//Validate auth (basic auth or SSO auth)
+	respWritten := handleAuthProviderRouting(h.Endpoint, w, r, h.Handler)
+	if respWritten {
+		//Request handled by subroute
+		return
+	}
+
+	//Plugin routing
+	if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, h.Endpoint.Tags) {
+		//Request handled by subroute
+		return
+	}
+
+	//Check if any virtual directory rules matches
+	proxyingPath := strings.TrimSpace(r.RequestURI)
+	targetProxyEndpoint := h.Endpoint.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
+	if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
+		//Virtual directory routing rule found. Route via vdir mode
+		h.Handler.vdirRequest(w, r, targetProxyEndpoint)
+		return
+	} else if !strings.HasSuffix(proxyingPath, "/") && h.Endpoint.ProxyType != ProxyTypeRoot {
+		potentialProxtEndpoint := h.Endpoint.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
+		if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
+			//Missing tailing slash. Redirect to target proxy endpoint
+			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
+			if !h.Endpoint.DisableLogging {
+				h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
+			}
+			return
+		}
+	}
+
+	//Fallback to handle by the host proxy forwarder
+	h.Handler.hostRequest(w, r, h.Endpoint)
+}
 
 func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/*
@@ -124,40 +169,27 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		//Validate auth (basic auth or SSO auth)
-		respWritten := handleAuthProviderRouting(sep, w, r, h)
-		if respWritten {
-			//Request handled by subroute
-			return
+		final := FinalProxyHandler{
+			Parent:   h.Parent,
+			Handler:  h,
+			Endpoint: sep,
 		}
 
-		//Plugin routing
-		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags) {
-			//Request handled by subroute
-			return
-		}
+		// Anubis Gating
+		if sep.EnableAnubis && sep.AnubisConfig != nil {
+			publicUrl := r.URL.Scheme + "://" + r.URL.Host
+			dpcore.AddXForwardedForHeader(r)
+			a, save := anubis.GetHandler(sep.AnubisConfig, sep, publicUrl, &final)
 
-		//Check if any virtual directory rules matches
-		proxyingPath := strings.TrimSpace(r.RequestURI)
-		targetProxyEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath)
-		if targetProxyEndpoint != nil && !targetProxyEndpoint.Disabled {
-			//Virtual directory routing rule found. Route via vdir mode
-			h.vdirRequest(w, r, targetProxyEndpoint)
-			return
-		} else if !strings.HasSuffix(proxyingPath, "/") && sep.ProxyType != ProxyTypeRoot {
-			potentialProxtEndpoint := sep.GetVirtualDirectoryHandlerFromRequestURI(proxyingPath + "/")
-			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
-				//Missing tailing slash. Redirect to target proxy endpoint
-				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
-				if !sep.DisableLogging {
-					h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
-				}
-				return
+			if save {
+				SaveReverseProxyConfig(sep)
 			}
+
+			a.ServeHTTP(w, r)
+		} else {
+			final.ServeHTTP(w, r)
 		}
 
-		//Fallback to handle by the host proxy forwarder
-		h.hostRequest(w, r, sep)
 		return
 	}
 

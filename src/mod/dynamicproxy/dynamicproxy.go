@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,7 +20,10 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/utils"
 )
+
+var CONF_HTTP_PROXY string //HTTP proxy configuration path
 
 /*
 	Zoraxy Dynamic Proxy
@@ -44,6 +49,48 @@ func NewDynamicProxy(option RouterOption) (*Router, error) {
 	}
 
 	return &thisRouter, nil
+}
+
+func filterProxyConfigFilename(filename string) string {
+	//Filter out wildcard characters
+	filename = strings.ReplaceAll(filename, "*", "(ST)")
+	filename = strings.ReplaceAll(filename, "?", "(QM)")
+	filename = strings.ReplaceAll(filename, "[", "(OB)")
+	filename = strings.ReplaceAll(filename, "]", "(CB)")
+	filename = strings.ReplaceAll(filename, "#", "(HT)")
+	return filepath.ToSlash(filename)
+}
+
+func SaveReverseProxyConfig(endpoint *ProxyEndpoint) error {
+	//Get filename for saving
+	filename := filepath.Join(CONF_HTTP_PROXY, endpoint.RootOrMatchingDomain+".config")
+	if endpoint.ProxyType == ProxyTypeRoot {
+		filename = filepath.Join(CONF_HTTP_PROXY, "root.config")
+	}
+
+	filename = filterProxyConfigFilename(filename)
+
+	//Save config to file
+	js, err := json.MarshalIndent(endpoint, "", " ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filename, js, 0775)
+}
+
+func RemoveReverseProxyConfig(endpoint string) error {
+	filename := filepath.Join(CONF_HTTP_PROXY, endpoint+".config")
+	if endpoint == "/" {
+		filename = filepath.Join(CONF_HTTP_PROXY, "/root.config")
+	}
+
+	filename = filterProxyConfigFilename(filename)
+
+	if !utils.FileExists(filename) {
+		return errors.New("target endpoint not exists")
+	}
+	return os.Remove(filename)
 }
 
 // Update TLS setting in runtime. Will restart the proxy server

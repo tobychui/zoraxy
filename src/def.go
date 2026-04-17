@@ -113,7 +113,6 @@ var (
 	TMP_FOLDER                 string //Temporary folder path
 	ACME_AUTORENEW_CONFIG_PATH string //ACME auto renew configuration path
 	CONF_FOLDER                string //Configuration folder path
-	CONF_HTTP_PROXY            string //HTTP proxy configuration path
 	CONF_STREAM_PROXY          string //Stream proxy configuration path
 	CONF_CERT_STORE            string //Certificate store path
 	CONF_REDIRECTION           string //Redirection configuration path

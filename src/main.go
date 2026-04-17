@@ -43,6 +43,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/update"
 	"imuslab.com/zoraxy/mod/utils"
@@ -66,7 +67,7 @@ func main() {
 	//Initialize path variables from flags
 	TMP_FOLDER = *path_tmp
 	CONF_FOLDER = *path_conf
-	CONF_HTTP_PROXY = CONF_FOLDER + "/proxy"
+	dynamicproxy.CONF_HTTP_PROXY = CONF_FOLDER + "/proxy"
 	CONF_STREAM_PROXY = CONF_FOLDER + "/streamproxy"
 	CONF_CERT_STORE = CONF_FOLDER + "/certs"
 	CONF_REDIRECTION = CONF_FOLDER + "/redirect"

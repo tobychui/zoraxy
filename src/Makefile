@@ -17,6 +17,11 @@ clean:
 	rm -f zoraxy_*_*
 	rm -f web.tar.gz
 
+anubis:
+	cd thirdparty/anubis
+	npm install
+	npm run assets
+
 $(PLATFORMS):
 	@echo "Building $(os)/$(arch)"
 	GOROOT_FINAL=Git/ GOOS=$(os) GOARCH=$(arch) $(if $(filter linux/arm,$(os)/$(arch)),GOARM=6,) CGO_ENABLED="0" go build -o './dist/zoraxy_$(os)_$(arch)'  -ldflags "-s -w" -trimpath

@@ -1,0 +1,3 @@
+[submodule "src/thirdparty/anubis"]
+	path = src/thirdparty/anubis
+	url = https://github.com/TecharoHQ/anubis

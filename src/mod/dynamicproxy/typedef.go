@@ -18,6 +18,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
+	"imuslab.com/zoraxy/mod/dynamicproxy/anubis"
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
@@ -207,6 +208,9 @@ const (
 	CaptchaExceptionType_CIDR  = captcha.ExceptionTypeCIDR
 )
 
+/* Anubis Provider Configuration */
+type AnubisConfig = anubis.AnubisConfig
+
 // A proxy endpoint record, a general interface for handling inbound routing
 type ProxyEndpoint struct {
 	ProxyType            ProxyType               //The type of this proxy, see const def
@@ -267,6 +271,10 @@ type ProxyEndpoint struct {
 	parent   *Router            `json:"-"` //Parent router, excluded from JSON
 	detector *exploits.Detector `json:"-"` //Exploit detector instance, excluded from JSON
 	Tags     []string           // Tags for the proxy endpoint
+
+	// Anubis Gating
+	EnableAnubis bool          // Enable Anubis gating for this endpoint
+	AnubisConfig *AnubisConfig // Anubis configuration
 }
 
 /*
