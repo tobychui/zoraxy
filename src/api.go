@@ -243,6 +243,8 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/webdav/start", staticWebServer.HandleStartWebDAV)
 	authRouter.HandleFunc("/api/webserv/webdav/stop", staticWebServer.HandleStopWebDAV)
 	authRouter.HandleFunc("/api/webserv/webdav/setPort", staticWebServer.HandleWebDAVPortChange)
+	authRouter.HandleFunc("/api/webserv/webdav/setUseCustomCredentials", staticWebServer.HandleSetUseCustomCredentials)
+	authRouter.HandleFunc("/api/webserv/webdav/setCustomCredentials", staticWebServer.HandleSetCustomCredentials)
 }
 
 // Register the APIs for Network Utilities functions

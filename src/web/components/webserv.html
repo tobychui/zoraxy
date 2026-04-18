@@ -109,7 +109,40 @@
             <input id="webdav_port" type="number" step="1" min="1" max="65535" value="5488">
             <small>WebDAV server listens only on localhost (127.0.0.1) for security reasons.</small>
         </div>
+        <div class="ui basic segment advanceoptions accordion" style="margin-top:0.6em;">
+            <div class="title">
+                <i class="dropdown icon"></i>
+                Advanced Options
+            </div>
+            <div class="content">
+                <div class="inline field">
+                    <div class="ui toggle checkbox">
+                        <input id="webdav_useCustomCredentials" type="checkbox" class="hidden">
+                        <label>Use Custom Credentials</label>
+                        <small>Use custom username and password for WebDAV instead of Zoraxy admin credentials.</small>
+                    </div>
+                </div>
+                <div id="webdav_customCredentialsForm">
+                    <div class="field">
+                        <label>Custom Username</label>
+                        <input id="webdav_customUsername" type="text" placeholder="Enter username (3-32 characters)">
+                    </div>
+                    <div class="field">
+                        <label>Custom Password</label>
+                        <input id="webdav_customPassword" type="password" placeholder="Enter password (minimum 8 characters)">
+                    </div>
+                    <button class="ui basic button" id="webdav_saveCustomCredentials">
+                        <i class="green save icon"></i>
+                        Save
+                    </button>
+                    <br><br>
+                    <small><i class="ui blue info circle icon"></i> Custom credentials are saved separately from other settings</small>
+                </div>
+            </div>
+        </div>
     </div>
+    <br>
+    <small><i class="ui blue save icon"></i> Changes are saved automatically</small>
     <br>
     <div class="ui message">
         <div class="ui accordion webdavhelp">
@@ -177,6 +210,7 @@
     <script>
         $(".webservhelp").accordion();
         $(".webdavhelp").accordion();
+        $(".advanceoptions.accordion").accordion();
         $(".ui.checkbox").checkbox();
 
         function setWebServerRunningState(running){
@@ -215,6 +249,8 @@
                 $("#webserv_listenPort").off("change");
                 $("#webdav_enable").off("change");
                 $("#webdav_port").off("change");
+                $("#webdav_useCustomCredentials").off("change");
+                $("#webdav_saveCustomCredentials").off("click");
 
                 setWebServerRunningState(data.Running);
 
@@ -246,6 +282,18 @@
                 
                 $("#webdav_port").val(data.WebDAVPort);
                 updateWebDAVPortExample(data.WebDAVPort);
+
+                //Custom credentials settings
+                if (data.UseCustomCredentials){
+                    $("#webdav_useCustomCredentials").parent().checkbox("set checked");
+                }else{
+                    $("#webdav_useCustomCredentials").parent().checkbox("set unchecked");
+                }
+                
+                // Set the custom username if available
+                if (data.CustomCredentialsUsername){
+                    $("#webdav_customUsername").val(data.CustomCredentialsUsername);
+                }
 
                 //Bind checkbox events
                 $("#webserv_enable").off("change").on("change", function(){
@@ -384,6 +432,62 @@
                             }else{
                                 msgbox("WebDAV port updated");
                                 updateWebDAVPortExample(newPort);
+                            }
+                        }
+                    })
+                });
+
+                // Custom credentials toggle
+                $("#webdav_useCustomCredentials").off("change").on("change", function(){
+                    let enable = $(this)[0].checked;
+                    $.cjax({
+                        url: "/api/webserv/webdav/setUseCustomCredentials",
+                        method: "POST",
+                        data: {"enable": enable},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                if (enable) {
+                                    msgbox("Custom credentials enabled. Please set username and password.");
+                                } else {
+                                    msgbox("Using Zoraxy admin credentials for WebDAV");
+                                }
+                            }
+                        }
+                    })
+                });
+
+                // Save custom credentials button
+                $("#webdav_saveCustomCredentials").off("click").on("click", function(){
+                    let username = $("#webdav_customUsername").val();
+                    let password = $("#webdav_customPassword").val();
+
+                    // Validate input
+                    if (!username || username.length < 3 || username.length > 32) {
+                        msgbox("Username must be between 3 and 32 characters", false);
+                        return;
+                    }
+
+                    if (!password || password.length < 8) {
+                        msgbox("Password must be at least 8 characters long", false);
+                        return;
+                    }
+
+                    $.cjax({
+                        url: "/api/webserv/webdav/setCustomCredentials",
+                        method: "POST",
+                        data: {
+                            "username": username,
+                            "password": password
+                        },
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false);
+                            }else{
+                                msgbox("Custom credentials saved successfully");
+                                // Clear password field for security
+                                $("#webdav_customPassword").val("");
                             }
                         }
                     })
