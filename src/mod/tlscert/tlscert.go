@@ -39,6 +39,20 @@ type Manager struct {
 //go:embed localhost.pem localhost.key
 var buildinCertStore embed.FS
 
+const (
+	defaultPublicCertFileMode os.FileMode = 0644
+	defaultPrivateKeyFileMode os.FileMode = 0600
+)
+
+func writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
+	err := os.WriteFile(filename, data, mode)
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(filename, mode)
+}
+
 func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	if !utils.FileExists(certStore) {
 		os.MkdirAll(certStore, 0775)
@@ -50,12 +64,12 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	//Check if this is initial setup
 	if !utils.FileExists(pubKey) {
 		buildInPubKey, _ := buildinCertStore.ReadFile(filepath.Base(pubKey))
-		os.WriteFile(pubKey, buildInPubKey, 0775)
+		writeFileWithMode(pubKey, buildInPubKey, defaultPublicCertFileMode)
 	}
 
 	if !utils.FileExists(priKey) {
 		buildInPriKey, _ := buildinCertStore.ReadFile(filepath.Base(priKey))
-		os.WriteFile(priKey, buildInPriKey, 0775)
+		writeFileWithMode(priKey, buildInPriKey, defaultPrivateKeyFileMode)
 	}
 
 	thisManager := Manager{

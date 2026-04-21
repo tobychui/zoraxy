@@ -79,6 +79,8 @@ var (
 	acmeAutoRenewInterval = flag.Int("autorenew", 86400, "ACME auto TLS/SSL certificate renew check interval (seconds)")
 	acmeCertAutoRenewDays = flag.Int("earlyrenew", 30, "Number of days to early renew a soon expiring certificate (days)")
 	acmeTestMode          = flag.Bool("acmetestmode", false, "Run ACME in test/staging mode")
+	acmeKeyFileMode       = flag.String("acmekeymode", "0600", "File mode for ACME private key files (octal)")
+	acmePublicFileMode    = flag.String("acmepublicmode", "0644", "File mode for ACME certificate and metadata files (octal)")
 
 	/* Logging Configuration Flags */
 	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
