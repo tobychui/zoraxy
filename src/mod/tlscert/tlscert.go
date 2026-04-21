@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"embed"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -45,12 +46,22 @@ const (
 )
 
 func writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
-	err := os.WriteFile(filename, data, mode)
+	// Clean the path and reject any path traversal sequences (e.g. "..")
+	// to prevent a crafted filename from escaping the intended directory.
+	cleanedPath := filepath.Clean(filename)
+	if strings.Contains(cleanedPath, "..") {
+		return fmt.Errorf("invalid filename: path traversal detected in %q", filename)
+	}
+
+	err := os.WriteFile(cleanedPath, data, mode)
 	if err != nil {
 		return err
 	}
 
-	return os.Chmod(filename, mode)
+	// os.WriteFile honours the process umask, so the on-disk permissions may
+	// differ from the requested mode. os.Chmod sets the exact bits regardless
+	// of the umask — essential for private-key files (e.g. 0600).
+	return os.Chmod(cleanedPath, mode)
 }
 
 func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
