@@ -359,42 +359,37 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
 func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
-	if endpoint != nil && endpoint.DisableLogging {
-		// Notes: endpoint can be nil if the request has been handled before a host name can be resolved
-		// e.g. Redirection matching rule
-		// in that case we will log it by default and will not enter this routine
+	// Notes: endpoint can be nil if the request has been handled before a host name can be resolved
+	// e.g. Redirection matching rule
+	if endpoint == nil || !endpoint.DisableLogging {
+		// log the http request to file
+		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
 		return
 	}
-
-	router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
 
 	if router.Option.StatisticCollector == nil {
 		// Statistic collection not yet initialized
 		return
 	}
 
-	if endpoint != nil && endpoint.DisableStatisticCollection {
-		// Endpoint level statistic collection disabled
-		return
+	if endpoint == nil || !endpoint.DisableStatisticCollection {
+		// Collect statistic from request
+		go func() {
+			requestInfo := statistic.RequestInfo{
+				IpAddr:                        netutils.GetRequesterIP(r),
+				RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
+				Succ:                          succ,
+				StatusCode:                    statusCode,
+				ForwardType:                   forwardType,
+				Referer:                       r.Referer(),
+				UserAgent:                     r.UserAgent(),
+				RequestURL:                    r.Host + r.RequestURI,
+				Target:                        originalHostname,
+				Upstream:                      upstreamHostname,
+			}
+			router.Option.StatisticCollector.RecordRequest(requestInfo)
+		}()
 	}
-
-	// Proceed to record the request info
-	go func() {
-		requestInfo := statistic.RequestInfo{
-			IpAddr:                        netutils.GetRequesterIP(r),
-			RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
-			Succ:                          succ,
-			StatusCode:                    statusCode,
-			ForwardType:                   forwardType,
-			Referer:                       r.Referer(),
-			UserAgent:                     r.UserAgent(),
-			RequestURL:                    r.Host + r.RequestURI,
-			Target:                        originalHostname,
-			Upstream:                      upstreamHostname,
-		}
-		router.Option.StatisticCollector.RecordRequest(requestInfo)
-	}()
-
 }
 
 // Serve error page with status code

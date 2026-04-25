@@ -49,14 +49,54 @@ func NewWebDAVServer(options *WebServerOptions, authAgent *auth.AuthAgent) *WebD
 func (wd *WebDAVServer) basicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, ok := r.BasicAuth()
-		if !ok || !wd.authAgent.ValidateUsernameAndPassword(username, password) {
-			w.Header().Set("WWW-Authenticate", `Basic realm="Zoraxy WebDAV"`)
-			w.Header().Set("Dav", "1, 2")
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
+
+		// Check if custom credentials are enabled
+		if wd.options.UseCustomCredentials {
+			// Use custom credentials from database
+			if !ok || !wd.validateCustomCredentials(username, password) {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Zoraxy WebDAV"`)
+				w.Header().Set("Dav", "1, 2")
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		} else {
+			// Use global admin credentials
+			if !ok || !wd.authAgent.ValidateUsernameAndPassword(username, password) {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Zoraxy WebDAV"`)
+				w.Header().Set("Dav", "1, 2")
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 		}
+
 		next.ServeHTTP(w, r)
 	})
+}
+
+// validateCustomCredentials validates custom WebDAV credentials
+func (wd *WebDAVServer) validateCustomCredentials(username, password string) bool {
+	// Get stored username and hashed password from database
+	var storedUsername string
+	var storedPasswordHash string
+
+	err := wd.options.Sysdb.Read("webserv", "webdavCustomUsername", &storedUsername)
+	if err != nil {
+		return false
+	}
+
+	err = wd.options.Sysdb.Read("webserv", "webdavCustomPasswordHash", &storedPasswordHash)
+	if err != nil {
+		return false
+	}
+
+	// Check if username matches
+	if username != storedUsername {
+		return false
+	}
+
+	// Hash the provided password and compare with stored hash
+	hashedPassword := auth.Hash(password)
+	return hashedPassword == storedPasswordHash
 }
 
 // Start starts the WebDAV server

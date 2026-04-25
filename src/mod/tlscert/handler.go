@@ -189,20 +189,12 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	os.MkdirAll(m.CertStore, 0775)
-	f, err := os.Create(filepath.Join(m.CertStore, overWriteFilename))
-	if err != nil {
-		http.Error(w, "Failed to create file", http.StatusInternalServerError)
-		return
+	fileMode := defaultPublicCertFileMode
+	if keytype == "pri" {
+		fileMode = defaultPrivateKeyFileMode
 	}
-	defer f.Close()
 
-	// copy file contents to destination file
-	_, err = io.Copy(f, file)
-	if err != nil {
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
-		return
-	}
-	_, err = f.Write(fileBytes)
+	err = writeFileWithMode(filepath.Join(m.CertStore, overWriteFilename), fileBytes, fileMode)
 	if err != nil {
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return

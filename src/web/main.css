@@ -689,6 +689,10 @@ body.darkTheme .menudivider{
     margin-left: 3px;
 }
 
+.statusDot:hover{
+    opacity: 0.8;
+}
+
 .online.statusDot{
     background-color: #3bd671;
 }
@@ -700,6 +704,10 @@ body.darkTheme .menudivider{
 }
 .padding.statusDot{
     cursor: auto;
+}
+
+#redirectionRuleList .ui.toggle.checkbox input:checked ~ label::before {
+	background-color: var(--buttom_toggle_active) !important;
 }
 
 /*

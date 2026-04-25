@@ -38,7 +38,7 @@ func (t *RuleTable) IsRedirectable(r *http.Request) bool {
 	requestPath := r.Host + r.URL.Path
 	rr := t.MatchRedirectRule(requestPath)
 	
-	if rr == nil {
+	if rr == nil || !rr.Enabled {
 		return false
 	}
 	

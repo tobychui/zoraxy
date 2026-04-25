@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/pprof"
@@ -127,6 +128,7 @@ func RegisterRedirectionAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/redirect/add", handleAddRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/delete", handleDeleteRedirectionRule)
 	authRouter.HandleFunc("/api/redirect/edit", handleEditRedirectionRule)
+	authRouter.HandleFunc("/api/redirect/toggle", handleToggleRedirectionRuleEnable)
 	authRouter.HandleFunc("/api/redirect/regex", handleToggleRedirectRegexpSupport)
 	authRouter.HandleFunc("/api/redirect/case_sensitive", handleToggleRedirectCaseSensitivity)
 }
@@ -241,6 +243,8 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/webdav/start", staticWebServer.HandleStartWebDAV)
 	authRouter.HandleFunc("/api/webserv/webdav/stop", staticWebServer.HandleStopWebDAV)
 	authRouter.HandleFunc("/api/webserv/webdav/setPort", staticWebServer.HandleWebDAVPortChange)
+	authRouter.HandleFunc("/api/webserv/webdav/setUseCustomCredentials", staticWebServer.HandleSetUseCustomCredentials)
+	authRouter.HandleFunc("/api/webserv/webdav/setCustomCredentials", staticWebServer.HandleSetCustomCredentials)
 }
 
 // Register the APIs for Network Utilities functions
@@ -367,7 +371,12 @@ func initAPIs(targetMux *http.ServeMux) {
 
 	// Register the standard web services URLs
 	var staticWebRes http.Handler
-	if *development_build {
+	webFolderExists := utils.FileExists("web")
+	if *development_build && !webFolderExists {
+		fmt.Println("Warning: Development build is enabled but 'web' folder does not exist. Falling back to embedded static resources.")
+		fmt.Println("If you are developing the web UI, please make sure to have the 'web' folder in the same directory as the executable for a better development experience with hot reload.")
+	}
+	if *development_build && webFolderExists {
 		staticWebRes = http.FileServer(http.Dir("web/"))
 	} else {
 		subFS, err := fs.Sub(webres, "web")

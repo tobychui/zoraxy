@@ -102,6 +102,18 @@
     
     function renderRecords(records){
         $("#utmrender").html("");
+        if (Object.keys(records).length === 0){
+            $("#utmrender").html(`<div class="ui basic segment">
+                <h4 class="ui header">
+                    <i class="green check circle icon"></i>
+                    <div class="content">
+                        No Uptime Monitor Targets
+                        <div class="sub header">There are currently no uptime monitor targets configured. To get started, go to <b>Create Proxy Rule</b> to add a new proxy rule, then refresh this page.</div>
+                    </div>
+                </h4>
+            </div>`);
+            return;
+        }
         for (let [key, value] of Object.entries(records)) {
             renderUptimeData(key, value);
         }

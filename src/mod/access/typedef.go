@@ -1,6 +1,7 @@
 package access
 
 import (
+	"net"
 	"sync"
 	"time"
 
@@ -53,4 +54,6 @@ type Controller struct {
 	//Internal
 	publicIpTicker     *time.Ticker
 	publicIpTickerStop chan bool
+	trustedCIDRs       []*net.IPNet   // Pre-parsed CIDR entries for fast lookup
+	trustedCIDRMu      sync.RWMutex   // Protects trustedCIDRs
 }

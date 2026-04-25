@@ -172,6 +172,29 @@ func handleToggleRedirectRegexpSupport(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
+// Handle toggling the enabled state of a redirection rule
+func handleToggleRedirectionRuleEnable(w http.ResponseWriter, r *http.Request) {
+	redirectUrl, err := utils.PostPara(r, "redirectUrl")
+	if err != nil {
+		utils.SendErrorResponse(w, "redirect url cannot be empty")
+		return
+	}
+
+	enabled, err := utils.PostPara(r, "enabled")
+	if err != nil {
+		utils.SendErrorResponse(w, "enabled state cannot be empty")
+		return
+	}
+
+	err = redirectTable.ToggleEnableRedirectRule(redirectUrl, strings.EqualFold(strings.TrimSpace(enabled), "true"))
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
 // Toggle redirection case sensitivity. Note that this affects all redirection rules
 func handleToggleRedirectCaseSensitivity(w http.ResponseWriter, r *http.Request) {
 	enabled, err := utils.PostPara(r, "enable")

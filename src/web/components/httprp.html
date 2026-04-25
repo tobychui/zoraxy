@@ -564,6 +564,11 @@
                                     <label class="ui basic label">seconds</label>
                                 </div>
                                 <small style="opacity:0.7;">Session duration: how long users can access after solving CAPTCHA</small>
+                                <div style="margin-top: 0.8em;">
+                                    <label>Protected Path Prefixes (Optional)</label>
+                                    <textarea class="CaptchaPathPrefixes" rows="3" placeholder="/form&#10;/api" style="width: 100%; resize: vertical;"></textarea>
+                                    <small style="opacity:0.7;">Leave empty to protect all paths on this endpoint. One prefix per line, comma or semicolon is also supported.</small>
+                                </div>
                                 <!-- Google reCAPTCHA specific settings -->
                                 <div class="googleRecaptchaSettings" style="margin-top: 0.8em; display: none;">
                                     <label>reCAPTCHA Version</label>
@@ -1110,6 +1115,7 @@
         let captchaSessionDuration = $(editor).find(".CaptchaSessionDuration").val();
         let captchaRecaptchaVersion = $(editor).find(".recaptchaVersionDropdown").dropdown("get value");
         let captchaRecaptchaScore = $(editor).find(".RecaptchaScore").val();
+        let captchaPathPrefixes = $(editor).find(".CaptchaPathPrefixes").val();
 
         let tags = getTagsArrayFromEndpoint(uuid);
         if (tags.length > 0){
@@ -1142,6 +1148,7 @@
                 "captchaSessionDuration": captchaSessionDuration,
                 "captchaRecaptchaVersion": captchaRecaptchaVersion,
                 "captchaRecaptchaScore": captchaRecaptchaScore,
+                "captchaPathPrefixes": captchaPathPrefixes,
                 "tags": tags,
             };
         console.log("updating proxy config:", cfgPayload);
@@ -1591,12 +1598,6 @@
         editor.find(".DisableLogging").off('change');
         editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
         editor.find(".DisableLogging").on("change", function() {
-            // When logging is disabled, also disable statistic collection
-            if ($(this).is(':checked')) {
-                editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
-            } else {
-                editor.find(".DisableStatisticCollection").prop("disabled", false);
-            }
             saveProxyInlineEdit(uuid);
         });
 
@@ -1605,11 +1606,6 @@
         editor.find(".DisableStatisticCollection").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
-
-        // Handle initial state: if logging is disabled, disable statistic collection
-        if (subd.DisableLogging) {
-            editor.find(".DisableStatisticCollection").prop("checked", true).prop("disabled", true);
-        }
 
         // Exploit Detection
         editor.find(".BlockCommonExploits").off('change');
@@ -1895,6 +1891,7 @@
             editor.find(".CaptchaSessionDuration").val(subd.CaptchaConfig.SessionDuration || 3600);
             editor.find(".recaptchaVersionDropdown input[type='hidden']").val(subd.CaptchaConfig.RecaptchaVersion || "v2");
             editor.find(".RecaptchaScore").val(subd.CaptchaConfig.RecaptchaScore || 0.5);
+            editor.find(".CaptchaPathPrefixes").val((subd.CaptchaConfig.ProtectedPathPrefixes || []).join("\n"));
 
             // Show/hide Google reCAPTCHA specific settings
             if (subd.CaptchaConfig.Provider == 1) {
@@ -1915,6 +1912,7 @@
             editor.find(".CaptchaSessionDuration").val("3600");
             editor.find(".recaptchaVersionDropdown input[type='hidden']").val("v2");
             editor.find(".RecaptchaScore").val("0.5");
+            editor.find(".CaptchaPathPrefixes").val("");
             editor.find(".googleRecaptchaSettings").hide();
         }
 
@@ -1965,6 +1963,9 @@
             saveProxyInlineEdit(uuid);
         });
         editor.find(".CaptchaSessionDuration").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+        editor.find(".CaptchaPathPrefixes").off("change").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
         editor.find(".RecaptchaScore").off("change").on("change", function() {
