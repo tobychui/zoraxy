@@ -47,6 +47,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/constellix"
 	"github.com/go-acme/lego/v4/providers/dns/corenetworks"
 	"github.com/go-acme/lego/v4/providers/dns/cpanel"
+	"github.com/go-acme/lego/v4/providers/dns/czechia"
 	"github.com/go-acme/lego/v4/providers/dns/ddnss"
 	"github.com/go-acme/lego/v4/providers/dns/derak"
 	"github.com/go-acme/lego/v4/providers/dns/desec"
@@ -68,6 +69,8 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/edgeone"
 	"github.com/go-acme/lego/v4/providers/dns/efficientip"
 	"github.com/go-acme/lego/v4/providers/dns/epik"
+	"github.com/go-acme/lego/v4/providers/dns/eurodns"
+	"github.com/go-acme/lego/v4/providers/dns/excedo"
 	"github.com/go-acme/lego/v4/providers/dns/exoscale"
 	"github.com/go-acme/lego/v4/providers/dns/f5xc"
 	"github.com/go-acme/lego/v4/providers/dns/freemyip"
@@ -126,6 +129,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/neodigit"
 	"github.com/go-acme/lego/v4/providers/dns/netcup"
 	"github.com/go-acme/lego/v4/providers/dns/netlify"
+	"github.com/go-acme/lego/v4/providers/dns/netnod"
 	"github.com/go-acme/lego/v4/providers/dns/nicmanager"
 	"github.com/go-acme/lego/v4/providers/dns/nicru"
 	"github.com/go-acme/lego/v4/providers/dns/nifcloud"
@@ -133,6 +137,8 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/nodion"
 	"github.com/go-acme/lego/v4/providers/dns/ns1"
 	"github.com/go-acme/lego/v4/providers/dns/octenium"
+	"github.com/go-acme/lego/v4/providers/dns/onecloudru"
+	"github.com/go-acme/lego/v4/providers/dns/onlinenet"
 	"github.com/go-acme/lego/v4/providers/dns/otc"
 	"github.com/go-acme/lego/v4/providers/dns/ovh"
 	"github.com/go-acme/lego/v4/providers/dns/pdns"
@@ -163,6 +169,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/timewebcloud"
 	"github.com/go-acme/lego/v4/providers/dns/todaynic"
 	"github.com/go-acme/lego/v4/providers/dns/transip"
+	"github.com/go-acme/lego/v4/providers/dns/ucloud"
 	"github.com/go-acme/lego/v4/providers/dns/ultradns"
 	"github.com/go-acme/lego/v4/providers/dns/uniteddomains"
 	"github.com/go-acme/lego/v4/providers/dns/variomedia"
@@ -529,6 +536,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return cpanel.NewDNSProviderConfig(cfg)
+	case "czechia":
+		cfg := czechia.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return czechia.NewDNSProviderConfig(cfg)
 	case "ddnss":
 		cfg := ddnss.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -719,6 +735,24 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return epik.NewDNSProviderConfig(cfg)
+	case "eurodns":
+		cfg := eurodns.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return eurodns.NewDNSProviderConfig(cfg)
+	case "excedo":
+		cfg := excedo.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return excedo.NewDNSProviderConfig(cfg)
 	case "exoscale":
 		cfg := exoscale.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1241,6 +1275,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return netlify.NewDNSProviderConfig(cfg)
+	case "netnod":
+		cfg := netnod.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return netnod.NewDNSProviderConfig(cfg)
 	case "nicmanager":
 		cfg := nicmanager.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1304,6 +1347,24 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return octenium.NewDNSProviderConfig(cfg)
+	case "onecloudru":
+		cfg := onecloudru.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return onecloudru.NewDNSProviderConfig(cfg)
+	case "onlinenet":
+		cfg := onlinenet.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return onlinenet.NewDNSProviderConfig(cfg)
 	case "otc":
 		cfg := otc.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1575,6 +1636,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return transip.NewDNSProviderConfig(cfg)
+	case "ucloud":
+		cfg := ucloud.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return ucloud.NewDNSProviderConfig(cfg)
 	case "ultradns":
 		cfg := ultradns.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
