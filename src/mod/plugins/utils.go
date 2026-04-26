@@ -32,6 +32,25 @@ func (m *Manager) GetPluginEntryPoint(folderpath string) (string, error) {
 	if !info.IsDir() {
 		return "", errors.New("path is not a directory")
 	}
+
+	startScriptPath := filepath.Join(folderpath, "start.sh")
+	startBatchPath := filepath.Join(folderpath, "start.bat")
+	goModPath := filepath.Join(folderpath, "go.mod")
+
+	// Prefer source entrypoints for plugin repositories that ship source code.
+	// This avoids stale checked-in binaries shadowing newer API/UI changes.
+	if _, err := os.Stat(goModPath); err == nil {
+		if runtime.GOOS == "windows" {
+			if _, err := os.Stat(startBatchPath); err == nil {
+				return startBatchPath, nil
+			}
+		} else {
+			if _, err := os.Stat(startScriptPath); err == nil {
+				return startScriptPath, nil
+			}
+		}
+	}
+
 	expectedBinaryPath := filepath.Join(folderpath, filepath.Base(folderpath))
 	if runtime.GOOS == "windows" {
 		expectedBinaryPath += ".exe"
@@ -41,12 +60,12 @@ func (m *Manager) GetPluginEntryPoint(folderpath string) (string, error) {
 		return expectedBinaryPath, nil
 	}
 
-	if _, err := os.Stat(filepath.Join(folderpath, "start.sh")); err == nil {
-		return filepath.Join(folderpath, "start.sh"), nil
+	if _, err := os.Stat(startScriptPath); err == nil {
+		return startScriptPath, nil
 	}
 
-	if _, err := os.Stat(filepath.Join(folderpath, "start.bat")); err == nil {
-		return filepath.Join(folderpath, "start.bat"), nil
+	if _, err := os.Stat(startBatchPath); err == nil {
+		return startBatchPath, nil
 	}
 
 	return "", errors.New("no valid entry point found")

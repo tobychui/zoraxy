@@ -374,6 +374,7 @@ func startupSequence() {
 
 	pluginManager = plugins.NewPluginManager(&plugins.ManagerOptions{
 		PluginDir:          pluginFolder,
+		PluginDataDir:      filepath.Join(CONF_FOLDER, "plugins"),
 		Database:           sysdb,
 		Logger:             SystemWideLogger,
 		PluginGroupsConfig: CONF_PLUGIN_GROUPS,
@@ -388,14 +389,14 @@ func startupSequence() {
 			DevelopmentBuild: *development_build,
 		},
 		/* Plugin Store URLs */
-		PluginStoreURLs: []string{
-			"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json",
-			//TO BE ADDED
-		},
+		PluginStoreURLs: plugins.GetDefaultPluginStoreURLs(),
 		/* Developer Options */
 		EnableHotReload:   *development_build, //Default to true if development build
 		HotReloadInterval: 5,                  //seconds
 	})
+	if err := pluginManager.LoadPluginStoreURLs(); err != nil {
+		SystemWideLogger.PrintAndLog("plugin-manager", "Failed to load plugin store URLs; using defaults", err)
+	}
 
 	/*
 		Event Manager
