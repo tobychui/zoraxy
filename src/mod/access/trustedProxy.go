@@ -24,37 +24,48 @@ var defaultTrustedProxiesCSV string
 
 // Check if an IP is a trusted proxy (supports both single IPs and CIDRs)
 func (c *Controller) IsTrustedProxy(ip string) bool {
-	// Parse the input IP
 	parsedIP := net.ParseIP(ip)
 	if parsedIP == nil {
 		return false
 	}
 
-	trusted := false
+	// Fast path: exact IP match via direct map lookup - O(1)
+	if _, exists := c.TrustedProxies.Load(ip); exists {
+		return true
+	}
+
+	// Check pre-parsed CIDR ranges (avoids re-parsing on every request)
+	c.trustedCIDRMu.RLock()
+	defer c.trustedCIDRMu.RUnlock()
+	for _, cidr := range c.trustedCIDRs {
+		if cidr.Contains(parsedIP) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// rebuildTrustedCIDRCache pre-parses all CIDR entries from the trusted proxy list
+// so IsTrustedProxy doesn't need to re-parse them on every request.
+func (c *Controller) rebuildTrustedCIDRCache() {
+	var cidrs []*net.IPNet
 	c.TrustedProxies.Range(func(key, value any) bool {
 		proxy, ok := value.(TrustedProxy)
 		if !ok {
 			return true
 		}
-
-		// Check if it's a CIDR notation
 		if strings.Contains(proxy.IP, "/") {
 			_, cidr, err := net.ParseCIDR(proxy.IP)
-			if err == nil && cidr.Contains(parsedIP) {
-				trusted = true
-				return false // stop iteration
-			}
-		} else {
-			// Direct IP comparison
-			if proxy.IP == ip {
-				trusted = true
-				return false // stop iteration
+			if err == nil {
+				cidrs = append(cidrs, cidr)
 			}
 		}
 		return true
 	})
-
-	return trusted
+	c.trustedCIDRMu.Lock()
+	c.trustedCIDRs = cidrs
+	c.trustedCIDRMu.Unlock()
 }
 
 // TrustedProxyExists checks if a trusted proxy entry exists by its exact IP/CIDR key
@@ -68,6 +79,7 @@ func (c *Controller) AddTrustedProxy(ip string, desc string) bool {
 	_, exists := c.TrustedProxies.Load(ip)
 	if !exists {
 		c.TrustedProxies.Store(ip, TrustedProxy{IP: ip, Desc: desc})
+		c.rebuildTrustedCIDRCache()
 	}
 	return !exists
 }
@@ -77,6 +89,7 @@ func (c *Controller) RemoveTrustedProxy(ip string) bool {
 	_, exists := c.TrustedProxies.Load(ip)
 	if exists {
 		c.TrustedProxies.Delete(ip)
+		c.rebuildTrustedCIDRCache()
 	}
 	return exists
 }
@@ -113,6 +126,7 @@ func (c *Controller) LoadTrustedProxies() error {
 		for _, proxy := range defaultProxies {
 			c.TrustedProxies.Store(proxy.IP, proxy)
 		}
+		c.rebuildTrustedCIDRCache()
 		return nil
 	}
 
@@ -131,6 +145,7 @@ func (c *Controller) LoadTrustedProxies() error {
 	for _, proxy := range trustedProxies {
 		c.TrustedProxies.Store(proxy.IP, proxy)
 	}
+	c.rebuildTrustedCIDRCache()
 
 	return nil
 }
@@ -164,10 +179,13 @@ func (c *Controller) SaveTrustedProxies() error {
 	return err
 }
 
-// GetClientIP returns the client IP based on the access rule's trusted proxy config
+// GetClientIP returns the client IP based on the access rule's trusted proxy config.
+// When TrustProxyHeadersOnly is enabled, proxy headers (X-Forwarded-For, X-Real-IP, etc.)
+// are only trusted if the direct connection comes from an IP in the trusted proxy list.
 func (s *AccessRule) GetClientIP(r *http.Request) string {
-	if s.TrustProxyHeadersOnly {
+	remoteIP := netutils.GetRequesterIPUntrusted(r)
+	if s.TrustProxyHeadersOnly && s.parent != nil && s.parent.IsTrustedProxy(remoteIP) {
 		return netutils.GetRequesterIP(r)
 	}
-	return netutils.GetRequesterIPUntrusted(r)
+	return remoteIP
 }

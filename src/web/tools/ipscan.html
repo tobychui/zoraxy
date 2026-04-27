@@ -27,6 +27,16 @@
             <br>
             <div class="ui segment">
                 <div style="padding: 1em;">
+                    <h4 class="ui dividing header">Connected Subnets</h4>
+                    <div class="ui form">
+                        <div class="field">
+                            <label>Select a connected subnet to auto-fill the IP range below</label>
+                            <select class="ui fluid dropdown" id="subnet-select">
+                                <option value="">-- Loading subnets... --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <br>
                     <div class="ui stackable grid">
                         <div class="eight wide column">
                             <h4 class="ui dividing header">Scan IP Range</h4>
@@ -70,6 +80,44 @@
         </div>
         <script>
             $(document).ready(function() {
+                // Load connected subnets into the dropdown
+                $.get("/api/stats/listnic", function(data) {
+                    var select = $('#subnet-select');
+                    select.empty();
+                    select.append('<option value="">-- Select a subnet --</option>');
+                    if (data && data.length) {
+                        $.each(data, function(i, iface) {
+                            if (iface.IPs) {
+                                $.each(iface.IPs, function(j, cidr) {
+                                    // Only show IPv4 CIDR entries
+                                    if (cidr.indexOf('/') !== -1 && cidr.indexOf('.') !== -1) {
+                                        select.append('<option value="' + cidr + '">' + iface.Name + ' — ' + cidr + '</option>');
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        select.append('<option value="">-- No subnets found --</option>');
+                    }
+                    select.dropdown();
+                }).fail(function() {
+                    $('#subnet-select').empty().append('<option value="">-- Failed to load subnets --</option>');
+                });
+
+                // Auto-fill start/end IP when a subnet is selected
+                $('#subnet-select').on('change', function() {
+                    var cidr = $(this).val();
+                    if (!cidr) return;
+                    var range = cidrToStartEnd(cidr);
+                    if (range) {
+                        $('#start-ip').val(range.start);
+                        $('#end-ip').val(range.end);
+                        // Also fill the CIDR field for convenience
+                        var cidrOnly = cidr.split('/')[0].replace(/\.\d+$/, '.0') + '/' + cidr.split('/')[1];
+                        $('#cidr').val(cidrOnly);
+                    }
+                });
+
                 $('#ip-scan-btn').click(function(event) {
                     event.preventDefault();
                     var start = $('#start-ip').val().trim();
@@ -81,6 +129,18 @@
 
                     if (!isValidIPv4(start) || !isValidIPv4(end)){
                         alert('Invalid start or end ip address');
+                        return;
+                    }
+
+                    // Warn for large or non-private IP ranges
+                    var rangeSize = ipToInt(end) - ipToInt(start) + 1;
+                    var warnMsg = '';
+                    if (!isPrivateIPv4(start)) {
+                        warnMsg = 'The selected IP range appears to be a public (non-private) address. Scanning public IP ranges may be inappropriate or illegal without authorization. Continue?';
+                    } else if (rangeSize > 1024) {
+                        warnMsg = 'The selected IP range is very large (' + rangeSize + ' addresses). This scan may take a long time. Continue?';
+                    }
+                    if (warnMsg && !confirm(warnMsg)) {
                         return;
                     }
 
@@ -209,6 +269,42 @@
 
             function toggleOfflineHost(){
                 $(".offlinehost").toggle();
+            }
+
+            // Convert a CIDR string (e.g. "192.168.1.5/24") to {start, end} host range
+            function cidrToStartEnd(cidr) {
+                var parts = cidr.split('/');
+                if (parts.length !== 2) return null;
+                var ip = parts[0];
+                var prefix = parseInt(parts[1], 10);
+                if (isNaN(prefix) || prefix < 0 || prefix > 32) return null;
+                var ipInt = ipToInt(ip);
+                if (isNaN(ipInt)) return null;
+                var mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+                var networkInt = (ipInt & mask) >>> 0;
+                var broadcastInt = (networkInt | (~mask >>> 0)) >>> 0;
+                var startInt = prefix >= 31 ? networkInt : networkInt + 1;
+                var endInt   = prefix >= 31 ? broadcastInt : broadcastInt - 1;
+                return { start: intToIp(startInt), end: intToIp(endInt) };
+            }
+
+            function ipToInt(ip) {
+                var p = ip.split('.').map(Number);
+                return ((p[0] * 16777216) + (p[1] * 65536) + (p[2] * 256) + p[3]) >>> 0;
+            }
+
+            function intToIp(n) {
+                return [(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF].join('.');
+            }
+
+            // Returns true if ip is in RFC1918 / loopback / link-local space
+            function isPrivateIPv4(ip) {
+                var p = ip.split('.').map(Number);
+                return p[0] === 10 ||
+                       p[0] === 127 ||
+                       (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
+                       (p[0] === 192 && p[1] === 168) ||
+                       (p[0] === 169 && p[1] === 254);
             }
 
             function launchToolWithSize(url, width, height){
