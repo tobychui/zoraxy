@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 
 	"github.com/google/uuid"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -70,12 +69,12 @@ type ProxyRelayInstance struct {
 	Timeout              int                  //Timeout for connection in sec
 
 	/* Internal */
-	tcpStopChan                 chan bool     //Stop channel for TCP listener
-	udpStopChan                 chan bool     //Stop channel for UDP listener
-	aTobAccumulatedByteTransfer *atomic.Int64 //Accumulated byte transfer from A to B
-	bToaAccumulatedByteTransfer *atomic.Int64 //Accumulated byte transfer from B to A
-	udpClientMap                sync.Map      //map storing the UDP client-server connections
-	parent                      *Manager      `json:"-"`
+	tcpStopChan                 chan bool //Stop channel for TCP listener
+	udpStopChan                 chan bool //Stop channel for UDP listener
+	aTobAccumulatedByteTransfer *int64    //Accumulated byte transfer from A to B
+	bToaAccumulatedByteTransfer *int64    //Accumulated byte transfer from B to A
+	udpClientMap                sync.Map  //map storing the UDP client-server connections
+	parent                      *Manager  `json:"-"`
 }
 
 type Options struct {
@@ -123,6 +122,32 @@ func NewStreamProxy(options *Options) (*Manager, error) {
 		if err != nil {
 			options.Logger.PrintAndLog("stream-prox", "Unmarshal stream proxy config failed", err)
 			continue
+		}
+
+		// Check if UUID is empty
+		if thisRelayConfig.UUID == "" {
+			// Maybe copied from online tutorial without uuid, or the uuid field is accidentally deleted.
+			// Generate a new UUID and save it back to file
+			thisRelayConfig.UUID = uuid.New().String()
+			newConfigBytes, err := json.Marshal(thisRelayConfig)
+			if err != nil {
+				options.Logger.PrintAndLog("stream-prox", "Marshal stream proxy config failed", err)
+				continue
+			}
+			err = os.WriteFile(configFile, newConfigBytes, 0775)
+			if err != nil {
+				options.Logger.PrintAndLog("stream-prox", "Save stream proxy config failed", err)
+				continue
+			}
+
+			// Rename the file to uuid.config
+			newConfigFile := filepath.Join(options.ConfigStore, thisRelayConfig.UUID+".config")
+			err = os.Rename(configFile, newConfigFile)
+			if err != nil {
+				options.Logger.PrintAndLog("stream-prox", "Rename stream proxy config file failed", err)
+				continue
+			}
+			options.Logger.PrintAndLog("stream-prox", "Updated stream proxy config with new UUID: "+thisRelayConfig.UUID, nil)
 		}
 
 		//Append the config to the list
@@ -173,11 +198,9 @@ func (m *Manager) logf(message string, originalError error) {
 
 // NewConfig creates a new proxy relay config with the given options
 func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
-	//Generate two zero value for atomic int64
-	aAcc := atomic.Int64{}
-	bAcc := atomic.Int64{}
-	aAcc.Store(0)
-	bAcc.Store(0)
+	//Generate two zero value for int64
+	aAcc := int64(0)
+	bAcc := int64(0)
 	//Generate a new config from options
 	configUUID := uuid.New().String()
 	thisConfig := ProxyRelayInstance{

@@ -149,7 +149,7 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 			}
 			continue
 		}
-		c.aTobAccumulatedByteTransfer.Add(int64(n))
+		*c.aTobAccumulatedByteTransfer += int64(n)
 		saddr := cliaddr.String()
 		rawConn, found := c.udpClientMap.Load(saddr)
 		var conn *udpClientServerConn
