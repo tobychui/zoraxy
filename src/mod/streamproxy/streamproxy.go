@@ -125,6 +125,14 @@ func NewStreamProxy(options *Options) (*Manager, error) {
 			continue
 		}
 
+		//Re-initialize unexported runtime fields. These are skipped by json
+		//(un)marshal and would otherwise be nil for resumed rules, causing a
+		//SIGSEGV in connCopy on the first forwarded byte (issue #1157).
+		aAcc := atomic.Int64{}
+		bAcc := atomic.Int64{}
+		thisRelayConfig.aTobAccumulatedByteTransfer = &aAcc
+		thisRelayConfig.bToaAccumulatedByteTransfer = &bAcc
+
 		//Append the config to the list
 		previousRules = append(previousRules, thisRelayConfig)
 	}
