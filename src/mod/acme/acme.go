@@ -76,21 +76,25 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 
 // ACMEHandler handles ACME-related operations.
 type ACMEHandler struct {
-	Port              string
-	Database          *database.Database
-	Logger            *logger.Logger
-	TestMode          bool
+	Port           string
+	Database       *database.Database
+	Logger         *logger.Logger
+	TestMode       bool
+	KeyFileMode    os.FileMode
+	PublicFileMode os.FileMode
 }
 
 // NewACME creates a new ACMEHandler instance.
 func NewACME(
-			port string, database *database.Database,
-			logger *logger.Logger, testMode bool) *ACMEHandler {
+	port string, database *database.Database,
+	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode) *ACMEHandler {
 	return &ACMEHandler{
-		Port:              port,
-		Database:          database,
-		Logger:            logger,
-		TestMode:          testMode,
+		Port:           port,
+		Database:       database,
+		Logger:         logger,
+		TestMode:       testMode,
+		KeyFileMode:    keyFileMode,
+		PublicFileMode: publicFileMode,
 	}
 }
 
@@ -103,6 +107,15 @@ func (a *ACMEHandler) Logf(message string, err error) {
 // Function defined for future compatibility
 func (a *ACMEHandler) Close() error {
 	return nil
+}
+
+func (a *ACMEHandler) writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
+	err := os.WriteFile(filename, data, mode)
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(filename, mode)
 }
 
 // ObtainCert obtains a certificate for the specified domains.
@@ -164,7 +177,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		} else {
 			// wrong caName => use default acme
 			config.CADirURL, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
-			a.Logf("Using Default ACME " + config.CADirURL + " for CA Directory URL", nil)
+			a.Logf("Using Default ACME "+config.CADirURL+" for CA Directory URL", nil)
 		}
 	}
 
@@ -314,12 +327,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = os.WriteFile("./conf/certs/"+certificateName+".pem", certificates.Certificate, 0777)
+	err = a.writeFileWithMode("./conf/certs/"+certificateName+".pem", certificates.Certificate, a.PublicFileMode)
 	if err != nil {
 		a.Logf("Failed to write public key to disk", err)
 		return false, err
 	}
-	err = os.WriteFile("./conf/certs/"+certificateName+".key", certificates.PrivateKey, 0777)
+	err = a.writeFileWithMode("./conf/certs/"+certificateName+".key", certificates.PrivateKey, a.KeyFileMode)
 	if err != nil {
 		a.Logf("Failed to write private key to disk", err)
 		return false, err
@@ -341,7 +354,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 
-	err = os.WriteFile("./conf/certs/"+certificateName+".json", certInfoBytes, 0777)
+	err = a.writeFileWithMode("./conf/certs/"+certificateName+".json", certInfoBytes, a.PublicFileMode)
 	if err != nil {
 		a.Logf("Failed to write certificate renew config to file", err)
 		return false, err

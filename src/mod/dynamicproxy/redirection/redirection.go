@@ -2,6 +2,7 @@ package redirection
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path"
@@ -18,17 +19,20 @@ type RuleTable struct {
 	AllowRegex    bool     //Allow regular expression to be used in rule matching. Require up to O(n^m) time complexity
 	CaseSensitive bool     //Force case sensitive URL matching
 	configPath    string   //The location where the redirection rules is stored
-	rules         sync.Map //Store map[string]*RedirectRules for this reverse proxy instance
+	rules         sync.Map //Store map[string]*RedirectRule for this reverse proxy instance
 	Logger        *logger.Logger
 }
 
-type RedirectRules struct {
+type RedirectRule struct {
+	Enabled           bool   //Whether this redirection rule is enabled
 	RedirectURL       string //The matching URL to redirect
 	TargetURL         string //The destination redirection url
 	ForwardChildpath  bool   //Also redirect the pathname
 	StatusCode        int    //Status Code for redirection
 	RequireExactMatch bool   //Require exact URL match instead of prefix matching
 	DeviceType        string //Device type filter: "all", "desktop", or "mobile"
+
+	parent *RuleTable
 }
 
 func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger *logger.Logger) (*RuleTable, error) {
@@ -50,15 +54,17 @@ func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger
 		return nil, err
 	}
 
-	// Parse the json content into RedirectRules
-	var rules []*RedirectRules
+	// Parse the json content into RedirectRule
+	var rules []*RedirectRule
 	for _, file := range files {
 		b, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
 
-		thisRule := RedirectRules{}
+		thisRule := RedirectRule{
+			Enabled: true, //Default to enabled when loading from file for backward compatibility
+		}
 
 		err = json.Unmarshal(b, &thisRule)
 		if err != nil {
@@ -70,6 +76,7 @@ func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger
 
 	//Map the rules into the sync map
 	for _, rule := range rules {
+		rule.parent = &thisRuleTable
 		thisRuleTable.log("Redirection rule added: "+rule.RedirectURL+" -> "+rule.TargetURL, nil)
 		thisRuleTable.rules.Store(rule.RedirectURL, rule)
 	}
@@ -78,38 +85,25 @@ func NewRuleTable(configPath string, allowRegex bool, caseSensitive bool, logger
 }
 
 func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string) error {
-	// Create a new RedirectRules object with the given parameters
-	newRule := &RedirectRules{
+	// Create a new RedirectRule object with the given parameters
+	newRule := &RedirectRule{
+		Enabled:           true,
 		RedirectURL:       redirectURL,
 		TargetURL:         destURL,
 		ForwardChildpath:  forwardPathname,
 		StatusCode:        statusCode,
 		RequireExactMatch: requireExactMatch,
 		DeviceType:        deviceType,
+		parent:            t,
 	}
 
-	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
-	filename := utils.ReplaceSpecialCharacters(redirectURL) + ".json"
-
-	// Create the full file path by joining the t.configPath with the filename
-	filepath := path.Join(t.configPath, filename)
-
-	// Create a new file for writing the JSON data
-	file, err := os.Create(filepath)
+	// Save the new rule to file
+	err := newRule.SaveChangeToFile()
 	if err != nil {
-		t.log("Error creating file "+filepath, err)
-		return err
-	}
-	defer file.Close()
-
-	// Encode the RedirectRules object to JSON and write it to the file
-	err = json.NewEncoder(file).Encode(newRule)
-	if err != nil {
-		t.log("Error encoding JSON to file "+filepath, err)
 		return err
 	}
 
-	// Store the RedirectRules object in the sync.Map
+	// Store the RedirectRule object in the sync.Map
 	t.rules.Store(redirectURL, newRule)
 
 	return nil
@@ -117,33 +111,29 @@ func (t *RuleTable) AddRedirectRule(redirectURL string, destURL string, forwardP
 
 // Edit an existing redirection rule, the oldRedirectURL is used to find the rule to be edited
 func (t *RuleTable) EditRedirectRule(oldRedirectURL string, newRedirectURL string, destURL string, forwardPathname bool, statusCode int, requireExactMatch bool, deviceType string) error {
-	newRule := &RedirectRules{
+	// Preserve the enabled state from the old rule
+	enabled := true
+	if oldRule, ok := t.rules.Load(oldRedirectURL); ok {
+		enabled = oldRule.(*RedirectRule).Enabled
+	}
+
+	newRule := &RedirectRule{
+		Enabled:           enabled,
 		RedirectURL:       newRedirectURL,
 		TargetURL:         destURL,
 		ForwardChildpath:  forwardPathname,
 		StatusCode:        statusCode,
 		RequireExactMatch: requireExactMatch,
 		DeviceType:        deviceType,
+		parent:            t,
 	}
 
 	//Remove the old rule
 	t.DeleteRedirectRule(oldRedirectURL)
 
-	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
-	filename := utils.ReplaceSpecialCharacters(newRedirectURL) + ".json"
-	filepath := path.Join(t.configPath, filename)
-
-	// Create a new file for writing the JSON data
-	file, err := os.Create(filepath)
+	// Save changes to file
+	err := newRule.SaveChangeToFile()
 	if err != nil {
-		t.log("Error creating file "+filepath, err)
-		return err
-	}
-	defer file.Close()
-
-	err = json.NewEncoder(file).Encode(newRule)
-	if err != nil {
-		t.log("Error encoding JSON to file "+filepath, err)
 		return err
 	}
 
@@ -173,15 +163,14 @@ func (t *RuleTable) DeleteRedirectRule(redirectURL string) error {
 
 	// Delete the key-value pair from the sync.Map
 	t.rules.Delete(redirectURL)
-
 	return nil
 }
 
 // Get a list of all the redirection rules
-func (t *RuleTable) GetAllRedirectRules() []*RedirectRules {
-	rules := []*RedirectRules{}
+func (t *RuleTable) GetAllRedirectRules() []*RedirectRule {
+	rules := []*RedirectRule{}
 	t.rules.Range(func(key, value interface{}) bool {
-		r, ok := value.(*RedirectRules)
+		r, ok := value.(*RedirectRule)
 		if ok {
 			rules = append(rules, r)
 		}
@@ -190,14 +179,39 @@ func (t *RuleTable) GetAllRedirectRules() []*RedirectRules {
 	return rules
 }
 
+// Toggle the enabled state of a redirection rule, also write to disk
+func (t *RuleTable) ToggleEnableRedirectRule(redirectURL string, enabled bool) error {
+	ruleInterface, ok := t.rules.Load(redirectURL)
+	if !ok {
+		return errors.New("redirect rule not found")
+	}
+
+	rule := ruleInterface.(*RedirectRule)
+	rule.Enabled = enabled
+
+	// Save changes to file
+	err := rule.SaveChangeToFile()
+	if err != nil {
+		return err
+	}
+
+	t.rules.Store(redirectURL, rule)
+	return nil
+}
+
 // Check if a given request URL matched any of the redirection rule
-func (t *RuleTable) MatchRedirectRule(requestedURL string) *RedirectRules {
+func (t *RuleTable) MatchRedirectRule(requestedURL string) *RedirectRule {
 	// Iterate through all the keys in the rules map
-	var targetRedirectionRule *RedirectRules = nil
+	var targetRedirectionRule *RedirectRule = nil
 	var maxMatch int = 0
 	t.rules.Range(func(key interface{}, value interface{}) bool {
-		rule := value.(*RedirectRules)
+		rule := value.(*RedirectRule)
 		keyStr := key.(string)
+
+		// Skip disabled rules
+		if !rule.Enabled {
+			return true
+		}
 
 		if t.AllowRegex {
 			//Regexp matching rule
@@ -265,4 +279,24 @@ func (t *RuleTable) log(message string, err error) {
 	} else {
 		t.Logger.PrintAndLog("redirect", message, err)
 	}
+}
+
+func (r *RedirectRule) SaveChangeToFile() error {
+	// Convert the redirectURL to a valid filename by replacing "/" with "-" and "." with "_"
+	filename := utils.ReplaceSpecialCharacters(r.RedirectURL) + ".json"
+	filepath := path.Join(r.parent.configPath, filename)
+
+	js, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		r.parent.log("Error encoding JSON to file "+filepath, err)
+		return err
+	}
+
+	err = os.WriteFile(filepath, js, 0644)
+	if err != nil {
+		r.parent.log("Error writing JSON to file "+filepath, err)
+		return err
+	}
+
+	return nil
 }

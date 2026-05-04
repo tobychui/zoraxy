@@ -9,6 +9,7 @@
         <table class="ui sortable unstackable celled table" >
           <thead>
               <tr>
+                  <th><!-- Enable Toggle Field --></th>
                   <th>Redirection URL</th>
                   <th>Destination URL</th>
                   <th class="no-sort">Copy Pathname</th>
@@ -20,6 +21,7 @@
           </thead>
           <tbody id="redirectionRuleList">
               <tr>
+                  <td></td>
                   <td></td>
                   <td></td>
                   <td></td>
@@ -217,6 +219,12 @@
                 deviceTypeLabel = "Mobile Only";
               }
               $("#redirectionRuleList").append(`<tr>
+                  <td class="collapsing">
+                    <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Enable / Disable Rule">
+                        <input type="checkbox" class="enableToggle" name="active" onchange="handleRedirectionRuleEnableToggle(this);" payload="${encodedEntry}" ${entry.Enabled ? "checked" : ""}>
+                        <label></label>
+                    </div>
+                  </td>
                   <td><a href="${hrefURL}" target="_blank">${entry.RedirectURL}</a></td>
                   <td>${entry.TargetURL}</td>
                   <td>${entry.ForwardChildpath?"<i class='ui green checkmark icon'></i>":"<i class='ui red remove icon'></i>"}</td>
@@ -369,6 +377,29 @@
     }
 
     initCaseSensitivityToggle();
+
+    function handleRedirectionRuleEnableToggle(toggleElement){
+      let payload = JSON.parse(decodeURIComponent($(toggleElement).attr("payload")));
+      let enabled = $(toggleElement).is(":checked");
+
+      $.cjax({
+        url: "/api/redirect/toggle",
+        method: "POST",
+        data: {
+          redirectUrl: payload.RedirectURL,
+          enabled: enabled,
+        },
+        success: function(data){
+          if (data.error != undefined){
+            msgbox(data.error, false);
+            //Revert the toggle
+            $(toggleElement).prop("checked", !enabled);
+          } else {
+            msgbox("Redirection rule " + (enabled ? "enabled" : "disabled"), true);
+          }
+        }
+      });
+    }
 
     $("#rurl").on('change', (event) => {
       const value = event.target.value.trim().replace(/^(https?:\/\/)/, '');

@@ -59,13 +59,7 @@ func (m *Manager) GenerateSelfSignedCertificate(cn string, sans []string, certFi
 	}
 
 	// Write certificate to file
-	certOut, err := os.Create(filepath.Join(m.CertStore, certFile))
-	if err != nil {
-		m.Logger.PrintAndLog("tls-router", "Failed to open cert file for writing: "+certFile, err)
-		return err
-	}
-	defer certOut.Close()
-	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	err = writeFileWithMode(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), defaultPublicCertFileMode)
 	if err != nil {
 		m.Logger.PrintAndLog("tls-router", "Failed to write certificate to file: "+certFile, err)
 		return err
@@ -77,13 +71,7 @@ func (m *Manager) GenerateSelfSignedCertificate(cn string, sans []string, certFi
 		m.Logger.PrintAndLog("tls-router", "Unable to marshal ECDSA private key", err)
 		return err
 	}
-	keyOut, err := os.Create(filepath.Join(m.CertStore, keyFile))
-	if err != nil {
-		m.Logger.PrintAndLog("tls-router", "Failed to open key file for writing: "+keyFile, err)
-		return err
-	}
-	defer keyOut.Close()
-	err = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
+	err = writeFileWithMode(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes}), defaultPrivateKeyFileMode)
 	if err != nil {
 		m.Logger.PrintAndLog("tls-router", "Failed to write private key to file: "+keyFile, err)
 		return err

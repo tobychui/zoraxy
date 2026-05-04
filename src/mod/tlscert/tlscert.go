@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"embed"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -39,6 +40,30 @@ type Manager struct {
 //go:embed localhost.pem localhost.key
 var buildinCertStore embed.FS
 
+const (
+	defaultPublicCertFileMode os.FileMode = 0644
+	defaultPrivateKeyFileMode os.FileMode = 0600
+)
+
+func writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
+	// Clean the path and reject any path traversal sequences (e.g. "..")
+	// to prevent a crafted filename from escaping the intended directory.
+	cleanedPath := filepath.Clean(filename)
+	if strings.Contains(cleanedPath, "..") {
+		return fmt.Errorf("invalid filename: path traversal detected in %q", filename)
+	}
+
+	err := os.WriteFile(cleanedPath, data, mode)
+	if err != nil {
+		return err
+	}
+
+	// os.WriteFile honours the process umask, so the on-disk permissions may
+	// differ from the requested mode. os.Chmod sets the exact bits regardless
+	// of the umask — essential for private-key files (e.g. 0600).
+	return os.Chmod(cleanedPath, mode)
+}
+
 func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	if !utils.FileExists(certStore) {
 		os.MkdirAll(certStore, 0775)
@@ -50,12 +75,12 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	//Check if this is initial setup
 	if !utils.FileExists(pubKey) {
 		buildInPubKey, _ := buildinCertStore.ReadFile(filepath.Base(pubKey))
-		os.WriteFile(pubKey, buildInPubKey, 0775)
+		writeFileWithMode(pubKey, buildInPubKey, defaultPublicCertFileMode)
 	}
 
 	if !utils.FileExists(priKey) {
 		buildInPriKey, _ := buildinCertStore.ReadFile(filepath.Base(priKey))
-		os.WriteFile(priKey, buildInPriKey, 0775)
+		writeFileWithMode(priKey, buildInPriKey, defaultPrivateKeyFileMode)
 	}
 
 	thisManager := Manager{

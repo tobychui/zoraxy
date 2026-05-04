@@ -74,7 +74,7 @@ func HandleCountryDistrSummary(w http.ResponseWriter, r *http.Request) {
 // See https://github.com/tobychui/zoraxy/issues/77
 func UpdateUptimeMonitorTargets() {
 	if uptimeMonitor != nil {
-		uptimeMonitor.Config.Targets = GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter)
+		uptimeMonitor.SetTargets(GetUptimeTargetsFromReverseProxyRules(dynamicProxyRouter))
 		uptimeMonitor.CleanRecords()
 		go func() {
 			uptimeMonitor.ExecuteUptimeCheck()

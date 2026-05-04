@@ -39,6 +39,7 @@ type WebServerOptions struct {
 	DisableListenToAllInterface bool               // Disable listening to all interfaces, only listen to localhost
 	EnableWebDAV                bool               //Enable WebDAV server
 	WebDAVPort                  string             //Port for WebDAV server (default: 5488)
+	UseCustomCredentials        bool               // Use custom credentials for WebDAV instead of the global credentials in auth module
 	Logger                      *logger.Logger     //System logger
 	Sysdb                       *database.Database //Database for storing configs
 	AuthAgent                   *auth.AuthAgent    //Authentication agent for WebDAV basic auth
@@ -118,6 +119,11 @@ func (ws *WebServer) RestorePreviousState() {
 	}
 	ws.option.Sysdb.Read("webserv", "webdavPort", &webdavPort)
 	ws.option.WebDAVPort = webdavPort
+
+	//Set UseCustomCredentials
+	useCustomCredentials := ws.option.UseCustomCredentials
+	ws.option.Sysdb.Read("webserv", "useCustomCredentials", &useCustomCredentials)
+	ws.option.UseCustomCredentials = useCustomCredentials
 
 	//Check the running state
 	webservRunning := true
@@ -314,3 +320,24 @@ func (ws *WebServer) Close() {
 		ws.WebDAV.Close()
 	}
 }
+
+// SetCustomCredentials sets custom username and password for WebDAV
+func (ws *WebServer) SetCustomCredentials(username, password string) error {
+	// Hash the password
+	hashedPassword := auth.Hash(password)
+	
+	// Save username and hashed password to database
+	err := ws.option.Sysdb.Write("webserv", "webdavCustomUsername", username)
+	if err != nil {
+		return err
+	}
+	
+	err = ws.option.Sysdb.Write("webserv", "webdavCustomPasswordHash", hashedPassword)
+	if err != nil {
+		return err
+	}
+	
+	ws.option.Logger.PrintAndLog("webdav", "Custom credentials updated for user: "+username, nil)
+	return nil
+}
+

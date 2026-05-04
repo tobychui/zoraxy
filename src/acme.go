@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
@@ -38,7 +39,20 @@ func initACME() *acme.ACMEHandler {
 		port = getRandomPort(30000)
 	}
 
-	return acme.NewACME(strconv.Itoa(port), sysdb, SystemWideLogger, *acmeTestMode)
+	keyFileMode := parseACMEFileMode(*acmeKeyFileMode, 0600, "acmekeymode")
+	publicFileMode := parseACMEFileMode(*acmePublicFileMode, 0644, "acmepublicmode")
+
+	return acme.NewACME(strconv.Itoa(port), sysdb, SystemWideLogger, *acmeTestMode, keyFileMode, publicFileMode)
+}
+
+func parseACMEFileMode(raw string, fallback os.FileMode, flagName string) os.FileMode {
+	parsed, err := strconv.ParseUint(raw, 8, 32)
+	if err != nil {
+		SystemWideLogger.Println("Invalid " + flagName + " value " + raw + ", using fallback " + fmt.Sprintf("%#o", fallback))
+		return fallback
+	}
+
+	return os.FileMode(parsed)
 }
 
 // Restart ACME handler and auto renewer

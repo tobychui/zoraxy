@@ -1166,6 +1166,29 @@
    }
   ]
  },
+ "czechia": {
+  "Name": "czechia",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "ddnss": {
   "Name": "ddnss",
   "ConfigableFields": [
@@ -1726,6 +1749,60 @@
   "ConfigableFields": [
    {
     "Title": "Signature",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "eurodns": {
+  "Name": "eurodns",
+  "ConfigableFields": [
+   {
+    "Title": "ApplicationID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "excedo": {
+  "Name": "excedo",
+  "ConfigableFields": [
+   {
+    "Title": "APIURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
@@ -2751,6 +2828,10 @@
     "Datatype": "string"
    },
    {
+    "Title": "TeamID",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -3315,6 +3396,29 @@
    }
   ]
  },
+ "netnod": {
+  "Name": "netnod",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "nicmanager": {
   "Name": "nicmanager",
   "ConfigableFields": [
@@ -3493,6 +3597,52 @@
   "ConfigableFields": [
    {
     "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "onecloudru": {
+  "Name": "onecloudru",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "onlinenet": {
+  "Name": "onlinenet",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
     "Datatype": "string"
    },
    {
@@ -3849,6 +3999,22 @@
     "Datatype": "string"
    },
    {
+    "Title": "TSIGGSSRealm",
+    "Datatype": "string"
+   },
+   {
+    "Title": "TSIGGSSUsername",
+    "Datatype": "string"
+   },
+   {
+    "Title": "TSIGGSSPassword",
+    "Datatype": "string"
+   },
+   {
+    "Title": "TSIGGSSKeytabFile",
+    "Datatype": "string"
+   },
+   {
     "Title": "PropagationTimeout",
     "Datatype": "time.Duration"
    },
@@ -3857,7 +4023,12 @@
     "Datatype": "time.Duration"
    }
   ],
-  "HiddenFields": []
+  "HiddenFields": [
+   {
+    "Title": "Zones",
+    "Datatype": "[]string"
+   }
+  ]
  },
  "rimuhosting": {
   "Name": "rimuhosting",
@@ -4405,6 +4576,40 @@
     "Datatype": "*http.Client"
    }
   ]
+ },
+ "ucloud": {
+  "Name": "ucloud",
+  "ConfigableFields": [
+   {
+    "Title": "Region",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ProjectID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PublicKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PrivateKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "baseURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": []
  },
  "ultradns": {
   "Name": "ultradns",
