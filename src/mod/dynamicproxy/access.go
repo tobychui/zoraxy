@@ -1,12 +1,15 @@
 package dynamicproxy
 
 import (
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/eventsystem"
+	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 )
 
@@ -25,8 +28,15 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.Option.WebDirectory, w, r)
 	if isBlocked {
 		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "", sep)
+		return true
 	}
-	return isBlocked
+
+	if isBlocked, blockedReason = accessRequestBlockedByEndpointWhitelist(accessRule, h.Parent.Option.WebDirectory, w, r, sep); isBlocked {
+		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "", sep)
+		return true
+	}
+
+	return false
 }
 
 // Return boolean, return true if access is blocked
@@ -66,17 +76,64 @@ func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory strin
 
 	//Check if this ip is in whitelist
 	if !accessRule.IsWhitelisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile(filepath.Join(templateDirectory, "templates/whitelist.html"))
-		if err != nil {
-			w.Write(page_forbidden)
-		} else {
-			w.Write(template)
-		}
+		writeWhitelistResponse(templateDirectory, w)
 		return true, "whitelist"
 	}
 
 	//Not blocked.
 	return false, ""
+}
+
+func accessRequestBlockedByEndpointWhitelist(accessRule *access.AccessRule, templateDirectory string, w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) (bool, string) {
+	if sep == nil || !sep.RequireIPWhitelist || len(sep.IPWhitelistSubnets) == 0 {
+		return false, ""
+	}
+
+	clientIpAddr := accessRule.GetClientIP(r)
+	if !ipAllowedByWhitelist(clientIpAddr, sep.IPWhitelistSubnets) {
+		writeWhitelistResponse(templateDirectory, w)
+		return true, "ip-whitelist"
+	}
+
+	return false, ""
+}
+
+func ipAllowedByWhitelist(clientIP string, whitelist []string) bool {
+	clientIP = strings.TrimSpace(clientIP)
+	if clientIP == "" {
+		return false
+	}
+
+	clientAddr := net.ParseIP(clientIP)
+	for _, entry := range whitelist {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+
+		if strings.Contains(entry, "/") {
+			if netutils.MatchIpCIDR(clientIP, entry) {
+				return true
+			}
+			continue
+		}
+
+		entryAddr := net.ParseIP(entry)
+		if clientAddr != nil && entryAddr != nil && clientAddr.Equal(entryAddr) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func writeWhitelistResponse(templateDirectory string, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusForbidden)
+	template, err := os.ReadFile(filepath.Join(templateDirectory, "templates/whitelist.html"))
+	if err != nil {
+		w.Write(page_forbidden)
+		return
+	}
+	w.Write(template)
 }

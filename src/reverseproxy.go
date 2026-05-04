@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -87,14 +88,41 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 	}
 
 	return &dynamicproxy.CaptchaConfig{
-		Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
-		SiteKey:          captchaSiteKey,
-		SecretKey:        captchaSecretKey,
-		SessionDuration:  captchaSessionDuration,
-		RecaptchaVersion: captchaRecaptchaVersion,
-		RecaptchaScore:   captchaRecaptchaScore,
+		Provider:              dynamicproxy.CaptchaProvider(captchaProvider),
+		SiteKey:               captchaSiteKey,
+		SecretKey:             captchaSecretKey,
+		SessionDuration:       captchaSessionDuration,
+		RecaptchaVersion:      captchaRecaptchaVersion,
+		RecaptchaScore:        captchaRecaptchaScore,
 		ProtectedPathPrefixes: protectedPathPrefixes,
 	}, nil
+}
+
+func parseIPWhitelistFromRequest(r *http.Request) (bool, []string, error) {
+	requireWhitelist, _ := utils.PostBool(r, "ipWhitelistEnabled")
+	whitelistStr, _ := utils.PostPara(r, "ipWhitelistSubnets")
+
+	whitelist := []string{}
+	for _, entry := range strings.FieldsFunc(whitelistStr, func(r rune) bool {
+		return r == '\n' || r == '\r' || r == ',' || r == ';'
+	}) {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+
+		if strings.Contains(entry, "/") {
+			if _, _, err := net.ParseCIDR(entry); err != nil {
+				return requireWhitelist, nil, fmt.Errorf("invalid CIDR: %s", entry)
+			}
+		} else if net.ParseIP(entry) == nil {
+			return requireWhitelist, nil, fmt.Errorf("invalid IP: %s", entry)
+		}
+
+		whitelist = append(whitelist, entry)
+	}
+
+	return requireWhitelist, whitelist, nil
 }
 
 // Add user customizable reverse proxy
@@ -185,17 +213,17 @@ func ReverseProxyInit() {
 		ForceHttpsRedirect: forceHttpsRedirect,
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
-		TlsManager:         tlsCertManager,
-		RedirectRuleTable:  redirectTable,
-		GeodbStore:         geodbStore,
-		StatisticCollector: statisticCollector,
-		WebDirectory:       *path_webserver,
-		AccessController:   accessController,
-		ForwardAuthRouter:  forwardAuthRouter,
-		OAuth2Router:       oauth2Router,
+		TlsManager:          tlsCertManager,
+		RedirectRuleTable:   redirectTable,
+		GeodbStore:          geodbStore,
+		StatisticCollector:  statisticCollector,
+		WebDirectory:        *path_webserver,
+		AccessController:    accessController,
+		ForwardAuthRouter:   forwardAuthRouter,
+		OAuth2Router:        oauth2Router,
 		ZorxAuthAgentRouter: zorxAuthRouter,
-		LoadBalancer:       loadBalancer,
-		PluginManager:      pluginManager,
+		LoadBalancer:        loadBalancer,
+		PluginManager:       pluginManager,
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -387,6 +415,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	requireCaptcha := captchaConfig != nil
 
+	requireIPWhitelist, ipWhitelistSubnets, err := parseIPWhitelistFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse IP whitelist: "+err.Error())
+		return
+	}
+
 	// Bypass WebSocket Origin Check
 	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
 	if strbpwsorg == "" {
@@ -521,6 +555,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Rate Limit
 			RequireRateLimit: requireRateLimit,
 			RateLimit:        int64(proxyRateLimit),
+			// IP Whitelist
+			RequireIPWhitelist: requireIPWhitelist,
+			IPWhitelistSubnets: ipWhitelistSubnets,
 			// CAPTCHA Gating
 			RequireCaptcha: requireCaptcha,
 			CaptchaConfig:  captchaConfig,
@@ -693,6 +730,12 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	requireCaptcha := captchaConfig != nil
 
+	requireIPWhitelist, ipWhitelistSubnets, err := parseIPWhitelistFromRequest(r)
+	if err != nil {
+		utils.SendErrorResponse(w, "failed to parse IP whitelist: "+err.Error())
+		return
+	}
+
 	// Disable chunked Encoding
 	disableChunkedEncoding, _ := utils.PostBool(r, "dChunkedEnc")
 
@@ -757,6 +800,8 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	newProxyEndpoint.RequireRateLimit = requireRateLimit
 	newProxyEndpoint.RateLimit = proxyRateLimit
+	newProxyEndpoint.RequireIPWhitelist = requireIPWhitelist
+	newProxyEndpoint.IPWhitelistSubnets = ipWhitelistSubnets
 	newProxyEndpoint.RequireCaptcha = requireCaptcha
 	newProxyEndpoint.CaptchaConfig = captchaConfig
 	newProxyEndpoint.UseStickySession = useStickySession

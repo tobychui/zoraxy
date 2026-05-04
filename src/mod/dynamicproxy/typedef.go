@@ -257,7 +257,9 @@ type ProxyEndpoint struct {
 	ForceHTTP11                    bool //Force use HTTP/1.1 for upstream connection
 
 	//Access Control
-	AccessFilterUUID string //Access filter ID
+	AccessFilterUUID   string //Access filter ID
+	RequireIPWhitelist bool
+	IPWhitelistSubnets []string
 
 	//Fallback routing logic (Special Rule Sets Only)
 	DefaultSiteOption int    //Fallback routing logic options

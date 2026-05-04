@@ -523,6 +523,21 @@
                             </div>
                              <small style="opacity:0.7;">Select how the system should respond when malicious or automated traffic is detected.</small>
                             <div class="ui divider"></div>
+                            <!-- IP Whitelist -->
+                            <label><b>IP Subnet Whitelist</b></label>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="RequireIPWhitelist">
+                                <label>Restrict Access by Allowed Subnets<br>
+                                    <small>Only allow requests from the IPs or CIDR ranges listed below</small>
+                                </label>
+                            </div>
+                            <div class="ipWhitelistSettings" style="margin-top: 0.8em; padding-left: 1.5em; display: none;">
+                                <label>Allowed Subnets (CIDR or single IP)</label>
+                                <textarea class="IPWhitelistSubnets" rows="3" placeholder="10.10.10.0/24&#10;192.168.1.0/24" style="width: 100%; resize: vertical;"></textarea>
+                                <small style="opacity:0.7;">One per line, comma or semicolon also supported. Enforcement only when enabled and list is not empty.</small>
+                            </div>
+                            <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
@@ -1107,6 +1122,9 @@
         let blockAICrawlers = $(editor).find(".BlockAICrawlers")[0].checked;
         let mitigationAction = $(editor).find(".mitigationActionDropdown").dropdown("get value");
 
+        let requireIPWhitelist = $(editor).find(".RequireIPWhitelist")[0].checked;
+        let ipWhitelistSubnets = $(editor).find(".IPWhitelistSubnets").val();
+
         // CAPTCHA Gating
         let requireCaptcha = $(editor).find(".RequireCaptcha")[0].checked;
         let captchaProvider = $(editor).find(".captchaProviderDropdown").dropdown("get value");
@@ -1140,6 +1158,8 @@
                 "blockCommonExploits": blockCommonExploits,
                 "blockAICrawlers": blockAICrawlers,
                 "mitigationAction": mitigationAction,
+                "ipWhitelistEnabled": requireIPWhitelist,
+                "ipWhitelistSubnets": ipWhitelistSubnets,
                 "ratenum" :rateLimit,
                 "captcha": requireCaptcha,
                 "captchaProvider": captchaProvider,
@@ -1845,6 +1865,28 @@
 
         editor.find(".editBasicAuthCredentialsBtn").off("click").on("click", function(){
             editBasicAuthCredentials(uuid);
+        });
+
+        // IP whitelist
+        editor.find(".IPWhitelistSubnets").val((subd.IPWhitelistSubnets || []).join("\n"));
+        if (subd.RequireIPWhitelist) {
+            editor.find(".RequireIPWhitelist").prop("checked", true);
+            editor.find(".ipWhitelistSettings").show();
+        } else {
+            editor.find(".RequireIPWhitelist").prop("checked", false);
+            editor.find(".ipWhitelistSettings").hide();
+        }
+
+        editor.find(".RequireIPWhitelist").off("change").on("change", function() {
+            if ($(this).is(":checked")) {
+                editor.find(".ipWhitelistSettings").show();
+            } else {
+                editor.find(".ipWhitelistSettings").hide();
+            }
+            saveProxyInlineEdit(uuid);
+        });
+        editor.find(".IPWhitelistSubnets").off("change").on("change", function() {
+            saveProxyInlineEdit(uuid);
         });
 
         //Rate limit

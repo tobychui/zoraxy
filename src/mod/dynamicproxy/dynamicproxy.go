@@ -271,6 +271,10 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		if isBlocked {
 			return
 		}
+		isBlocked, _ = accessRequestBlockedByEndpointWhitelist(accessRule, router.Option.WebDirectory, w, r, sep)
+		if isBlocked {
+			return
+		}
 	}
 
 	// Rate Limit

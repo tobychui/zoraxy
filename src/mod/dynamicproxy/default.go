@@ -61,6 +61,8 @@ func GetDefaultProxyEndpoint() ProxyEndpoint {
 		AuthenticationProvider:       GetDefaultAuthenticationProvider(),
 		RequireRateLimit:             false,
 		RateLimit:                    0,
+		RequireIPWhitelist:           false,
+		IPWhitelistSubnets:           []string{},
 		DisableUptimeMonitor:         false,
 		DisableAutoFallback:          false,
 		AccessFilterUUID:             "default",
