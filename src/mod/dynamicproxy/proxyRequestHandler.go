@@ -171,7 +171,11 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 
 	/* WebSocket automatic proxy */
 	requestURL := r.URL.String()
-	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
+	if isWebSocketRequest(r) {
+		if target.DisableWebSocket {
+			http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
+			return
+		}
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
 		r.Header.Set("Zr-Origin-Upgrade", "websocket")
 		wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
@@ -194,11 +198,13 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		}
 
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-			SkipTLSValidation:  selectedUpstream.SkipCertValidations,
-			SkipOriginCheck:    selectedUpstream.SkipWebSocketOriginCheck,
-			CopyAllHeaders:     target.EnableWebsocketCustomHeaders,
-			UserDefinedHeaders: target.HeaderRewriteRules.UserDefinedHeaders,
-			Logger:             h.Parent.Option.Logger,
+			SkipTLSValidation:              selectedUpstream.SkipCertValidations,
+			SkipOriginCheck:                selectedUpstream.SkipWebSocketOriginCheck,
+			CopyAllHeaders:                 target.EnableWebsocketCustomHeaders,
+			UserDefinedHeaders:             target.HeaderRewriteRules.UserDefinedHeaders,
+			Logger:                         h.Parent.Option.Logger,
+			Timeout:                        target.WebsocketTimeout,
+			EnableTimeoutRefreshOnActivity: target.EnableTimeoutRefreshOnActivity,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return
@@ -272,7 +278,11 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	r.Header.Set("X-Forwarded-Host", r.Host)
 	r.Header.Set("X-Forwarded-Server", "zoraxy-"+h.Parent.Option.HostUUID)
 
-	if r.Header["Upgrade"] != nil && strings.ToLower(r.Header["Upgrade"][0]) == "websocket" {
+	if isWebSocketRequest(r) {
+		if target.parent.DisableWebSocket {
+			http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
+			return
+		}
 		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
 		r.Header.Set("Zr-Origin-Upgrade", "websocket")
 		wsRedirectionEndpoint := target.Domain
@@ -290,11 +300,13 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 		h.Parent.logRequest(r, true, 101, "vdir-websocket", r.Host, target.Domain, target.parent)
 		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-			SkipTLSValidation:  target.SkipCertValidations,
-			SkipOriginCheck:    true,                                       //You should not use websocket via virtual directory. But keep this to true for compatibility
-			CopyAllHeaders:     target.parent.EnableWebsocketCustomHeaders, //Left this as default to prevent nginx user setting / as vdir
-			UserDefinedHeaders: target.parent.HeaderRewriteRules.UserDefinedHeaders,
-			Logger:             h.Parent.Option.Logger,
+			SkipTLSValidation:              target.SkipCertValidations,
+			SkipOriginCheck:                true,                                       //You should not use websocket via virtual directory. But keep this to true for compatibility
+			CopyAllHeaders:                 target.parent.EnableWebsocketCustomHeaders, //Left this as default to prevent nginx user setting / as vdir
+			UserDefinedHeaders:             target.parent.HeaderRewriteRules.UserDefinedHeaders,
+			Logger:                         h.Parent.Option.Logger,
+			Timeout:                        target.parent.WebsocketTimeout,
+			EnableTimeoutRefreshOnActivity: target.parent.EnableTimeoutRefreshOnActivity,
 		})
 		wspHandler.ServeHTTP(w, r)
 		return

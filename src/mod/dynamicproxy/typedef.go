@@ -11,6 +11,7 @@ import (
 	_ "embed"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
@@ -226,6 +227,11 @@ type ProxyEndpoint struct {
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
+	//Websocket auto proxy
+	DisableWebSocket               bool  //Block all WebSocket upgrade requests with an HTTP error response
+	WebsocketTimeout               int64 //Websocket connection timeout in seconds, set to 0 for using default 300 seconds
+	EnableTimeoutRefreshOnActivity bool  //Refresh websocket connection deadline on activity, requires websocket timeout to be set
+
 	//Custom Headers
 	HeaderRewriteRules           *HeaderRewriteRules
 	EnableWebsocketCustomHeaders bool //Enable custom headers for websocket connections as well (default only http reqiests)
@@ -320,4 +326,17 @@ func (e ErrorTemplateType) getTemplateContent() ([]byte, string) {
 	default:
 		return page_rperror, "rperror.html"
 	}
+}
+
+// isWebSocketRequest checks if the incoming HTTP request is a WebSocket upgrade request
+func isWebSocketRequest(r *http.Request) bool {
+	if r.Header == nil || r.Header["Upgrade"] == nil {
+		return false
+	}
+	upgradeHeader := r.Header["Upgrade"][0]
+	if upgradeHeader == "" {
+		return false
+	}
+
+	return strings.ToLower(upgradeHeader) == "websocket"
 }
