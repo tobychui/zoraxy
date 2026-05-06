@@ -38,6 +38,17 @@
         <div class="wrapper">
             <div class="toolbar">
                 <div id="mainmenu" class="ui secondary vertical menu">
+                    <!-- Recent Items Section -->
+                    <div class="recent-section-header" onclick="toggleMenuGroup('recent')">
+                        <i class="clock outline icon"></i>
+                        <span style="flex:1; margin-left:0.35em;">Recent</span>
+                        <i class="chevron down icon menugroup-chevron" id="chevron-recent"></i>
+                    </div>
+                    <div id="group-recent">
+                        <div class="recent-empty-hint">No recent items</div>
+                    </div>
+                    <div class="ui divider recent-section-divider"></div>
+
                     <a class="item" tag="qstart">
                         <i class="simplistic magic icon"></i>Quick Start
                     </a>
@@ -47,54 +58,110 @@
                     <a class="item" tag="setroot">
                         <i class="simplistic home icon"></i> Default Site
                     </a>
-                    <div class="ui divider menudivider">Reverse Proxy</div>
-                    <a class="item" tag="httprp">
-                        <i class="simplistic sitemap icon"></i> HTTP Proxy
-                    </a>
-                    <a class="item" tag="vdir">
-                        <i class="simplistic folder icon"></i> Virtual Directory
-                    </a>
-                    <a class="item" tag="rules">
-                        <i class="simplistic plus square icon"></i> Create Proxy Rules
-                    </a>
-                    <a class="item" tag="streamproxy">
-                        <i class="simplistic exchange icon"></i> Stream Proxy
-                    </a>
-                    <div class="ui divider menudivider">Access & Connections</div>
-                    <a class="item" tag="redirectset">
-                        <i class="simplistic level up alternate icon"></i> Redirection
-                    </a>
-                    <a class="item" tag="access">
-                        <i class="simplistic ban icon"></i> Access Control
-                    </a>
-                    <div class="ui divider menudivider">Security</div>
-                    <a class="item" tag="cert">
-                        <i class="simplistic lock icon"></i> TLS / SSL certificates
-                    </a>
-                    <a class="item" tag="sso">
-                        <i class="simplistic user circle icon"></i> SSO / OAuth2
-                    </a>
-                    <div class="ui divider menudivider">Others</div>
-                    <a class="item" tag="webserv">
-                        <i class="simplistic globe icon"></i> Static Web Server
-                    </a>
-                    <a class="item" tag="utm">
-                        <i class="simplistic time icon"></i> Uptime Monitor
-                    </a>
-                    <a class="item" tag="networktool">
-                        <i class="simplistic terminal icon"></i> Network Tools
-                    </a>
-                    <a class="item" tag="stats">
-                        <i class="simplistic database icon"></i> Statistical Analysis
-                    </a>
-                    <a class="item" tag="utils">
-                        <i class="simplistic paperclip icon"></i> Utilities
-                    </a>
+
+                    <!-- Reverse Proxy Group -->
+                    <div class="menugroup-container">
+                        <div class="menugroup-header" onclick="toggleMenuGroup('reverseproxy')">
+                            <i class="sitemap icon"></i>
+                            <span>Reverse Proxy</span>
+                            <i class="chevron down icon menugroup-chevron" id="chevron-reverseproxy"></i>
+                        </div>
+                        <div class="menugroup-items" id="group-reverseproxy">
+                            <a class="item" tag="httprp" tab_group="reverseproxy">
+                                <i class="simplistic sitemap icon"></i> HTTP Proxy
+                            </a>
+                            <a class="item" tag="vdir" tab_group="reverseproxy">
+                                <i class="simplistic folder icon"></i> Virtual Directory
+                            </a>
+                            <a class="item" tag="rules" tab_group="reverseproxy">
+                                <i class="simplistic plus square icon"></i> Create Proxy Rule
+                            </a>
+                            <a class="item" tag="streamproxy" tab_group="reverseproxy">
+                                <i class="simplistic exchange icon"></i> Stream Proxy
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Access & Connections Group -->
+                    <div class="menugroup-container">
+                        <div class="menugroup-header" onclick="toggleMenuGroup('accessconn')">
+                            <i class="shield alternate icon"></i>
+                            <span>Access & Connections</span>
+                            <i class="chevron down icon menugroup-chevron" id="chevron-accessconn"></i>
+                        </div>
+                        <div class="menugroup-items" id="group-accessconn">
+                            <a class="item" tag="redirectset" tab_group="accessconn">
+                                <i class="simplistic level up alternate icon"></i> Redirection
+                            </a>
+                            <a class="item" tag="access" tab_group="accessconn">
+                                <i class="simplistic ban icon"></i> Access Control
+                            </a>
+                             <a class="item" tag="trustproxy" tab_group="accessconn">
+                                <i class="shield alternate icon"></i> Trusted Proxy
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Security Group -->
+                    <div class="menugroup-container">
+                        <div class="menugroup-header" onclick="toggleMenuGroup('security')">
+                            <i class="lock icon"></i>
+                            <span>Security</span>
+                            <i class="chevron down icon menugroup-chevron" id="chevron-security"></i>
+                        </div>
+                        <div class="menugroup-items" id="group-security">
+                            <a class="item" tag="cert" tab_group="security">
+                                <i class="simplistic lock icon"></i> TLS / SSL certificates
+                            </a>
+                            <a class="item" tag="sso" tab_group="security">
+                                <i class="simplistic user circle icon"></i> SSO / OAuth2
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Services Group -->
+                    <div class="menugroup-container">
+                        <div class="menugroup-header" onclick="toggleMenuGroup('services')">
+                            <i class="server icon"></i>
+                            <span>Services</span>
+                            <i class="chevron down icon menugroup-chevron" id="chevron-services"></i>
+                        </div>
+                        <div class="menugroup-items" id="group-services">
+                            <a class="item" tag="webserv" tab_group="services">
+                                <i class="simplistic globe icon"></i> Static Web Server
+                            </a>
+                            <a class="item" tag="utm" tab_group="services">
+                                <i class="simplistic time icon"></i> Uptime Monitor
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Others Group -->
+                    <div class="menugroup-container">
+                        <div class="menugroup-header" onclick="toggleMenuGroup('others')">
+                            <i class="th icon"></i>
+                            <span>Others</span>
+                            <i class="chevron down icon menugroup-chevron" id="chevron-others"></i>
+                        </div>
+                        <div class="menugroup-items" id="group-others">
+                            <a class="item" tag="networktool" tab_group="others">
+                                <i class="simplistic terminal icon"></i> Network Tools
+                            </a>
+                            <a class="item" tag="stats" tab_group="others">
+                                <i class="simplistic database icon"></i> Statistical Analysis
+                            </a>
+                            <a class="item" tag="utils" tab_group="others">
+                                <i class="simplistic paperclip icon"></i> Utilities
+                            </a>
+                        </div>
+                    </div>
+                    <div class="ui divider"></div>
+                    <!-- Plugin Manager -->
                     <a class="item" tag="plugins">
-                        <i class="simplistic puzzle piece icon"></i> Plugins Manager
+                        <i class="simplistic puzzle piece icon"></i> Plugin Manager
                     </a>
-                    <div class="ui divider menudivider">Plugins</div>
-                    <cx id="pluginMenu"></container>
+                    <!-- Installed Plugins -->
+                    <cx id="pluginMenu">
                         <a class="item" style="pointer-events: none; user-select: none; opacity: 0.6;">
                             <i class="green circle check icon"></i> No Plugins Installed
                         </a>
@@ -128,9 +195,12 @@
 
                 <!-- Redirections -->
                 <div id="redirectset" class="functiontab" target="redirection.html"></div>
-
+                
                 <!-- Blacklist -->
                 <div id="access" class="functiontab" target="access.html"></div>
+
+                 <!-- Trusted Proxy -->
+                <div id="trustproxy" class="functiontab" target="trustedproxy.html"></div>
 
                 <!-- SSO / Oauth services -->
                 <div id="sso" class="functiontab" target="sso.html"></div>
@@ -263,6 +333,10 @@
             initTabs(function(){
                 initRPStaste();
 
+                // Initialize collapsible group states and recent items before any tab navigation
+                initMenuGroupStates();
+                renderRecentItems();
+
                 if (window.location.hash.length > 1){
                     let tabID = window.location.hash.substr(1);
                     if (tabID.startsWith("{")) {
@@ -310,6 +384,9 @@
 
                 //Initialize all table that is sortable
                 $('table').tablesort();
+
+                // Menu is fully initialized; future tab switches will be recorded in recent history
+                _menuInitDone = true;
             });
 
             //Function to open a plugin tab by its plugin id
@@ -420,8 +497,16 @@
                     loadPluginUIContextIfAvailable();
                 }else{
                     window.location.hash = tabID;
-                }   
-                
+                }
+
+                // Update document title
+                var tabLabel = $(targetBtn).clone().children('i').remove().end().text().trim();
+                document.title = (tabLabel ? tabLabel + ' | ' : '') + 'Zoraxy';
+
+                // Expand the group containing this tab if it is collapsed
+                expandGroupContaining(tabID);
+                // Record in recent navigation history (skip during initial page load)
+                if (_menuInitDone) { recordRecentTab(tabID, $(targetBtn)); }
             }
 
             $(window).on("resize", function(){
@@ -549,6 +634,136 @@
 
             /* Utilities */
             $(".year").text(new Date().getFullYear());
+
+            /* ===================================================
+               Collapsible Side Menu Groups
+               =================================================== */
+            var _menuInitDone = false;
+
+            // Build tab → group map at runtime from tab_group attributes on menu items
+            var TAB_TO_GROUP = (function() {
+                var map = {};
+                $('#mainmenu [tab_group]').each(function() {
+                    var tabID  = $(this).attr('tag');
+                    var group  = $(this).attr('tab_group');
+                    if (tabID && group) { map[tabID] = group; }
+                });
+                return map;
+            })();
+
+            function getMenuGroupStates() {
+                try { return JSON.parse(localStorage.getItem('zoraxy_menu_groups') || '{}'); }
+                catch(e) { return {}; }
+            }
+
+            function saveMenuGroupStates(states) {
+                localStorage.setItem('zoraxy_menu_groups', JSON.stringify(states));
+            }
+
+            function toggleMenuGroup(groupId) {
+                var $items   = $('#group-' + groupId);
+                var $chevron = $('#chevron-' + groupId);
+                var states   = getMenuGroupStates();
+                if ($items.is(':hidden')) {
+                    $items.slideDown(180);
+                    $chevron.removeClass('collapsed');
+                    states[groupId] = true;
+                } else {
+                    $items.slideUp(180);
+                    $chevron.addClass('collapsed');
+                    states[groupId] = false;
+                }
+                saveMenuGroupStates(states);
+            }
+
+            // Build the list of collapsible group IDs at runtime from the DOM
+            // (any element with class "menugroup-items" and an id of "group-*" is a group)
+            var COLLAPSIBLE_GROUPS = (function() {
+                var groups = [];
+                $('.menugroup-items').each(function() {
+                    var id = $(this).attr('id') || '';
+                    if (id.startsWith('group-')) {
+                        groups.push(id.slice('group-'.length));
+                    }
+                });
+                return groups;
+            })();
+
+            function expandGroupContaining(tabID) {
+                var groupId = TAB_TO_GROUP[tabID];
+                if (!groupId) return;
+                var states = getMenuGroupStates();
+                COLLAPSIBLE_GROUPS.forEach(function(gid) {
+                    var $items   = $('#group-' + gid);
+                    var $chevron = $('#chevron-' + gid);
+                    if (gid === groupId) {
+                        // Ensure the parent group is expanded
+                        if ($items.is(':hidden')) {
+                            $items.slideDown(180);
+                            $chevron.removeClass('collapsed');
+                        }
+                        states[gid] = true;
+                    } else {
+                        // Collapse all other groups
+                        if ($items.is(':visible')) {
+                            $items.slideUp(180);
+                            $chevron.addClass('collapsed');
+                        }
+                        states[gid] = false;
+                    }
+                });
+                saveMenuGroupStates(states);
+            }
+
+            function initMenuGroupStates() {
+                var states = getMenuGroupStates();
+                // Discover all group containers from DOM (includes recent + all menugroup-items)
+                $('#mainmenu [id^="group-"]').each(function() {
+                    var gid = $(this).attr('id').slice('group-'.length);
+                    if (states[gid] === false) {
+                        $(this).hide();
+                        $('#chevron-' + gid).addClass('collapsed');
+                    }
+                });
+            }
+
+            /* ===================================================
+               Recent Items
+               =================================================== */
+            function getRecentTabs() {
+                try { return JSON.parse(localStorage.getItem('zoraxy_recent_tabs') || '[]'); }
+                catch(e) { return []; }
+            }
+
+            function recordRecentTab(tabID, $btn) {
+                if (!tabID || tabID === 'pluginContextWindow') return;
+                // Extract label (strip icon element text) and icon class
+                var label     = $btn.clone().children('i').remove().end().text().trim();
+                var iconClass = $btn.children('i').first().attr('class') || '';
+                var recent    = getRecentTabs().filter(function(t) { return t.tag !== tabID; });
+                recent.unshift({ tag: tabID, label: label, icon: iconClass });
+                recent = recent.slice(0, 5);
+                localStorage.setItem('zoraxy_recent_tabs', JSON.stringify(recent));
+                renderRecentItems();
+            }
+
+            function renderRecentItems() {
+                var $container = $('#group-recent');
+                $container.empty();
+                var recent = getRecentTabs();
+                if (recent.length === 0) {
+                    $container.html('<div class="recent-empty-hint">No recent items</div>');
+                    return;
+                }
+                recent.forEach(function(tab) {
+                    var $item = $('<a class="recent-item"></a>');
+                    $item.append($('<i style="margin-top: -8px;"></i>').addClass(tab.icon));
+                    $item.append(document.createTextNode(tab.label));
+                    $item.attr('title', tab.label);
+                    $item.on('click', function() { openTabById(tab.tag); });
+                    $container.append($item);
+                });
+            }
         </script>
     </body>
 </html>

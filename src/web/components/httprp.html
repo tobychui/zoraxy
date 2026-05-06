@@ -261,6 +261,9 @@
                     <a class="item hrpedit_menu_item" cfgpage="vdirs">
                         <i class="angle folder icon"></i> <span class="editorSideMenuText">Virtual Directory</span>
                     </a>
+                     <a class="item hrpedit_menu_item" cfgpage="websocket">
+                        <i class="exchange icon"></i> <span class="editorSideMenuText">WebSocket</span>
+                    </a>
                     <a class="item hrpedit_menu_item" cfgpage="alias">
                         <i class="at icon"></i> <span class="editorSideMenuText">Alias</span>
                     </a>
@@ -363,7 +366,10 @@
                                 <label>Use Sticky Session<br>
                                     <small>Enable stick session on load balancing</small></label>
                             </div>
-                            <br>
+                            
+                            <!-- Compatibility Settings -->
+                            <div class="ui divider"></div>
+                            <h4 style="margin-top: 0px;">Compatibility</h4>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="DisableChunkedTransferEncoding">
                                 <label>Disable Chunked Transfer Encoding<br>
@@ -375,18 +381,28 @@
                                 <label>Force HTTP/1.1<br>
                                     <small>Force the proxy to use HTTP/1.1 for upstream connections, disabling HTTP/2</small></label>
                             </div>
-                            <!-- WebSocket Settings -->
+                            
+                        </div>
+                    </div>
+                    <!-- WebSocket-->
+                    <div class="rpconfig_content" rpcfg="websocket">
+                        <div class="ui segment">
+                            <div class="ui visible message">
+                                <p><i class="exchange icon"></i> WebSocket connections are detected and forwarded automatically in Zoraxy, but you can optionally disable it.</p>
+                            </div>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" class="DisableWebSocket">
-                                <label>Disable WebSocket<br>
-                                    <small>Block all WebSocket upgrade requests to this endpoint with a 403 error</small></label>
+                                <input type="checkbox" class="EnableWebSocket" checked>
+                                <label>Enable WebSocket<br>
+                                    <small>Allow WebSocket upgrade requests to be proxied to this endpoint</small></label>
                             </div>
                             <br>
-                            <div class="ui small right labeled fluid input" style="margin-top: 0.4em;">
+                            <b>Connection Timeout</b>
+                            <div class="ui small right labeled fluid input" style="margin-top: 0.8em;">
                                 <input type="number" class="WebsocketTimeout" value="0" min="0">
                                 <label class="ui basic label">seconds</label>
                             </div>
                             <small style="opacity:0.7;">WebSocket connection timeout in seconds. Set to 0 to use the default (300 seconds).</small>
+                            <br><br>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="EnableTimeoutRefreshOnActivity">
                                 <label>Refresh timeout on activity<br>
@@ -1118,7 +1134,7 @@
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
-        let disableWebSocket = $(editor).find(".DisableWebSocket")[0].checked;
+        let disableWebSocket = !$(editor).find(".EnableWebSocket")[0].checked;
         let websocketTimeout = parseInt($(editor).find(".WebsocketTimeout").val()) || 0;
         if (websocketTimeout < 0) websocketTimeout = 0;
         let enableTimeoutRefreshOnActivity = $(editor).find(".EnableTimeoutRefreshOnActivity")[0].checked;
@@ -1793,9 +1809,9 @@
             saveProxyInlineEdit(uuid);
         });
 
-        editor.find(".DisableWebSocket").off("change");
-        editor.find(".DisableWebSocket").prop("checked", subd.DisableWebSocket);
-        editor.find(".DisableWebSocket").on("change", function() {
+        editor.find(".EnableWebSocket").off("change");
+        editor.find(".EnableWebSocket").prop("checked", !subd.DisableWebSocket);
+        editor.find(".EnableWebSocket").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

@@ -318,6 +318,170 @@ body.darkTheme .menubar{
     border-top: 1px solid rgba(255,255,255,.1) !important;
 }
 
+/* ========================================
+   Collapsible Side Menu Groups
+   ======================================== */
+.menugroup-container {
+    position: relative;
+}
+
+.menugroup-header {
+    display: flex;
+    align-items: center;
+    padding: 0.55em 0.5em 0.35em;
+    cursor: pointer;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(0, 0, 0, 0.45);
+    user-select: none;
+    margin-top: 0.7em;
+    border-radius: 0.3em;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.menugroup-header:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.72);
+}
+
+.menugroup-header > .icon:first-child {
+	width: 1.1em;
+	padding-right: 1.6em;
+	margin-top: -0.8em;
+	opacity: 0.7;
+}
+
+.menugroup-header > span {
+    flex: 1;
+}
+
+.menugroup-chevron {
+    font-size: 0.7em !important;
+    opacity: 0.45;
+    transition: transform 0.22s ease;
+    margin-left: auto;
+    margin-right: 1em !important;
+    
+}
+
+.menugroup-chevron:not(.collapsed){
+    margin-top: -1.2em !important;
+    margin-right: 0.4em !important;
+}
+
+.menugroup-chevron.collapsed {
+    transform: rotate(-90deg);
+}
+
+.menugroup-items {
+    padding-top: 0.2em;
+    border-left: 1px solid var(--divider_color);
+    margin-left: 0.8em;
+}
+
+.menugroup-items .item {
+    padding-left: 1.4em !important;
+}
+
+body.darkTheme .menugroup-header {
+    color: rgba(255, 255, 255, 0.38);
+}
+
+body.darkTheme .menugroup-header:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+#pluginMenu .item{
+    margin-right: 0px;
+    margin-left: 0px;
+    padding-top: 0.6em;
+    padding-bottom: 0.6em;
+}
+
+/* ========================================
+   Recent Items Section
+   ======================================== */
+.recent-section-header {
+    display: flex;
+    align-items: center;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(0, 0, 0, 0.45);
+    padding: 0.6em 0.6em 0.4em;
+    cursor: pointer;
+    border-radius: 0.3em;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    user-select: none;
+}
+
+.recent-section-header i{
+    margin-top: -8px;
+}
+
+.recent-section-header:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.72);
+}
+
+.recent-section-header .menugroup-chevron {
+    margin-left: auto;
+}
+
+.recent-item {
+    display: flex;
+    align-items: center;
+    padding: 0.45em 0.8em 0.45em 1.3em;
+    border-radius: 0.3em;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: inherit;
+    transition: background-color 0.12s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none !important;
+}
+
+.recent-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.recent-item .icon {
+    margin-right: 0.5em;
+    font-size: 0.82em;
+    opacity: 0.55;
+    flex-shrink: 0;
+}
+
+.recent-empty-hint {
+    font-size: 0.82em;
+    opacity: 0.42;
+    font-style: italic;
+    padding: 0.25em 0.5em 0.5em 1.3em;
+}
+
+.recent-section-divider {
+    margin: 0.5em 0 0.2em !important;
+}
+
+body.darkTheme .recent-section-header {
+    color: rgba(255, 255, 255, 0.38);
+}
+
+body.darkTheme .recent-section-header:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+body.darkTheme .recent-item:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
 body.darkTheme .menudivider{
     border-bottom: 1px solid rgba(255,255,255,.15) !important;
     border-top: 1px solid rgba(34,36,38,.1) !important;
