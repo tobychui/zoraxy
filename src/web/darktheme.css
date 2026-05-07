@@ -503,6 +503,7 @@ body.darkTheme #tourModal .ui.circular.icon.button:hover {
 */
 body.darkTheme .ui.table{
     background-color: transparent !important;
+    border: 1px solid rgba(255,255,255,.15) !important;
 }
 body.darkTheme .ui.celled.sortable.unstackable.compact.table thead th,
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td,
