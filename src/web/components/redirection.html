@@ -63,12 +63,12 @@
     <div class="ui divider"></div>
     <h4>Add Redirection Rule</h4>
     <div class="ui form">
-        <div class="field">
+        <div class="field" tourstep="url-from">
           <label>Redirection URL (From)</label>
           <input type="text" id="rurl" name="redirection-url" placeholder="Redirection URL">
           <small> Any matching prefix of the request URL will be redirected to the destination URL, e.g. redirect.example.com</small>
         </div>
-        <div class="field">
+        <div class="field" tourstep="url-to">
           <label>Destination URL (To)</label>
           <input type="text" name="destination-url" placeholder="Destination URL">
           <small>The target URL request being redirected to, e.g. dest.example.com/mysite/ or dest.example.com/script.php, <b>sometime you might need to add tailing slash (/) to your URL depending on your use cases</b></small>
@@ -128,7 +128,9 @@
               </div>
             </div>
         </div>
-        <button class="ui basic button" onclick="addRules();"><i class="ui teal plus icon"></i> Add Redirection Rule</button>
+        <div tourstep="save_redirect_btn" style="display:inline-block;">
+          <button class="ui basic button" onclick="addRules();"><i class="ui teal plus icon"></i> Add Redirection Rule</button>
+        </div>
         <div class="ui green message" id="ruleAddSucc" style="display:none;">
           <i class="ui green checkmark icon"></i> Redirection Rules Added
         </div>

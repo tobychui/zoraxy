@@ -269,19 +269,42 @@ var tourSteps = {
             pos: "bottomright"
         }),
         tourStepFactory({
-            title: "📤 Upload Static Website",
-            desc: `Upload your static website files (e.g. HTML files) to the web directory. If remote access is not avaible, you can also upload it with the web server file manager here.`,
+            title: "📁 Enable WebDAV Server",
+            desc: `To manage files in your web directory remotely, enable the built-in <b>WebDAV server</b> by toggling <b>"Enable WebDAV Server"</b>. You can also customise the listen port and set custom credentials in the Advanced Options below.
+            <br><br>The WebDAV server only listens on <code>localhost</code>, so you will need to expose it via a proxy rule in the next step.`,
             tab: "webserv",
-            element: "#webserv_dirManager",
+            element: "#webserv .inline.field",
+            scrollto: "#webserv .inline.field",
             pos: "bottomright",
-            scrollto: "#webserv_dirManager"
         }),
         tourStepFactory({
-            title: "💡 Start Zoraxy HTTP listener",
-            desc: `Start Zoraxy (if it is not already running) by pressing the "Start Service" button.<br>You should now be able to visit your domain and see the static web server contents show up in your browser.`,
-            tab: "status",
-            element: "#status .poweroptions",
+            title: "🌐 Add DNS Record for WebDAV",
+            desc: `Before creating the proxy rule, add a DNS <b>A</b> or <b>CNAME</b> record for your chosen WebDAV subdomain (e.g. <code>webdav.example.com</code>) pointing to your Zoraxy server's public IP address — just like you did for your root domain.
+            <br><br>Once the DNS record is in place, fill in the subdomain in the <b>Matching Keyword / Domain</b> field.`,
+            tab: "rules",
+            element: "#rules .field[tourstep='matchingkeyword']",
+            scrollto: "#rules .field[tourstep='matchingkeyword']",
             pos: "bottomright",
+            callback: function(){
+                let webdavPort = $("#webdav_port").val() || "5488";
+                $("#rules .field[tourstep='matchingkeyword'] input").val("webdav.example.com");
+                $("#rules .field[tourstep='targetdomain'] input").val("127.0.0.1:" + webdavPort);
+            }
+        }),
+        tourStepFactory({
+            title: "💾 Save the WebDAV Proxy Rule",
+            desc: `The target destination has been pre-filled to <code>127.0.0.1:5488</code> (adjust if you changed the WebDAV port). Click <b>"Create Endpoint"</b> to save the rule.
+            <br><br>Once saved, you can connect to <code>https://webdav.example.com</code> using any WebDAV-compatible client such as WinSCP, Cyberduck, or Windows "Map Network Drive".`,
+            element: "#rules div[tourstep='newProxyRule']",
+            scrollto: "#rules div[tourstep='newProxyRule']",
+            pos: "topright",
+        }),
+        tourStepFactory({
+            title: "🎉 WebDAV Server Setup Completed!",
+            desc: `You should now be able to visit your domain and see the static web server contents show up in your browser.`,
+            tab: "webserv",
+            element: "",
+            pos: "center",
         })
     ],
 
@@ -445,11 +468,15 @@ var tourSteps = {
         }),
         tourStepFactory({
             title: "⚙️ Setup ACME",
-            desc: `If you didn't want to pay for a certificate, there are free CA where you can use to obtain a certificate. By default, Let's Encrypt is used and in order to use their service, you will need to fill in your webmin contact email in the "ACME EMAIL" field.
-            <br><br> After you are done, click "Save Settings" and continue.`,
-            element: "#cert div[tourstep='acmeSettings']",
-            scrollto: "#cert div[tourstep='acmeSettings']",
+            desc: `If you didn't want to pay for a certificate, there are free CAs you can use to obtain a certificate. By default, Let's Encrypt is used and in order to use their service, you will need to fill in your contact email in the <b>ACME Email</b> field.
+            <br><br>After filling in the email and selecting your preferred CA, click <b>Save</b> and continue.`,
+            tab: "acme",
+            element: "#acme div[tourstep='acmeSettings']",
+            scrollto: "#acme div[tourstep='acmeSettings']",
             pos: "bottomright",
+            callback: function(){
+                openTabById("acme");
+            }
         }),
         tourStepFactory({
             title: "👉 Open ACME Tool",
@@ -471,14 +498,16 @@ var tourSteps = {
         }),
         tourStepFactory({
             title: "🔄 Enable Auto Renew",
-            desc:`Free certificate only last for a few months. If you want Zoraxy to help you automate the certificate renew process, enable "Auto Renew" by clicking the <b>"Enable Certificate Auto Renew"</b> toggle switch.
-            <br><br>You can fine tune which certificate to renew in the "Advance Renew Policy" dropdown.`,
-            element: ".sideWrapper",
-            pos: "bottomleft",
+            desc:`Free certificates only last for a few months. If you want Zoraxy to automate the renewal process, enable <b>"Enable Certificate Auto Renew"</b> using the toggle switch.
+            <br><br>You can fine-tune which certificates get renewed in the <b>Advanced Renew Policy</b> section just below — choose "Renew All Certs" or select individual certificates from the table.`,
+            tab: "acme",
+            element: "#acmeAutoRenewCheckbox",
+            scrollto: "#acmeAutoRenewCheckbox",
+            pos: "bottomright",
             callback: function(){
-                //If the user arrive this step from "Back"
-                if (!$(".sideWrapper").is(":visible")){
-                    openACMEManager();
+                //Close the ACME side tool if it is still open from the previous step
+                if ($(".sideWrapper").is(":visible")){
+                    hideSideWrapperInTourMode();
                 }
             }
         }),
@@ -494,5 +523,171 @@ var tourSteps = {
             }
         }),
 
+    ],
+
+    // Redirection rules tour steps
+    "redirect": [
+        tourStepFactory({
+            title: "↩️ Redirection Rules",
+            desc: `Sometimes you want to send visitors from one URL straight to another — for example, redirecting an old domain to a new one, or sending <code>http://</code> traffic to <code>https://</code>. That's exactly what <b>Redirection Rules</b> are for.
+            <br><br>In this tour you'll learn how to create a redirection rule and tune it to your needs.`,
+            tab: "redirectset",
+            pos: "center",
+        }),
+        tourStepFactory({
+            title: "📋 Existing Rules",
+            desc: `This table lists all your current redirection rules. Each row shows the source URL, the destination URL, and whether pathname forwarding and device filtering are active.
+            <br><br>You can toggle rules on/off with the switch in the first column, or delete them with the trash icon.`,
+            tab: "redirectset",
+            element: "#redirectset table",
+            scrollto: "#redirectset table",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🌐 Redirection URL (From)",
+            desc: `Fill in the URL you want to redirect <b>from</b> — this is the address your visitors currently use.
+            <br><br>e.g. <code>old.example.com</code>. Any incoming request whose URL starts with this value will be caught by this rule.`,
+            element: "#redirectset [tourstep='url-from']",
+            scrollto: "#redirectset [tourstep='url-from']",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🎯 Destination URL (To)",
+            desc: `Fill in the URL you want to redirect visitors <b>to</b>.
+            <br><br>e.g. <code>new.example.com</code> or <code>new.example.com/landing/</code>. You can include a path segment here — a trailing slash is sometimes required depending on how the destination server handles requests.`,
+            element: "#redirectset [tourstep='url-to']",
+            scrollto: "#redirectset [tourstep='url-to']",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "📂 Forward Pathname",
+            desc: `The <b>Forward Pathname</b> option controls whether the path after the source URL is appended to the destination.
+            <br><br>
+            <b>Enabled:</b> <code>old.example.com<b>/blog?post=13</b></code> → <code>new.example.com<b>/blog?post=13</b></code><br>
+            <b>Disabled:</b> <code>old.example.com/blog?post=13</code> → <code>new.example.com</code>
+            <br><br>Leave it <b>checked</b> (default) if you want all sub-paths to follow along with the redirect.`,
+            element: "#redirectset .field:has(input[name='forward-childpath'])",
+            scrollto: "#redirectset .field:has(input[name='forward-childpath'])",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "📱 Device Type Filter",
+            desc: `You can optionally restrict a redirection rule to only fire for certain device types.
+            <br><br>
+            <b>All Devices</b> — rule applies to everyone (default).<br>
+            <b>Desktop Only</b> — only desktop browsers are redirected; mobile visitors continue normally.<br>
+            <b>Mobile Only</b> — only mobile browsers are redirected; useful for sending mobile users to a dedicated mobile site.
+            <br><br>Unknown device types are treated as desktop.`,
+            element: "#redirectset .grouped.fields:has(input[name='redirect-device'])",
+            scrollto: "#redirectset .grouped.fields:has(input[name='redirect-device'])",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🔖 Status Code",
+            desc: `Choose between a <b>307 Temporary Redirect</b> and a <b>301 Moved Permanently</b>.
+            <br><br>
+            Use <b>307</b> while testing — browsers won't cache it, so you can change the rule freely.<br>
+            Switch to <b>301</b> once you're confident the redirect is permanent; search engines will transfer SEO ranking to the new URL.`,
+            element: "#redirectset .grouped.fields:has(input[name='redirect-type'])",
+            scrollto: "#redirectset .grouped.fields:has(input[name='redirect-type'])",
+            pos: "topright",
+        }),
+        tourStepFactory({
+            title: "💾 Save the Redirection Rule",
+            desc: `Happy with the settings? Click <b>"Add Redirection Rule"</b> to activate it immediately — no restart required.
+            <br><br>The new rule will appear at the top of the rules table. You can come back and edit or delete it at any time.`,
+            element: "#redirectset [tourstep='save_redirect_btn']",
+            scrollto: "#redirectset [tourstep='save_redirect_btn']",
+            pos: "topright",
+        }),
+        tourStepFactory({
+            title: "🎉 Redirection Rule Added!",
+            desc: `The new redirection rule has been successfully added and is now active.`,
+            element: "",
+            scrollto: "#redirectset",
+            pos: "center",
+        }),
+    ],
+
+    // Stream proxy (TCP/UDP) tour steps
+    "stream": [
+        tourStepFactory({
+            title: "🌊 Stream Proxy (TCP / UDP)",
+            desc: `The <b>Stream Proxy</b> lets you forward raw TCP or UDP traffic to a backend server — think game servers, databases, VoIP, or anything that doesn't speak HTTP.
+            <br><br>In this tour we'll use a <b>Minecraft server</b> as a hands-on example.`,
+            tab: "streamproxy",
+            pos: "center",
+        }),
+        tourStepFactory({
+            title: "🤔 How is this different from HTTP Proxy?",
+            desc: `HTTP proxy rules can tell traffic apart by domain name, so many sites can share the same port 80/443. Stream proxy doesn't work that way — it just forwards everything arriving on a port straight to one backend, no questions asked.
+            <br><br>That's a perfect fit for game servers, VoIP, and other non-HTTP services. If you do need smarter per-connection routing, check out the <b>Proxy Protocol</b> option at the end of this tour.`,
+            tab: "streamproxy",
+            pos: "center",
+        }),
+        tourStepFactory({
+            title: "📋 Existing Stream Rules",
+            desc: `This table lists all active stream proxy rules. Each row shows the rule name, the port Zoraxy is listening on, and the backend address traffic is forwarded to.`,
+            element: "#streamproxy #proxyTable",
+            scrollto: "#streamproxy #proxyTable",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🏷️ Give It a Name",
+            desc: `Fill in a friendly name for this rule so you can identify it later.
+            <br><br>For our example, type something like <code>Minecraft Server</code>.`,
+            element: "#streamproxy #streamProxyForm .field:has(input[name='name'])",
+            scrollto: "#streamproxy #addproxyConfig",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "👂 Listening Address",
+            desc: `This is the port on <em>this</em> machine that Zoraxy will listen on for incoming connections.
+            <br><br>Minecraft's default port is <code>25565</code>, so enter <code>:25565</code> to listen on all interfaces, or <code>0.0.0.0:25565</code> explicitly.
+            <br><br><b>Docker users:</b> you must also expose this port in your <code>docker-compose.yml</code> or <code>-p</code> flag.`,
+            element: "#streamproxy #streamProxyForm .field:has(input[name='listenAddr'])",
+            scrollto: "#streamproxy #streamProxyForm .field:has(input[name='listenAddr'])",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🎯 Proxy Target Address",
+            desc: `Enter the address of your actual Minecraft server backend — the machine Zoraxy should forward traffic to.
+            <br><br>e.g. <code>192.168.1.100:25565</code> for a server on your local network, or <code>mc.myserver.com:25565</code> for a remote host.`,
+            element: "#streamproxy #streamProxyForm .field:has(input[name='proxyAddr'])",
+            scrollto: "#streamproxy #streamProxyForm .field:has(input[name='proxyAddr'])",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "⚙️ Enable TCP / UDP",
+            desc: `Toggle on <b>TCP</b> for Minecraft Java Edition (it uses TCP). If you are also forwarding a Bedrock Edition server, enable <b>UDP</b> as well.
+            <br><br>You can enable both on the same rule if your backend handles both protocols on the same port.`,
+            element: "#streamproxy #streamProxyForm .field:has(input[name='useTCP'])",
+            scrollto: "#streamproxy #streamProxyForm .field:has(input[name='useTCP'])",
+            pos: "bottomright",
+        }),
+        tourStepFactory({
+            title: "🔬 Proxy Protocol (Advanced)",
+            desc: `Leave this set to <b>Disabled</b> for most use cases like Minecraft.
+            <br><br>If your backend needs to know the <em>real client IP address</em> (e.g. a web server behind Zoraxy), enable <b>Proxy Protocol V1 or V2</b>. It prepends a small header to each connection so the backend can see where the traffic originally came from — think of it as writing the sender's return address on the envelope before forwarding it.
+            <br><br>Note: UDP does not support Proxy Protocol V1.`,
+            element: "#streamproxy #streamProxyForm .field:has(select[name='proxyProtocolVersion'])",
+            scrollto: "#streamproxy #streamProxyForm .field:has(select[name='proxyProtocolVersion'])",
+            pos: "topright",
+        }),
+        tourStepFactory({
+            title: "💾 Create the Stream Rule",
+            desc: `Click <b>"Create"</b> to start the stream proxy immediately. Your Minecraft server will now be accessible through Zoraxy on port <code>25565</code>.
+            <br><br>Players can connect using your Zoraxy host's domain or IP address — Zoraxy will transparently forward all traffic to your backend server.`,
+            element: "#streamproxy [tourstep='create_stream_proxy_btn']",
+            scrollto: "#streamproxy [tourstep='create_stream_proxy_btn']",
+            pos: "topright",
+        }),
+         tourStepFactory({
+            title: "🎉Stream Proxy Rule Added!",
+            desc: `The new stream proxy rule has been successfully added and is now active.`,
+            element: "",
+            scrollto: "#streamproxy",
+            pos: "center",
+        }),
     ],
 }
