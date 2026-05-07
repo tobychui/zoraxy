@@ -346,11 +346,23 @@ body.darkTheme .menubar{
     color: rgba(0, 0, 0, 0.72);
 }
 
-.menugroup-header > .icon:first-child {
-	width: 1.1em;
-	padding-right: 1.6em;
-	margin-top: -0.8em;
+.menugroup-icon {
+	width: 20px;
+	height: auto;
+	margin-right: 0.4em;
 	opacity: 0.7;
+	object-fit: contain;
+}
+.menugroup-header .theme-icon-dark {
+    display: none;
+}
+
+body.darkTheme .menugroup-header .theme-icon-light {
+    display: none;
+}
+
+body.darkTheme .menugroup-header .theme-icon-dark {
+    display: inline-block;
 }
 
 .menugroup-header > span {

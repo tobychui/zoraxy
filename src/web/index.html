@@ -62,7 +62,8 @@
                     <!-- Reverse Proxy Group -->
                     <div class="menugroup-container">
                         <div class="menugroup-header" onclick="toggleMenuGroup('reverseproxy')">
-                            <i class="sitemap icon"></i>
+                            <img class="menugroup-icon theme-icon-light" src="img/icons/proxy_black.svg" alt="Reverse Proxy">
+                            <img class="menugroup-icon theme-icon-dark" src="img/icons/proxy_white.svg" alt="Reverse Proxy">
                             <span>Reverse Proxy</span>
                             <i class="chevron down icon menugroup-chevron" id="chevron-reverseproxy"></i>
                         </div>
@@ -85,7 +86,8 @@
                     <!-- Access & Connections Group -->
                     <div class="menugroup-container">
                         <div class="menugroup-header" onclick="toggleMenuGroup('accessconn')">
-                            <i class="shield alternate icon"></i>
+                            <img class="menugroup-icon theme-icon-light" src="img/icons/access_black.svg" alt="Access and Connections">
+                            <img class="menugroup-icon theme-icon-dark" src="img/icons/access_white.svg" alt="Access and Connections">
                             <span>Access & Connections</span>
                             <i class="chevron down icon menugroup-chevron" id="chevron-accessconn"></i>
                         </div>
@@ -105,13 +107,17 @@
                     <!-- Security Group -->
                     <div class="menugroup-container">
                         <div class="menugroup-header" onclick="toggleMenuGroup('security')">
-                            <i class="lock icon"></i>
+                            <img class="menugroup-icon theme-icon-light" src="img/icons/security_black.svg" alt="Security">
+                            <img class="menugroup-icon theme-icon-dark" src="img/icons/security_white.svg" alt="Security">
                             <span>Security</span>
                             <i class="chevron down icon menugroup-chevron" id="chevron-security"></i>
                         </div>
                         <div class="menugroup-items" id="group-security">
                             <a class="item" tag="cert" tab_group="security">
                                 <i class="simplistic lock icon"></i> TLS / SSL certificates
+                            </a>
+                            <a class="item" tag="acme" tab_group="security">
+                                <i class="simplistic asterisk icon"></i> ACME Client
                             </a>
                             <a class="item" tag="sso" tab_group="security">
                                 <i class="simplistic user circle icon"></i> SSO / OAuth2
@@ -122,7 +128,8 @@
                     <!-- Services Group -->
                     <div class="menugroup-container">
                         <div class="menugroup-header" onclick="toggleMenuGroup('services')">
-                            <i class="server icon"></i>
+                            <img class="menugroup-icon theme-icon-light" src="img/icons/service_black.svg" alt="Services">
+                            <img class="menugroup-icon theme-icon-dark" src="img/icons/service_white.svg" alt="Services">
                             <span>Services</span>
                             <i class="chevron down icon menugroup-chevron" id="chevron-services"></i>
                         </div>
@@ -136,17 +143,33 @@
                         </div>
                     </div>
 
+                    <!-- Networking Group -->
+                    <div class="menugroup-container">
+                        <div class="menugroup-header" onclick="toggleMenuGroup('networking')">
+                            <img class="menugroup-icon theme-icon-light" src="img/icons/lan_black.svg" alt="Networking">
+                            <img class="menugroup-icon theme-icon-dark" src="img/icons/lan_white.svg" alt="Networking">
+                            <span>Networking</span>
+                            <i class="chevron down icon menugroup-chevron" id="chevron-networking"></i>
+                        </div>
+                        <div class="menugroup-items" id="group-networking">
+                            <a class="item" tag="networktool" tab_group="networking">
+                                <i class="simplistic terminal icon"></i> Network Tools
+                            </a>
+                            <a class="item" tag="iface" tab_group="networking">
+                                <i class="wifi icon"></i> Network Interfaces
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Others Group -->
                     <div class="menugroup-container">
                         <div class="menugroup-header" onclick="toggleMenuGroup('others')">
-                            <i class="th icon"></i>
+                            <img class="menugroup-icon theme-icon-light" src="img/icons/others_black.svg" alt="Others">
+                            <img class="menugroup-icon theme-icon-dark" src="img/icons/others_white.svg" alt="Others">
                             <span>Others</span>
                             <i class="chevron down icon menugroup-chevron" id="chevron-others"></i>
                         </div>
                         <div class="menugroup-items" id="group-others">
-                            <a class="item" tag="networktool" tab_group="others">
-                                <i class="simplistic terminal icon"></i> Network Tools
-                            </a>
                             <a class="item" tag="stats" tab_group="others">
                                 <i class="simplistic database icon"></i> Statistical Analysis
                             </a>
@@ -193,6 +216,9 @@
                 <!-- Set TLS cert -->
                 <div id="cert" class="functiontab" target="cert.html"></div>
 
+                <!-- ACME Settings -->
+                <div id="acme" class="functiontab" target="acme.html"></div>
+
                 <!-- Redirections -->
                 <div id="redirectset" class="functiontab" target="redirection.html"></div>
                 
@@ -219,6 +245,9 @@
 
                 <!-- Network Tools -->
                 <div id="networktool" class="functiontab" target="networktools.html"></div>
+
+                <!-- Interface -->
+                <div id="iface" class="functiontab" target="iface.html"></div>
 
                 <!-- Statistic Tools -->
                 <div id="stats" class="functiontab" target="stats.html"></div>
