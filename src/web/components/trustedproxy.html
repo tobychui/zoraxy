@@ -75,14 +75,10 @@
 </div>
 <script>
 (function(){
-    /* ─── helpers ─────────────────────────────────────────────────────────── */
-
     function proxyListToCsv(proxies) {
         if (!proxies || proxies.length === 0) return '';
         return proxies.map(function(p){ return p.IP + ', ' + (p.Desc || ''); }).join('\n');
     }
-
-    /* ─── table mode ─────────────────────────────────────────────────────── */
 
     function initTrustedProxyTable(){
         $.get('/api/trustedproxy/list', function(data) {
@@ -97,7 +93,7 @@
                 $.each(data, function(index, proxy) {
                     let ip = proxy.IP;
                     let desc = proxy.Desc || '';
-                    let icon = ip.includes('/') ? "angle double right blue icon" : "angle double right green icon";
+                    let icon = ip.includes('/') ? "shield alternate green icon" : "shield alternate blue icon";
                     $('#trustedProxyTable').append(`
                         <tr class="trustedProxyItem" data-ip="${encodeURIComponent(ip)}">
                             <td class="proxy-ip-cell">
@@ -115,10 +111,10 @@
                             </td>
                             <td>
                                 <div class="proxy-actions-display">
-                                    <button class="ui icon basic mini blue button" onclick="window.editTrustedProxyRow(this);" title="Edit">
+                                    <button class="ui icon basic mini circular button" onclick="window.editTrustedProxyRow(this);" title="Edit">
                                         <i class="edit icon"></i>
                                     </button>
-                                    <button class="ui icon basic mini red button" onclick="window.removeTrustedProxy('${ip}');" title="Delete">
+                                    <button class="ui icon basic mini circular red button" onclick="window.removeTrustedProxy('${ip}');" title="Delete">
                                         <i class="trash alternate icon"></i>
                                     </button>
                                 </div>
@@ -137,8 +133,6 @@
             }
         });
     }
-
-    /* ─── text-edit toggle ───────────────────────────────────────────────── */
 
     var _inTextEditMode = false;
 
@@ -163,8 +157,6 @@
             });
         }
     }
-
-    /* ─── bulk save / cancel / reset ────────────────────────────────────── */
 
     function saveBulkTrustedProxies() {
         var csv = $('#trustedProxyTextArea').val();
@@ -217,8 +209,6 @@
             }
         });
     }
-
-    /* ─── row-level edit / delete ────────────────────────────────────────── */
 
     function addTrustedProxy(){
         var ip = $('#trustedProxyIpInput').val().trim();
@@ -309,8 +299,6 @@
             }
         });
     }
-
-    /* ─── exports & init ─────────────────────────────────────────────────── */
 
     window.initTrustedProxyTable       = initTrustedProxyTable;
     window.addTrustedProxy             = addTrustedProxy;
