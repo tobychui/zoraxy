@@ -6,46 +6,84 @@
             When a request arrives from a trusted proxy, Zoraxy will read the real client IP from forwarded headers (e.g. <code>X-Forwarded-For</code> or <code>X-Real-IP</code>) instead of the connection address. Only add proxies you control.</p>
     </div>
     <div class="ui divider"></div>
-    <!-- Add new trusted proxy form -->
-    <h4>Add Trusted Proxy</h4>
-    <div class="ui form">
-        <div class="two fields">
-            <div class="field">
-                <label>IP Address / CIDR</label>
-                <input type="text" id="trustedProxyIpInput" placeholder="e.g. 103.21.244.0/22 or 192.168.1.1">
-                <small>Supports single IP addresses and CIDR notation (e.g. 192.168.1.0/24 or 192.168.1.1)</small>
-            </div>
-            <div class="field">
-                <label>Description</label>
-                <input type="text" id="trustedProxyDescInput" placeholder="e.g. Cloudflare">
-            </div>
+    <div class="ui basic segment">
+        <!-- Trusted proxy table -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5em;">
+            <h3 style="margin:0;">Trusted Proxy List</h3>
+            <button id="toggleTextEditBtn" class="ui basic small button" onclick="window.toggleTrustedProxyTextEdit();">
+                <i class="edit icon"></i> Edit as Text
+            </button>
         </div>
-        <button class="ui basic green button" onclick="addTrustedProxy();">
-            <i class="ui green add icon"></i> Add Trusted Proxy
-        </button>
+        <br>
+
+        <!-- Table view (default) -->
+        <div id="trustedProxyTableView">
+            <table class="ui unstackable basic celled table">
+                <thead>
+                    <tr>
+                        <th>IP / CIDR</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="trustedProxyTable">
+                </tbody>
+            </table>
+            <button id="refreshProxyListBtn" class="ui basic button" onclick="window.initTrustedProxyTable();"><i class="ui green refresh icon"></i> Refresh</button>
+        </div>
+
+        <!-- Text edit view (hidden by default) -->
+        <div id="trustedProxyTextView" style="display:none;">
+            <p style="color: grey;"><i class="info circle icon"></i>One entry per line. Format: <code>ip/cidr, description</code>. Lines starting with <code>#</code> are ignored.</p>
+            <textarea id="trustedProxyTextArea" class="ui fluid" rows="14"
+                style="width:100%; font-family:monospace; font-size:0.95em; padding:0.75em; border:1px solid rgba(34,36,38,.15); border-radius:0.28571429rem; resize:vertical;"></textarea>
+            <br><br>
+            <button class="ui basic green button" onclick="window.saveBulkTrustedProxies();">
+                <i class="save icon"></i> Save
+            </button>
+            <button class="ui basic button" onclick="window.cancelBulkTrustedProxies();">
+                <i class="times icon"></i> Cancel
+            </button>
+            <button class="ui basic red button" onclick="window.resetDefaultTrustedProxies();" style="float:right;">
+                <i class="redo icon"></i> Reset to Default
+            </button>
+        </div>
     </div>
-    <br>
     <div class="ui divider"></div>
-    <button id="refreshProxyListBtn" class="ui circular right floated basic icon button" onclick="initTrustedProxyTable();"><i class="ui green refresh icon"></i></button>
-    <!-- Trusted proxy table -->
-    <h4>Trusted Proxy List </h4>
-    <p>You can also edit the <code>conf/trusted_proxies.json</code> file directly for bulk updates.</p>
-    <table class="ui unstackable basic celled table">
-        <thead>
-            <tr>
-                <th>IP / CIDR</th>
-                <th>Description</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="trustedProxyTable">
-        </tbody>
-    </table>
+     <div id="trustedProxyAddForm" class="ui basic segment">
+        <!-- Add new trusted proxy form -->
+        <h3>Add Trusted Proxy</h3>
+        <div class="ui form">
+            <div class="two fields">
+                <div class="field">
+                    <label>IP Address / CIDR</label>
+                    <input type="text" id="trustedProxyIpInput" placeholder="e.g. 103.21.244.0/22 or 192.168.1.1">
+                    <small>Supports single IP addresses and CIDR notation (e.g. 192.168.1.0/24 or 192.168.1.1)</small>
+                </div>
+                <div class="field">
+                    <label>Description</label>
+                    <input type="text" id="trustedProxyDescInput" placeholder="e.g. Cloudflare">
+                </div>
+            </div>
+            <button class="ui basic green button" onclick="window.addTrustedProxy();">
+                <i class="ui green add icon"></i> Add Trusted Proxy
+            </button>
+        </div>
+    </div>
     <br>
     <br>
 </div>
 <script>
-    // Initialize trusted proxy table
+(function(){
+    /* ─── helpers ─────────────────────────────────────────────────────────── */
+
+    function proxyListToCsv(proxies) {
+        if (!proxies || proxies.length === 0) return '';
+        return proxies.map(function(p){ return p.IP + ', ' + (p.Desc || ''); }).join('\n');
+    }
+
+    /* ─── table mode ─────────────────────────────────────────────────────── */
+
     function initTrustedProxyTable(){
         $.get('/api/trustedproxy/list', function(data) {
             $('#trustedProxyTable').html("");
@@ -77,18 +115,18 @@
                             </td>
                             <td>
                                 <div class="proxy-actions-display">
-                                    <button class="ui icon basic mini blue button" onclick="editTrustedProxyRow(this);" title="Edit">
+                                    <button class="ui icon basic mini blue button" onclick="window.editTrustedProxyRow(this);" title="Edit">
                                         <i class="edit icon"></i>
                                     </button>
-                                    <button class="ui icon basic mini red button" onclick="removeTrustedProxy('${ip}');" title="Delete">
+                                    <button class="ui icon basic mini red button" onclick="window.removeTrustedProxy('${ip}');" title="Delete">
                                         <i class="trash alternate icon"></i>
                                     </button>
                                 </div>
                                 <div class="proxy-actions-edit" style="display:none;">
-                                    <button class="ui icon basic mini green button" onclick="saveTrustedProxyRow(this, '${ip}');" title="Save">
+                                    <button class="ui icon basic mini green button" onclick="window.saveTrustedProxyRow(this, '${ip}');" title="Save">
                                         <i class="check icon"></i>
                                     </button>
-                                    <button class="ui icon basic mini grey button" onclick="cancelTrustedProxyEdit(this);" title="Cancel">
+                                    <button class="ui icon basic mini grey button" onclick="window.cancelTrustedProxyEdit(this);" title="Cancel">
                                         <i class="times icon"></i>
                                     </button>
                                 </div>
@@ -99,12 +137,92 @@
             }
         });
     }
-    initTrustedProxyTable();
 
-    // Add a new trusted proxy
+    /* ─── text-edit toggle ───────────────────────────────────────────────── */
+
+    var _inTextEditMode = false;
+
+    function toggleTrustedProxyTextEdit() {
+        if (_inTextEditMode) {
+            // Switch back to table mode without saving
+            _inTextEditMode = false;
+            $('#trustedProxyTableView').show();
+            $('#trustedProxyAddForm').show();
+            $('#trustedProxyTextView').hide();
+            $('#toggleTextEditBtn').html('<i class="edit icon"></i> Edit as Text');
+            initTrustedProxyTable();
+        } else {
+            // Switch to text-edit mode: populate textarea then show it
+            $.get('/api/trustedproxy/list', function(data) {
+                $('#trustedProxyTextArea').val(proxyListToCsv(data));
+                _inTextEditMode = true;
+                $('#trustedProxyTableView').hide();
+                $('#trustedProxyAddForm').hide();
+                $('#trustedProxyTextView').show();
+                $('#toggleTextEditBtn').html('<i class="table icon"></i> View as Table');
+            });
+        }
+    }
+
+    /* ─── bulk save / cancel / reset ────────────────────────────────────── */
+
+    function saveBulkTrustedProxies() {
+        var csv = $('#trustedProxyTextArea').val();
+        $.cjax({
+            type: 'POST',
+            url: '/api/trustedproxy/bulkUpdate',
+            data: { csv: csv },
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox("Failed to save: " + data.error, false);
+                    return;
+                }
+                msgbox("Trusted proxy list saved", true);
+                // Switch back to table view
+                _inTextEditMode = false;
+                $('#trustedProxyTableView').show();
+                $('#trustedProxyAddForm').show();
+                $('#trustedProxyTextView').hide();
+                $('#toggleTextEditBtn').html('<i class="edit icon"></i> Edit as Text');
+                initTrustedProxyTable();
+            }
+        });
+    }
+
+    function cancelBulkTrustedProxies() {
+        // Re-fetch from backend and switch back to table view
+        _inTextEditMode = false;
+        $('#trustedProxyTableView').show();
+        $('#trustedProxyAddForm').show();
+        $('#trustedProxyTextView').hide();
+        $('#toggleTextEditBtn').html('<i class="edit icon"></i> Edit as Text');
+        initTrustedProxyTable();
+    }
+
+    function resetDefaultTrustedProxies() {
+        if (!confirm("Reset the trusted proxy list to factory defaults? This will remove all custom entries.")) {
+            return;
+        }
+        $.cjax({
+            type: 'POST',
+            url: '/api/trustedproxy/reset',
+            success: function(data) {
+                if (data.error != undefined) {
+                    msgbox("Failed to reset: " + data.error, false);
+                    return;
+                }
+                // data is the new proxy list
+                $('#trustedProxyTextArea').val(proxyListToCsv(data));
+                msgbox("Trusted proxy list reset to defaults", true);
+            }
+        });
+    }
+
+    /* ─── row-level edit / delete ────────────────────────────────────────── */
+
     function addTrustedProxy(){
-        let ip = $('#trustedProxyIpInput').val().trim();
-        let desc = $('#trustedProxyDescInput').val().trim();
+        var ip = $('#trustedProxyIpInput').val().trim();
+        var desc = $('#trustedProxyDescInput').val().trim();
 
         if (ip == ''){
             msgbox("Please enter an IP address or CIDR", false);
@@ -128,7 +246,6 @@
         });
     }
 
-    // Remove a trusted proxy
     function removeTrustedProxy(ip){
         if (!confirm("Are you sure you want to remove this trusted proxy?")){
             return;
@@ -149,28 +266,25 @@
         });
     }
 
-    // Edit trusted proxy row - switch to edit mode
     function editTrustedProxyRow(btn){
-        let row = $(btn).closest('tr');
+        var row = $(btn).closest('tr');
         row.find('.proxy-icon, .proxy-ip-display, .proxy-desc-display, .proxy-actions-display').hide();
         row.find('.proxy-ip-edit, .proxy-desc-edit, .proxy-actions-edit').show();
         row.find('.proxy-ip-edit input').focus();
     }
 
-    // Cancel editing a trusted proxy row
     function cancelTrustedProxyEdit(btn){
-        let row = $(btn).closest('tr');
+        var row = $(btn).closest('tr');
         row.find('.proxy-ip-edit input').val(row.find('.proxy-ip-display').text());
         row.find('.proxy-desc-edit input').val(row.find('.proxy-desc-display').text());
         row.find('.proxy-icon, .proxy-ip-display, .proxy-desc-display, .proxy-actions-display').show();
         row.find('.proxy-ip-edit, .proxy-desc-edit, .proxy-actions-edit').hide();
     }
 
-    // Save edited trusted proxy row
     function saveTrustedProxyRow(btn, originalIp){
-        let row = $(btn).closest('tr');
-        let newIp = row.find('.proxy-ip-edit input').val().trim();
-        let newDesc = row.find('.proxy-desc-edit input').val().trim();
+        var row = $(btn).closest('tr');
+        var newIp = row.find('.proxy-ip-edit input').val().trim();
+        var newDesc = row.find('.proxy-desc-edit input').val().trim();
 
         if (newIp == ''){
             msgbox("IP address cannot be empty", false);
@@ -195,4 +309,20 @@
             }
         });
     }
+
+    /* ─── exports & init ─────────────────────────────────────────────────── */
+
+    window.initTrustedProxyTable       = initTrustedProxyTable;
+    window.addTrustedProxy             = addTrustedProxy;
+    window.removeTrustedProxy          = removeTrustedProxy;
+    window.editTrustedProxyRow         = editTrustedProxyRow;
+    window.cancelTrustedProxyEdit      = cancelTrustedProxyEdit;
+    window.saveTrustedProxyRow         = saveTrustedProxyRow;
+    window.toggleTrustedProxyTextEdit  = toggleTrustedProxyTextEdit;
+    window.saveBulkTrustedProxies      = saveBulkTrustedProxies;
+    window.cancelBulkTrustedProxies    = cancelBulkTrustedProxies;
+    window.resetDefaultTrustedProxies  = resetDefaultTrustedProxies;
+
+    initTrustedProxyTable();
+})();
 </script>

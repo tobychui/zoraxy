@@ -164,6 +164,8 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/trustedproxy/add", handleAddTrustedProxy)
 	authRouter.HandleFunc("/api/trustedproxy/remove", handleRemoveTrustedProxy)
 	authRouter.HandleFunc("/api/trustedproxy/update", handleUpdateTrustedProxy)
+	authRouter.HandleFunc("/api/trustedproxy/bulkUpdate", handleBulkUpdateTrustedProxies)
+	authRouter.HandleFunc("/api/trustedproxy/reset", handleResetDefaultTrustedProxies)
 }
 
 // Register the APIs for path blocking rules management functions, WIP
