@@ -77,31 +77,32 @@
     </div>
     <div class="ui segment renew_selected_certificate">
         <p>Select specific certificates to renew automatically:</p>
-    <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
-        <table id="acmeDomainCertTable" class="ui very compact unstackable basic disabled table">
-            <thead>
-                <tr>
-                    <th>Domain Name</th>
-                    <th>Match Rule</th>
-                    <th>Auto-Renew</th>
-                </tr>
-            </thead>
-            <tbody id="acmeDomainTableBody"></tbody>
-        </table>
+        <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+            <table id="acmeDomainCertTable" class="ui very compact unstackable basic disabled table">
+                <thead>
+                    <tr>
+                        <th>Domain Name</th>
+                        <th>Match Rule</th>
+                        <th>Auto-Renew</th>
+                    </tr>
+                </thead>
+                <tbody id="acmeDomainTableBody"></tbody>
+            </table>
+        </div>
+        <small><i class="ui red info circle icon"></i> Domains in red are expired</small><br><br>
+        <div class="ui yellow message">
+            Certificate auto-renew only works with CAs supported by Zoraxy. Check the Zoraxy wiki for the supported CA list.
+        </div>
+        <div class="">
+            <button id="acmeRenewSelectedBtn" onclick="window.acmeRenewNow();" class="ui basic disabled button">
+                <i class="yellow refresh icon"></i> Renew Selected
+            </button>
+        
+        </div>
     </div>
-    <small><i class="ui red info circle icon"></i> Domains in red are expired</small><br><br>
-    <div class="ui yellow message">
-        Certificate auto-renew only works with CAs supported by Zoraxy. Check the Zoraxy wiki for the supported CA list.
-    </div>
-    <div class="ui buttons">
-        <button id="acmeRenewSelectedBtn" onclick="window.acmeRenewNow();" class="ui basic disabled button">
-            <i class="yellow refresh icon"></i> Renew Selected
-        </button>
-        <button class="ui basic button" onclick="window.acmeSaveRenewPolicy();">
-            <i class="blue save icon"></i> Save Changes
-        </button>
-    </div>
-    </div>
+    <button class="ui basic button" onclick="window.acmeSaveRenewPolicy();">
+            <i class="green save icon"></i> Save Renew Policy
+    </button>
     
     <br>
     <div class="ui divider"></div>

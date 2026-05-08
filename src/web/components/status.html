@@ -65,6 +65,10 @@
         <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
     </div>
     <div class="ui divider"></div>
+   
+</div>
+<!-- Network Activity -->
+<div class="standardContainer">
     <h4>Network Status</h4>
     <p>Overall Network I/O in Current Host Server</p>
 </div>
@@ -74,6 +78,11 @@
 <div id="networkActivityPlaceHolder">
     <p style="opacity: 0.5;"> Graph Render Paused</p>
 </div>
+<!-- Traffic Flow Diagram -->
+<div id="trafficFlowDiagramWrapper" class="standardContainer" ">
+    <iframe id="trafficFlowDiagram" src="snippet/trafficFlowDiagram.html" style="width: 100%; height: 480px; border: none; border-radius: 1em;"></iframe>
+</div>
+<!-- Global Settings -->
 <div class="standardContainer">
     <div class="ui divider"></div>
     <h4>Global Settings</h4>
