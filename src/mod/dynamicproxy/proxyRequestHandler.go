@@ -376,16 +376,16 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 	if endpoint == nil || !endpoint.DisableLogging {
 		// log the http request to file
 		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
+	}
+
+	if endpoint == nil || router.Option.StatisticCollector == nil {
+		// Cannot determine the endpoint for this request, or statistic collector is not set, skip statistic collection
 		return
 	}
 
-	if router.Option.StatisticCollector == nil {
-		// Statistic collection not yet initialized
-		return
-	}
-
-	if endpoint == nil || !endpoint.DisableStatisticCollection {
+	if !endpoint.DisableStatisticCollection {
 		// Collect statistic from request
+
 		go func() {
 			requestInfo := statistic.RequestInfo{
 				IpAddr:                        netutils.GetRequesterIP(r),

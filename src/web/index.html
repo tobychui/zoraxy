@@ -452,7 +452,10 @@
                         if ($(this)[0].contentWindow.setDarkTheme){
                             $(this)[0].contentWindow.setDarkTheme(false);
                         }
-                    })
+                    });
+
+                    // Remove dark theme for traffic flow diagram
+                    $("#trafficFlowDiagram")[0].contentWindow.document.body.classList.remove("darkTheme");
 
                     if ($("#pluginContextLoader").is(":visible")){
                         $("#pluginContextLoader")[0].contentWindow.setDarkTheme(false);
@@ -468,6 +471,8 @@
                             $(this)[0].contentWindow.setDarkTheme(true);
                         }
                     })
+                    // Add dark theme for traffic flow diagram
+                    $("#trafficFlowDiagram")[0].contentWindow.document.body.classList.add("darkTheme");
                     if ($("#pluginContextLoader").is(":visible")){
                         $("#pluginContextLoader")[0].contentWindow.setDarkTheme(true);
                     }
