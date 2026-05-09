@@ -319,6 +319,8 @@
             <button class="zoom-btn" id="btn-zoom-in" title="Zoom in">&#43;</button>
             <div class="zoom-divider"></div>
             <button class="zoom-btn" id="btn-refresh" title="Refresh" onclick="loadDiagram()"><i class="refresh icon" style="color:#21ba45; font-size:13px;"></i></button>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="btn-fullscreen" title="Fullscreen"><i class="expand icon" style="font-size:11px;"></i></button>
         </div>
         <div id="legend-overlay">
             <div class="legend-item"><div class="legend-line legend-line-proxy"></div> Internet → Proxy Rule</div>
@@ -457,7 +459,7 @@
         return g;
     }
 
-    /* ── Build the Internet node ──────────────────────────────────── */
+    /* Build the Internet node (globe icon with circle background) */
     function buildInternetNode(x, y, h) {
         const g = svgEl("g", { class: "internet-node" });
         const cy = y + h / 2;
@@ -499,7 +501,7 @@
         return g;
     }
 
-    /* ── Draw an animated Bezier flow edge ───────────────────────── */
+    /* Draw an animated cubic Bezier flow edge between two points */
     function buildFlowEdge(x1, y1, x2, y2, strokeW, colorClass, count, maxCount, edgeIndex) {
         const g = svgEl("g", {});
         const mx = (x1 + x2) / 2;
@@ -533,7 +535,7 @@
         return g;
     }
 
-    /* ── Main render function ─────────────────────────────────────── */
+    /* Main render function: build and populate the SVG diagram from API data */
     function renderDiagram(data) {
         const svg = document.getElementById("diagram-canvas");
         svg.innerHTML = "";
@@ -548,7 +550,7 @@
         document.getElementById("noDataMsg").style.display = "none";
         svg.style.display = "block";
 
-        // ── Build defs (filter, gradient) ──────────────────────────
+        // Build SVG defs: drop-shadow filter
         const defs = svgEl("defs");
 
         const filter = svgEl("filter", { id: "shadow", x: "-20%", y: "-20%", width: "140%", height: "140%" });
@@ -558,13 +560,13 @@
 
         svg.appendChild(defs);
 
-        // ── Sort proxies by request count descending ─────────────
+        // Sort proxies by request count, highest first
         proxies.sort((a, b) => b.requestCount - a.requestCount);
 
-        // ── Compute max traffic for scaling ──────────────────────
+        // Compute max traffic count for edge width scaling
         const maxProxyCount = Math.max(...proxies.map(p => p.requestCount), 1);
 
-        // ── Build deduplicated upstream map ───────────────────────
+        // Build deduplicated upstream map
         // Key: origin string → { origin, requireTLS, inactive, requestCount, rowIndex }
         // Traffic counts are summed across all proxy rules that share the same upstream.
         // A shared upstream is considered active if at least one proxy treats it as active.
@@ -619,13 +621,13 @@
         svg.setAttribute("height", canvasHeight);
         svg.setAttribute("viewBox", `0 0 ${canvasWidth} ${canvasHeight}`);
 
-        // ── Layer groups (edges below nodes) ─────────────────────
+        // Layer groups: edges are rendered below nodes
         const edgeGroup = svgEl("g", { id: "edges" });
         const nodeGroup = svgEl("g", { id: "nodes" });
         svg.appendChild(edgeGroup);
         svg.appendChild(nodeGroup);
 
-        // ── Internet node ─────────────────────────────────────────
+        // Place Internet node at vertical center of canvas left column
         const internetNodeX = COL_INTERNET_X;
         const internetNodeY = internetCY - INTERNET_W / 2;
         nodeGroup.appendChild(buildInternetNode(internetNodeX, internetNodeY, INTERNET_W));
@@ -647,7 +649,7 @@
             const proxyRX = COL_PROXY_X + PROXY_W; // right edge
             const proxyRY = proxyCY;
 
-            // ── Edge: Internet → Proxy ────────────────────────────
+            // Draw edge from Internet node to proxy node
             const w1 = proxy.disabled ? MIN_EDGE_W : edgeWidth(proxy.requestCount, maxProxyCount);
             edgeGroup.appendChild(buildFlowEdge(
                 internetRX, internetRY,
@@ -659,7 +661,7 @@
             // Proxy node
             nodeGroup.appendChild(buildProxyNode(proxy, COL_PROXY_X, proxyY));
 
-            // ── Edges: Proxy → each of its upstreams (deduped) ───
+            // Draw edges from proxy to each deduplicated upstream
             if (proxy.upstreams.length > 0) {
                 for (const upstream of proxy.upstreams) {
                     const dedupedUs = upstreamMap.get(upstream.origin);
@@ -699,14 +701,14 @@
             }
         }
 
-        // ── Render each unique upstream node exactly once ────────
+        // Render each unique upstream node exactly once
         for (const dedupedUs of upstreamMap.values()) {
             const upstreamY = upstreamCenterStart + dedupedUs.rowIndex * (UPSTREAM_H + ROW_GAP_UPSTREAM);
             nodeGroup.appendChild(buildUpstreamNode(dedupedUs, COL_UPSTREAM_X, upstreamY));
         }
     }
 
-    /* ── Load data from API ───────────────────────────────────────── */
+    /* Fetch traffic map from API and trigger diagram render */
     function loadDiagram() {
         document.getElementById("loadingMsg").style.display = "block";
         document.getElementById("diagram-canvas").style.display = "none";
@@ -731,7 +733,7 @@
         });
     }
 
-    /* ── Helpers used before renderDiagram ───────────────────────── */
+    /* Compact number formatter (referenced before renderDiagram definition) */
     function fmtCount(n) {
         n = parseInt(n) || 0;
         if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
@@ -739,14 +741,14 @@
         return String(n);
     }
 
-    /* ── Apply transform to pan container ─────────────────────────── */
+    /* Apply current pan/zoom transform to the pan container */
     function applyTransform() {
         const container = document.getElementById("diagram-pan-container");
         container.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
         document.getElementById("zoom-label").textContent = Math.round(zoom * 100) + "%";
     }
 
-    /* ── Zoom centered on a viewport point (ox, oy) ─────────────────── */
+    /* Zoom to a new level, centered on viewport point (ox, oy) */
     function zoomTo(newZoom, ox, oy) {
         const wrapper = document.getElementById("diagram-wrapper");
         if (ox === undefined) ox = wrapper.clientWidth / 2;
@@ -764,7 +766,7 @@
     document.getElementById("btn-zoom-in").addEventListener("click",  e => { e.stopPropagation(); zoomIn(); });
     document.getElementById("btn-zoom-out").addEventListener("click", e => { e.stopPropagation(); zoomOut(); });
 
-    /* ── Mouse drag pan ──────────────────────────────────────────── */
+    /* Mouse drag pan handler */
     const _wrapper = document.getElementById("diagram-wrapper");
     let _dragging = false, _dragSX = 0, _dragSY = 0, _panSX = 0, _panSY = 0;
 
@@ -789,7 +791,7 @@
         _wrapper.classList.remove("dragging");
     });
 
-    /* ── Scroll-wheel zoom (zoom toward cursor) ──────────────────── */
+    /* Scroll-wheel zoom toward cursor position */
     _wrapper.addEventListener("wheel", e => {
         e.preventDefault();
         const rect = _wrapper.getBoundingClientRect();
@@ -798,7 +800,7 @@
         zoomTo(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP), ox, oy);
     }, { passive: false });
 
-    /* ── Touch pan & pinch-zoom ──────────────────────────────────── */
+    /* Touch pan and pinch-zoom handler */
     let _tSX = 0, _tSY = 0, _pinchDist = 0, _pinchZoom = 1, _pinchMX = 0, _pinchMY = 0;
 
     _wrapper.addEventListener("touchstart", e => {
@@ -839,7 +841,32 @@
         }
     });
 
-    /* ── Auto-refresh every 30 seconds ───────────────────────────── */
+    /* Fullscreen toggle */
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    document.getElementById("btn-fullscreen").addEventListener("click", e => {
+        e.stopPropagation();
+        toggleFullscreen();
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+        const btn = document.getElementById("btn-fullscreen");
+        if (document.fullscreenElement) {
+            btn.innerHTML = '<i class="compress icon" style="font-size:11px;"></i>';
+            btn.title = "Exit fullscreen";
+        } else {
+            btn.innerHTML = '<i class="expand icon" style="font-size:11px;"></i>';
+            btn.title = "Fullscreen";
+        }
+    });
+
+    /* Initialize: apply transform, load data, start 30-second auto-refresh */
     applyTransform();
     loadDiagram();
     setInterval(loadDiagram, 30000);

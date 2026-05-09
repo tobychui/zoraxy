@@ -39,8 +39,9 @@
             <div class="toolbar">
                 <div id="mainmenu" class="ui secondary vertical menu">
                     <!-- Recent Items Section -->
-                    <div class="recent-section-header" onclick="toggleMenuGroup('recent')">
-                        <i class="clock outline icon"></i>
+                    <div class="recent-section-header menugroup-header" onclick="toggleMenuGroup('recent')">
+                        <img class="menugroup-icon theme-icon-light" src="img/icons/recent_black.svg" alt="Recent">
+                        <img class="menugroup-icon theme-icon-dark" src="img/icons/recent_white.svg" alt="Recent">
                         <span style="flex:1; margin-left:0.35em;">Recent</span>
                         <i class="chevron down icon menugroup-chevron" id="chevron-recent"></i>
                     </div>
@@ -669,9 +670,9 @@
             /* Utilities */
             $(".year").text(new Date().getFullYear());
 
-            /* ===================================================
-               Collapsible Side Menu Groups
-               =================================================== */
+            /* 
+                Collapsible Side Menu Groups
+            */
             var _menuInitDone = false;
 
             // Build tab → group map at runtime from tab_group attributes on menu items
@@ -761,9 +762,7 @@
                 });
             }
 
-            /* ===================================================
-               Recent Items
-               =================================================== */
+            /* Recent Items */
             function getRecentTabs() {
                 try { return JSON.parse(localStorage.getItem('zoraxy_recent_tabs') || '[]'); }
                 catch(e) { return []; }
