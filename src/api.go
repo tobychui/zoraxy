@@ -421,6 +421,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	//Others
 	targetMux.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
+	authRouter.HandleFunc("/api/info/ipcheck", HandleIpAccessCheck)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
 	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)

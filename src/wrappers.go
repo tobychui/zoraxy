@@ -449,3 +449,50 @@ func HandleGeoIpLookup(w http.ResponseWriter, r *http.Request) {
 	js, _ := json.Marshal(cc)
 	utils.SendJSONResponse(w, string(js))
 }
+
+// HandleIpAccessCheck resolves the GeoIP country code for the given IP and
+// evaluates every access rule to report whether the IP would be permitted.
+func HandleIpAccessCheck(w http.ResponseWriter, r *http.Request) {
+	ip, err := utils.GetPara(r, "ip")
+	if err != nil {
+		utils.SendErrorResponse(w, "ip not given")
+		return
+	}
+
+	// Resolve country code
+	cc, err := geodbStore.ResolveCountryCodeFromIP(ip)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	// Evaluate each access rule
+	type RuleResult struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Allowed bool   `json:"allowed"`
+	}
+
+	type Result struct {
+		CountryIsoCode string       `json:"countryIsoCode"`
+		Rules          []RuleResult `json:"rules"`
+	}
+
+	allRules := accessController.ListAllAccessRules()
+	ruleResults := make([]RuleResult, 0, len(allRules))
+	for _, rule := range allRules {
+		ruleResults = append(ruleResults, RuleResult{
+			ID:      rule.ID,
+			Name:    rule.Name,
+			Allowed: rule.AllowIpAccess(ip),
+		})
+	}
+
+	result := Result{
+		CountryIsoCode: cc.CountryIsoCode,
+		Rules:          ruleResults,
+	}
+
+	js, _ := json.Marshal(result)
+	utils.SendJSONResponse(w, string(js))
+}
