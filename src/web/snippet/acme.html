@@ -54,6 +54,18 @@
       </div>
       <small>If you don't want to share your private email address, you can also fill in an email address that point to a mailbox not exists on your domain.</small>
     </div>
+    -->
+    <h3>ACME Email</h3>
+    <p>Email is required by many CAs for renewing via ACME protocol</p>
+    <div class="ui fluid action input">
+      <input id="caRegisterEmail" type="text" placeholder="webmaster@example.com">
+      <button class="ui icon basic button" onclick="saveEmailToConfig(this);">
+          <i class="blue save icon"></i>
+      </button>
+    </div>
+    <small>If you don't want to share your private email address, you can also fill in an email address that point to a mailbox not exists on your domain.</small>
+    <!-- Moved to components/acme.html, will be removed soon-->
+    <!-- 
     <div class="ui basic segment advanceoptions">
       <div class="ui accordion advanceSettings">
           <div class="title">
