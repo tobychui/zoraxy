@@ -8,7 +8,7 @@
 /* Color Pallete */
 /* Theme Color Definition */
 body:not(.darkTheme){
-    --theme_bg: #f6f6f6;
+    --theme_bg: #fafafa;
     --theme_bg_primary: #ffffff;
     --theme_bg_secondary: #ffffff;
     --theme_bg_active: #ececec;
@@ -20,7 +20,7 @@ body:not(.darkTheme){
     --text_color: #414141;
     --text_color_secondary: #4b4b4b;
     --input_color: white;
-    --divider_color: #cacaca;
+    --divider_color: #e2e2de;
     --text_color_inverted: #fcfcfc;
     --button_text_color: #878787;
     --button_border_color: #dedede;
@@ -503,6 +503,7 @@ body.darkTheme #tourModal .ui.circular.icon.button:hover {
 */
 body.darkTheme .ui.table{
     background-color: transparent !important;
+    border: 1px solid rgba(255,255,255,.15) !important;
 }
 body.darkTheme .ui.celled.sortable.unstackable.compact.table thead th,
 body.darkTheme .ui.celled.sortable.unstackable.compact.table tbody td,

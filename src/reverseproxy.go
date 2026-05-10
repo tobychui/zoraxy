@@ -87,12 +87,12 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 	}
 
 	return &dynamicproxy.CaptchaConfig{
-		Provider:         dynamicproxy.CaptchaProvider(captchaProvider),
-		SiteKey:          captchaSiteKey,
-		SecretKey:        captchaSecretKey,
-		SessionDuration:  captchaSessionDuration,
-		RecaptchaVersion: captchaRecaptchaVersion,
-		RecaptchaScore:   captchaRecaptchaScore,
+		Provider:              dynamicproxy.CaptchaProvider(captchaProvider),
+		SiteKey:               captchaSiteKey,
+		SecretKey:             captchaSecretKey,
+		SessionDuration:       captchaSessionDuration,
+		RecaptchaVersion:      captchaRecaptchaVersion,
+		RecaptchaScore:        captchaRecaptchaScore,
 		ProtectedPathPrefixes: protectedPathPrefixes,
 	}, nil
 }
@@ -185,17 +185,17 @@ func ReverseProxyInit() {
 		ForceHttpsRedirect: forceHttpsRedirect,
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
-		TlsManager:         tlsCertManager,
-		RedirectRuleTable:  redirectTable,
-		GeodbStore:         geodbStore,
-		StatisticCollector: statisticCollector,
-		WebDirectory:       *path_webserver,
-		AccessController:   accessController,
-		ForwardAuthRouter:  forwardAuthRouter,
-		OAuth2Router:       oauth2Router,
+		TlsManager:          tlsCertManager,
+		RedirectRuleTable:   redirectTable,
+		GeodbStore:          geodbStore,
+		StatisticCollector:  statisticCollector,
+		WebDirectory:        *path_webserver,
+		AccessController:    accessController,
+		ForwardAuthRouter:   forwardAuthRouter,
+		OAuth2Router:        oauth2Router,
 		ZorxAuthAgentRouter: zorxAuthRouter,
-		LoadBalancer:       loadBalancer,
-		PluginManager:      pluginManager,
+		LoadBalancer:        loadBalancer,
+		PluginManager:       pluginManager,
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -448,6 +448,15 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
 	}
 
+	// WebSocket options
+	disableWebSocket, _ := utils.PostBool(r, "disableWebSocket")
+	websocketTimeoutStr, _ := utils.PostPara(r, "websocketTimeout")
+	websocketTimeout, _ := strconv.ParseInt(websocketTimeoutStr, 10, 64)
+	if websocketTimeout < 0 {
+		websocketTimeout = 0
+	}
+	enableTimeoutRefreshOnActivity, _ := utils.PostBool(r, "enableTimeoutRefreshOnActivity")
+
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	switch eptype {
 	case "host":
@@ -532,6 +541,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BlockCommonExploits:  blockCommonExploits,
 			BlockAICrawlers:      blockAICrawlers,
 			MitigationAction:     mitigationAction,
+			DisableWebSocket:               disableWebSocket,
+			WebsocketTimeout:               websocketTimeout,
+			EnableTimeoutRefreshOnActivity: enableTimeoutRefreshOnActivity,
 		}
 
 		preparedEndpoint, err := dynamicProxyRouter.PrepareProxyRoute(&thisProxyEndpoint)
@@ -699,6 +711,15 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Force HTTP/1.1
 	forceHTTP11, _ := utils.PostBool(r, "forceHTTP11")
 
+	// WebSocket options
+	disableWebSocket, _ := utils.PostBool(r, "disableWebSocket")
+	websocketTimeoutStr, _ := utils.PostPara(r, "websocketTimeout")
+	websocketTimeout, _ := strconv.ParseInt(websocketTimeoutStr, 10, 64)
+	if websocketTimeout < 0 {
+		websocketTimeout = 0
+	}
+	enableTimeoutRefreshOnActivity, _ := utils.PostBool(r, "enableTimeoutRefreshOnActivity")
+
 	// Disable logging
 	disableLogging, _ := utils.PostBool(r, "dLogging")
 
@@ -764,6 +785,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.ForceHTTP11 = forceHTTP11
+	newProxyEndpoint.DisableWebSocket = disableWebSocket
+	newProxyEndpoint.WebsocketTimeout = websocketTimeout
+	newProxyEndpoint.EnableTimeoutRefreshOnActivity = enableTimeoutRefreshOnActivity
 	newProxyEndpoint.DisableLogging = disableLogging
 	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
 	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
