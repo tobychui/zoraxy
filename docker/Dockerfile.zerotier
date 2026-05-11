@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
+ARG ZORAXY_BASE_IMAGE=zoraxy-base
+
 ## Build Zoraxy
 FROM docker.io/golang:alpine AS build-zoraxy
 
@@ -18,8 +20,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     chmod 755 /usr/local/bin/zoraxy
 
 
-## Main
-FROM docker.io/alpine:latest
+## Base Zoraxy image for standalone ZeroTier builds
+FROM docker.io/alpine:latest AS zoraxy-base
 
 RUN apk add --update --no-cache tzdata python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
     rm -rf /var/cache/apk/* /tmp/*
@@ -61,3 +63,28 @@ LABEL com.imuslab.zoraxy.container-identifier="Zoraxy"
 ENTRYPOINT [ "python3", "-u", "/opt/zoraxy/entrypoint.py" ]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
+
+## Build ZeroTier
+FROM docker.io/rust:1.79-alpine AS build-zerotier
+
+RUN mkdir -p /opt/zerotier/source/ &&\
+    mkdir -p /usr/local/bin/
+
+WORKDIR /opt/zerotier/source/
+
+RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano
+
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.10.6 &&\
+    tar -xzvf ZeroTierOne.tar.gz &&\
+    cd ZeroTierOne-*/zeroidc &&\
+    cargo update -p getrandom &&\
+    cd .. &&\
+    make -f make-linux.mk &&\
+    mv ./zerotier-one /usr/local/bin/zerotier-one &&\
+    chmod 755 /usr/local/bin/zerotier-one
+
+FROM ${ZORAXY_BASE_IMAGE}
+
+COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one

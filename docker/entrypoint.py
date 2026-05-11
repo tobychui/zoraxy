@@ -2,6 +2,7 @@
 
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import time
@@ -68,6 +69,15 @@ def start_zerotier():
 
   global zerotier_proc
 
+  zerotier_bin = getenv("ZEROTIER_BIN", "/usr/local/bin/zerotier-one")
+  resolved_zerotier_bin = zerotier_bin if "/" in zerotier_bin else shutil.which(zerotier_bin)
+  if not resolved_zerotier_bin or not os.path.exists(resolved_zerotier_bin):
+    print(
+      f"ZeroTier requested but binary was not found at {zerotier_bin}. "
+      "Use the zoraxydocker/zoraxy:<tag>-zerotier image or mount a binary and set ZEROTIER_BIN."
+    )
+    sys.exit(1)
+
   config_dir = "/opt/zoraxy/config/zerotier/"
   zt_path = "/var/lib/zerotier-one"
 
@@ -78,12 +88,14 @@ def start_zerotier():
   except FileExistsError:
     print(f"Symlink {zt_path} already exists, skipping creation.")
 
-  zerotier_proc = popen(["zerotier-one"])
+  zerotier_proc = popen([resolved_zerotier_bin])
 
 def start_zoraxy():
   print("Starting Zoraxy...")
 
   global zoraxy_proc
+
+  mdns_name = getenv("MDNSNAME", "''")
 
   zoraxy_args = [
     "zoraxy",
@@ -95,7 +107,7 @@ def start_zoraxy():
     f"-enablelog={ getenv('ENABLELOG', 'true') }",
     f"-fastgeoip={ getenv('FASTGEOIP', 'false') }",
     f"-mdns={ getenv('MDNS', 'true') }",
-    f"-mdnsname={ getenv('MDNSNAME', "''") }",
+    f"-mdnsname={ mdns_name }",
     f"-noauth={ getenv('NOAUTH', 'false') }",
     f"-plugin={ getenv('PLUGIN', '/opt/zoraxy/plugin/') }",
     f"-port=:{ getenv('PORT', '8000') }",
@@ -128,4 +140,3 @@ def main():
 
 if __name__ == "__main__":
   main()
-
