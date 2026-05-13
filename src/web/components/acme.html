@@ -1,0 +1,388 @@
+<style>
+    #acme .expiredDomain { color: rgb(238, 31, 31); }
+    #acme .validDomain   { color: rgb(49, 192, 113); }
+    #acme .disabled.table { opacity: 0.5; pointer-events: none; }
+    .renew_all_certificate.section-disabled,
+    .renew_selected_certificate.section-disabled {
+        opacity: 0.4;
+        pointer-events: none;
+        user-select: none;
+    }
+</style>
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Certificate Authority (CA) and Auto Renew (ACME)</h2>
+        <p>Management features regarding CA and ACME</p>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui basic segment acmeRenewStateWrapper">
+        <h4 class="ui header" id="acmeAutoRenewer">
+            <i class="white remove icon"></i>
+            <div class="content">
+                <span id="acmeAutoRenewerStatus">Disabled</span>
+                <div class="sub header">ACME Auto-Renewer</div>
+            </div>
+        </h4>
+    </div>
+    <div style="margin-top: 1.2em;">
+        <p style="float: right; color: #b3c2b6; display:none;" id="acmeEnableToggleSucc"><i class="green checkmark icon"></i> Setting Updated</p>
+        <div class="ui toggle checkbox" id="acmeAutoRenewCheckbox">
+            <input type="checkbox" id="enableCertAutoRenew">
+            <label>Enable Certificate Auto Renew</label>
+        </div>
+        <small id="acmeEmailRequiredHint" style="display:none; color: #e07b39; margin-left: 1em;">
+            <i class="exclamation circle icon"></i> ACME email must be set before enabling
+        </small>
+    </div>
+    <div class="ui divider"></div>
+    <h3>Preferred Certificate Authority</h3>
+    <p>The default CA to use when create a new subdomain proxy endpoint with TLS certificate</p>
+    <div class="ui fluid form" tourstep="acmeSettings">
+        <div class="field">
+            <label>Preferred CA</label>
+            <div class="ui selection dropdown" id="defaultCA">
+                <input type="hidden" name="defaultCA">
+                <i class="dropdown icon"></i>
+                <div class="default text">Let's Encrypt</div>
+                <div class="menu">
+                    <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
+                    <!-- <div class="item" data-value="Buypass">Buypass</div> -->
+                    <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+                </div>
+            </div>
+        </div>
+        <div class="field">
+            <label>ACME Email</label>
+            <input id="prefACMEEmail" type="text" placeholder="ACME Email">
+        </div>
+        <button class="ui basic button" onclick="saveDefaultCA();"><i class="ui green save icon"></i> Save</button>
+    </div>
+    <br>
+    <div class="ui divider"></div>
+    <h3>Advanced Renew Policy</h3>
+    <p>Configure which certificates the ACME auto-renewer should renew automatically.</p>
+    <div style="display: flex; align-items: center; gap: 1.6em; flex-wrap: wrap;">
+        <div class="ui toggle checkbox" id="renewAllSupportedCheckbox">
+            <input type="checkbox" id="renewAllSupported" onchange="window.acmeSetAutoRenewMode(this.checked);">
+            <label>Renew All Certs</label>
+        </div>
+        <br>
+       
+    </div>
+    <div class="ui segment renew_all_certificate">
+        <p>All certificates will be renewed automatically.</p>
+         <button id="acmeRenewNowBtn" onclick="window.acmeRenewNow();" class="ui basic button">
+            <i class="yellow refresh icon"></i> Renew Now
+        </button>
+    </div>
+    <div class="ui segment renew_selected_certificate">
+        <p>Select specific certificates to renew automatically:</p>
+        <div style="width: 100%; overflow-x: auto; margin-bottom: 1em;">
+            <table id="acmeDomainCertTable" class="ui very compact unstackable basic disabled table">
+                <thead>
+                    <tr>
+                        <th>Domain Name</th>
+                        <th>Match Rule</th>
+                        <th>Auto-Renew</th>
+                    </tr>
+                </thead>
+                <tbody id="acmeDomainTableBody"></tbody>
+            </table>
+        </div>
+        <small><i class="ui red info circle icon"></i> Domains in red are expired</small><br><br>
+        <div class="ui yellow message">
+            Certificate auto-renew only works with CAs supported by Zoraxy. Check the Zoraxy wiki for the supported CA list.
+        </div>
+        <div class="">
+            <button id="acmeRenewSelectedBtn" onclick="window.acmeRenewNow();" class="ui basic disabled button">
+                <i class="yellow refresh icon"></i> Renew Selected
+            </button>
+        
+        </div>
+    </div>
+    <button class="ui basic button" onclick="window.acmeSaveRenewPolicy();">
+            <i class="green save icon"></i> Save Renew Policy
+    </button>
+    
+    <br>
+    <div class="ui divider"></div>
+    <h3>Generate New Certificate</h3>
+    <p>Manually generate a certificate if one of your domain do not have certificate.</p>
+    <button class="ui basic button" tourstep="openACMEManager" onclick="openACMEManager();"><i class="yellow external icon"></i> Open ACME Tool</button>
+</div>
+<script>
+(function(){
+    // Scoped variables
+    var enableTriggerOnChangeEvent = true;
+    var expiredDomains = [];
+
+    // Widget initialization
+    $("#defaultCA").dropdown();
+    $("#acmeAutoRenewCheckbox").checkbox();
+    $("#renewAllSupportedCheckbox").checkbox();
+
+    // Email gate control
+    function updateEmailGate(email) {
+        if (email.trim() === "") {
+            $("#acmeAutoRenewCheckbox").addClass("disabled");
+            $("#acmeEmailRequiredHint").show();
+        } else {
+            $("#acmeAutoRenewCheckbox").removeClass("disabled");
+            $("#acmeEmailRequiredHint").hide();
+        }
+    }
+
+    // Toggle state
+    function initToggleState(){
+        $.get("/api/acme/autoRenew/enable", function(data){
+            enableTriggerOnChangeEvent = false;
+            if (data == true){
+                $("#acmeAutoRenewCheckbox").checkbox("set checked");
+            } else {
+                $("#acmeAutoRenewCheckbox").checkbox("set unchecked");
+            }
+            enableTriggerOnChangeEvent = true;
+            setACMEEnableStates(data);
+
+            // Attach change handler after the initial state is applied
+            $("#enableCertAutoRenew").on("change", function(){
+                if (!enableTriggerOnChangeEvent){ return; }
+                toggleAutoRenew();
+            });
+        });
+    }
+
+    function toggleAutoRenew(){
+        var enabled = $("#acmeAutoRenewCheckbox").checkbox("is checked");
+        $.cjax({
+            url: "/api/acme/autoRenew/enable",
+            method: "POST",
+            data: {"enable": enabled},
+            success: function(data){
+                if (data.error){
+                    msgbox(data.error, false, 5000);
+                    // Revert the toggle visually
+                    enableTriggerOnChangeEvent = false;
+                    if (enabled){
+                        $("#acmeAutoRenewCheckbox").checkbox("set unchecked");
+                    } else {
+                        $("#acmeAutoRenewCheckbox").checkbox("set checked");
+                    }
+                    enableTriggerOnChangeEvent = true;
+                    setACMEEnableStates(!enabled);
+                } else {
+                    $("#acmeEnableToggleSucc").stop().finish().fadeIn("fast").delay(3000).fadeOut("fast");
+                    setACMEEnableStates(enabled);
+                }
+            }
+        });
+    }
+
+    // Advanced Renew Policy
+    function acmeSetAutoRenewMode(useAutoMode) {
+        if (useAutoMode){
+            $("#acmeDomainCertTable").addClass("disabled");
+            $("#acmeRenewNowBtn").removeClass("disabled");
+            $("#acmeRenewSelectedBtn").addClass("disabled");
+            $(".renew_all_certificate").removeClass("section-disabled");
+            $(".renew_selected_certificate").addClass("section-disabled");
+        } else {
+            $("#acmeDomainCertTable").removeClass("disabled");
+            $("#acmeRenewNowBtn").addClass("disabled");
+            $("#acmeRenewSelectedBtn").removeClass("disabled");
+            $(".renew_all_certificate").addClass("section-disabled");
+            $(".renew_selected_certificate").removeClass("section-disabled");
+        }
+    }
+
+    function renderDomainTable(domainFileList) {
+        var tableBody = $('#acmeDomainTableBody');
+        tableBody.empty();
+
+        for (var srcfile in domainFileList) {
+            if (!domainFileList.hasOwnProperty(srcfile)){ continue; }
+            var domains = domainFileList[srcfile];
+
+            var domainClass = "validDomain";
+            for (var i = 0; i < domains.length; i++){
+                if (expiredDomains.includes(domains[i])){
+                    domainClass = "expiredDomain";
+                    break;
+                }
+            }
+
+            var row = $('<tr>');
+            row.append($('<td class="' + domainClass + '">').html(domains.join("<br>")));
+            row.append($('<td>').text(srcfile));
+
+            var checkboxCell = $('<td>').attr('srcfile', srcfile).attr('domain', encodeURIComponent(JSON.stringify(domains)));
+            checkboxCell.append($('<input type="checkbox">').attr('name', srcfile));
+            row.append(checkboxCell);
+
+            tableBody.append(row);
+        }
+
+        if (Object.keys(domainFileList).length === 0){
+            tableBody.append('<tr><td colspan="3"><i class="ui green circle check icon"></i> No certificate in use</td></tr>');
+        }
+    }
+
+    function initAutoRenewPolicy(){
+        $.get("/api/acme/autoRenew/listDomains", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+                return;
+            }
+            if (data[0] === "*"){
+                $("#renewAllSupportedCheckbox").checkbox("set checked");
+                acmeSetAutoRenewMode(true);
+            } else {
+                data.forEach(function(name){
+                    $('#acmeDomainTableBody input[type="checkbox"][name="' + name + '"]').prop('checked', true);
+                });
+                acmeSetAutoRenewMode(false);
+            }
+        });
+    }
+
+    function initDomainTable(){
+        $.get("/api/cert/listdomains?compact=true", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+            } else {
+                renderDomainTable(data);
+            }
+            initAutoRenewPolicy();
+        });
+    }
+
+    function initDomainFileList(){
+        $.ajax({
+            url: "/api/acme/listExpiredDomains",
+            method: "GET",
+            success: function(response){
+                expiredDomains = response.domain || [];
+                initDomainTable();
+            },
+            error: function(){
+                initDomainTable();
+            }
+        });
+    }
+
+    function acmeSaveRenewPolicy(){
+        var autoRenewAll = $("#renewAllSupportedCheckbox").checkbox("is checked");
+        if (autoRenewAll){
+            $.cjax({
+                url: "/api/acme/autoRenew/setDomains",
+                method: "POST",
+                data: {opr: "setAuto"},
+                success: function(data){
+                    msgbox("Renew policy updated");
+                }
+            });
+        } else {
+            var checkedNames = [];
+            $('#acmeDomainTableBody input[type="checkbox"]:checked').each(function(){
+                checkedNames.push($(this).attr('name'));
+            });
+            $.cjax({
+                url: "/api/acme/autoRenew/setDomains",
+                method: "POST",
+                data: {opr: "setSelected", domains: JSON.stringify(checkedNames)},
+                success: function(data){
+                    msgbox("Renew policy updated");
+                }
+            });
+        }
+    }
+
+    function acmeRenewNow(){
+        $.get("/api/acme/autoRenew/renewNow", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false, 6000);
+            } else {
+                msgbox(data);
+            }
+        });
+    }
+
+    // Main initialization
+    function initAcmeStatus(){
+        $.get("/api/acme/autoRenew/email", function(data){
+            $("#prefACMEEmail").val(data);
+            updateEmailGate(data);
+            if (data.trim() == ""){
+                $(".renewButton").addClass('disabled');
+            } else {
+                $(".renewButton").removeClass('disabled');
+            }
+        });
+
+        $.get("/api/acme/autoRenew/ca", function(data){
+            $("#defaultCA").dropdown("set value", data);
+        });
+
+        initToggleState();
+        initDomainFileList();
+    }
+    initAcmeStatus();
+
+    // Global exports
+    // setACMEEnableStates is also called from snippet/acme.html via parent.setACMEEnableStates
+    window.setACMEEnableStates = function(enabled){
+        $("#acmeAutoRenewerStatus").text(enabled ? "Enabled" : "Disabled");
+        if (enabled){
+            $(".acmeRenewStateWrapper").addClass("enabled");
+        } else {
+            $(".acmeRenewStateWrapper").removeClass("enabled");
+        }
+        $("#acmeAutoRenewer").find("i").attr("class", enabled ? "white circle check icon" : "white circle times icon");
+    };
+
+    window.saveDefaultCA = function(){
+        var newDefaultEmail = $("#prefACMEEmail").val().trim();
+        var newDefaultCA = $("#defaultCA").dropdown("get value");
+
+        if (newDefaultEmail == ""){
+            msgbox("Invalid acme email given", false);
+            return;
+        }
+
+        $.cjax({
+            url: "/api/acme/autoRenew/email",
+            method: "POST",
+            data: {"set": newDefaultEmail},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                } else {
+                    $(".renewButton").removeClass('disabled');
+                    updateEmailGate(newDefaultEmail);
+                }
+            }
+        });
+
+        $.cjax({
+            url: "/api/acme/autoRenew/ca",
+            data: {"set": newDefaultCA},
+            method: "POST",
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }
+            }
+        });
+
+        msgbox("Settings updated");
+    };
+
+    window.openACMEManager = function(){
+        showSideWrapper('snippet/acme.html');
+    };
+
+    window.acmeSetAutoRenewMode  = acmeSetAutoRenewMode;
+    window.acmeSaveRenewPolicy   = acmeSaveRenewPolicy;
+    window.acmeRenewNow          = acmeRenewNow;
+})();
+</script>

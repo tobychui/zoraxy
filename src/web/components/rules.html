@@ -94,6 +94,26 @@
                                 </div>
                                 <div class="field">
                                     <div class="ui checkbox">
+                                        <input type="checkbox" id="disableWebSocket">
+                                        <label>Disable WebSocket<br><small>Block all WebSocket upgrade requests to this endpoint with a 403 error</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label>WebSocket Timeout</label>
+                                    <div class="ui fluid right labeled input">
+                                        <input type="number" id="websocketTimeout" placeholder="0" min="0" value="0">
+                                        <div class="ui basic label">seconds</div>
+                                    </div>
+                                    <small>WebSocket connection timeout in seconds. Set to 0 for default (300 seconds).</small>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="enableTimeoutRefreshOnActivity">
+                                        <label>Refresh timeout on activity<br><small>Reset the WebSocket deadline each time a message is received (idle timeout instead of max lifetime)</small></label>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
                                         <input type="checkbox" id="bypassGlobalTLS">
                                         <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
                                     </div>
@@ -316,6 +336,10 @@
         let proxyRateLimit = $("#proxyRateLimit").val();
         let requireRateLimit = $("#requireRateLimit")[0].checked;
         let skipWebSocketOriginCheck = $("#skipWebsocketOriginCheck")[0].checked;
+        let disableWebSocket = $("#disableWebSocket")[0].checked;
+        let websocketTimeout = parseInt($("#websocketTimeout").val()) || 0;
+        if (websocketTimeout < 0) websocketTimeout = 0;
+        let enableTimeoutRefreshOnActivity = $("#enableTimeoutRefreshOnActivity")[0].checked;
         let accessRuleToUse = $("#newProxyRuleAccessFilter").val();
         let useStickySessionLB = $("#useStickySessionLB")[0].checked; 
         let tags = $("#proxyTags").val().trim();
@@ -365,6 +389,9 @@
                 blockCommonExploits: blockCommonExploits,
                 blockAICrawlers: blockAICrawlers,
                 mitigationAction: mitigationAction,
+                disableWebSocket: disableWebSocket,
+                websocketTimeout: websocketTimeout,
+                enableTimeoutRefreshOnActivity: enableTimeoutRefreshOnActivity,
             },
             success: function(data){
                 if (data.error != undefined){

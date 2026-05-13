@@ -759,6 +759,84 @@ func handleUpdateTrustedProxy(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
+// Bulk-replace the entire trusted proxy list from a CSV body.
+// Each non-empty line must be:  ip/cidr, description
+// Lines starting with # are treated as comments and skipped.
+func handleBulkUpdateTrustedProxies(w http.ResponseWriter, r *http.Request) {
+	csv, err := utils.PostPara(r, "csv")
+	if err != nil {
+		utils.SendErrorResponse(w, "csv parameter is required")
+		return
+	}
+
+	p := bluemonday.StrictPolicy()
+
+	// Parse the incoming CSV into (ip, desc) pairs before mutating state
+	type entry struct {
+		ip   string
+		desc string
+	}
+	var entries []entry
+	for _, rawLine := range strings.Split(csv, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, ",", 2)
+		ip := strings.TrimSpace(parts[0])
+		if ip == "" {
+			continue
+		}
+		desc := ""
+		if len(parts) == 2 {
+			desc = p.Sanitize(strings.TrimSpace(parts[1]))
+		}
+		entries = append(entries, entry{ip: ip, desc: desc})
+	}
+
+	// Remove every existing entry
+	for _, proxy := range accessController.ListTrustedProxies() {
+		accessController.RemoveTrustedProxy(proxy.IP)
+	}
+
+	// Add the new entries in order
+	for _, e := range entries {
+		accessController.AddTrustedProxy(e.ip, e.desc)
+	}
+
+	// Persist
+	if err := accessController.SaveTrustedProxies(); err != nil {
+		utils.SendErrorResponse(w, "failed to save trusted proxies: "+err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// Reset the trusted proxy list to the built-in defaults and return the new list.
+func handleResetDefaultTrustedProxies(w http.ResponseWriter, r *http.Request) {
+	// Remove all current entries
+	for _, proxy := range accessController.ListTrustedProxies() {
+		accessController.RemoveTrustedProxy(proxy.IP)
+	}
+
+	// Load defaults
+	for _, proxy := range accessController.GetDefaultTrustedProxies() {
+		accessController.AddTrustedProxy(proxy.IP, proxy.Desc)
+	}
+
+	// Persist
+	if err := accessController.SaveTrustedProxies(); err != nil {
+		utils.SendErrorResponse(w, "failed to save trusted proxies: "+err.Error())
+		return
+	}
+
+	// Return the new list so the UI can refresh without an extra round-trip
+	result := accessController.ListTrustedProxies()
+	js, _ := json.Marshal(result)
+	utils.SendJSONResponse(w, string(js))
+}
+
 // List all quick ban ip address
 func handleListQuickBan(w http.ResponseWriter, r *http.Request) {
 	currentSummary := statisticCollector.GetCurrentDailySummary()

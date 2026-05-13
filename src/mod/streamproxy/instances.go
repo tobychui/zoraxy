@@ -32,6 +32,15 @@ func (c *ProxyRelayInstance) Start() error {
 		return errors.New("proxy already running")
 	}
 
+	if c.aTobAccumulatedByteTransfer == nil {
+		aAcc := int64(0)
+		c.aTobAccumulatedByteTransfer = &aAcc
+	}
+	if c.bToaAccumulatedByteTransfer == nil {
+		bAcc := int64(0)
+		c.bToaAccumulatedByteTransfer = &bAcc
+	}
+
 	// Create a stopChan to control the loop
 	tcpStopChan := make(chan bool)
 	udpStopChan := make(chan bool)

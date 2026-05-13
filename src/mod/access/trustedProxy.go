@@ -150,6 +150,12 @@ func (c *Controller) LoadTrustedProxies() error {
 	return nil
 }
 
+// GetDefaultTrustedProxies returns the built-in default trusted proxy list
+// parsed from the embedded CSV, without modifying the running configuration.
+func (c *Controller) GetDefaultTrustedProxies() []TrustedProxy {
+	return loadDefaultTrustedProxiesFromCSV()
+}
+
 // loadDefaultTrustedProxiesFromCSV parses the embedded CSV and returns TrustedProxy slice
 func loadDefaultTrustedProxiesFromCSV() []TrustedProxy {
 	var proxies []TrustedProxy

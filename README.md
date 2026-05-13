@@ -57,6 +57,11 @@ For other systems or architectures, please see [Releases](https://github.com/tob
 Thank you for the well written and easy to follow tutorial by Reddit user [itsvmn](https://www.reddit.com/user/itsvmn/)! 
 If you have no background in setting up reverse proxy or web routing, you should check this out before you start setting up your Zoraxy. 
 
+### Switching from Nginx / NPM? 
+Check out our new (experimental) nginx to Zoraxy config converter!
+
+[Launch Config Converter](https://zoraxy.aroz.org/nginx2zoraxy.html)
+
 ## Build from Source
 
 Requires Go 1.23 or higher
@@ -224,13 +229,13 @@ Some section of Zoraxy are contributed by our amazing community and if you have 
 
 - Docker Container List by [@eyerrock](https://github.com/eyerrock)
 
-- Stream Proxy [@jemmy1794](https://github.com/jemmy1794)
-
 - Change Log [@Morethanevil](https://github.com/Morethanevil)
 
 ### Looking for Maintainer
 
 - ACME integration (Auto-renew & Zoraxy integration)
+
+- Zoraxy Auth (Build-in basic SSO feature) 
 
 - Logging (including analysis & attack prevention) Module
 

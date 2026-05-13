@@ -164,6 +164,8 @@ func RegisterAccessRuleAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/trustedproxy/add", handleAddTrustedProxy)
 	authRouter.HandleFunc("/api/trustedproxy/remove", handleRemoveTrustedProxy)
 	authRouter.HandleFunc("/api/trustedproxy/update", handleUpdateTrustedProxy)
+	authRouter.HandleFunc("/api/trustedproxy/bulkUpdate", handleBulkUpdateTrustedProxies)
+	authRouter.HandleFunc("/api/trustedproxy/reset", handleResetDefaultTrustedProxies)
 }
 
 // Register the APIs for path blocking rules management functions, WIP
@@ -177,6 +179,7 @@ func RegisterPathRuleAPIs(authRouter *auth.RouterDef) {
 func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	/* Traffic Summary */
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
+	authRouter.HandleFunc("/api/stats/trafficmap", HandleTrafficMapData)
 	authRouter.HandleFunc("/api/stats/countries", HandleCountryDistrSummary)
 	authRouter.HandleFunc("/api/stats/netstat", netstatBuffers.HandleGetNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/netstatgraph", netstatBuffers.HandleGetBufferedNetworkInterfaceStats)
@@ -418,6 +421,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	//Others
 	targetMux.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
+	authRouter.HandleFunc("/api/info/ipcheck", HandleIpAccessCheck)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
 	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)

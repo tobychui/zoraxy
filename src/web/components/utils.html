@@ -44,6 +44,7 @@
             <div class="ui divider"></div>
             <h3>Forget Password Email</h3>
             <p>The following SMTP settings help you to reset your password in case you have lost your management account.</p>
+            <div class="ui message"><p>This feature is deprecated and will be removed in future versions. For password resets, use the <code>./zoraxy -reset_ac</code> command.</p></div>
             <form id="email-form" class="ui form">
                 <div class="field">
                     <label>Sender Address</label>
@@ -171,6 +172,33 @@
             <p>Results: <div id="ipRangeOutput">N/A</div></p>
         </div>
         <div class="ui divider"></div>
+        <h3>Geo-IP Lookup</h3>
+        <p>Enter an IP address and see its estimated geographical location and access control rule results.</p>
+        <div class="ui basic segment">
+            <div class="ui action input" style="width: 100%; max-width: 420px;">
+                <input type="text" id="geoipInput" placeholder="IPv4 or IPv6 address (e.g. 1.1.1.1)">
+                <button class="ui basic blue button" onclick="lookupGeoIp()"><i class="search icon"></i> Lookup</button>
+            </div>
+            <div id="geoipResult" style="display:none; margin-top: 1em;">
+                <div class="ui small label" style="margin-bottom: 1em;">
+                    <i class="globe icon"></i> Country ISO Code: <span id="geoipCountryCode" class="detail">-</span>
+                </div>
+                <h5>Access Rule Check</h5>
+                <p style="color: grey; font-size: 0.9em;">Shows whether this IP would be permitted by each configured access rule.</p>
+                <table class="ui very basic celled table" id="geoipRuleTable">
+                    <thead>
+                        <tr>
+                            <th>Rule UUID</th>
+                            <th>Rule Name</th>
+                            <th>Access</th>
+                        </tr>
+                    </thead>
+                    <tbody id="geoipRuleTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="geoipError" class="ui red message" style="display:none;"></div>
+        </div>
     </div>
     <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab4">
         <!-- Config Tools -->
@@ -416,6 +444,58 @@
 
         return isValid;
     }
+
+    /*
+        Geo-IP Lookup & Access Rule Check
+    */
+    function lookupGeoIp() {
+        const ip = document.getElementById('geoipInput').value.trim();
+        if (!ip) {
+            document.getElementById('geoipError').textContent = 'Please enter an IP address.';
+            document.getElementById('geoipError').style.display = 'block';
+            document.getElementById('geoipResult').style.display = 'none';
+            return;
+        }
+        document.getElementById('geoipError').style.display = 'none';
+        document.getElementById('geoipResult').style.display = 'none';
+
+        $.get('/api/info/ipcheck', { ip: ip }, function(data) {
+            if (data.error) {
+                document.getElementById('geoipError').textContent = data.error;
+                document.getElementById('geoipError').style.display = 'block';
+                return;
+            }
+            const countryCode = data.countryIsoCode || '(unknown)';
+            document.getElementById('geoipCountryCode').textContent = countryCode;
+
+            const tbody = document.getElementById('geoipRuleTableBody');
+            tbody.innerHTML = '';
+            (data.rules || []).forEach(function(rule) {
+                const icon = rule.allowed
+                    ? '<i class="green check circle icon"></i> Allow'
+                    : '<i class="red times circle icon"></i> Deny';
+                tbody.innerHTML += `<tr>
+                    <td style="font-family: monospace; font-size: 0.85em;">${rule.id}</td>
+                    <td>${rule.name}</td>
+                    <td>${icon}</td>
+                </tr>`;
+            });
+            if ((data.rules || []).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">No access rules configured.</td></tr>';
+            }
+            document.getElementById('geoipResult').style.display = 'block';
+        }).fail(function(xhr) {
+            let msg = 'Lookup failed.';
+            try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+            document.getElementById('geoipError').textContent = msg;
+            document.getElementById('geoipError').style.display = 'block';
+        });
+    }
+
+    // Allow pressing Enter in the IP input to trigger lookup
+    document.getElementById('geoipInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') lookupGeoIp();
+    });
 
     /*
         IP Address Utilities

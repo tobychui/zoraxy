@@ -1,5 +1,19 @@
 
 <div id="quickstart" class="standardContainer">
+    <style>
+        body.darkTheme .tutorial .author{
+            color: white !important;
+        }
+
+        .tutorial{
+            cursor: pointer;
+            transition: opacity 0.3s ease, background-color 0.3s ease;
+        }
+        .tutorial:hover{
+            opacity: 0.8;
+            background-color: var(--theme_bg_active);
+        }
+    </style>
     <div class="ui container">
         <h1 class="ui header">
             <img src="img/res/1F44B.png">
@@ -50,12 +64,46 @@
                 </div>
             </div>
         </div>
-        <div class="ui divider"></div>
+        <br>
         <div style="width: 100%;" align="center">
             <button onclick="startQuickStartTour();" class="ui finished button quickstartControlButton">
                 Start Walkthrough
             </button>
         </div>
+        <div class="ui divider"></div>
+        <!-- More advance tutorials -->
+         <div class="ui segment tutorial" name="redirect">
+            <div class="ui comments">
+                <div class="comment">
+                    <a class="avatar">
+                    <img src="img/res/redirect.svg">
+                    </a>
+                    <div class="content">
+                        <div class="author">Setting Up Redirections</div>
+                        <div class="text">
+                            <p>Redirect all traffic from one domain to another domain, or redirect specific paths to other URLs.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="ui segment tutorial" name="stream">
+            <div class="ui comments">
+                <div class="comment">
+                    <a class="avatar">
+                    <img src="img/res/stream.svg">
+                    </a>
+                    <div class="content">
+                        <div class="author">Stream Proxy</div>
+                        <div class="text">
+                            <p>Proxy TCP / UDP traffic to different servers or services.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
     </div>
     
 </div>
@@ -71,6 +119,13 @@
         $(this).addClass("active");
         let tourType = $(this).attr("name");
         currentQuickSetupClass = tourType;
+    });
+
+    $("#quickstart .tutorial").on("click", function(data){
+        $(".serviceOption.active").removeClass("active");
+        let tourType = $(this).attr("name");
+        currentQuickSetupClass = tourType;
+        startQuickStartTour();
     });
    
 </script>

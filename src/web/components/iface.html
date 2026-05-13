@@ -1,0 +1,50 @@
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Network Interfaces</h2>
+        <p>Network Interface Card (NIC) currently installed on this host</p>
+    </div>
+    <table id="network-interfaces-table" class="ui selectable inverted striped celled table">
+        <thead>
+            <tr>
+                <th>Interface Name</th>
+                <th>ID</th>
+                <th>IP Address</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        </tbody>
+    </table>
+    <button class="ui basic button" onclick="renderNICInfo(); msgbox('NIC information reloaded');"><i class="green refresh icon"></i> Refresh</button>
+</div>
+<script>
+/*
+    NIC Info
+*/
+function renderNICInfo(){
+    $.get("/api/stats/listnic",function(data){
+        var tbody = document.querySelector("#network-interfaces-table tbody");
+        tbody.innerHTML = ""; // Clear existing rows
+        data.forEach(function(item) {
+            var tr = document.createElement("tr");
+            var name = document.createElement("td");
+            name.textContent = item.Name;
+            var id = document.createElement("td");
+            id.textContent = item.ID;
+            var ips = document.createElement("td");
+            if (item.IPs == null){
+                ips.innerHTML = "NOT CONNECTED";
+            }else{
+                ips.innerHTML = item.IPs.join("<br>");
+            }
+            
+            tr.appendChild(name);
+            tr.appendChild(id);
+            tr.appendChild(ips);
+            tbody.appendChild(tr);
+        });
+    });
+}
+renderNICInfo();
+
+</script>

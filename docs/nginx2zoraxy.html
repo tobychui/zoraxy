@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nginx to Zoraxy Config Converter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.css"
+          integrity="sha512-3quBdRGJyLy79hzhDDcBzANW+mVqPctrGCfIPosHQtMKb3rKsCxfyslzwlz2wj1dT8A7UX+sEvDjaUv+WExQrA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.js"
+            integrity="sha512-gnoBksrDbaMnlE0rhhkcx3iwzvgBGz6mOEj4/Y5ZY09n55dYddx6+WYc72A55qEesV8VX2iMomteIwobeGK1BQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #f4f5f7;
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+        .main-header {
+            background: linear-gradient(135deg, #1b1c1d 0%, #2d3436 100%);
+            color: white;
+            padding: 2.5em 0 2em 0;
+            margin-bottom: 2em;
+            border-bottom: 4px solid #2185d0;
+        }
+        .main-header .sub.header {
+            color: #adb5bd !important;
+            margin-top: 0.4em !important;
+        }
+        .main-header .zoraxy-logo {
+            display: inline-block;
+            background: #2185d0;
+            color: white;
+            padding: 0.15em 0.5em;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            font-size: 0.85em;
+            vertical-align: middle;
+            margin-right: 0.3em;
+        }
+        .section-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5em;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5em;
+        }
+        .section-title {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: #2d3436;
+            border-bottom: 2px solid #2185d0;
+            padding-bottom: 0.5em;
+            margin-bottom: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 0.4em;
+        }
+        textarea.nginx-input {
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 12.5px;
+            min-height: 320px;
+            resize: vertical;
+            border: 1px solid #dde1e7;
+            border-radius: 4px;
+            background: #fafbfc;
+            line-height: 1.6;
+        }
+        textarea.nginx-input:focus {
+            border-color: #2185d0;
+            background: #fff;
+            outline: none;
+        }
+        .output-container {
+            position: relative;
+        }
+        .output-json {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 1.2em 1.4em;
+            border-radius: 6px;
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 12px;
+            white-space: pre;
+            overflow-x: auto;
+            max-height: 480px;
+            overflow-y: auto;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+        .output-json .json-key    { color: #89b4fa; }
+        .output-json .json-str    { color: #a6e3a1; }
+        .output-json .json-num    { color: #fab387; }
+        .output-json .json-bool   { color: #f38ba8; }
+        .output-json .json-null   { color: #9399b2; }
+        .copy-btn {
+            position: absolute;
+            top: 0.5em;
+            right: 0.5em;
+            opacity: 0.7;
+        }
+        .copy-btn:hover { opacity: 1; }
+        .config-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5em;
+        }
+        .config-filename {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #636e72;
+            background: #f4f5f7;
+            padding: 0.2em 0.6em;
+            border-radius: 4px;
+        }
+        .sev-info    { background: #e3f2fd; color: #1565c0; }
+        .sev-warning { background: #fff8e1; color: #e65100; }
+        .sev-error   { background: #ffebee; color: #b71c1c; }
+        .sev-label {
+            display: inline-block;
+            padding: 0.15em 0.5em;
+            border-radius: 3px;
+            font-size: 0.78em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .warn-item { font-family: 'Courier New', monospace; font-size: 11.5px; }
+        .warn-reason { font-size: 0.9em; color: #555; }
+        .warn-action { font-size: 0.85em; color: #2185d0; }
+        .placeholder-area {
+            text-align: center;
+            padding: 3em 1em;
+            color: #aaa;
+        }
+        .placeholder-area i { font-size: 3em; margin-bottom: 0.3em; display: block; }
+        .example-btns { margin-top: 0.8em; }
+        .example-btns .button { margin: 0.2em; }
+        #warningsArea { display: none; }
+        .multi-config-tab { margin-bottom: 1.5em; }
+        .no-warnings {
+            text-align: center;
+            padding: 1.5em;
+            color: #27ae60;
+        }
+        .stats-bar {
+            display: flex;
+            gap: 1em;
+            flex-wrap: wrap;
+            margin-bottom: 1em;
+        }
+        .stat-pill {
+            padding: 0.3em 0.8em;
+            border-radius: 20px;
+            font-size: 0.82em;
+            font-weight: 600;
+        }
+        .stat-pill.blue { background:#dbeafe; color:#1d4ed8; }
+        .stat-pill.green { background:#dcfce7; color:#15803d; }
+        .stat-pill.yellow { background:#fef9c3; color:#854d0e; }
+        .stat-pill.red { background:#fee2e2; color:#991b1b; }
+
+        @media (max-width: 767px) {
+            .main-header { padding: 1.5em 0 1em 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-header">
+    <div class="ui container">
+        <h1 class="ui inverted header" style="margin:0;">
+            <i class="exchange alternate icon" style="color:#2185d0;"></i>
+            <div class="content">
+                Nginx &rarr; <span class="zoraxy-logo">ZORAXY</span> Config Converter
+                <div class="sub header">
+                    Convert nginx <code style="background:rgba(255,255,255,0.1);padding:0 0.3em;border-radius:3px;">location</code>
+                    blocks into Zoraxy proxy endpoint <code style="background:rgba(255,255,255,0.1);padding:0 0.3em;border-radius:3px;">.config</code> files
+                </div>
+            </div>
+        </h1>
+    </div>
+</div>
+
+<div class="ui container" style="padding-bottom: 3em;">
+
+    <div class="ui stackable two column grid">
+
+        <!-- ===== LEFT: INPUT ===== -->
+        <div class="column">
+            <div class="section-card">
+                <div class="section-title"><i class="file code outline icon" style="color:#2185d0;"></i> Nginx Configuration</div>
+                <div class="ui form">
+                    <div class="field">
+                        <label>Paste nginx config below
+                            <span style="font-weight:400; color:#888;">&nbsp;(server block or bare location blocks)</span>
+                        </label>
+                        <textarea id="nginxInput" class="nginx-input" spellcheck="false"
+                            placeholder="# Paste your nginx server block or location directives here
+# Example:
+location = /mail/config-v1.1.xml {
+    proxy_pass http://192.168.25.32:8082/mail/config-v1.1.xml;
+    proxy_set_header Host $host;
+    default_type application/xml;
+    add_header Content-Type application/xml;
+}
+
+location / {
+    return 404;
+}"></textarea>
+                    </div>
+
+                    <div class="two fields">
+                        <div class="field">
+                            <label>Default domain name
+                                <span style="font-weight:400;color:#888;">(used when no <code>server_name</code> found)</span>
+                            </label>
+                            <input type="text" id="defaultDomain" placeholder="e.g. mail.example.com">
+                        </div>
+                        <div class="field">
+                            <label>Proxy type</label>
+                            <select id="proxyTypeOverride" class="ui dropdown">
+                                <option value="auto">Auto-detect</option>
+                                <option value="1">Subdomain / Virtual Host (Type 1)</option>
+                                <option value="0">Root / Default (Type 0)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="skipCertGlobal">
+                            <label>Skip TLS certificate validation for all upstream connections (<code>SkipCertValidations: true</code>)</label>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="disableChunkedEncoding">
+                            <label>Disable chunked transfer encoding (<code>DisableChunkedTransferEncoding: true</code>) &mdash; required for Proxmox VE and some legacy backends</label>
+                        </div>
+                    </div>
+
+                    <button class="ui primary fluid large button" onclick="convert()" style="margin-top:0.5em;">
+                        <i class="magic icon"></i> Convert to Zoraxy Config
+                    </button>
+                </div>
+
+                <div class="ui divider" style="margin-top:1.5em;"></div>
+
+                <div>
+                    <span style="font-weight:600; color:#636e72; font-size:0.9em;">LOAD EXAMPLE &nbsp;</span>
+                    <div style="margin-bottom:0.4em; font-size:0.8em; color:#aaa; text-transform:uppercase; letter-spacing:0.5px;">Common homelab apps</div>
+                    <div class="example-btns">
+                        <button class="ui tiny blue basic button" onclick="loadExample('full')">
+                            <i class="server icon"></i> Generic (full block)
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('wordpress')">
+                            <i class="wordpress icon"></i> WordPress
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('proxmox')">
+                            <i class="server icon"></i> Proxmox VE
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('nextcloud')">
+                            <i class="cloud icon"></i> Nextcloud
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('gitea')">
+                            <i class="code branch icon"></i> Gitea
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('grafana')">
+                            <i class="chart bar icon"></i> Grafana
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('homeassistant')">
+                            <i class="home icon"></i> Home Assistant
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('jellyfin')">
+                            <i class="film icon"></i> Jellyfin
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('portainer')">
+                            <i class="docker icon"></i> Portainer
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('vaultwarden')">
+                            <i class="shield icon"></i> Vaultwarden
+                        </button>
+                        <button class="ui tiny teal basic button" onclick="loadExample('pihole')">
+                            <i class="filter icon"></i> Pi-hole
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== RIGHT: OUTPUT ===== -->
+        <div class="column">
+            <div class="section-card" style="min-height:200px;">
+                <div class="section-title"><i class="download icon" style="color:#27ae60;"></i> Zoraxy Config Output</div>
+                <div id="outputArea">
+                    <div class="placeholder-area">
+                        <i class="file alternate outline icon" style="color:#dde1e7;"></i>
+                        <p style="margin:0; font-size:1em;">Converted configuration will appear here</p>
+                        <p style="color:#bbb; font-size:0.85em; margin-top:0.3em;">Load an example or paste your nginx config on the left, then click Convert</p>
+                    </div>
+                </div>
+            </div>
+            <div class="ui warning message" style="margin-top:0.8em; font-size:0.88em;">
+                <i class="exclamation circle icon"></i>
+                <strong>Disclaimer:</strong> The generated configuration is a best-effort conversion and has <strong>not been verified for correctness</strong>.
+                Always review the output carefully before importing it into Zoraxy.
+                Some nginx features cannot be mapped and will require manual configuration &mdash; see the table below for details.
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WARNINGS TABLE ===== -->
+    <div id="warningsArea" class="section-card">
+        <div class="section-title"><i class="exclamation triangle icon" style="color:#f39c12;"></i> Uncertain / Un-mappable Items</div>
+        <p style="color:#636e72; margin-top:-0.5em; margin-bottom:1em;">
+            The following nginx directives could not be directly converted or were mapped with caveats.
+            Review these items manually before deploying.
+        </p>
+        <div id="warningsBody"></div>
+    </div>
+
+</div><!-- /container -->
+
+<div style="background:#1b1c1d; color:#636e72; text-align:center; padding:1.2em; font-size:0.82em; margin-top:2em;">
+    Nginx &rarr; Zoraxy Config Converter &nbsp;&bull;&nbsp;
+    Part of the <a href="https://zoraxy.aroz.org" style="color:#2185d0;" target="_blank" rel="noopener noreferrer">Zoraxy</a> project &nbsp;&bull;&nbsp;
+    Not all nginx features are mappable — always review the output before use.
+</div>
+
+<script>
+/* =============================================================
+   EXAMPLES
+   ============================================================= */
+const EXAMPLES = {
+    mail: {
+        domain: 'mail.mydomain.de',
+        config: `location = /mail/config-v1.1.xml {
+    proxy_pass http://192.168.25.32:8082/mail/config-v1.1.xml;
+    proxy_set_header Host $host;
+    default_type application/xml;
+    add_header Content-Type application/xml;
+}
+
+location / {
+    return 404;
+}`
+    },
+    autodiscover: {
+        domain: 'autodiscover.mydomain.de',
+        config: `location = /autodiscover/autodiscover.xml {
+    proxy_pass http://192.168.25.32:8082/autodiscover/autodiscover.xml;
+    proxy_set_header Host $host;
+    default_type application/xml;
+    add_header Content-Type application/xml;
+}
+
+location / {
+    return 404;
+}`
+    },
+    mtasts: {
+        domain: 'mta-sts.mydomain.de',
+        config: `location = /.well-known/mta-sts.txt {
+    proxy_pass http://192.168.25.32:8082/.well-known/mta-sts.txt;
+    proxy_set_header Host $host;
+    default_type text/plain;
+    add_header Content-Type text/plain;
+}
+
+location / {
+    return 404;
+}`
+    },
+    full: {
+        domain: '',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name app.example.com www.app.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/app.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.example.com/privkey.pem;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+    }
+
+    location /static/ {
+        proxy_pass http://127.0.0.1:8080/static/;
+        proxy_set_header Host $host;
+        add_header Cache-Control "public, max-age=3600";
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_http_version 1.1;
+    }
+}`
+    },
+
+    wordpress: {
+        domain: 'blog.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name blog.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/blog.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/blog.example.com/privkey.pem;
+
+    client_max_body_size 64M;
+
+    location / {
+        proxy_pass http://192.168.1.10:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_read_timeout 120s;
+        # Required for WordPress login cookies
+        proxy_cookie_path / "/; HTTPOnly; Secure";
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        proxy_pass http://192.168.1.10:80;
+        proxy_set_header Host $host;
+        add_header Cache-Control "public, max-age=31536000";
+        expires 1y;
+    }
+}`
+    },
+
+    proxmox: {
+        domain: 'pve.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name pve.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/pve.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/pve.example.com/privkey.pem;
+
+    location / {
+        proxy_pass https://192.168.1.2:8006;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
+        # Proxmox uses self-signed certs internally
+        proxy_ssl_verify off;
+    }
+}`
+    },
+
+    nextcloud: {
+        domain: 'cloud.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name cloud.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/cloud.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/cloud.example.com/privkey.pem;
+
+    client_max_body_size 10G;
+    proxy_buffering off;
+
+    location / {
+        proxy_pass http://192.168.1.20:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400s;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    }
+}`
+    },
+
+    gitea: {
+        domain: 'git.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name git.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/git.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/git.example.com/privkey.pem;
+
+    client_max_body_size 512M;
+
+    location / {
+        proxy_pass http://192.168.1.30:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+    }
+}`
+    },
+
+    grafana: {
+        domain: 'grafana.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name grafana.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/grafana.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/grafana.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://192.168.1.40:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        # Required for Grafana Live (WebSocket)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
+    }
+}`
+    },
+
+    homeassistant: {
+        domain: 'ha.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name ha.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/ha.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ha.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://192.168.1.50:8123;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        # Required for Home Assistant WebSocket API
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
+    }
+}`
+    },
+
+    jellyfin: {
+        domain: 'media.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name media.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/media.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/media.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://192.168.1.60:8096;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        # Required for Jellyfin WebSocket (sync play)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 600s;
+        proxy_buffering off;
+    }
+
+    # Jellyfin web client assets
+    location /web/ {
+        proxy_pass http://192.168.1.60:8096/web/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}`
+    },
+
+    portainer: {
+        domain: 'portainer.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name portainer.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/portainer.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/portainer.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://192.168.1.70:9000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        # Required for Portainer WebSocket (container exec/logs)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600s;
+    }
+}`
+    },
+
+    vaultwarden: {
+        domain: 'vault.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name vault.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/vault.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vault.example.com/privkey.pem;
+
+    client_max_body_size 128M;
+
+    location / {
+        proxy_pass http://192.168.1.80:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+    }
+
+    # Vaultwarden WebSocket notifications
+    location /notifications/hub {
+        proxy_pass http://192.168.1.80:3012/notifications/hub;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location /notifications/hub/negotiate {
+        proxy_pass http://192.168.1.80:80/notifications/hub/negotiate;
+        proxy_set_header Host $host;
+    }
+}`
+    },
+
+    pihole: {
+        domain: 'pihole.example.com',
+        config: `server {
+    listen 80;
+    listen 443 ssl;
+    server_name pihole.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/pihole.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/pihole.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://192.168.1.2:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Pi-hole admin panel
+    location /admin/ {
+        proxy_pass http://192.168.1.2:80/admin/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}`
+    }
+};
+
+function loadExample(name) {
+    const ex = EXAMPLES[name];
+    if (!ex) return;
+    document.getElementById('nginxInput').value = ex.config;
+    if (ex.domain) {
+        document.getElementById('defaultDomain').value = ex.domain;
+    }
+    // Proxmox requires DisableChunkedTransferEncoding; auto-toggle for convenience
+    document.getElementById('disableChunkedEncoding').checked = (name === 'proxmox');
+}
+
+/* =============================================================
+   NGINX TOKENISER
+   ============================================================= */
+function tokenize(input) {
+    const tokens = [];
+    let i = 0;
+    const len = input.length;
+
+    while (i < len) {
+        const ch = input[i];
+
+        // Whitespace
+        if (/\s/.test(ch)) { i++; continue; }
+
+        // Line comment
+        if (ch === '#') {
+            while (i < len && input[i] !== '\n') i++;
+            continue;
+        }
+
+        // Punctuation
+        if (ch === '{') { tokens.push({ t: 'lbrace' }); i++; continue; }
+        if (ch === '}') { tokens.push({ t: 'rbrace' }); i++; continue; }
+        if (ch === ';') { tokens.push({ t: 'semi'   }); i++; continue; }
+
+        // Quoted string
+        if (ch === '"' || ch === "'") {
+            const q = ch;
+            let s = '';
+            i++;
+            while (i < len && input[i] !== q) {
+                if (input[i] === '\\' && i + 1 < len) { i++; }
+                s += input[i++];
+            }
+            i++; // closing quote
+            tokens.push({ t: 'word', v: s });
+            continue;
+        }
+
+        // Word / identifier / path
+        let w = '';
+        while (i < len && !/[\s{};#"']/.test(input[i])) {
+            w += input[i++];
+        }
+        if (w) tokens.push({ t: 'word', v: w });
+    }
+    return tokens;
+}
+
+/* =============================================================
+   NGINX PARSER
+   ============================================================= */
+function parse(tokens) {
+    let pos = 0;
+
+    function parseItems() {
+        const items = [];
+        while (pos < tokens.length && tokens[pos].t !== 'rbrace') {
+            const item = parseItem();
+            if (item) items.push(item);
+        }
+        return items;
+    }
+
+    function parseItem() {
+        if (pos >= tokens.length) return null;
+
+        const args = [];
+        while (pos < tokens.length &&
+               tokens[pos].t !== 'lbrace' &&
+               tokens[pos].t !== 'semi' &&
+               tokens[pos].t !== 'rbrace') {
+            args.push(tokens[pos++].v);
+        }
+
+        if (args.length === 0) {
+            // Skip stray brace/semi
+            if (pos < tokens.length &&
+                (tokens[pos].t === 'semi' || tokens[pos].t === 'rbrace')) {
+                if (tokens[pos].t === 'semi') pos++;
+            }
+            return null;
+        }
+
+        if (pos < tokens.length && tokens[pos].t === 'lbrace') {
+            pos++; // consume {
+            const children = parseItems();
+            if (pos < tokens.length && tokens[pos].t === 'rbrace') pos++; // consume }
+            return { type: 'block', directive: args[0], args: args.slice(1), children };
+        }
+
+        if (pos < tokens.length && tokens[pos].t === 'semi') {
+            pos++; // consume ;
+            return { type: 'directive', directive: args[0], args: args.slice(1) };
+        }
+
+        // Directive without semicolon (lenient)
+        return { type: 'directive', directive: args[0], args: args.slice(1) };
+    }
+
+    return parseItems();
+}
+
+/* =============================================================
+   CONVERSION HELPERS
+   ============================================================= */
+
+// Headers that Zoraxy handles automatically — no mapping needed
+const AUTO_HANDLED_HEADERS = new Set([
+    'X-Forwarded-For', 'X-Real-IP', 'X-Forwarded-Proto',
+    'X-Forwarded-Host', 'Upgrade', 'Connection'
+]);
+
+function parseDurationToMs(val) {
+    if (!val) return 0;
+    const m = val.match(/^(\d+)(ms|s|m|h)?$/);
+    if (!m) return 0;
+    const n = parseInt(m[1]);
+    switch (m[2]) {
+        case 'ms': return n;
+        case 'm':  return n * 60000;
+        case 'h':  return n * 3600000;
+        default:   return n * 1000; // 's' or bare number → seconds
+    }
+}
+
+function parseProxyPass(url) {
+    const m = url.match(/^(https?):\/\/([^\/]+)(\/.*)?$/);
+    if (!m) return null;
+    return {
+        scheme:          m[1],
+        hostPort:        m[2],
+        path:            m[3] || '/',
+        hasExplicitPath: !!m[3],
+        tls:             m[1] === 'https'
+    };
+}
+
+function buildZoraxyDomain(hostPort, path) {
+    if (path && path !== '/') return hostPort + path;
+    return hostPort;
+}
+
+function makeBaseConfig(domain, proxyTypeOverride, disableChunkedEncoding) {
+    let proxyType;
+    if (proxyTypeOverride === '0') {
+        proxyType = 0;
+    } else if (proxyTypeOverride === '1') {
+        proxyType = 1;
+    } else {
+        // auto: "/" means root (type 0), anything else is type 1
+        proxyType = (domain === '/' || domain === '') ? 0 : 1;
+    }
+
+    return {
+        ProxyType:             proxyType,
+        RootOrMatchingDomain:  proxyType === 0 ? '/' : domain,
+        MatchingDomainAlias:   [],
+        ActiveOrigins:         [],
+        InactiveOrigins:       [],
+        UseStickySession:      false,
+        UseActiveLoadBalance:  false,
+        Disabled:              false,
+        ListeningPorts:        [],
+        BypassGlobalTLS:       false,
+        TlsOptions: {
+            DisableSNI:                      false,
+            DisableLegacyCertificateMatching: false,
+            EnableAutoHTTPS:                 false,
+            PreferredCertificate:            {}
+        },
+        VirtualDirectories: [],
+        HeaderRewriteRules: {
+            UserDefinedHeaders:            [],
+            RequestHostOverwrite:          '',
+            HSTSMaxAge:                    0,
+            EnablePermissionPolicyHeader:  false,
+            PermissionPolicy:              null,
+            DisableHopByHopHeaderRemoval:  false,
+            DisableUserAgentHeaderRemoval: false
+        },
+        EnableWebsocketCustomHeaders: false,
+        AuthenticationProvider: {
+            AuthMethod:                      0,
+            BasicAuthCredentials:            [],
+            BasicAuthExceptionRules:         [],
+            BasicAuthGroupIDs:               null,
+            ForwardAuthURL:                  '',
+            ForwardAuthResponseHeaders:      null,
+            ForwardAuthResponseClientHeaders:null,
+            ForwardAuthRequestHeaders:       null,
+            ForwardAuthRequestExcludedCookies: null
+        },
+        RequireRateLimit:               false,
+        RateLimit:                      1000,
+        RequireCaptcha:                 false,
+        CaptchaConfig:                  null,
+        DisableUptimeMonitor:           false,
+        DisableAutoFallback:            false,
+        DisableLogging:                 false,
+        DisableStatisticCollection:     false,
+        BlockCommonExploits:            false,
+        BlockAICrawlers:                false,
+        MitigationAction:               0,
+        DisableChunkedTransferEncoding: !!disableChunkedEncoding,
+        ForceHTTP11:                    false,
+        AccessFilterUUID:               '',
+        DefaultSiteOption:              0,
+        DefaultSiteValue:               '',
+        Tags:                           []
+    };
+}
+
+/* =============================================================
+   SERVER-LEVEL DIRECTIVE HANDLER
+   ============================================================= */
+function handleServerDirective(item, config, unmappable) {
+    const d = item.directive;
+    const val = item.args.join(' ');
+
+    switch (d) {
+        case 'server_name':
+        case 'listen':
+            break; // handled externally
+
+        case 'ssl_certificate':
+        case 'ssl_certificate_key':
+        case 'ssl_protocols':
+        case 'ssl_ciphers':
+        case 'ssl_prefer_server_ciphers':
+        case 'ssl_session_timeout':
+        case 'ssl_session_cache':
+        case 'ssl_stapling':
+        case 'ssl_stapling_verify':
+            unmappable.push({
+                sev: 'info',
+                item: `${d} ${val}`,
+                reason: 'TLS/SSL configuration is managed globally in Zoraxy, not per-endpoint.',
+                action: 'Configure certificates in Zoraxy\'s SSL/TLS management section.'
+            });
+            break;
+
+        case 'access_log':
+        case 'error_log':
+            unmappable.push({
+                sev: 'info',
+                item: `${d} ${val}`,
+                reason: 'Logging configuration is managed globally in Zoraxy.',
+                action: 'Use Zoraxy\'s built-in log management.'
+            });
+            break;
+
+        case 'gzip':
+        case 'gzip_types':
+        case 'gzip_vary':
+        case 'gzip_comp_level':
+            unmappable.push({
+                sev: 'warning',
+                item: `${d} ${val}`,
+                reason: 'Gzip compression configuration is not available in Zoraxy.',
+                action: 'Enable compression at the backend server or CDN level.'
+            });
+            break;
+
+        case 'client_max_body_size':
+            unmappable.push({
+                sev: 'warning',
+                item: `${d} ${val}`,
+                reason: 'Zoraxy use timeout instead of max body size, and does not have a direct equivalent to this directive.',
+                action: 'Configure request size limits at the backend application level.'
+            });
+            break;
+
+        case 'add_header':
+        case 'proxy_set_header': {
+            // Server-level headers — apply globally to config
+            const hName = item.args[0];
+            const hVal = item.args.slice(1).join(' ');
+            if (d === 'proxy_set_header' && hName === 'Host') {
+                if (hVal !== '$host' && hVal !== '$http_host') {
+                    config.HeaderRewriteRules.RequestHostOverwrite = hVal;
+                    unmappable.push({
+                        sev: 'info',
+                        item: `${d} ${hName} ${hVal} (server level)`,
+                        reason: `Mapped to RequestHostOverwrite: "${hVal}".`,
+                        action: 'Verify the host overwrite is correct.'
+                    });
+                }
+            } else if (d === 'add_header') {
+                const direction = 1; // downstream (response)
+                config.HeaderRewriteRules.UserDefinedHeaders.push(
+                    { Direction: direction, Key: hName, Value: hVal.replace(/^["']|["']$/g, ''), IsRemove: false }
+                );
+                unmappable.push({
+                    sev: 'info',
+                    item: `add_header ${hName} ${hVal} (server level)`,
+                    reason: 'Mapped as a downstream (response) header in UserDefinedHeaders.',
+                    action: `Header "${hName}" will be added to all responses from this endpoint.`
+                });
+            }
+            break;
+        }
+
+        case 'include':
+            unmappable.push({
+                sev: 'warning',
+                item: `include ${val}`,
+                reason: 'Nginx include directives are not supported.',
+                action: 'Expand the included file contents and re-run the converter.'
+            });
+            break;
+
+        default:
+            if (d) {
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (server level)`,
+                    reason: `Unsupported or unknown server-level directive.`,
+                    action: 'Review this directive manually.'
+                });
+            }
+    }
+}
+
+/* =============================================================
+   LOCATION BLOCK CONVERTER
+   ============================================================= */
+function convertLocation(loc, config, unmappable, globalSkipCert) {
+    // Parse modifier and path from args
+    let modifier = '';
+    let path = '';
+    if (loc.args.length === 1) {
+        path = loc.args[0];
+    } else if (loc.args.length >= 2) {
+        modifier = loc.args[0];
+        path = loc.args.slice(1).join(' ');
+    }
+    const locLabel = `location ${modifier ? modifier + ' ' : ''}${path}`;
+
+    // Regex locations — not mappable
+    if (modifier === '~' || modifier === '~*') {
+        unmappable.push({
+            sev: 'error',
+            item: locLabel,
+            reason: `Regex location matching (${modifier}) is not supported in Zoraxy. Zoraxy uses prefix/exact path matching only.`,
+            action: 'Rewrite as a prefix-based VirtualDirectory, or add individual entries for each path that would match the regex.'
+        });
+        return;
+    }
+
+    // Named locations (@name) — not directly mappable
+    if (path.startsWith('@')) {
+        unmappable.push({
+            sev: 'error',
+            item: locLabel,
+            reason: 'Named locations (@name) are an nginx-internal routing feature with no equivalent in Zoraxy.',
+            action: 'Refactor your nginx config to avoid named locations, or handle the logic at the backend.'
+        });
+        return;
+    }
+
+    // Parse directives inside this location
+    let proxyPass = null;
+    let returnCode = null;
+    let returnArg = null;
+    let skipCert = globalSkipCert;
+    let respTimeout = 0;
+    let forceHTTP11 = false;
+    const requestHeaders = [];
+    const responseHeaders = [];
+
+    for (const item of (loc.children || [])) {
+        if (item.type !== 'directive') {
+            // Nested blocks (e.g. nested location, if block)
+            if (item.type === 'block') {
+                if (item.directive === 'if') {
+                    unmappable.push({
+                        sev: 'error',
+                        item: `if block inside ${locLabel}`,
+                        reason: 'nginx "if" conditionals inside location blocks are not supported in Zoraxy.',
+                        action: 'Handle conditional logic at the backend application level.'
+                    });
+                } else {
+                    unmappable.push({
+                        sev: 'warning',
+                        item: `${item.directive} block inside ${locLabel}`,
+                        reason: `Nested block "${item.directive}" is not supported.`,
+                        action: 'Review this block manually.'
+                    });
+                }
+            }
+            continue;
+        }
+
+        const d   = item.directive;
+        const args = item.args;
+        const val  = args.join(' ');
+
+        switch (d) {
+            case 'proxy_pass':
+                proxyPass = args[0];
+                break;
+
+            case 'return':
+                returnCode = args[0];
+                returnArg  = args[1] || null;
+                break;
+
+            case 'proxy_ssl_verify':
+                if (args[0] === 'off') skipCert = true;
+                break;
+
+            case 'proxy_read_timeout': {
+                const ms = parseDurationToMs(args[0]);
+                respTimeout = ms;
+                unmappable.push({
+                    sev: 'info',
+                    item: `proxy_read_timeout ${val} (in ${locLabel})`,
+                    reason: `Mapped to RespTimeout: ${ms} (ms) on the upstream origin.`,
+                    action: 'Verify the timeout value is correct for your use case.'
+                });
+                break;
+            }
+
+            case 'proxy_http_version':
+                if (args[0] === '1.1') {
+                    forceHTTP11 = true;
+                    unmappable.push({
+                        sev: 'info',
+                        item: `proxy_http_version 1.1 (in ${locLabel})`,
+                        reason: 'Mapped to ForceHTTP11: true in the Zoraxy config.',
+                        action: 'ForceHTTP11 applies endpoint-wide, not per-location.'
+                    });
+                } else {
+                    unmappable.push({
+                        sev: 'warning',
+                        item: `proxy_http_version ${val} (in ${locLabel})`,
+                        reason: 'Only HTTP/1.1 is configurable in Zoraxy (ForceHTTP11). HTTP/2 and HTTP/3 upstream are not manually selectable.',
+                        action: 'Zoraxy defaults to HTTP/1.1 for upstream connections.'
+                    });
+                }
+                break;
+
+            case 'proxy_set_header': {
+                const hName = args[0];
+                const hVal  = args.slice(1).join(' ');
+
+                if (hName === 'Host') {
+                    if (hVal === '$host' || hVal === '$http_host') {
+                        unmappable.push({
+                            sev: 'info',
+                            item: `proxy_set_header Host ${hVal} (in ${locLabel})`,
+                            reason: 'Zoraxy passes the original Host header by default. This directive reflects the default behavior.',
+                            action: 'No action needed.'
+                        });
+                    } else {
+                        config.HeaderRewriteRules.RequestHostOverwrite = hVal;
+                        unmappable.push({
+                            sev: 'info',
+                            item: `proxy_set_header Host ${hVal} (in ${locLabel})`,
+                            reason: `Mapped to RequestHostOverwrite: "${hVal}". This is endpoint-wide in Zoraxy.`,
+                            action: 'Verify the host value is correct. Note: this applies to all paths in the endpoint, not just this location.'
+                        });
+                    }
+                } else if (AUTO_HANDLED_HEADERS.has(hName)) {
+                    unmappable.push({
+                        sev: 'info',
+                        item: `proxy_set_header ${hName} ${hVal} (in ${locLabel})`,
+                        reason: `Zoraxy automatically manages the ${hName} header. This directive is redundant.`,
+                        action: 'No action needed.'
+                    });
+                } else {
+                    // Custom request header — mappable
+                    requestHeaders.push({ Direction: 0, Key: hName, Value: hVal, IsRemove: false });
+                }
+                break;
+            }
+
+            case 'add_header': {
+                const hName = args[0];
+                const hVal  = args.slice(1).join(' ').replace(/^["']|["']$/g, '');
+                // Map as downstream (response) header — Direction: 1
+                responseHeaders.push({ Direction: 1, Key: hName, Value: hVal, IsRemove: false });
+                unmappable.push({
+                    sev: 'info',
+                    item: `add_header ${hName} ${hVal} (in ${locLabel})`,
+                    reason: `Mapped as a downstream (response) header in UserDefinedHeaders (Direction: 1). This is endpoint-wide in Zoraxy, not per-location.`,
+                    action: `Zoraxy will inject "${hName}: ${hVal}" into all responses from this endpoint. If the backend already sets this header, both may appear.`
+                });
+                break;
+            }
+
+            case 'default_type':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `default_type ${val} (in ${locLabel})`,
+                    reason: 'Response Content-Type fallback (default_type) is not supported in Zoraxy. The backend controls the content type.',
+                    action: 'Configure the correct Content-Type at the backend, or use add_header Content-Type to always inject it.'
+                });
+                break;
+
+            case 'proxy_buffering':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `proxy_buffering ${val} (in ${locLabel})`,
+                    reason: 'Proxy buffering control is not configurable in Zoraxy.',
+                    action: 'If disabling buffering is required (e.g. for SSE or streaming), handle it at the backend level.'
+                });
+                break;
+
+            case 'proxy_connect_timeout':
+            case 'proxy_send_timeout':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: `${d} is not configurable in Zoraxy. Only proxy_read_timeout maps to RespTimeout.`,
+                    action: 'Zoraxy uses system defaults for connection and send timeouts.'
+                });
+                break;
+
+            case 'rewrite':
+                unmappable.push({
+                    sev: 'error',
+                    item: `rewrite ${val} (in ${locLabel})`,
+                    reason: 'URL rewriting is not supported in Zoraxy\'s reverse proxy configuration.',
+                    action: 'Handle URL rewriting at the backend application, or restructure routes so no rewriting is needed.'
+                });
+                break;
+
+            case 'try_files':
+                unmappable.push({
+                    sev: 'error',
+                    item: `try_files ${val} (in ${locLabel})`,
+                    reason: 'try_files is a static file-serving directive and is not applicable to Zoraxy\'s reverse proxy mode.',
+                    action: 'Zoraxy proxies all requests to the configured backend. Implement file-serving fallback at the backend.'
+                });
+                break;
+
+            case 'auth_basic':
+            case 'auth_basic_user_file':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: 'nginx Basic Auth cannot be directly mapped. Zoraxy has its own authentication system.',
+                    action: 'Use Zoraxy\'s built-in Basic Auth feature in the proxy rule settings (AuthenticationProvider).'
+                });
+                break;
+
+            case 'proxy_hide_header':
+                // Can be mapped as IsRemove: true header
+                config.HeaderRewriteRules.UserDefinedHeaders.push(
+                    { Direction: 1, Key: args[0], Value: '', IsRemove: true }
+                );
+                unmappable.push({
+                    sev: 'info',
+                    item: `proxy_hide_header ${val} (in ${locLabel})`,
+                    reason: 'Mapped as a UserDefinedHeader with IsRemove: true (removes this response header).',
+                    action: 'Verify the header name is correct.'
+                });
+                break;
+
+            case 'proxy_pass_header':
+                unmappable.push({
+                    sev: 'info',
+                    item: `proxy_pass_header ${val} (in ${locLabel})`,
+                    reason: 'Zoraxy passes upstream headers by default. This directive is generally not needed.',
+                    action: 'No action needed unless you are trying to pass a hop-by-hop header. Use DisableHopByHopHeaderRemoval if required.'
+                });
+                break;
+
+            case 'proxy_cache':
+            case 'proxy_cache_bypass':
+            case 'proxy_cache_valid':
+            case 'proxy_no_cache':
+            case 'proxy_cache_key':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: 'Proxy caching directives are not supported in Zoraxy.',
+                    action: 'Consider caching at the backend, a CDN, or a dedicated caching layer.'
+                });
+                break;
+
+            case 'proxy_next_upstream':
+            case 'proxy_next_upstream_tries':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: 'Upstream failover configuration is handled differently in Zoraxy (via InactiveOrigins and load balancing).',
+                    action: 'Add fallback origins to InactiveOrigins and enable UseActiveLoadBalance if needed.'
+                });
+                break;
+
+            case 'expires':
+            case 'etag':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: `Cache control directive "${d}" is not supported at the Zoraxy proxy level.`,
+                    action: 'Set cache headers at the backend application or use add_header to inject Cache-Control headers.'
+                });
+                break;
+
+            case 'error_page':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `error_page ${val} (in ${locLabel})`,
+                    reason: 'Custom error pages are not configurable per-endpoint in Zoraxy.',
+                    action: 'Configure error pages at the backend application level.'
+                });
+                break;
+
+            case 'limit_req':
+            case 'limit_req_zone':
+            case 'limit_conn':
+                unmappable.push({
+                    sev: 'warning',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: 'nginx rate limiting directives are not directly mappable. Zoraxy has its own rate limiting system.',
+                    action: 'Enable rate limiting in Zoraxy via RequireRateLimit and RateLimit settings.'
+                });
+                break;
+
+            case 'access_log':
+            case 'error_log':
+                // logging — info only
+                unmappable.push({
+                    sev: 'info',
+                    item: `${d} ${val} (in ${locLabel})`,
+                    reason: 'Logging configuration is managed globally in Zoraxy.',
+                    action: 'Use Zoraxy\'s built-in log management interface.'
+                });
+                break;
+
+            case 'if':
+                // This shouldn't happen since if blocks are type:block, but just in case
+                unmappable.push({
+                    sev: 'error',
+                    item: `if (in ${locLabel})`,
+                    reason: 'Nginx "if" conditionals are not supported in Zoraxy.',
+                    action: 'Handle conditional logic at the backend application level.'
+                });
+                break;
+
+            default:
+                if (d) {
+                    unmappable.push({
+                        sev: 'warning',
+                        item: `${d} ${val} (in ${locLabel})`,
+                        reason: `Unknown or unsupported directive "${d}".`,
+                        action: 'Review this directive manually and check Zoraxy documentation for equivalents.'
+                    });
+                }
+        }
+    }
+
+    // Apply ForceHTTP11 endpoint-wide
+    if (forceHTTP11) config.ForceHTTP11 = true;
+
+    // --- Handle return directives ---
+    if (returnCode !== null) {
+        const code = parseInt(returnCode);
+        if (code >= 301 && code <= 308 && returnArg) {
+            unmappable.push({
+                sev: 'warning',
+                item: `${locLabel} { return ${returnCode} ${returnArg}; }`,
+                reason: `HTTP redirect (${returnCode} → ${returnArg}) inside a location block is not mappable as a VirtualDirectory. Zoraxy has a separate Redirect Rules feature.`,
+                action: `Create a redirect rule in Zoraxy's "Redirect Rules" section: match path "${path}" and redirect to "${returnArg}" with status ${returnCode}.`
+            });
+        } else if (code === 404 && path === '/') {
+            unmappable.push({
+                sev: 'warning',
+                item: `${locLabel} { return 404; }`,
+                reason: 'A catch-all "return 404" means unmatched paths return 404. Zoraxy does not have a direct equivalent — requests with no matching VirtualDirectory will be routed to the root backend.',
+                action: 'Leave ActiveOrigins empty (no root backend) so Zoraxy naturally returns an error for unmatched paths, or set DefaultSiteOption to control the fallback behavior.'
+            });
+        } else {
+            unmappable.push({
+                sev: 'error',
+                item: `${locLabel} { return ${returnCode}${returnArg ? ' ' + returnArg : ''}; }`,
+                reason: `"return ${returnCode}" is not directly supported in Zoraxy proxy configuration.`,
+                action: 'Handle this response at the backend application level, or use Zoraxy\'s redirect/rewrite rules where applicable.'
+            });
+        }
+        return; // No proxy entry to create
+    }
+
+    // --- No proxy_pass and no return: nothing to proxy ---
+    if (!proxyPass) {
+        if ((loc.children || []).filter(c => c.type === 'directive').length > 0) {
+            unmappable.push({
+                sev: 'warning',
+                item: locLabel,
+                reason: 'No proxy_pass directive found and no supported fallback action. This location block could not be mapped.',
+                action: 'Review what this location block is doing and configure an equivalent backend in Zoraxy.'
+            });
+        }
+        return;
+    }
+
+    // --- Parse proxy_pass ---
+    const pp = parseProxyPass(proxyPass);
+    if (!pp) {
+        unmappable.push({
+            sev: 'error',
+            item: `proxy_pass ${proxyPass} (in ${locLabel})`,
+            reason: 'Could not parse the proxy_pass URL. Only http:// and https:// with a host:port target are supported.',
+            action: 'Ensure the URL follows the format: http(s)://host:port/optional/path'
+        });
+        return;
+    }
+
+    // Collect mapped headers
+    config.HeaderRewriteRules.UserDefinedHeaders.push(...requestHeaders, ...responseHeaders);
+
+    // Decide: ActiveOrigins (root backend) vs VirtualDirectory (path-specific routing)
+    //
+    // Zoraxy model:
+    //   ActiveOrigins  = the backends for the root of this virtual host (location / only)
+    //   VirtualDirectory = path-specific sub-routes; Zoraxy strips the matching prefix
+    //                      before forwarding to the upstream domain.
+    //
+    // Rules:
+    //   - location /              → ActiveOrigins (host:port only; Zoraxy preserves full URI)
+    //   - any non-root location   → VirtualDirectory always
+    //       - same path or no explicit path (pass-through):
+    //           upstream = host:port + location_path  so Zoraxy restores the full URI
+    //           e.g. location /api/ → proxy_pass .../api/  ⟹  Domain "host:3000/api/"
+    //       - different path (rewriting):
+    //           upstream = host:port + proxy_pass_path
+    //           e.g. location /app/ → proxy_pass .../       ⟹  Domain "host:3000/"
+
+    const isRoot     = (path === '/' && modifier !== '=');
+    const isSamePath = pp.path === path;
+
+    if (isRoot) {
+        // Root location → ActiveOrigins
+        config.ActiveOrigins.push({
+            OriginIpOrDomain:         pp.hostPort,
+            RequireTLS:               pp.tls,
+            SkipCertValidations:      skipCert,
+            SkipWebSocketOriginCheck: true,
+            Weight:                   1,
+            MaxConn:                  0,
+            RespTimeout:              respTimeout
+        });
+    } else {
+        // Non-root location → VirtualDirectory
+        // For pass-through cases (same path or no explicit path in proxy_pass), use the
+        // location path as the upstream path so the full URI is reconstructed after
+        // Zoraxy strips the matching prefix.
+        const isPassThrough  = isSamePath || !pp.hasExplicitPath;
+        const upstreamPath   = isPassThrough ? path : pp.path;
+        const vdirDomain     = buildZoraxyDomain(pp.hostPort, upstreamPath);
+
+        let matchingPath = path;
+        // Ensure trailing slash for directory-style prefix matches
+        if (modifier !== '=') {
+            const lastSegment = path.split('/').pop();
+            const looksLikeFile = lastSegment.includes('.') && !lastSegment.startsWith('.');
+            if (!looksLikeFile && !matchingPath.endsWith('/')) {
+                matchingPath = matchingPath + '/';
+            }
+        }
+
+        config.VirtualDirectories.push({
+            MatchingPath:        matchingPath,
+            Domain:              vdirDomain,
+            RequireTLS:          pp.tls,
+            SkipCertValidations: skipCert,
+            Disabled:            false
+        });
+
+        // VirtualDirectory has no RespTimeout field — warn if proxy_read_timeout was set
+        if (respTimeout > 0) {
+            unmappable.push({
+                sev:    'warning',
+                item:   `proxy_read_timeout (in ${locLabel})`,
+                reason: `proxy_read_timeout ${respTimeout / 1000}s cannot be set per-path in Zoraxy. VirtualDirectory entries do not carry a timeout field.`,
+                action: 'Set the timeout globally on the root ActiveOrigins entry, or configure it at the backend.'
+            });
+        }
+    }
+}
+
+/* =============================================================
+   SERVER BLOCK CONVERTER
+   ============================================================= */
+function convertServer(serverNode, defaultDomain, proxyTypeOverride, globalSkipCert, disableChunkedEncoding) {
+    const unmappable = [];
+    const children   = serverNode.children || [];
+
+    // Extract server_name
+    const domains = [];
+    for (const item of children) {
+        if (item.type === 'directive' && item.directive === 'server_name') {
+            for (const d of item.args) {
+                if (d !== '_' && d !== 'localhost' || item.args.length === 1) {
+                    domains.push(d);
+                }
+            }
+        }
+    }
+
+    const primaryDomain = domains[0] || defaultDomain || 'unknown.domain';
+    const aliasDomains  = domains.slice(1);
+
+    const config = makeBaseConfig(primaryDomain, proxyTypeOverride, disableChunkedEncoding);
+    config.MatchingDomainAlias = aliasDomains;
+
+    // Server-level non-location directives
+    for (const item of children) {
+        if (item.type === 'directive' && item.directive !== 'server_name') {
+            handleServerDirective(item, config, unmappable);
+        }
+    }
+
+    // Location blocks
+    for (const item of children) {
+        if (item.type === 'block' && item.directive === 'location') {
+            convertLocation(item, config, unmappable, globalSkipCert);
+        } else if (item.type === 'block' && item.directive !== 'location') {
+            unmappable.push({
+                sev: 'warning',
+                item: `${item.directive} block (server level)`,
+                reason: `Block directive "${item.directive}" at server level is not supported.`,
+                action: 'Review this block manually.'
+            });
+        }
+    }
+
+    // Deduplicate ActiveOrigins by OriginIpOrDomain — keep the first occurrence
+    const seenOrigins = new Set();
+    config.ActiveOrigins = config.ActiveOrigins.filter(o => {
+        if (seenOrigins.has(o.OriginIpOrDomain)) return false;
+        seenOrigins.add(o.OriginIpOrDomain);
+        return true;
+    });
+
+    return { config, unmappable, domain: primaryDomain };
+}
+
+/* =============================================================
+   MAIN ENTRY POINT
+   ============================================================= */
+function nginxToZoraxy(input, defaultDomain, proxyTypeOverride, globalSkipCert, disableChunkedEncoding) {
+    const tokens = tokenize(input);
+    const ast    = parse(tokens);
+
+    const results    = [];
+    const allWarnings = [];
+
+    const serverBlocks = ast.filter(n => n.type === 'block' && n.directive === 'server');
+
+    if (serverBlocks.length > 0) {
+        for (const srv of serverBlocks) {
+            const r = convertServer(srv, defaultDomain, proxyTypeOverride, globalSkipCert, disableChunkedEncoding);
+            results.push(r);
+            allWarnings.push(...r.unmappable);
+        }
+    } else {
+        // Bare location blocks — wrap in a fake server node
+        const fakeServer = { children: ast };
+        const r = convertServer(fakeServer, defaultDomain, proxyTypeOverride, globalSkipCert, disableChunkedEncoding);
+        results.push(r);
+        allWarnings.push(...r.unmappable);
+    }
+
+    return { results, warnings: allWarnings };
+}
+
+/* =============================================================
+   JSON SYNTAX HIGHLIGHTER
+   ============================================================= */
+function syntaxHighlight(json) {
+    const escaped = json
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    return escaped.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function (match) {
+            let cls = 'json-num';
+            if (/^"/.test(match)) {
+                cls = /:$/.test(match) ? 'json-key' : 'json-str';
+            } else if (/true|false/.test(match)) {
+                cls = 'json-bool';
+            } else if (/null/.test(match)) {
+                cls = 'json-null';
+            }
+            return `<span class="${cls}">${match}</span>`;
+        }
+    );
+}
+
+/* =============================================================
+   COPY TO CLIPBOARD
+   ============================================================= */
+function copyConfig(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = el.closest('.output-container').querySelector('.copy-btn');
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="check icon"></i> Copied!';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }
+    }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    });
+}
+
+/* =============================================================
+   DOWNLOAD CONFIG
+   ============================================================= */
+function downloadConfig(id, filename) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = el.innerText || el.textContent;
+    const blob = new Blob([text], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* =============================================================
+   UI RENDERER
+   ============================================================= */
+function renderOutput(results, warnings) {
+    const outputArea = document.getElementById('outputArea');
+    let html = '';
+
+    if (results.length === 0) {
+        html = `<div class="ui warning message"><i class="warning icon"></i>No results were generated. Check your input.</div>`;
+        outputArea.innerHTML = html;
+        return;
+    }
+
+    // Stats bar
+    const totalVdirs   = results.reduce((s, r) => s + r.config.VirtualDirectories.length, 0);
+    const totalOrigins = results.reduce((s, r) => s + r.config.ActiveOrigins.length, 0);
+    const infoCount    = warnings.filter(w => w.sev === 'info').length;
+    const warnCount    = warnings.filter(w => w.sev === 'warning').length;
+    const errCount     = warnings.filter(w => w.sev === 'error').length;
+
+    html += `<div class="stats-bar">
+        <span class="stat-pill blue">${results.length} config${results.length !== 1 ? 's' : ''}</span>
+        <span class="stat-pill green">${totalOrigins} root origin${totalOrigins !== 1 ? 's' : ''}</span>
+        <span class="stat-pill green">${totalVdirs} virtual dir${totalVdirs !== 1 ? 's' : ''}</span>
+        ${infoCount  ? `<span class="stat-pill blue">${infoCount} info note${infoCount   !== 1 ? 's' : ''}</span>` : ''}
+        ${warnCount  ? `<span class="stat-pill yellow">${warnCount} warning${warnCount   !== 1 ? 's' : ''}</span>` : ''}
+        ${errCount   ? `<span class="stat-pill red">${errCount} error${errCount          !== 1 ? 's' : ''}</span>` : ''}
+    </div>`;
+
+    results.forEach((r, idx) => {
+        const jsonStr  = JSON.stringify(r.config, null, 2);
+        const outputId = `configOutput_${idx}`;
+        const filename = (r.domain && r.domain !== 'unknown.domain')
+            ? r.domain.replace(/\*/g, '_') + '.config'
+            : 'zoraxy.config';
+
+        html += `
+        <div class="multi-config-tab">
+            <div class="config-header">
+                <span class="config-filename">${filename}</span>
+                <div>
+                    <button class="ui tiny icon button copy-btn" onclick="copyConfig('${outputId}')" title="Copy to clipboard">
+                        <i class="copy icon"></i> Copy
+                    </button>
+                    <button class="ui tiny icon button" onclick="downloadConfig('${outputId}', '${filename}')" title="Download">
+                        <i class="download icon"></i> Download
+                    </button>
+                </div>
+            </div>
+            <div class="output-container">
+                <pre class="output-json" id="${outputId}">${syntaxHighlight(jsonStr)}</pre>
+            </div>
+        </div>`;
+    });
+
+    outputArea.innerHTML = html;
+}
+
+function renderWarnings(warnings) {
+    const area = document.getElementById('warningsArea');
+    const body = document.getElementById('warningsBody');
+
+    if (warnings.length === 0) {
+        area.style.display = 'block';
+        body.innerHTML = `<div class="no-warnings"><i class="check circle icon" style="color:#27ae60; font-size:1.5em;"></i><p style="color:#27ae60; font-weight:600; margin:0.3em 0 0;">All directives were mapped successfully!</p></div>`;
+        return;
+    }
+
+    area.style.display = 'block';
+
+    const sevLabel = {
+        info:    '<span class="sev-label sev-info">Info</span>',
+        warning: '<span class="sev-label sev-warning">Warning</span>',
+        error:   '<span class="sev-label sev-error">Error</span>'
+    };
+
+    const sevSortOrder = { error: 0, warning: 1, info: 2 };
+    const sorted = [...warnings].sort((a, b) => sevSortOrder[a.sev] - sevSortOrder[b.sev]);
+
+    // Deduplicate by item+reason
+    const seen = new Set();
+    const deduped = sorted.filter(w => {
+        const key = w.item + '|' + w.reason;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
+    let rows = '';
+    for (const w of deduped) {
+        rows += `<tr>
+            <td>${sevLabel[w.sev] || ''} <span class="warn-item">${escapeHtml(w.item)}</span></td>
+            <td class="warn-reason">${escapeHtml(w.reason)}</td>
+            <td class="warn-action">${escapeHtml(w.action || '—')}</td>
+        </tr>`;
+    }
+
+    body.innerHTML = `<table class="ui celled striped small table">
+        <thead><tr>
+            <th style="width:32%">Nginx Directive / Location</th>
+            <th style="width:38%">Reason / Notes</th>
+            <th style="width:30%">Suggested Action</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* =============================================================
+   MAIN CONVERT FUNCTION (called by button)
+   ============================================================= */
+function convert() {
+    const input             = document.getElementById('nginxInput').value.trim();
+    const defaultDomain     = document.getElementById('defaultDomain').value.trim();
+    const proxyTypeOverride = document.getElementById('proxyTypeOverride').value;
+    const globalSkipCert         = document.getElementById('skipCertGlobal').checked;
+    const disableChunkedEncoding  = document.getElementById('disableChunkedEncoding').checked;
+
+    if (!input) {
+        document.getElementById('outputArea').innerHTML = `
+            <div class="ui warning message">
+                <i class="warning icon"></i>
+                Please paste your nginx configuration in the input area.
+            </div>`;
+        document.getElementById('warningsArea').style.display = 'none';
+        return;
+    }
+
+    let output;
+    try {
+        output = nginxToZoraxy(input, defaultDomain, proxyTypeOverride, globalSkipCert, disableChunkedEncoding);
+    } catch (e) {
+        document.getElementById('outputArea').innerHTML = `
+            <div class="ui negative message">
+                <div class="header">Parse Error</div>
+                <p>${escapeHtml(e.message)}</p>
+            </div>`;
+        return;
+    }
+
+    renderOutput(output.results, output.warnings);
+    renderWarnings(output.warnings);
+}
+
+/* =============================================================
+   INIT
+   ============================================================= */
+$(document).ready(function () {
+    $('.ui.dropdown').dropdown();
+    $('.ui.checkbox').checkbox();
+    // Auto-convert on Ctrl+Enter
+    document.getElementById('nginxInput').addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') convert();
+    });
+});
+</script>
+</body>
+</html>

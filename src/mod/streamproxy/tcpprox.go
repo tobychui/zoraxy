@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	proxyproto "github.com/pires/go-proxyproto"
@@ -33,12 +32,12 @@ func isValidPort(port string) bool {
 	return true
 }
 
-func (c *ProxyRelayInstance) connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *atomic.Int64) {
+func (c *ProxyRelayInstance) connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *int64) {
 	n, err := io.Copy(conn1, conn2)
 	if err != nil {
 		return
 	}
-	accumulator.Add(n) //Add to accumulator
+	*accumulator += n //Add to accumulator
 	conn1.Close()
 	c.LogMsg("[←] close the connect at local:["+conn1.LocalAddr().String()+"] and remote:["+conn1.RemoteAddr().String()+"]", nil)
 	//conn2.Close()
@@ -65,7 +64,7 @@ func WriteProxyProtocolHeader(dst net.Conn, src net.Conn, version ProxyProtocolV
 	return err
 }
 
-func (c *ProxyRelayInstance) forward(conn1 net.Conn, conn2 net.Conn, aTob *atomic.Int64, bToa *atomic.Int64) {
+func (c *ProxyRelayInstance) forward(conn1 net.Conn, conn2 net.Conn, aTob *int64, bToa *int64) {
 	msg := fmt.Sprintf("[+] start transmit. [%s],[%s] <-> [%s],[%s]",
 		conn1.LocalAddr().String(), conn1.RemoteAddr().String(),
 		conn2.LocalAddr().String(), conn2.RemoteAddr().String())

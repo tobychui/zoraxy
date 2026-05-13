@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+    <script src="../script/jquery-3.6.0.min.js"></script>
+    <script src="../script/semantic/semantic.min.js"></script>
+    <script src="../script/utils.js"></script>
+    <style>
+        :root {
+            --bg-canvas: #f7f8fc;
+            --node-proxy-bg: #ffffff;
+            --node-proxy-border: #4b75ff;
+            --node-upstream-bg: #ffffff;
+            --node-upstream-border: #f47847;
+            --node-disabled-border: #cccccc;
+            --node-disabled-bg: #f3f3f3;
+            --text-primary: #222;
+            --text-secondary: #666;
+            --text-count: #4b75ff;
+            --edge-color: #4b75ff;
+            --edge-upstream-color: #f47847;
+            --internet-fill: #4b75ff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.10);
+        }
+
+        body.darkTheme {
+            --bg-canvas: #1a1a2e;
+            --node-proxy-bg: #16213e;
+            --node-proxy-border: #4b75ff;
+            --node-upstream-bg: #16213e;
+            --node-upstream-border: #f7c915;
+            --node-disabled-border: #444;
+            --node-disabled-bg: #252540;
+            --text-primary: #e0e0e0;
+            --text-secondary: #aaa;
+            --text-count: #7b9fff;
+            --edge-color: #4b75ff;
+            --edge-upstream-color: #f7c915;
+            --internet-fill: #4b75ff;
+            --shadow: 0 2px 12px rgba(0,0,0,0.4);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-canvas);
+            color: var(--text-primary);
+        }
+
+        #diagram-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            min-height: 300px;
+            overflow: hidden;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            background: var(--bg-canvas);
+        }
+
+        #diagram-wrapper.dragging {
+            cursor: grabbing;
+        }
+
+        #diagram-pan-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+
+        #grid-bg {
+            position: absolute;
+            top: -5000px;
+            left: -5000px;
+            width: 20000px;
+            height: 20000px;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(128,128,128,0.12) 1.5px, transparent 1.5px),
+                linear-gradient(90deg, rgba(128,128,128,0.12) 1.5px, transparent 1.5px);
+            background-size: 40px 40px;
+        }
+
+        body.darkTheme #grid-bg {
+            background-image:
+                linear-gradient(rgba(255,255,255,0.07) 1.5px, transparent 1.5px),
+                linear-gradient(90deg, rgba(255,255,255,0.07) 1.5px, transparent 1.5px);
+        }
+
+        #diagram-canvas {
+            display: block;
+            position: relative;
+        }
+
+        #zoom-controls {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: var(--node-proxy-bg);
+            border: 1px solid rgba(128,128,128,0.25);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            z-index: 100;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .zoom-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+            transition: background 0.15s;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(128,128,128,0.12);
+        }
+
+        .zoom-btn:active {
+            background: rgba(128,128,128,0.24);
+        }
+
+        #zoom-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 40px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .zoom-divider {
+            width: 1px;
+            height: 18px;
+            background: rgba(128,128,128,0.2);
+        }
+
+        /* SVG Node Styles */
+        .internet-node rect {
+            fill: var(--internet-fill);
+            rx: 12;
+        }
+
+        .proxy-node rect {
+            fill: var(--node-proxy-bg);
+            stroke: var(--node-proxy-border);
+            stroke-width: 1.5;
+        }
+
+        .proxy-node.disabled rect {
+            fill: var(--node-disabled-bg);
+            stroke: var(--node-disabled-border);
+            stroke-dasharray: 4 3;
+        }
+
+        .upstream-node rect {
+            fill: var(--node-upstream-bg);
+            stroke: var(--node-upstream-border);
+            stroke-width: 1.5;
+        }
+
+        .upstream-node.inactive rect {
+            fill: var(--node-disabled-bg);
+            stroke: var(--node-disabled-border);
+            stroke-dasharray: 4 3;
+        }
+
+        .node-title {
+            font-size: 12px;
+            font-weight: 600;
+            fill: var(--text-primary);
+        }
+
+        .node-subtitle {
+            font-size: 10px;
+            fill: var(--text-secondary);
+        }
+
+        .node-count {
+            font-size: 11px;
+            font-weight: 700;
+            fill: var(--text-count);
+        }
+
+        .internet-label {
+            font-size: 12px;
+            font-weight: 700;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+        }
+
+        /* Animated flow edges */
+        .flow-edge {
+            fill: none;
+            stroke-linecap: round;
+            opacity: 0.75;
+        }
+
+        .flow-edge-internet {
+            stroke: var(--edge-color);
+        }
+
+        .flow-edge-upstream {
+            stroke: var(--edge-upstream-color);
+        }
+
+        .flow-edge-disabled {
+            stroke: var(--node-disabled-border);
+        }
+
+        .flow-dash {
+            fill: none;
+            stroke-linecap: round;
+            opacity: 0.9;
+            stroke-dasharray: 1 20;
+            animation: flowDash 1.4s linear infinite;
+        }
+
+        .flow-dash-internet {
+            stroke: #ffffff;
+        }
+
+        .flow-dash-upstream {
+            stroke: #ffffff;
+        }
+
+        @keyframes flowDash {
+            from { stroke-dashoffset: 40; }
+            to   { stroke-dashoffset: 0; }
+        }
+
+        #loadingMsg {
+            text-align: center;
+            padding: 3em 0;
+            color: var(--text-secondary);
+        }
+
+        #noDataMsg {
+            display: none;
+            text-align: center;
+            padding: 3em 0;
+            color: var(--text-secondary);
+        }
+
+        #legend-overlay {
+            position: absolute;
+            bottom: 14px;
+            right: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45em;
+            background: var(--node-proxy-bg);
+            border: 1px solid rgba(128,128,128,0.25);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 8px 12px;
+            z-index: 100;
+            user-select: none;
+            -webkit-user-select: none;
+            font-size: 0.78em;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            white-space: nowrap;
+        }
+
+        .legend-line {
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .legend-line-proxy { background: var(--edge-color); }
+        .legend-line-upstream { background: var(--edge-upstream-color); }
+        .legend-line-disabled { background: #bbb; }
+    </style>
+</head>
+<body class="darkTheme">
+    <link rel="stylesheet" href="../darktheme.css">
+    <script src="../script/darktheme.js"></script>
+    <div id="loadingMsg" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;"><i class="spinner loading icon"></i> Loading traffic data...</div>
+    <div id="noDataMsg" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;display:none;"><i class="info circle icon"></i> No proxy rules found.</div>
+    <div id="diagram-wrapper">
+        <div id="diagram-pan-container">
+            <div id="grid-bg"></div>
+            <svg id="diagram-canvas"></svg>
+        </div>
+        <div id="zoom-controls">
+            <button class="zoom-btn" id="btn-zoom-out" title="Zoom out">&#8722;</button>
+            <div class="zoom-divider"></div>
+            <span id="zoom-label">100%</span>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="btn-zoom-in" title="Zoom in">&#43;</button>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="btn-refresh" title="Refresh" onclick="loadDiagram()"><i class="refresh icon" style="color:#21ba45; font-size:13px;"></i></button>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="btn-fullscreen" title="Fullscreen"><i class="expand icon" style="font-size:11px;"></i></button>
+        </div>
+        <div id="legend-overlay">
+            <div class="legend-item"><div class="legend-line legend-line-proxy"></div> Internet → Proxy Rule</div>
+            <div class="legend-item"><div class="legend-line legend-line-upstream"></div> Proxy Rule → Upstream</div>
+            <div class="legend-item"><div class="legend-line legend-line-disabled" style="border-top:2px dashed #bbb;height:0;width:24px;"></div> Disabled / Inactive</div>
+        </div>
+    </div>
+
+    <script>
+    /* Layout constants */
+    const INTERNET_W = 80, INTERNET_H = 80;
+    const PROXY_W = 160, PROXY_H = 54;
+    const UPSTREAM_W = 156, UPSTREAM_H = 46;
+    const COL_INTERNET_X = 40;
+    const COL_PROXY_X = 200;
+    const COL_UPSTREAM_X = 440;
+    const ROW_GAP_PROXY = 16;
+    const ROW_GAP_UPSTREAM = 10;
+    const CANVAS_PADDING_Y = 24;
+    const MIN_EDGE_W = 1.2;
+    const MAX_EDGE_W = 10;
+    const ANIM_SPEEDS = [2.2, 1.8, 1.4, 1.1, 0.8]; // seconds, index by traffic tier
+
+    /* Zoom & Pan State */
+    let panX = 20, panY = 20;
+    let zoom = 1.0;
+    const ZOOM_MIN = 0.25, ZOOM_MAX = 3.0, ZOOM_STEP = 0.15;
+    let _firstLoad = true;
+
+    /* SVG namespace helper */
+    function svgEl(tag, attrs) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+        return el;
+    }
+
+    /* Compute edge stroke width from traffic count */
+    function edgeWidth(count, maxCount) {
+        if (!maxCount || maxCount === 0) return MIN_EDGE_W;
+        const ratio = Math.sqrt(count / maxCount); // sqrt for better visual scaling
+        return MIN_EDGE_W + ratio * (MAX_EDGE_W - MIN_EDGE_W);
+    }
+
+    /* Animation speed from traffic tier */
+    function animDuration(count, maxCount) {
+        if (!maxCount || count === 0) return "2.8s";
+        const ratio = count / maxCount;
+        if (ratio > 0.8) return "0.7s";
+        if (ratio > 0.6) return "1.0s";
+        if (ratio > 0.4) return "1.4s";
+        if (ratio > 0.2) return "1.8s";
+        return "2.4s";
+    }
+
+    /* Format large numbers compactly */
+    function fmtCount(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+        if (n >= 1000)    return (n / 1000).toFixed(1) + "K";
+        return String(n);
+    }
+
+    /* Truncate long domain/host names */
+    function truncate(str, max) {
+        return str.length > max ? str.slice(0, max - 1) + "…" : str;
+    }
+
+    /* Build a rounded-rect node group */
+    function buildProxyNode(proxy, x, y) {
+        const g = svgEl("g", { class: "proxy-node" + (proxy.disabled ? " disabled" : "") });
+
+        const rx = 8;
+        g.appendChild(svgEl("rect", {
+            x, y, width: PROXY_W, height: PROXY_H,
+            rx, ry: rx,
+            filter: "url(#shadow)"
+        }));
+
+        // Domain label
+        const titleEl = svgEl("text", {
+            x: x + 10, y: y + 19,
+            class: "node-title"
+        });
+        titleEl.textContent = truncate(proxy.domain, 22);
+        g.appendChild(titleEl);
+
+        // Status / disabled badge
+        if (proxy.disabled) {
+            const badge = svgEl("text", { x: x + PROXY_W - 10, y: y + 19, class: "node-subtitle", "text-anchor": "end" });
+            badge.textContent = "disabled";
+            g.appendChild(badge);
+        }
+
+        // Request count
+        const countEl = svgEl("text", { x: x + 10, y: y + 36, class: "node-count" });
+        countEl.textContent = fmtCount(proxy.requestCount) + " req";
+        g.appendChild(countEl);
+
+        // Upstream count hint
+        const uHint = svgEl("text", { x: x + PROXY_W - 10, y: y + 36, class: "node-subtitle", "text-anchor": "end" });
+        uHint.textContent = proxy.upstreams.length + " upstream" + (proxy.upstreams.length !== 1 ? "s" : "");
+        g.appendChild(uHint);
+
+        return g;
+    }
+
+    function buildUpstreamNode(upstream, x, y) {
+        const g = svgEl("g", { class: "upstream-node" + (upstream.inactive ? " inactive" : "") });
+        const rx = 8;
+        g.appendChild(svgEl("rect", {
+            x, y, width: UPSTREAM_W, height: UPSTREAM_H,
+            rx, ry: rx,
+            filter: "url(#shadow)"
+        }));
+
+        // TLS badge
+        const tlsBadge = upstream.requireTLS ? "🔒 " : "";
+
+        const titleEl = svgEl("text", { x: x + 10, y: y + 17, class: "node-title" });
+        titleEl.textContent = truncate(upstream.origin, 20);
+        g.appendChild(titleEl);
+
+        if (upstream.inactive) {
+            const badge = svgEl("text", { x: x + UPSTREAM_W - 10, y: y + 17, class: "node-subtitle", "text-anchor": "end" });
+            badge.textContent = "inactive";
+            g.appendChild(badge);
+        } else if (upstream.requireTLS) {
+            const badge = svgEl("text", { x: x + UPSTREAM_W - 10, y: y + 17, class: "node-subtitle", "text-anchor": "end" });
+            badge.textContent = "TLS";
+            g.appendChild(badge);
+        }
+
+        const countEl = svgEl("text", { x: x + 10, y: y + 34, class: "node-count" });
+        countEl.textContent = fmtCount(upstream.requestCount) + " req";
+        g.appendChild(countEl);
+
+        return g;
+    }
+
+    /* Build the Internet node (globe icon with circle background) */
+    function buildInternetNode(x, y, h) {
+        const g = svgEl("g", { class: "internet-node" });
+        const cy = y + h / 2;
+        const cx = x + INTERNET_W / 2;
+        const r = 32;
+
+        // Circle background
+        const circle = svgEl("circle", {
+            cx, cy, r,
+            fill: "var(--internet-fill)",
+            filter: "url(#shadow)"
+        });
+        g.appendChild(circle);
+
+        // Globe icon — simple SVG globe lines
+        const globeG = svgEl("g", { stroke: "rgba(255,255,255,0.55)", "stroke-width": "1.5", fill: "none" });
+        globeG.appendChild(svgEl("circle", { cx, cy, r: r - 1, stroke: "rgba(255,255,255,0.3)" }));
+        // Latitude lines
+        for (const dy of [-14, 0, 14]) {
+            const halfW = Math.sqrt(Math.max(0, r * r - dy * dy)) * 0.95;
+            globeG.appendChild(svgEl("path", {
+                d: `M ${cx - halfW} ${cy + dy} Q ${cx} ${cy + dy - 5} ${cx + halfW} ${cy + dy}`
+            }));
+        }
+        // Vertical meridian
+        globeG.appendChild(svgEl("ellipse", { cx, cy, rx: 14, ry: r - 1 }));
+        g.appendChild(globeG);
+
+        // Label
+        const label = svgEl("text", {
+            x: cx, y: cy + r + 14,
+            class: "internet-label",
+            "font-size": "11",
+            "text-anchor": "middle"
+        });
+        label.textContent = "Internet";
+        g.appendChild(label);
+
+        return g;
+    }
+
+    /* Draw an animated cubic Bezier flow edge between two points */
+    function buildFlowEdge(x1, y1, x2, y2, strokeW, colorClass, count, maxCount, edgeIndex) {
+        const g = svgEl("g", {});
+        const mx = (x1 + x2) / 2;
+
+        const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+
+        // Background solid path
+        const base = svgEl("path", {
+            d,
+            class: "flow-edge " + colorClass,
+            "stroke-width": strokeW
+        });
+        g.appendChild(base);
+
+        // Animated dashes on top
+        if (count > 0) {
+            const dashClass = colorClass.includes("internet") ? "flow-dash flow-dash-internet" : "flow-dash flow-dash-upstream";
+            const dash = svgEl("path", {
+                d,
+                class: dashClass,
+                "stroke-width": Math.max(strokeW * 0.55, 1.2),
+            });
+            const dur = animDuration(count, maxCount);
+            // Stagger animations by edge index so they don't all move in sync
+            const delay = (edgeIndex * 0.17) % 1.4;
+            dash.style.animationDuration = dur;
+            dash.style.animationDelay = `-${delay}s`;
+            g.appendChild(dash);
+        }
+
+        return g;
+    }
+
+    /* Main render function: build and populate the SVG diagram from API data */
+    function renderDiagram(data) {
+        const svg = document.getElementById("diagram-canvas");
+        svg.innerHTML = "";
+
+        const proxies = data.proxies || [];
+
+        if (proxies.length === 0) {
+            document.getElementById("noDataMsg").style.display = "block";
+            svg.style.display = "none";
+            return;
+        }
+        document.getElementById("noDataMsg").style.display = "none";
+        svg.style.display = "block";
+
+        // Build SVG defs: drop-shadow filter
+        const defs = svgEl("defs");
+
+        const filter = svgEl("filter", { id: "shadow", x: "-20%", y: "-20%", width: "140%", height: "140%" });
+        const feShadow = svgEl("feDropShadow", { dx: "0", dy: "2", stdDeviation: "3", "flood-opacity": "0.10" });
+        filter.appendChild(feShadow);
+        defs.appendChild(filter);
+
+        svg.appendChild(defs);
+
+        // Sort proxies by request count, highest first
+        proxies.sort((a, b) => b.requestCount - a.requestCount);
+
+        // Compute max traffic count for edge width scaling
+        const maxProxyCount = Math.max(...proxies.map(p => p.requestCount), 1);
+
+        // Build deduplicated upstream map
+        // Key: origin string → { origin, requireTLS, inactive, requestCount, rowIndex }
+        // Traffic counts are summed across all proxy rules that share the same upstream.
+        // A shared upstream is considered active if at least one proxy treats it as active.
+        const upstreamMap = new Map();
+        for (const proxy of proxies) {
+            for (const us of proxy.upstreams) {
+                if (upstreamMap.has(us.origin)) {
+                    const existing = upstreamMap.get(us.origin);
+                    // upstream.requestCount is a global stat (not per-proxy), so take the max, not the sum
+                    existing.requestCount = Math.max(existing.requestCount, us.requestCount);
+                    if (!us.inactive) existing.inactive = false;
+                } else {
+                    upstreamMap.set(us.origin, {
+                        origin:       us.origin,
+                        requireTLS:   us.requireTLS,
+                        inactive:     us.inactive,
+                        requestCount: us.requestCount,
+                        rowIndex:     -1, // assigned below
+                    });
+                }
+            }
+        }
+
+        // Assign row indices to unique upstreams
+        let nextRow = 0;
+        for (const u of upstreamMap.values()) {
+            u.rowIndex = nextRow++;
+        }
+
+        // Proxies with no upstreams each get their own placeholder row at the end
+        const noUpstreamProxyRows = new Map(); // proxy domain → rowIndex
+        for (const proxy of proxies) {
+            if (proxy.upstreams.length === 0) {
+                noUpstreamProxyRows.set(proxy.domain, nextRow++);
+            }
+        }
+
+        const totalUpstreamRows = nextRow;
+        const maxUpstreamCount  = Math.max(...Array.from(upstreamMap.values()).map(u => u.requestCount), 1);
+
+        const upstreamColumnHeight = totalUpstreamRows * (UPSTREAM_H + ROW_GAP_UPSTREAM) - ROW_GAP_UPSTREAM;
+        const proxyColumnHeight = proxies.length * (PROXY_H + ROW_GAP_PROXY) - ROW_GAP_PROXY;
+        const canvasHeight = Math.max(upstreamColumnHeight, proxyColumnHeight, INTERNET_H + 40) + CANVAS_PADDING_Y * 2;
+
+        // Vertical centre of each column
+        const proxyCenterStart = CANVAS_PADDING_Y + Math.max(0, (canvasHeight - CANVAS_PADDING_Y * 2 - proxyColumnHeight) / 2);
+        const upstreamCenterStart = CANVAS_PADDING_Y + Math.max(0, (canvasHeight - CANVAS_PADDING_Y * 2 - upstreamColumnHeight) / 2);
+        const internetCY = canvasHeight / 2;
+
+        const canvasWidth = COL_UPSTREAM_X + UPSTREAM_W + 40;
+        svg.setAttribute("width", canvasWidth);
+        svg.setAttribute("height", canvasHeight);
+        svg.setAttribute("viewBox", `0 0 ${canvasWidth} ${canvasHeight}`);
+
+        // Layer groups: edges are rendered below nodes
+        const edgeGroup = svgEl("g", { id: "edges" });
+        const nodeGroup = svgEl("g", { id: "nodes" });
+        svg.appendChild(edgeGroup);
+        svg.appendChild(nodeGroup);
+
+        // Place Internet node at vertical center of canvas left column
+        const internetNodeX = COL_INTERNET_X;
+        const internetNodeY = internetCY - INTERNET_W / 2;
+        nodeGroup.appendChild(buildInternetNode(internetNodeX, internetNodeY, INTERNET_W));
+
+        // Right-hand connection point of Internet node
+        const internetRX = internetNodeX + INTERNET_W / 2 + 32; // circle edge
+        const internetRY = internetCY;
+
+        let edgeIndex = 0;
+
+        for (let pi = 0; pi < proxies.length; pi++) {
+            const proxy = proxies[pi];
+            const proxyY = proxyCenterStart + pi * (PROXY_H + ROW_GAP_PROXY);
+            const proxyCY = proxyY + PROXY_H / 2;
+
+            // Proxy node connection points
+            const proxyLX = COL_PROXY_X;          // left edge
+            const proxyLY = proxyCY;
+            const proxyRX = COL_PROXY_X + PROXY_W; // right edge
+            const proxyRY = proxyCY;
+
+            // Draw edge from Internet node to proxy node
+            const w1 = proxy.disabled ? MIN_EDGE_W : edgeWidth(proxy.requestCount, maxProxyCount);
+            edgeGroup.appendChild(buildFlowEdge(
+                internetRX, internetRY,
+                proxyLX, proxyLY,
+                w1, "flow-edge-internet",
+                proxy.disabled ? 0 : proxy.requestCount, maxProxyCount, edgeIndex++
+            ));
+
+            // Proxy node
+            nodeGroup.appendChild(buildProxyNode(proxy, COL_PROXY_X, proxyY));
+
+            // Draw edges from proxy to each deduplicated upstream
+            if (proxy.upstreams.length > 0) {
+                for (const upstream of proxy.upstreams) {
+                    const dedupedUs = upstreamMap.get(upstream.origin);
+                    const upstreamY  = upstreamCenterStart + dedupedUs.rowIndex * (UPSTREAM_H + ROW_GAP_UPSTREAM);
+                    const upstreamCY = upstreamY + UPSTREAM_H / 2;
+
+                    const linkDisabled = upstream.inactive || proxy.disabled;
+                    const w2 = linkDisabled ? MIN_EDGE_W
+                        : edgeWidth(Math.min(proxy.requestCount, upstream.requestCount), maxUpstreamCount);
+                    edgeGroup.appendChild(buildFlowEdge(
+                        proxyRX, proxyRY,
+                        COL_UPSTREAM_X, upstreamCY,
+                        w2, linkDisabled ? "flow-edge-disabled" : "flow-edge-upstream",
+                        linkDisabled ? 0 : Math.min(proxy.requestCount, upstream.requestCount),
+                        maxUpstreamCount, edgeIndex++
+                    ));
+                }
+            } else {
+                // No upstreams — draw edge to this proxy's placeholder row
+                const phRow    = noUpstreamProxyRows.get(proxy.domain);
+                const upstreamY  = upstreamCenterStart + phRow * (UPSTREAM_H + ROW_GAP_UPSTREAM);
+                const upstreamCY = upstreamY + UPSTREAM_H / 2;
+                edgeGroup.appendChild(buildFlowEdge(
+                    proxyRX, proxyRY,
+                    COL_UPSTREAM_X, upstreamCY,
+                    MIN_EDGE_W, "flow-edge-upstream", 0, 1, edgeIndex++
+                ));
+                const ph = svgEl("g", { class: "upstream-node inactive" });
+                ph.appendChild(svgEl("rect", {
+                    x: COL_UPSTREAM_X, y: upstreamY,
+                    width: UPSTREAM_W, height: UPSTREAM_H, rx: 8, ry: 8
+                }));
+                const phText = svgEl("text", { x: COL_UPSTREAM_X + 10, y: upstreamY + 27, class: "node-subtitle" });
+                phText.textContent = "No upstreams configured";
+                ph.appendChild(phText);
+                nodeGroup.appendChild(ph);
+            }
+        }
+
+        // Render each unique upstream node exactly once
+        for (const dedupedUs of upstreamMap.values()) {
+            const upstreamY = upstreamCenterStart + dedupedUs.rowIndex * (UPSTREAM_H + ROW_GAP_UPSTREAM);
+            nodeGroup.appendChild(buildUpstreamNode(dedupedUs, COL_UPSTREAM_X, upstreamY));
+        }
+    }
+
+    /* Fetch traffic map from API and trigger diagram render */
+    function loadDiagram() {
+        document.getElementById("loadingMsg").style.display = "block";
+        document.getElementById("diagram-canvas").style.display = "none";
+        document.getElementById("noDataMsg").style.display = "none";
+
+        $.get("/api/stats/trafficmap", function(data) {
+            document.getElementById("loadingMsg").style.display = "none";
+            renderDiagram(data);
+            if (_firstLoad) {
+                _firstLoad = false;
+                const _wEl = document.getElementById("diagram-wrapper");
+                const _svgCanvas = document.getElementById("diagram-canvas");
+                const svgW = parseFloat(_svgCanvas.getAttribute("width") || 0);
+                const svgH = parseFloat(_svgCanvas.getAttribute("height") || 0);
+                panX = (_wEl.clientWidth  - svgW * zoom) / 2;
+                panY = (_wEl.clientHeight - svgH * zoom) / 2;
+                applyTransform();
+            }
+        }).fail(function() {
+            document.getElementById("loadingMsg").innerHTML =
+                '<i class="exclamation triangle icon"></i> Failed to load traffic data.';
+        });
+    }
+
+    /* Compact number formatter (referenced before renderDiagram definition) */
+    function fmtCount(n) {
+        n = parseInt(n) || 0;
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+        if (n >= 1000)    return (n / 1000).toFixed(1) + "K";
+        return String(n);
+    }
+
+    /* Apply current pan/zoom transform to the pan container */
+    function applyTransform() {
+        const container = document.getElementById("diagram-pan-container");
+        container.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+        document.getElementById("zoom-label").textContent = Math.round(zoom * 100) + "%";
+    }
+
+    /* Zoom to a new level, centered on viewport point (ox, oy) */
+    function zoomTo(newZoom, ox, oy) {
+        const wrapper = document.getElementById("diagram-wrapper");
+        if (ox === undefined) ox = wrapper.clientWidth / 2;
+        if (oy === undefined) oy = wrapper.clientHeight / 2;
+        const clamped = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newZoom));
+        panX = ox - (ox - panX) * (clamped / zoom);
+        panY = oy - (oy - panY) * (clamped / zoom);
+        zoom = clamped;
+        applyTransform();
+    }
+
+    function zoomIn()  { zoomTo(zoom + ZOOM_STEP); }
+    function zoomOut() { zoomTo(zoom - ZOOM_STEP); }
+
+    document.getElementById("btn-zoom-in").addEventListener("click",  e => { e.stopPropagation(); zoomIn(); });
+    document.getElementById("btn-zoom-out").addEventListener("click", e => { e.stopPropagation(); zoomOut(); });
+
+    /* Mouse drag pan handler */
+    const _wrapper = document.getElementById("diagram-wrapper");
+    let _dragging = false, _dragSX = 0, _dragSY = 0, _panSX = 0, _panSY = 0;
+
+    _wrapper.addEventListener("mousedown", e => {
+        if (e.target.closest("#zoom-controls")) return;
+        _dragging = true;
+        _dragSX = e.clientX; _dragSY = e.clientY;
+        _panSX = panX;       _panSY = panY;
+        _wrapper.classList.add("dragging");
+        e.preventDefault();
+    });
+
+    window.addEventListener("mousemove", e => {
+        if (!_dragging) return;
+        panX = _panSX + (e.clientX - _dragSX);
+        panY = _panSY + (e.clientY - _dragSY);
+        applyTransform();
+    });
+
+    window.addEventListener("mouseup", () => {
+        _dragging = false;
+        _wrapper.classList.remove("dragging");
+    });
+
+    /* Scroll-wheel zoom toward cursor position */
+    _wrapper.addEventListener("wheel", e => {
+        e.preventDefault();
+        const rect = _wrapper.getBoundingClientRect();
+        const ox = e.clientX - rect.left;
+        const oy = e.clientY - rect.top;
+        zoomTo(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP), ox, oy);
+    }, { passive: false });
+
+    /* Touch pan and pinch-zoom handler */
+    let _tSX = 0, _tSY = 0, _pinchDist = 0, _pinchZoom = 1, _pinchMX = 0, _pinchMY = 0;
+
+    _wrapper.addEventListener("touchstart", e => {
+        if (e.target.closest("#zoom-controls")) return;
+        if (e.touches.length === 1) {
+            _tSX = e.touches[0].clientX; _tSY = e.touches[0].clientY;
+            _panSX = panX; _panSY = panY;
+        } else if (e.touches.length === 2) {
+            const dx = e.touches[1].clientX - e.touches[0].clientX;
+            const dy = e.touches[1].clientY - e.touches[0].clientY;
+            _pinchDist  = Math.hypot(dx, dy);
+            _pinchZoom  = zoom;
+            const rect  = _wrapper.getBoundingClientRect();
+            _pinchMX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+            _pinchMY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    _wrapper.addEventListener("touchmove", e => {
+        if (e.touches.length === 1) {
+            panX = _panSX + (e.touches[0].clientX - _tSX);
+            panY = _panSY + (e.touches[0].clientY - _tSY);
+            applyTransform();
+        } else if (e.touches.length === 2) {
+            const dx   = e.touches[1].clientX - e.touches[0].clientX;
+            const dy   = e.touches[1].clientY - e.touches[0].clientY;
+            const dist = Math.hypot(dx, dy);
+            zoomTo(_pinchZoom * (dist / _pinchDist), _pinchMX, _pinchMY);
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    _wrapper.addEventListener("touchend", e => {
+        if (e.touches.length === 1) {
+            _tSX = e.touches[0].clientX; _tSY = e.touches[0].clientY;
+            _panSX = panX; _panSY = panY;
+        }
+    });
+
+    /* Fullscreen toggle */
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    document.getElementById("btn-fullscreen").addEventListener("click", e => {
+        e.stopPropagation();
+        toggleFullscreen();
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+        const btn = document.getElementById("btn-fullscreen");
+        if (document.fullscreenElement) {
+            btn.innerHTML = '<i class="compress icon" style="font-size:11px;"></i>';
+            btn.title = "Exit fullscreen";
+        } else {
+            btn.innerHTML = '<i class="expand icon" style="font-size:11px;"></i>';
+            btn.title = "Fullscreen";
+        }
+    });
+
+    /* Initialize: apply transform, load data, start 30-second auto-refresh */
+    applyTransform();
+    loadDiagram();
+    setInterval(loadDiagram, 30000);
+    </script>
+</body>
+</html>

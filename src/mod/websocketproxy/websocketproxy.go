@@ -11,11 +11,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 	"imuslab.com/zoraxy/mod/info/logger"
 )
+
+const defaultWebsocketTimeout = 300 * time.Second
 
 var (
 	// DefaultUpgrader specifies the parameters for upgrading an HTTP
@@ -57,11 +60,13 @@ type WebsocketProxy struct {
 
 // Additional options for websocket proxy runtime
 type Options struct {
-	SkipTLSValidation  bool                         //Skip backend TLS validation
-	SkipOriginCheck    bool                         //Skip origin check
-	CopyAllHeaders     bool                         //Copy all headers from incoming request to backend request
-	UserDefinedHeaders []*rewrite.UserDefinedHeader //User defined headers
-	Logger             *logger.Logger               //Logger, can be nil
+	SkipTLSValidation              bool                         //Skip backend TLS validation
+	SkipOriginCheck                bool                         //Skip origin check
+	CopyAllHeaders                 bool                         //Copy all headers from incoming request to backend request
+	UserDefinedHeaders             []*rewrite.UserDefinedHeader //User defined headers
+	Logger                         *logger.Logger               //Logger, can be nil
+	Timeout                        int64                        //Connection timeout in seconds, 0 means default (300 seconds)
+	EnableTimeoutRefreshOnActivity bool                         //Refresh websocket connection deadline on activity, requires websocket timeout to be set
 }
 
 // ProxyHandler returns a new http.Handler interface that reverse proxies the
@@ -282,6 +287,25 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 	defer connPub.Close()
 
+	// Determine the connection timeout
+
+	var connTimeout time.Duration
+	if w.Options.Timeout > 0 {
+		connTimeout = time.Duration(w.Options.Timeout) * time.Second
+	} else {
+		connTimeout = defaultWebsocketTimeout
+	}
+
+	// Workaround for issue #1159
+	// Apply deadlines to both connections if timeout is enabled
+	if w.Options.EnableTimeoutRefreshOnActivity {
+		deadline := time.Now().Add(connTimeout)
+		_ = connPub.SetReadDeadline(deadline)
+		_ = connPub.SetWriteDeadline(deadline)
+		_ = connBackend.SetReadDeadline(deadline)
+		_ = connBackend.SetWriteDeadline(deadline)
+	}
+
 	errClient := make(chan error, 1)
 	errBackend := make(chan error, 1)
 	replicateWebsocketConn := func(dst, src *websocket.Conn, errc chan error) {
@@ -298,11 +322,21 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				dst.WriteMessage(websocket.CloseMessage, m)
 				break
 			}
+
+			if w.Options.EnableTimeoutRefreshOnActivity {
+				// Refresh deadline on activity
+				newDeadline := time.Now().Add(connTimeout)
+				_ = src.SetReadDeadline(newDeadline)
+				_ = dst.SetWriteDeadline(newDeadline)
+			}
+
+			// Write the message to the destination connection
 			err = dst.WriteMessage(msgType, msg)
 			if err != nil {
 				errc <- err
 				break
 			}
+
 		}
 	}
 
