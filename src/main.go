@@ -45,6 +45,7 @@ import (
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/update"
+	"imuslab.com/zoraxy/mod/update/updateutil"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -77,6 +78,7 @@ func main() {
 	CONF_LOG_CONFIG = CONF_FOLDER + "/log_conf.json"
 	ACME_AUTORENEW_CONFIG_PATH = CONF_FOLDER + "/acme_conf.json"
 	CONF_TRUSTED_PROXIES = CONF_FOLDER + "/trusted_proxies.json"
+	updateutil.SetConfigFolder(CONF_FOLDER)
 
 	/* Maintaince Function Modes */
 	if *showver {

@@ -30,6 +30,7 @@ type HostSpecificTlsBehavior struct {
 
 type Manager struct {
 	CertStore   string         //Path where all the certs are stored
+	TempDir     string         //Temp folder for built-in fallback certs
 	LoadedCerts []*CertCache   //A list of loaded certs
 	Logger      *logger.Logger //System wide logger for debug mesage
 
@@ -64,13 +65,21 @@ func writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
 	return os.Chmod(cleanedPath, mode)
 }
 
-func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
+func NewManager(certStore string, tempDir string, logger *logger.Logger) (*Manager, error) {
 	if !utils.FileExists(certStore) {
 		os.MkdirAll(certStore, 0775)
 	}
 
-	pubKey := "./tmp/localhost.pem"
-	priKey := "./tmp/localhost.key"
+	if tempDir == "" {
+		tempDir = "./tmp"
+	}
+	if !utils.FileExists(tempDir) {
+		os.MkdirAll(tempDir, 0775)
+	}
+	cleanTempDir := filepath.Clean(tempDir)
+
+	pubKey := filepath.Join(cleanTempDir, "localhost.pem")
+	priKey := filepath.Join(cleanTempDir, "localhost.key")
 
 	//Check if this is initial setup
 	if !utils.FileExists(pubKey) {
@@ -85,6 +94,7 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 
 	thisManager := Manager{
 		CertStore:               certStore,
+		TempDir:                 cleanTempDir,
 		LoadedCerts:             []*CertCache{},
 		hostSpecificTlsBehavior: defaultHostSpecificTlsBehavior, //Default to no SNI and no auto HTTPS
 		Logger:                  logger,
@@ -233,8 +243,8 @@ func (m *Manager) GetCert(helloInfo *tls.ClientHelloInfo) (*tls.Certificate, err
 // GetCertificateByHostname returns the certificate and private key for a given hostname
 func (m *Manager) GetCertificateByHostname(hostname string) (string, string, error) {
 	//Check if the domain corrisponding cert exists
-	pubKey := "./tmp/localhost.pem"
-	priKey := "./tmp/localhost.key"
+	pubKey := filepath.Join(m.TempDir, "localhost.pem")
+	priKey := filepath.Join(m.TempDir, "localhost.key")
 
 	tlsBehavior, err := m.hostSpecificTlsBehavior(hostname)
 	if err != nil {

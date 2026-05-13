@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"imuslab.com/zoraxy/mod/update/updateutil"
 )
 
 /*
@@ -19,13 +21,14 @@ import (
 func UpdateFrom307To308() error {
 
 	//Load the configs
-	oldConfigFiles, err := filepath.Glob("./conf/proxy/*.config")
+	oldConfigFiles, err := filepath.Glob(updateutil.ConfigPath("proxy", "*.config"))
 	if err != nil {
 		return err
 	}
 
 	//Backup all the files
-	err = os.MkdirAll("./conf/proxy.old/", 0775)
+	backupDir := updateutil.ConfigPath("proxy.old")
+	err = os.MkdirAll(backupDir, 0775)
 	if err != nil {
 		return err
 	}
@@ -34,7 +37,7 @@ func UpdateFrom307To308() error {
 		// Extract the file name from the path
 		fileName := filepath.Base(oldConfigFile)
 		// Construct the backup file path
-		backupFile := filepath.Join("./conf/proxy.old/", fileName)
+		backupFile := filepath.Join(backupDir, fileName)
 
 		// Copy the file to the backup directory
 		err := copyFile(oldConfigFile, backupFile)

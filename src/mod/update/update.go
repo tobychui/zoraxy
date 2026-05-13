@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/update/updateutil"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -20,11 +21,12 @@ import (
 // to update 3.0.7 to 3.0.8, use RunConfigUpdate(307, 308)
 // This function support cross versions updates (e.g. 307 -> 310)
 func RunConfigUpdate(fromVersion int, toVersion int) {
-	versionFile := "./conf/version"
-	isFirstTimeInit, _ := isFirstTimeInitialize("./conf/proxy/")
+	versionFile := updateutil.ConfigPath("version")
+	proxyDir := updateutil.ConfigPath("proxy")
+	isFirstTimeInit, _ := isFirstTimeInitialize(proxyDir)
 	if isFirstTimeInit {
 		//Create version file and exit
-		os.MkdirAll("./conf/", 0775)
+		os.MkdirAll(updateutil.ConfigPath(), 0775)
 		os.WriteFile(versionFile, []byte(strconv.Itoa(toVersion)), 0775)
 		return
 	}

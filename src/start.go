@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -134,7 +135,7 @@ func startupSequence() {
 	pluginApiKeyManager = auth.NewAPIKeyManager()
 
 	//Create a TLS certificate manager
-	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, SystemWideLogger)
+	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, TMP_FOLDER, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -154,6 +155,7 @@ func startupSequence() {
 	geodbStore, err = geodb.NewGeoDb(sysdb, &geodb.StoreOptions{
 		AllowSlowIpv4LookUp:          !*enableHighSpeedGeoIPLookup,
 		AllowSlowIpv6Lookup:          !*enableHighSpeedGeoIPLookup,
+		ExternalDataDir:              CONF_GEODB_PATH,
 		Logger:                       SystemWideLogger,
 		SlowLookupCacheClearInterval: GEODB_CACHE_CLEAR_INTERVAL * time.Minute,
 	})
@@ -191,7 +193,7 @@ func startupSequence() {
 		Database: sysdb,
 	})
 
-	zorxAuthRouter = zorxauth.NewAuthRouter(sysdb, SystemWideLogger)
+	zorxAuthRouter = zorxauth.NewAuthRouterWithConfig(sysdb, SystemWideLogger, filepath.Join(CONF_FOLDER, "sso", "zorxauth"))
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{

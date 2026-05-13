@@ -11,6 +11,8 @@ import (
 	"embed"
 	"flag"
 	"net/http"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
@@ -62,6 +64,21 @@ const (
 	STATISTIC_AUTO_SAVE_INTERVAL = 600 /* Seconds */
 )
 
+var defaultDataRoot = getDefaultDataRoot()
+
+func getDefaultDataRoot() string {
+	if runtime.GOOS == "windows" {
+		return "."
+	}
+
+	return "/etc/zoraxy"
+}
+
+func defaultDataPath(parts ...string) string {
+	items := append([]string{defaultDataRoot}, parts...)
+	return filepath.Join(items...)
+}
+
 /* System Startup Flags */
 var (
 	webUIPort                  = flag.String("port", ":8000", "Management web interface listening port")
@@ -90,13 +107,13 @@ var (
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
 
 	/* Path Configuration Flags */
-	path_database  = flag.String("dbpath", "./sys.db", "Database path")
-	path_conf      = flag.String("conf", "./conf", "Configuration folder path")
-	path_tmp       = flag.String("tmp", "./tmp", "Temporary folder path")
-	path_uuid      = flag.String("uuid", "./sys.uuid", "sys.uuid file path")
-	path_logFile   = flag.String("log", "./log", "Log folder path")
+	path_database  = flag.String("dbpath", defaultDataPath("sys.db"), "Database path")
+	path_conf      = flag.String("conf", defaultDataPath("conf"), "Configuration folder path")
+	path_tmp       = flag.String("tmp", defaultDataPath("tmp"), "Temporary folder path")
+	path_uuid      = flag.String("uuid", defaultDataPath("sys.uuid"), "sys.uuid file path")
+	path_logFile   = flag.String("log", defaultDataPath("log"), "Log folder path")
 	path_webserver = flag.String("webroot", "./www", "Static web server root folder. Only allow change in start paramters")
-	path_plugin    = flag.String("plugin", "./plugins", "Plugin folder path")
+	path_plugin    = flag.String("plugin", defaultDataPath("plugins"), "Plugin folder path")
 
 	/* Maintaince & Development Function Flags */
 	geoDbUpdate       = flag.Bool("update_geoip", false, "Download the latest GeoIP data and exit")

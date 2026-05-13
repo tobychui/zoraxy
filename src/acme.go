@@ -42,7 +42,7 @@ func initACME() *acme.ACMEHandler {
 	keyFileMode := parseACMEFileMode(*acmeKeyFileMode, 0600, "acmekeymode")
 	publicFileMode := parseACMEFileMode(*acmePublicFileMode, 0644, "acmepublicmode")
 
-	return acme.NewACME(strconv.Itoa(port), sysdb, SystemWideLogger, *acmeTestMode, keyFileMode, publicFileMode)
+	return acme.NewACME(strconv.Itoa(port), sysdb, SystemWideLogger, *acmeTestMode, keyFileMode, publicFileMode, CONF_CERT_STORE)
 }
 
 func parseACMEFileMode(raw string, fallback os.FileMode, flagName string) os.FileMode {

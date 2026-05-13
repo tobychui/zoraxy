@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -35,6 +36,7 @@ type Store struct {
 type StoreOptions struct {
 	AllowSlowIpv4LookUp          bool
 	AllowSlowIpv6Lookup          bool
+	ExternalDataDir              string
 	Logger                       *logger.Logger
 	SlowLookupCacheClearInterval time.Duration //Clear slow lookup cache interval
 }
@@ -45,17 +47,25 @@ type CountryInfo struct {
 }
 
 func NewGeoDb(sysdb *database.Database, option *StoreOptions) (*Store, error) {
+	externalDir := option.ExternalDataDir
+	if externalDir == "" {
+		externalDir = filepath.Join(".", "conf", "geodb")
+	}
+	externalDir = filepath.Clean(externalDir)
+	externalV4Path := filepath.Join(externalDir, "geoipv4.csv")
+	externalV6Path := filepath.Join(externalDir, "geoipv6.csv")
+
 	//Check if external geoDB data is available
-	if utils.FileExists("./conf/geodb/geoipv4.csv") {
-		externalV4Db, err := os.ReadFile("./conf/geodb/geoipv4.csv")
+	if utils.FileExists(externalV4Path) {
+		externalV4Db, err := os.ReadFile(externalV4Path)
 		if err == nil {
 			option.Logger.PrintAndLog("GeoDB", "External GeoDB data found, using external IPv4 GeoIP data", nil)
 			geoipv4 = externalV4Db
 		}
 	}
 
-	if utils.FileExists("./conf/geodb/geoipv6.csv") {
-		externalV6Db, err := os.ReadFile("./conf/geodb/geoipv6.csv")
+	if utils.FileExists(externalV6Path) {
+		externalV6Db, err := os.ReadFile(externalV6Path)
 		if err == nil {
 			option.Logger.PrintAndLog("GeoDB", "External GeoDB data found, using external IPv6 GeoIP data", nil)
 			geoipv6 = externalV6Db

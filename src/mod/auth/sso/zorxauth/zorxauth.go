@@ -39,6 +39,11 @@ import (
 
 // NewAuthRouter creates a new AuthRouter instance
 func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
+	return NewAuthRouterWithConfig(db, log, "")
+}
+
+// NewAuthRouterWithConfig creates a new AuthRouter instance with an optional config folder override.
+func NewAuthRouterWithConfig(db *database.Database, log *logger.Logger, configFolderPath string) *AuthRouter {
 	// Create a new table for zorxauth settings if it doesn't exist
 	db.NewTable(DB_NAME)
 	db.NewTable(DB_USERS_TABLE)
@@ -48,12 +53,19 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 	if !db.KeyExists(DB_NAME, "options") {
 		//Write default options to database
 		defaultOptions := getDefaultOptions()
+		if configFolderPath != "" {
+			defaultOptions.ConfigFolderPath = configFolderPath
+		}
 		db.Write(DB_NAME, "options", defaultOptions)
 	}
 
 	//Load options from database
 	options := AuthRouterOptions{}
 	db.Read(DB_NAME, "options", &options)
+	if configFolderPath != "" && options.ConfigFolderPath != configFolderPath {
+		options.ConfigFolderPath = configFolderPath
+		db.Write(DB_NAME, "options", &options)
+	}
 
 	authRouter := &AuthRouter{
 		Logger:             log,

@@ -11,13 +11,14 @@ import (
 
 func UpdateFrom314To315() error {
 	//Load the configs
-	oldConfigFiles, err := filepath.Glob("./conf/proxy/*.config")
+	oldConfigFiles, err := filepath.Glob(updateutil.ConfigPath("proxy", "*.config"))
 	if err != nil {
 		return err
 	}
 
 	//Backup all the files
-	err = os.MkdirAll("./conf/proxy-314.old/", 0775)
+	backupDir := updateutil.ConfigPath("proxy-314.old")
+	err = os.MkdirAll(backupDir, 0775)
 	if err != nil {
 		return err
 	}
@@ -26,7 +27,7 @@ func UpdateFrom314To315() error {
 		// Extract the file name from the path
 		fileName := filepath.Base(oldConfigFile)
 		// Construct the backup file path
-		backupFile := filepath.Join("./conf/proxy-314.old/", fileName)
+		backupFile := filepath.Join(backupDir, fileName)
 
 		// Copy the file to the backup directory
 		err := updateutil.CopyFile(oldConfigFile, backupFile)

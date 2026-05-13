@@ -82,12 +82,22 @@ type ACMEHandler struct {
 	TestMode       bool
 	KeyFileMode    os.FileMode
 	PublicFileMode os.FileMode
+	CertStore      string
 }
 
 // NewACME creates a new ACMEHandler instance.
+
 func NewACME(
 	port string, database *database.Database,
-	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode) *ACMEHandler {
+	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode, certStore string) *ACMEHandler {
+	if certStore == "" {
+		certStore = "./conf/certs"
+	}
+	if !utils.FileExists(certStore) {
+		os.MkdirAll(certStore, 0775)
+	}
+	cleanCertStore := filepath.Clean(certStore)
+
 	return &ACMEHandler{
 		Port:           port,
 		Database:       database,
@@ -95,6 +105,7 @@ func NewACME(
 		TestMode:       testMode,
 		KeyFileMode:    keyFileMode,
 		PublicFileMode: publicFileMode,
+		CertStore:      cleanCertStore,
 	}
 }
 
@@ -190,7 +201,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	}
 
 	// Load certificate info from JSON file
-	certInfo, err := LoadCertInfoJSON(fmt.Sprintf("./conf/certs/%s.json", certificateName))
+	certInfo, err := LoadCertInfoJSON(filepath.Join(a.CertStore, certificateName+".json"))
 	if err == nil {
 		useDNS = certInfo.UseDNS
 		if dnsServers == "" && certInfo.DNSServers != nil && len(certInfo.DNSServers) > 0 {
@@ -327,12 +338,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Each certificate comes back with the cert bytes, the bytes of the client's
 	// private key, and a certificate URL.
-	err = a.writeFileWithMode("./conf/certs/"+certificateName+".pem", certificates.Certificate, a.PublicFileMode)
+	err = a.writeFileWithMode(filepath.Join(a.CertStore, certificateName+".pem"), certificates.Certificate, a.PublicFileMode)
 	if err != nil {
 		a.Logf("Failed to write public key to disk", err)
 		return false, err
 	}
-	err = a.writeFileWithMode("./conf/certs/"+certificateName+".key", certificates.PrivateKey, a.KeyFileMode)
+	err = a.writeFileWithMode(filepath.Join(a.CertStore, certificateName+".key"), certificates.PrivateKey, a.KeyFileMode)
 	if err != nil {
 		a.Logf("Failed to write private key to disk", err)
 		return false, err
@@ -354,7 +365,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		return false, err
 	}
 
-	err = a.writeFileWithMode("./conf/certs/"+certificateName+".json", certInfoBytes, a.PublicFileMode)
+	err = a.writeFileWithMode(filepath.Join(a.CertStore, certificateName+".json"), certInfoBytes, a.PublicFileMode)
 	if err != nil {
 		a.Logf("Failed to write certificate renew config to file", err)
 		return false, err
@@ -369,7 +380,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 // it will said expired as well!
 func (a *ACMEHandler) CheckCertificate() []string {
 	// read from dir
-	filenames, err := os.ReadDir("./conf/certs/")
+	filenames, err := os.ReadDir(a.CertStore)
 
 	expiredCerts := []string{}
 
@@ -379,7 +390,7 @@ func (a *ACMEHandler) CheckCertificate() []string {
 	}
 
 	for _, filename := range filenames {
-		certFilepath := filepath.Join("./conf/certs/", filename.Name())
+		certFilepath := filepath.Join(a.CertStore, filename.Name())
 
 		certBytes, err := os.ReadFile(certFilepath)
 		if err != nil {
@@ -541,7 +552,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Extract SANs from existing PEM to ensure all domains are included
-	pemPath := fmt.Sprintf("./conf/certs/%s.pem", filename)
+	pemPath := filepath.Join(a.CertStore, filename+".pem")
 	sanDomains, err := ExtractDomainsFromPEM(pemPath)
 	if err == nil {
 		// Merge domainPara + SANs
