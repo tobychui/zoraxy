@@ -260,10 +260,6 @@ func RegisterNetworkUtilsAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/tools/webssh", HandleCreateProxySession)
 	authRouter.HandleFunc("/api/tools/websshSupported", HandleWebSshSupportCheck)
 	authRouter.HandleFunc("/api/tools/wol", HandleWakeOnLan)
-	authRouter.HandleFunc("/api/tools/smtp/get", HandleSMTPGet)
-	authRouter.HandleFunc("/api/tools/smtp/set", HandleSMTPSet)
-	authRouter.HandleFunc("/api/tools/smtp/admin", HandleAdminEmailGet)
-	authRouter.HandleFunc("/api/tools/smtp/test", HandleTestEmailSend)
 	authRouter.HandleFunc("/api/tools/fwdproxy/enable", forwardProxy.HandleToogle)
 	authRouter.HandleFunc("/api/tools/fwdproxy/port", forwardProxy.HandlePort)
 }
@@ -409,10 +405,6 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterACMEAndAutoRenewerAPIs(authRouter)
 	RegisterStaticWebServerAPIs(authRouter)
 	RegisterPluginAPIs(authRouter)
-
-	//Account Reset
-	targetMux.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)
-	targetMux.HandleFunc("/api/account/new", HandleNewPasswordSetup)
 
 	//Docker UX Optimizations
 	authRouter.HandleFunc("/api/docker/available", DockerUXOptimizer.HandleDockerAvailable)

@@ -154,6 +154,13 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 		rawConn, found := c.udpClientMap.Load(saddr)
 		var conn *udpClientServerConn
 		if !found {
+			// Check if this new client is allowed by access control policy
+			accessRule := c.getEffectiveAccessRule()
+			if accessRule != nil && !accessRule.AllowIpAccess(cliaddr.IP.String()) {
+				c.LogMsg("[UDP] Connection from "+cliaddr.IP.String()+" rejected by access control policy", nil)
+				continue
+			}
+
 			conn = createNewUDPConn(targetAddr, cliaddr)
 			if conn == nil {
 				continue

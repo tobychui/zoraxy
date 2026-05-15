@@ -24,7 +24,6 @@ import (
 	"imuslab.com/zoraxy/mod/dockerux"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
-	"imuslab.com/zoraxy/mod/email"
 	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
@@ -171,7 +170,6 @@ var (
 	zorxAuthRouter    *zorxauth.AuthRouter //ZorxAuth router for ZorxAuth SSO authentication
 
 	//Helper modules
-	EmailSender       *email.Sender         //Email sender that handle email sending
 	AnalyticLoader    *analytic.DataLoader  //Data loader for Zoraxy Analytic
 	DockerUXOptimizer *dockerux.UXOptimizer //Docker user experience optimizer, community contribution only
 	SystemWideLogger  *logger.Logger        //Logger for Zoraxy
