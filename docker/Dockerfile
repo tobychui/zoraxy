@@ -24,6 +24,7 @@ WORKDIR /opt/zerotier/source/
 
 RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano
 
+# Version is pinned because newer versions don't work for whatever reason
 RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.10.6 &&\
     tar -xzvf ZeroTierOne.tar.gz &&\
     cd ZeroTierOne-*/zeroidc &&\
@@ -38,7 +39,7 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
 FROM docker.io/alpine:latest
 
 RUN apk add --update --no-cache tzdata python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
-    rm -rf /var/cache/apk/* /tmp/*
+    rm -rf /var/cache/apk/* /tmp/* # Simple cleanup
 
 COPY --chmod=700 ./entrypoint.py /opt/zoraxy/
 
@@ -46,7 +47,7 @@ COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-o
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
 
 RUN mkdir -p /opt/zoraxy/plugin/ &&\
-    echo "tun" | tee -a /etc/modules
+    echo "tun" | tee -a /etc/modules # For ZeroTier
 
 WORKDIR /opt/zoraxy/config/
 

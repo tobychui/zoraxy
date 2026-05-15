@@ -1,7 +1,6 @@
----
 name: Build and push Docker image
 
-"on":
+on:
   release:
     types: [released, prereleased]
 
@@ -10,6 +9,7 @@ env:
   DOCKER_REPO: ${{ vars.DOCKER_REPO || 'zoraxy' }}
   DOCKER_REPO_TAG_CACHE_NAME: ${{ vars.DOCKER_REPO_TAG_CACHE_NAME || 'buildcache' }}
   DOCKER_PLATFORMS: ${{ vars.DOCKER_PLATFORMS || 'linux/amd64,linux/arm64' }}
+
 permissions:
   contents: read
 
@@ -38,6 +38,7 @@ jobs:
         run: |
           cp -lr $GITHUB_WORKSPACE/src/ $GITHUB_WORKSPACE/docker/src/
 
+        # Modify the pushed tag depending on the release type. Prereleases and RC's should not be tagged as latest
       - name: Create tag list for docker image
         id: tags
         run: |
