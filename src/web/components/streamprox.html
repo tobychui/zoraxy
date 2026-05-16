@@ -94,6 +94,18 @@
                         <i class="exclamation triangle icon"></i> Proxy Protocol V1 is not supported for UDP. The proxy protocol header will not be included in UDP packets if selected.
                     </div>
             </div>
+            <div class="field">
+                <label>Access Rule</label>
+                <div class="ui fluid selection dropdown" id="streamProxyAccessRuleDropdown">
+                    <input type="hidden" name="accessRuleUUID" value="default">
+                    <i class="dropdown icon"></i>
+                    <div class="default text">Default</div>
+                    <div class="menu" id="streamProxyAccessRuleList">
+                        <div class="item" data-value="default"><i class="ui yellow star icon"></i> Default</div>
+                    </div>
+                </div>
+                <small>Select which access rule (blacklist / whitelist) applies to connections on this proxy rule. Uses "Default" if the selected rule is removed.</small>
+            </div>
             <div tourstep="create_stream_proxy_btn" style="display:inline-block;">
                 <button id="addStreamProxyButton" class="ui basic button" type="submit"><i class="ui green add icon"></i> Create</button>  
             </div>
@@ -121,6 +133,29 @@
         $(document).ready(updateProxyProtocolUdpWarning);
 
         $("#streamProxyForm .dropdown").dropdown();
+
+        // Load access rules into the dropdown
+        function initStreamProxyAccessRuleDropdown(callback) {
+            $.get("/api/access/list", function(data) {
+                if (data.error == undefined) {
+                    $("#streamProxyAccessRuleList").html("");
+                    data.forEach(function(rule) {
+                        let icon = `<i class="ui grey filter icon"></i>`;
+                        if (rule.ID == "default") {
+                            icon = `<i class="ui yellow star icon"></i>`;
+                        } else if (rule.BlacklistEnabled && !rule.WhitelistEnabled) {
+                            icon = `<i class="ui red filter icon"></i>`;
+                        } else if (rule.WhitelistEnabled && !rule.BlacklistEnabled) {
+                            icon = `<i class="ui green filter icon"></i>`;
+                        }
+                        $("#streamProxyAccessRuleList").append(`<div class="item" data-value="${rule.ID}">${icon} ${rule.Name}</div>`);
+                    });
+                    $("#streamProxyAccessRuleDropdown").dropdown();
+                    if (callback != undefined) { callback(); }
+                }
+            });
+        }
+        initStreamProxyAccessRuleDropdown();
         $('#streamProxyForm').on('submit', function(event) {
             event.preventDefault();
 
@@ -162,6 +197,7 @@
             $('#streamProxyForm select[name=proxyProtocolVersion]').dropdown('set selected', '0');
             $("#streamProxyForm input[name=timeout]").val(10);
             $("#streamProxyForm .toggle.checkbox").checkbox("set unchecked");
+            $("#streamProxyAccessRuleDropdown").dropdown("set selected", "default");
         }
 
         function cancelStreamProxyEdit(event=undefined) {
@@ -311,6 +347,11 @@
                             $(checkboxEle).checkbox("set unchecked");
                         }
                         return;
+                    }else if (key == "AccessRuleUUID"){
+                        initStreamProxyAccessRuleDropdown(function(){
+                            $("#streamProxyAccessRuleDropdown").dropdown("set selected", value || "default");
+                        });
+                        return;
                     }else if (key == "ListeningAddress"){
                         field = $("#streamProxyForm input[name=listenAddr]");
                     }else if (key == "ProxyTargetAddr"){
@@ -363,6 +404,7 @@
                     proxyProtocolVersion: parseInt($("#streamProxyForm select[name=proxyProtocolVersion]").val(), 10),
                     enableLogging: $("#streamProxyForm input[name=enableLogging]")[0].checked ,
                     timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
+                    accessRuleUUID: $("#streamProxyForm input[name=accessRuleUUID]").val().trim(),
                 },
                 success: function(response) {
                     $(btn).html(originalButtonHTML);
@@ -450,5 +492,13 @@
             });
         }
         initProxyConfigList();
+
+        //Bind on tab switch events
+        tabSwitchEventBind["streamproxy"] = function(){
+            // Re-render the list to update the running status of each proxy
+            initProxyConfigList();
+            // Update access rules in the dropdown in case they are changed in the Access Rules tab
+            initStreamProxyAccessRuleDropdown();
+        }
     </script>
 </div>

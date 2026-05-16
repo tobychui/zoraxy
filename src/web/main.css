@@ -872,6 +872,9 @@ body.darkTheme .menudivider{
 .online.statusDot{
     background-color: #3bd671;
 }
+.fine.statusDot{
+    background-color: #5583ee;
+}
 .error.statusDot{
     background-color: #f29030;
 }

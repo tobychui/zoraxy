@@ -131,9 +131,10 @@ const (
 
 // Paths to exclude in basic auth enabled proxy handler
 type BasicAuthExceptionRule struct {
-	RuleType   AuthExceptionType //The type of the exception rule
-	PathPrefix string            //Path prefix to match, e.g. /api/v1/
-	CIDR       string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
+	RuleType        AuthExceptionType //The type of the exception rule
+	PathPrefix      string            //Path prefix to match, e.g. /api/v1/
+	CIDR            string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
+	UseTrustedProxy bool              //If true, trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) for CIDR matching. WARNING: enabling this allows header spoofing if the upstream proxy is not trusted.
 }
 
 /* Routing Rule Data Structures */
@@ -248,10 +249,11 @@ type ProxyEndpoint struct {
 	CaptchaConfig  *CaptchaConfig // CAPTCHA provider configuration
 
 	//Uptime Monitor
-	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
-	DisableAutoFallback        bool //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
-	DisableLogging             bool //Disable logging of reverse proxy requests
-	DisableStatisticCollection bool //Disable statistic collection for this endpoint
+	DisableUptimeMonitor       bool   //Disable uptime monitor for this endpoint
+	UptimeMonitorURI           string //Optional URI path used by the uptime monitor health check (e.g. "/identity", "/healthz"). Empty = default "/"
+	DisableAutoFallback        bool   //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
+	DisableLogging             bool   //Disable logging of reverse proxy requests
+	DisableStatisticCollection bool   //Disable statistic collection for this endpoint
 
 	//Exploit Detection
 	BlockCommonExploits bool //Enable blocking of common exploits (SQLi, XSS, etc.)

@@ -300,6 +300,7 @@ func startupSequence() {
 	//Create TCP Proxy Manager
 	streamProxyManager, err = streamproxy.NewStreamProxy(&streamproxy.Options{
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
+		AccessController:     accessController,
 		ConfigStore:          CONF_STREAM_PROXY,
 		Logger:               SystemWideLogger,
 	})
@@ -309,10 +310,6 @@ func startupSequence() {
 
 	//Create WoL MAC storage table
 	sysdb.NewTable("wolmac")
-
-	//Create an email sender if SMTP config exists
-	sysdb.NewTable("smtp")
-	EmailSender = loadSMTPConfig()
 
 	//Create an analytic loader
 	AnalyticLoader = analytic.NewDataLoader(sysdb, statisticCollector)
