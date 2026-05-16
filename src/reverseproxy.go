@@ -538,14 +538,21 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			RequireCaptcha: requireCaptcha,
 			CaptchaConfig:  captchaConfig,
 
-			Tags:                 tags,
+			Tags: tags,
+			// Uptime Monitor
 			DisableUptimeMonitor: !enableUtm,
 			UptimeMonitorURI:     utmURI,
 			DisableAutoFallback:  false, // Default to false for new endpoints
-			DisableLogging:       disableLog,
-			BlockCommonExploits:  blockCommonExploits,
-			BlockAICrawlers:      blockAICrawlers,
-			MitigationAction:     mitigationAction,
+
+			// Logger
+			DisableLogging: disableLog,
+
+			// Security and Exploit Prevention
+			BlockCommonExploits: blockCommonExploits,
+			BlockAICrawlers:     blockAICrawlers,
+			MitigationAction:    mitigationAction,
+
+			// WebSocket Options
 			DisableWebSocket:               disableWebSocket,
 			WebsocketTimeout:               websocketTimeout,
 			EnableTimeoutRefreshOnActivity: enableTimeoutRefreshOnActivity,
@@ -1288,9 +1295,14 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "This matching CIDR already exists")
 			return
 		}
+
+		// Only trust proxy headers when explicitly requested. Defaults to false (secure).
+		useTrustedProxy, _ := utils.PostBool(r, "trustproxy")
+
 		targetProxy.AuthenticationProvider.BasicAuthExceptionRules = append(targetProxy.AuthenticationProvider.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
-			RuleType: dynamicproxy.AuthExceptionType_CIDR,
-			CIDR:     strings.TrimSpace(matchingCIDR),
+			RuleType:        dynamicproxy.AuthExceptionType_CIDR,
+			CIDR:            strings.TrimSpace(matchingCIDR),
+			UseTrustedProxy: useTrustedProxy,
 		})
 
 	default:

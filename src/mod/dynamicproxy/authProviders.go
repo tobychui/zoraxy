@@ -85,7 +85,15 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 					return nil
 				}
 			case AuthExceptionType_CIDR:
-				requesterIp := netutils.GetRequesterIP(r)
+				// By default, use the untrusted (RemoteAddr-only) IP to prevent header-spoofing bypass.
+				// Only trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) when the rule
+				// was explicitly configured with UseTrustedProxy = true.
+				var requesterIp string
+				if exceptionRule.UseTrustedProxy {
+					requesterIp = netutils.GetRequesterIP(r)
+				} else {
+					requesterIp = netutils.GetRequesterIPUntrusted(r)
+				}
 				if requesterIp != "" {
 					if requesterIp == exceptionRule.CIDR {
 						// This IP is excluded from basic auth

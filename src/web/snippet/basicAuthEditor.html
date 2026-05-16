@@ -54,11 +54,12 @@
                     <tr>
                         <th>Exception Type</th>
                         <th>Path Prefix / CIDR</th>
+                        <th>Trust Proxy</th>
                         <th>Remove</th>
                     </tr></thead>
                     <tbody id="exclusionPaths">
                     <tr>
-                        <td colspan="3"><i class="ui green circle check icon"></i> No Exclusion Rule</td>
+                        <td colspan="4"><i class="ui green circle check icon"></i> No Exclusion Rule</td>
                     </tr>
                     </tbody>
                 </table>
@@ -77,6 +78,16 @@
                         <input id="newExclusionIP" type="text" placeholder="192.168.1.0/24" autocomplete="off">
                         <small>Enter a valid IP address or CIDR block.</small>
                     </div>
+                </div>
+                <div class="field" id="trustedProxyField" style="display: none;">
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="newExclusionTrustProxy">
+                        <label for="newExclusionTrustProxy">Trust proxy headers (X-Real-Ip, CF-Connecting-IP, X-Forwarded-For, etc.)</label>
+                    </div>
+                    <div class="ui yellow message" style="margin-top: 0.6em;">
+                        <i class="ui exclamation triangle icon"></i>
+                        <b>Security Warning</b><br> 
+                        Enabling this option lets Zoraxy read the client IP from HTTP headers that can be set by any client on the internet. Only enable this if Zoraxy sits <em>behind a reverse proxy you trust</em> (e.g. Cloudflare).
                 </div>
                 <div class="field" >
                     <button class="ui basic button" onclick="addExceptionPath();"><i class="yellow add icon"></i> Add Exception</button>
@@ -118,9 +129,12 @@
                     if (value === 'ip') {
                         $('#exclusionPathField').hide();
                         $('#exclusionIPField').show();
+                        $('#trustedProxyField').show();
                     } else {
                         $('#exclusionPathField').show();
                         $('#exclusionIPField').hide();
+                        $('#trustedProxyField').hide();
+                        $('#newExclusionTrustProxy').prop('checked', false);
                     }
                 }
             });
@@ -191,6 +205,7 @@
                 let exceptionType =  $('#exceptionTypeDropdown').val() == "path" ? 0x0 : 0x1;
                 let newExclusionPathMatchingPrefix = $('#newExclusionPath').val().trim();
                 let newExclusionIP = $('#newExclusionIP').val().trim();
+                let trustProxy = exceptionType == 0x1 && $('#newExclusionTrustProxy').is(':checked');
                 if (exceptionType == 0x0){
                     //Check if the path is empty
                     
@@ -211,7 +226,8 @@
                         "type":exceptionType,
                         ep: editingEndpoint.ep,
                         prefix: newExclusionPathMatchingPrefix,
-                        cidr: newExclusionIP
+                        cidr: newExclusionIP,
+                        trustproxy: trustProxy
                     },
                     method: "POST",
                     success: function(data){
@@ -222,6 +238,7 @@
                             parent.msgbox("New exception path added", true);
                             $('#newExclusionPath').val("");
                             $('#newExclusionIP').val("");
+                            $('#newExclusionTrustProxy').prop('checked', false);
                         }
                     }
                 });
@@ -283,14 +300,25 @@
                     }else{
                         if (data.length == 0){
                             $("#exclusionPaths").html(` <tr>
-                                <td colspan="3"><i class="ui green circle check icon"></i> No Path Excluded</td>
+                                <td colspan="4"><i class="ui green circle check icon"></i> No Path Excluded</td>
                             </tr>`);
                         }else{
                             $("#exclusionPaths").html("");
                             data.forEach(function(rule){
+                                let trustProxyBadge = '';
+                                if (rule.RuleType == 0x1) {
+                                    if (rule.UseTrustedProxy) {
+                                        trustProxyBadge = `<span class="ui yellow label" title="Client IP is read from proxy headers. Only safe behind a trusted upstream proxy.">Enabled</span>`;
+                                    } else {
+                                        trustProxyBadge = `<span class="ui green label">Disabled</span>`;
+                                    }
+                                } else {
+                                    trustProxyBadge = `<span style="color:#aaa;">N/A</span>`;
+                                }
                                 $("#exclusionPaths").append(` <tr>
                                     <td>${exceptionTypeToString(rule.RuleType)}</td>
                                     <td>${rule.PathPrefix || rule.CIDR }</td>
+                                    <td>${trustProxyBadge}</td>
                                     <td><button class="ui red basic mini circular icon button" onclick="removeExceptionPath(this);" etype="${rule.RuleType}" prefix="${rule.PathPrefix || rule.CIDR}"><i class="ui red times icon"></i></button></td>
                                 </tr>`);
                             })
