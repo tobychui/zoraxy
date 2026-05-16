@@ -70,6 +70,11 @@
                                         </label>
                                     </div>
                                 </div>
+                                <div class="field">
+                                    <label>Uptime monitor health-check URI <small>(optional)</small></label>
+                                    <input type="text" id="utmURI" placeholder="/" autocomplete="off">
+                                    <small>Path appended to the upstream URL when the uptime monitor performs its check (e.g. <code>/identity</code> for Plex, <code>/healthz</code>). Leave empty to use <code>/</code>.</small>
+                                </div>
 
                                 <div class="field">
                                     <label>Tags</label>
@@ -344,6 +349,7 @@
         let useStickySessionLB = $("#useStickySessionLB")[0].checked; 
         let tags = $("#proxyTags").val().trim();
         let enableUtm = $("#enableUtm")[0].checked;
+        let utmURI = $("#utmURI").val().trim();
         let disableLog = $("#disableLog")[0].checked;
         let disableStatisticCollection = $("#disableStatisticCollection")[0].checked;
         let blockCommonExploits = $("#blockCommonExploits")[0].checked;
@@ -384,6 +390,7 @@
                 stickysess: useStickySessionLB,
                 tags: tags,
                 enableUtm: enableUtm,
+                utmURI: utmURI,
                 disableLog: disableLog,
                 dStatisticCollection: disableStatisticCollection,
                 blockCommonExploits: blockCommonExploits,
@@ -401,6 +408,7 @@
                     $("#rootname").val("");
                     $("#proxyDomain").val("");
                     $("#proxyTags").val("");
+                    $("#utmURI").val("");
                     $("#blockCommonExploits").prop("checked", false);
                     $("#blockAICrawlers").prop("checked", false);
                     $("#mitigationAction").parent().dropdown("set selected", "0");

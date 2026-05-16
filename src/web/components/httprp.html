@@ -361,6 +361,13 @@
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
                             <br>
+                            <b>Health-check URI <span style="opacity:0.6; font-weight:normal;">(optional)</span></b>
+                            <div class="ui small fluid input" style="margin-top: 0.4em;">
+                                <input type="text" class="UptimeMonitorURI" placeholder="/" autocomplete="off">
+                            </div>
+                            <small style="opacity:0.7;">Path appended to the upstream URL when the uptime monitor performs its check (e.g. <code>/identity</code> for Plex, <code>/healthz</code>). Leave empty to use <code>/</code>.</small>
+                            <br><br>
+                            <br>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -1127,6 +1134,7 @@
         let epttype = "host";
         let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
         let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
+        let uptimeMonitorURI = $(editor).find(".UptimeMonitorURI").val().trim();
         let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
@@ -1166,6 +1174,7 @@
                 "rootname": uuid,
                 "ss":useStickySession,
                 "dutm": DisableUptimeMonitor,
+                "utmURI": uptimeMonitorURI,
                 "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
@@ -1778,9 +1787,17 @@
             // Enable/disable the auto fallback option based on uptime monitor state
             var isUptimeMonitorEnabled = $(this).is(":checked");
             editor.find(".DisableAutoFallback").prop("disabled", !isUptimeMonitorEnabled);
+            editor.find(".UptimeMonitorURI").prop("disabled", !isUptimeMonitorEnabled);
             if (!isUptimeMonitorEnabled) {
                 editor.find(".DisableAutoFallback").prop("checked", false);
             }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".UptimeMonitorURI").off("change");
+        editor.find(".UptimeMonitorURI").val(subd.UptimeMonitorURI || "");
+        editor.find(".UptimeMonitorURI").prop("disabled", subd.DisableUptimeMonitor);
+        editor.find(".UptimeMonitorURI").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

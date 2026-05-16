@@ -248,10 +248,11 @@ type ProxyEndpoint struct {
 	CaptchaConfig  *CaptchaConfig // CAPTCHA provider configuration
 
 	//Uptime Monitor
-	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
-	DisableAutoFallback        bool //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
-	DisableLogging             bool //Disable logging of reverse proxy requests
-	DisableStatisticCollection bool //Disable statistic collection for this endpoint
+	DisableUptimeMonitor       bool   //Disable uptime monitor for this endpoint
+	UptimeMonitorURI           string //Optional URI path used by the uptime monitor health check (e.g. "/identity", "/healthz"). Empty = default "/"
+	DisableAutoFallback        bool   //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
+	DisableLogging             bool   //Disable logging of reverse proxy requests
+	DisableStatisticCollection bool   //Disable statistic collection for this endpoint
 
 	//Exploit Detection
 	BlockCommonExploits bool //Enable blocking of common exploits (SQLi, XSS, etc.)

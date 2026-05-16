@@ -332,6 +332,10 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		enableUtm = true
 	}
 
+	// Custom URI used by the uptime monitor health check (optional)
+	utmURI, _ := utils.PostPara(r, "utmURI")
+	utmURI = strings.TrimSpace(utmURI)
+
 	// Disable logging?
 	disableLog, _ := utils.PostBool(r, "disableLog")
 
@@ -536,6 +540,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 			Tags:                 tags,
 			DisableUptimeMonitor: !enableUtm,
+			UptimeMonitorURI:     utmURI,
 			DisableAutoFallback:  false, // Default to false for new endpoints
 			DisableLogging:       disableLog,
 			BlockCommonExploits:  blockCommonExploits,
@@ -662,6 +667,10 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		disbleUtm = false
 	}
 
+	// Custom URI used by the uptime monitor health check (optional)
+	utmURI, _ := utils.PostPara(r, "utmURI")
+	utmURI = strings.TrimSpace(utmURI)
+
 	// Auth Provider
 	authProviderTypeStr, _ := utils.PostPara(r, "authprovider")
 	if authProviderTypeStr == "" {
@@ -782,6 +791,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.CaptchaConfig = captchaConfig
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
+	newProxyEndpoint.UptimeMonitorURI = utmURI
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.ForceHTTP11 = forceHTTP11
