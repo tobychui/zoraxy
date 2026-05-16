@@ -43,11 +43,12 @@ type ManagerOptions struct {
 	LastSuccPluginSyncTime  int64                 //The last sync time for the plugin store URLs, used to check if the plugin store URLs need to be synced again
 
 	/* Runtime */
-	SystemConst  *zoraxyPlugin.RuntimeConstantValue //The system constant value
-	ZoraxyPort   int                                //The port of the Zoraxy instance, used for API calls
-	CSRFTokenGen func(*http.Request) string         `json:"-"` //The CSRF token generator function
-	Database     *database.Database                 `json:"-"`
-	Logger       *logger.Logger                     `json:"-"`
+	SystemConst   *zoraxyPlugin.RuntimeConstantValue //The system constant value
+	ZoraxyPort    int                                //The port of the Zoraxy instance, used for API calls
+	PluginDataDir string                             //Base directory for plugin persistent data, typically under the Zoraxy conf folder
+	CSRFTokenGen  func(*http.Request) string         `json:"-"` //The CSRF token generator function
+	Database      *database.Database                 `json:"-"`
+	Logger        *logger.Logger                     `json:"-"`
 
 	/* API Key Management */
 	APIKeyManager *auth.APIKeyManager `json:"-"` //The API key manager for the plugins

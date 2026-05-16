@@ -90,29 +90,27 @@
                
             </div>
             <button class="ui basic button" onclick="forceResyncPlugins();"><i class="ui green refresh icon"></i> Update Plugin List</button>
-            <!-- <div class="ui divider"></div>
-                <div class="ui basic segment advanceoptions">
-                    <div class="ui accordion advanceSettings">
-                        <div class="title">
+            <div class="ui divider"></div>
+            <div class="ui basic segment advanceoptions">
+                <div class="ui accordion advanceSettings">
+                    <div class="title">
                         <i class="dropdown icon"></i>
-                            Advance Settings
-                        </div>
-                        <div class="content">
-                            <p>Plugin Store URLs</p>
-                            <div class="ui form">
+                        Advanced Settings
+                    </div>
+                    <div class="content">
+                        <div class="ui form">
                             <div class="field">
+                                <label>Plugin Store Repositories</label>
                                 <textarea id="pluginStoreURLs" rows="5"></textarea>
-                                <label>Enter plugin store URLs, separating each URL with a new line</label>
+                                <small>One repository index URL per line. Leave empty to restore the default repository list.</small>
                             </div>
-                            <button class="ui basic button" onclick="savePluginStoreURLs()">
-                                <i class="ui green save icon"></i>Save
+                            <button class="ui basic button" onclick="savePluginManagerURLs()">
+                                <i class="ui green save icon"></i> Save
                             </button>
-                            </div>
-                            
                         </div>
                     </div>
                 </div>
-            -->
+            </div>
             <div class="ui divider"></div>
             <div class="field" >
                 <button class="ui basic button"  style="float: right;" onclick="closeThisWrapper();">Close</button>
@@ -168,6 +166,18 @@
             }
             initStoreList();
 
+            function initPluginStoreRepositories() {
+                $.get('/api/plugins/store/urls', function(data) {
+                    if (data.error != undefined) {
+                        parent.msgbox(data.error, false);
+                        return;
+                    }
+                    const urls = data.urls || [];
+                    $('#pluginStoreURLs').val(urls.join('\n'));
+                });
+            }
+            initPluginStoreRepositories();
+
             /* Plugin Search */
             function searchPlugins() {
                 const query = document.getElementById('searchInput').value.toLowerCase();
@@ -213,6 +223,7 @@
                         } else {
                             parent.msgbox("Plugin list updated successfully", true);
                             initStoreList();
+                            initPluginStoreRepositories();
                         }
                     }
                 });
@@ -383,18 +394,21 @@
 
             /* Advanced Options */                                
             function savePluginManagerURLs() {
-                const urls = document.getElementById('pluginStoreURLs').value.split('\n').map(url => url.trim()).filter(url => url !== '');
-                console.log('Saving URLs:', urls);
-                // Add your logic to save the URLs here, e.g., send them to the server
+                const urls = document.getElementById('pluginStoreURLs').value
+                    .split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url !== '');
                 $.cjax({
-                    url: '/api/plugins/store/saveURLs',
+                    url: '/api/plugins/store/urls',
                     type: 'POST',
-                    data: { urls },
+                    data: { urls: urls.join('\n') },
                     success: function(data) {
                         if (data.error != undefined) {
                             parent.msgbox(data.error, false);
                         } else {
-                            parent.msgbox("URLs saved successfully", true);
+                            parent.msgbox("Plugin store repositories saved", true);
+                            initPluginStoreRepositories();
+                            forceResyncPlugins();
                         }
                     }
                 });

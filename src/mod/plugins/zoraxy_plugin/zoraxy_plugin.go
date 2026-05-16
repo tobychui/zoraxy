@@ -139,6 +139,7 @@ type ConfigureSpec struct {
 	RuntimeConst RuntimeConstantValue `json:"runtime_const"`         //Runtime constant values
 	APIKey       string               `json:"api_key,omitempty"`     //API key for accessing Zoraxy APIs, if the plugin has permitted endpoints
 	ZoraxyPort   int                  `json:"zoraxy_port,omitempty"` //The port that Zoraxy is running on, used for making API calls to Zoraxy
+	DataDir      string               `json:"data_dir,omitempty"`    //Directory for plugin-owned persistent data, located under the Zoraxy config folder
 	//To be expanded
 }
 
