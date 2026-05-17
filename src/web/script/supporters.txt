@@ -1,0 +1,30 @@
+# supporters.txt
+#
+# A heartfelt thank you to each and every one of the wonderful individuals
+# listed below. Your generous donations have made a tremendous difference
+# to the Zoraxy project and the community around it.
+#
+# Because of your kindness and support, Zoraxy can remain free and open
+# source for everyone, and continue to grow with new features and
+# improvements. We are truly grateful for your belief in this project.
+#
+# Thank you — from the bottom of our hearts!
+#
+# Last update: 17/5/2026
+
+Samuel Sachs
+Mathias König
+Jonathan Asikis
+Robin Schambach
+Martin Thiermann
+Guanye Li
+Matthias Koitzsch
+Caleb Snell
+David Mulvey
+Erik Schumacher
+Daniel Heise
+Leonardo Izzo
+Jan Lukas Matejka
+Adrian Kuehlewind
+Edward Lamaster
+Marcel Nolte

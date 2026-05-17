@@ -8,6 +8,7 @@
         <a class="utils item" data-tab="utiltab2"><i class="ui grey file alternate outline icon"></i> Logger</a>
         <a class="utils item" data-tab="utiltab3">Toolbox</a>
         <a class="utils item" data-tab="utiltab4">System</a>
+        <a class="utils item" data-tab="utiltab5"><i class="heart red icon"></i> Contributors</a>
     </div>
 
     <div class="ui bottom attached tab segment utilitiesTabs active" data-tab="utiltab1">
@@ -198,6 +199,25 @@
                 </tbody>
             </table>
             <p>Zoraxy is developed by tobychui for <a href="//imuslab.com" target="_blank">imuslab</a> and open source under <a href="https://www.gnu.org/licenses/agpl-3.0.txt">AGPL</a></p>
+        </div>
+    </div>
+    <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab5">
+        <!-- Financial Supporters -->
+        <h3><i class="heart red icon"></i> Financial Supporters</h3>
+        <p>Zoraxy is made possible by the generosity of our wonderful supporters. A huge thank you to everyone who has donated to keep this project free and open source!</p>
+        <div class="ui basic segment">
+            <div id="supportersList" class="ui">
+                <div class="ui active centered inline loader" style="margin: 2em 0;"></div>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+        <!-- Privacy Notice -->
+        <div class="ui info message">
+            <i class="info circle icon"></i>
+            <strong>Privacy Notice:</strong> If you would prefer not to have your name displayed here, please open a pull request on the
+            <a href="https://github.com/tobychui/zoraxy" target="_blank">Zoraxy GitHub repository</a>
+            and edit the <code>src/web/script/supporters.txt</code> file — you may replace your name with a pseudonym or any text you like.
+            We fully respect your privacy and will merge such requests promptly.
         </div>
     </div>
     <br>
@@ -577,3 +597,43 @@
             })
         }
     }
+
+    /*
+        Financial Supporters
+    */
+    function loadSupporters() {
+        $.get("/script/supporters.txt", function(raw) {
+            var names = [];
+            raw.split("\n").forEach(function(line) {
+                var trimmed = line.trim();
+                if (trimmed && trimmed[0] !== '#') {
+                    names.push(trimmed);
+                }
+            });
+
+            var container = $("#supportersList");
+            container.empty();
+
+            if (names.length === 0) {
+                container.html('<p style="color: grey;">No supporters listed yet.</p>');
+                return;
+            }
+
+            var html = '<div style="display: flex; flex-wrap: wrap; gap: 0.6em; padding: 0.5em 0;">';
+            names.forEach(function(name) {
+                html += '<div class="ui black label" style="font-size: 1em; padding: 0.6em 1em;">'
+                    + '<i class="heart red icon" style="color: #db2828 !important; background-color: transparent !important;"></i>'
+                    + $('<span>').text(name).html()
+                    + '</div>';
+            });
+            html += '</div>';
+            html += '<p style="margin-top: 1.2em; color: grey; font-size: 0.9em;">'
+                + names.length + ' generous supporter' + (names.length !== 1 ? 's' : '') + ' and counting &mdash; thank you!'
+                + '</p>';
+            container.html(html);
+        }).fail(function() {
+            $("#supportersList").html('<p style="color: grey;">Unable to load supporters list.</p>');
+        });
+    }
+
+    loadSupporters();
