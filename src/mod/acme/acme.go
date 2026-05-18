@@ -181,6 +181,20 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	}
 
+	// Reuse a previously registered ACME account for this CA if one is stored
+	// in the database. Generating a fresh account key on every call makes
+	// Let's Encrypt treat every renewal as a brand new registration, which
+	// hits the "new registrations per IP" rate limit. config.CADirURL is fully
+	// resolved by this point, and lego.NewClient (below) reads the user key
+	// lazily, so overriding adminUser.key/Registration here is safe.
+	accountLoaded := false
+	if loadedKey, loadedReg, ok := a.loadACMEAccount(config.CADirURL); ok {
+		adminUser.key = loadedKey
+		adminUser.Registration = loadedReg
+		accountLoaded = true
+		a.Logf("Reusing existing ACME account for "+config.CADirURL, nil)
+	}
+
 	config.Certificate.KeyType = certcrypto.RSA2048
 
 	client, err := lego.NewClient(config)
@@ -264,8 +278,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	*/
 	var reg *registration.Resource
-	// New users will need to register
-	if client.GetExternalAccountRequired() {
+	// New users will need to register. If we reused an account loaded from
+	// disk, it is already registered - registering again would count against
+	// the CA's "new registrations per IP" rate limit, so skip it entirely.
+	if accountLoaded {
+		reg = adminUser.Registration
+	} else if client.GetExternalAccountRequired() {
 		a.Logf("External Account Required for this ACME Provider", nil)
 		// IF KID and HmacEncoded is overidden
 
@@ -313,6 +331,16 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	}
 	adminUser.Registration = reg
+
+	// Persist a freshly registered account so future certificate requests and
+	// renewals reuse it instead of registering a brand new account each time.
+	if !accountLoaded && reg != nil {
+		if serr := a.saveACMEAccount(config.CADirURL, &adminUser); serr != nil {
+			a.Logf("Failed to persist ACME account (renewals may hit rate limits)", serr)
+		} else {
+			a.Logf("Persisted ACME account for reuse on "+config.CADirURL, nil)
+		}
+	}
 
 	// obtain the certificate
 	request := certificate.ObtainRequest{
