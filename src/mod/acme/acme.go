@@ -102,6 +102,29 @@ func (a *ACMEHandler) Logf(message string, err error) {
 	a.Logger.PrintAndLog("ACME", message, err)
 }
 
+// MigrateACMEDNSConfig moves the DNS credential database entries stored under
+// oldName to newName, then removes the old keys. This must be called whenever a
+// certificate file is renamed (e.g. when it is promoted to or demoted from the
+// fallback/default certificate) so that auto-renewal can still locate the
+// correct DNS challenge credentials by the new filename.
+func (a *ACMEHandler) MigrateACMEDNSConfig(oldName, newName string) {
+	if !a.Database.TableExists("acme") {
+		return
+	}
+	for _, suffix := range []string{"_dns_provider", "_dns_credentials", "_dns_servers"} {
+		oldKey := oldName + suffix
+		newKey := newName + suffix
+		if !a.Database.KeyExists("acme", oldKey) {
+			continue
+		}
+		var value string
+		if err := a.Database.Read("acme", oldKey, &value); err == nil {
+			a.Database.Write("acme", newKey, value)
+			a.Database.Delete("acme", oldKey)
+		}
+	}
+}
+
 // Close closes the ACMEHandler.
 // ACME Handler does not need to close anything
 // Function defined for future compatibility

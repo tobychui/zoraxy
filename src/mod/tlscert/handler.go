@@ -96,14 +96,21 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 			if block != nil {
 				cert, err := x509.ParseCertificate(block.Bytes)
 				if err == nil {
-					originalKeyName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "key"))
 					originalPemName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "pem"))
+					originalKeyName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "key"))
 					originalJSONName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "json"))
 
 					os.Rename(defaultPubKey, originalPemName)
 					os.Rename(defaultPriKey, originalKeyName)
 					if utils.FileExists(defaultJSON) {
 						os.Rename(defaultJSON, originalJSONName)
+					}
+
+					// Migrate ACME DNS credentials from "default" back to the
+					// original certificate name so renewal can find them again.
+					if m.AcmeHandler != nil {
+						originalCertName := strings.TrimSuffix(filepath.Base(originalPemName), ".pem")
+						m.AcmeHandler.MigrateACMEDNSConfig("default", originalCertName)
 					}
 				}
 			}
@@ -121,6 +128,13 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 		if utils.FileExists(certJSON) {
 			os.Rename(certJSON, filepath.Join(m.CertStore, "default.json"))
 		}
+
+		// Migrate ACME DNS credentials to "default" so that auto-renewal can
+		// locate them by the new filename.
+		if m.AcmeHandler != nil {
+			m.AcmeHandler.MigrateACMEDNSConfig(certname, "default")
+		}
+
 		utils.SendOK(w)
 
 		//Update cert list

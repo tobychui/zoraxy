@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/acme"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -34,6 +35,7 @@ type Manager struct {
 	Logger      *logger.Logger //System wide logger for debug mesage
 
 	/* External handlers */
+	AcmeHandler             *acme.ACMEHandler                                          // Optional: used to migrate DNS credentials when a cert is renamed
 	hostSpecificTlsBehavior func(serverName string) (*HostSpecificTlsBehavior, error) // Function to get host specific TLS behavior, if nil, use global TLS options
 }
 

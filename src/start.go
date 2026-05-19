@@ -346,6 +346,11 @@ func startupSequence() {
 		log.Fatal(err)
 	}
 
+	// Give the cert manager a reference to the ACME handler so that it can
+	// migrate DNS credential database keys whenever a certificate is renamed
+	// (e.g. when it is promoted to the fallback/default certificate).
+	tlsCertManager.AcmeHandler = acmeHandler
+
 	/*
 		Plugin Manager
 	*/
