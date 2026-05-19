@@ -37,6 +37,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/listTags", ReverseProxyListTags)
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
+	authRouter.HandleFunc("/api/proxy/setTags", ReverseProxyHandleSetTags)
 	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
 	authRouter.HandleFunc("/api/proxy/setTlsConfig", ReverseProxyHandleSetTlsConfig)
 	authRouter.HandleFunc("/api/proxy/setHostname", ReverseProxyHandleSetHostname)
