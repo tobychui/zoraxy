@@ -164,7 +164,7 @@ func (router *Router) StartProxyService() error {
 								conn.Close()
 							} else {
 								//Default behavior
-								http.NotFound(w, r)
+								router.mux.ServeHTTP(w, r)
 							}
 
 						}

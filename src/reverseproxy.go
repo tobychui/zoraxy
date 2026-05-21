@@ -1566,7 +1566,7 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 		switch enabled {
 		case "true":
 			//Check if port 80 is already used by other services
-			if netutils.CheckIfPortOccupied(80) {
+			if netutils.CheckIfPortOccupied(80) && !dynamicProxyRouter.GetPort80ListenerState() {
 				utils.SendErrorResponse(w, "Port 80 is already used by other services")
 				return
 			}
