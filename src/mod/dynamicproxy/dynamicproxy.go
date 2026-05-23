@@ -113,6 +113,12 @@ func (router *Router) StartProxyService() error {
 			Addr:      ":" + strconv.Itoa(router.Option.Port),
 			Handler:   router.mux,
 			TLSConfig: config,
+			// ReadHeaderTimeout bounds the slowloris window without affecting
+			// long-lived bodies (uploads, SSE, streaming). IdleTimeout reaps
+			// idle keep-alive connections. ReadTimeout/WriteTimeout left at 0
+			// so legitimate long-running requests still work.
+			ReadHeaderTimeout: 10 * time.Second,
+			IdleTimeout:       120 * time.Second,
 		}
 		router.Running = true
 		if router.Option.Port != 80 && router.Option.ListenOnPort80 && !netutils.CheckIfPortOccupied(80) {
@@ -234,7 +240,13 @@ func (router *Router) StartProxyService() error {
 	} else {
 		//Serve with non TLS mode
 		router.tlsListener = nil
-		router.server = &http.Server{Addr: ":" + strconv.Itoa(router.Option.Port), Handler: router.mux}
+		router.server = &http.Server{
+			Addr:    ":" + strconv.Itoa(router.Option.Port),
+			Handler: router.mux,
+			// See TLS branch above for rationale.
+			ReadHeaderTimeout: 10 * time.Second,
+			IdleTimeout:       120 * time.Second,
+		}
 		router.Running = true
 		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (Plain HTTP mode)", nil)
 		go func() {
