@@ -66,6 +66,50 @@ func TestBoundedIncrTrimsLowFrequencyEntries(t *testing.T) {
 	}
 }
 
+func TestNewIncrFnDispatch(t *testing.T) {
+	// maxEntries=0 selects the unbounded path (upstream behavior).
+	unbounded := newIncrFn(0)
+	m1 := &sync.Map{}
+	b1 := newBoundedCounter(0)
+	for i := 0; i < 50; i++ {
+		unbounded(m1, b1, fmt.Sprintf("k%d", i))
+	}
+	if got := mapLen(m1); got != 50 {
+		t.Errorf("unbounded path: expected 50 entries, got %d (cap should not apply)", got)
+	}
+	if got := b1.size.Load(); got != 0 {
+		t.Errorf("unbounded path: bounded counter should stay at 0, got %d", got)
+	}
+
+	// maxEntries>0 selects the bounded path.
+	bounded := newIncrFn(10)
+	m2 := &sync.Map{}
+	b2 := newBoundedCounter(0)
+	for i := 0; i < 100; i++ {
+		bounded(m2, b2, fmt.Sprintf("k%d", i))
+	}
+	if got := mapLen(m2); got > 10 {
+		t.Errorf("bounded path with cap=10: map size %d exceeds cap", got)
+	}
+}
+
+func TestUnboundedIncrMatchesUpstreamPattern(t *testing.T) {
+	// unboundedIncr must reproduce Load → check → Store exactly.
+	m := &sync.Map{}
+	unboundedIncr(m, nil, "new-key")
+	v, ok := m.Load("new-key")
+	if !ok || v.(int) != 1 {
+		t.Fatalf("first insert: expected count 1, got %v (ok=%v)", v, ok)
+	}
+	for i := 0; i < 9; i++ {
+		unboundedIncr(m, nil, "new-key")
+	}
+	v, _ = m.Load("new-key")
+	if v.(int) != 10 {
+		t.Fatalf("after 10 increments: expected count 10, got %v", v)
+	}
+}
+
 func TestBoundedIncrConcurrent(t *testing.T) {
 	const capN = 500
 	const writers = 16

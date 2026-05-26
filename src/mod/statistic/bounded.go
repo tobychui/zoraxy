@@ -6,18 +6,18 @@ import (
 	"sync/atomic"
 )
 
-// maxEntriesPerStatMap is a soft cap on entries per per-dimension sync.Map in
-// DailySummary. When a map exceeds this cap, its lowest-count entries are
-// evicted down to ~90% of the cap. This bounds memory growth driven by
-// high-cardinality request inputs (many unique client IPs, varied
-// User-Agent/Referer strings, or many distinct URL paths) while preserving
-// the most frequently observed entries — the data the dashboards actually
-// surface.
+// The runtime cap comes from CollectorOption.MaxEntriesPerStatMap (driven by
+// the -stats_max_entries CLI flag). 0 disables the cap entirely and uses the
+// upstream Load → check → Store path (see unboundedIncr in statistic.go).
 //
-// TODO: expose as a configuration option (e.g. via router.Option or a CLI
-// flag) so operators running large-scale deployments can tune it. Hardcoded
-// for now to keep the change surface small.
-const maxEntriesPerStatMap = 20000
+// When enabled, the cap is a soft cap: a trim runs when a new-key insert pushes
+// the map past it, dropping the 10% of entries with the lowest request counts
+// to make room. This bounds memory growth driven by high-cardinality request
+// inputs (many unique client IPs, varied User-Agent/Referer strings, or many
+// distinct URL paths) while preserving the most frequently observed entries —
+// the data the dashboards actually surface.
+//
+// Recommended value when enabling: 20000 (~32MB worst case across all 8 maps).
 
 // boundedCounter is a sidecar to a *sync.Map[string]int that tracks its
 // logical size atomically and serializes trim (eviction) operations.

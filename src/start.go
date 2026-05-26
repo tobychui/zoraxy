@@ -195,7 +195,8 @@ func startupSequence() {
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{
-		Database: sysdb,
+		Database:             sysdb,
+		MaxEntriesPerStatMap: *statsMaxEntriesPerMap,
 	})
 	if err != nil {
 		panic(err)
