@@ -32,6 +32,12 @@ type DailySummary struct {
 	RequestURL          *sync.Map //Request URL of the request object
 	DownstreamHostnames *sync.Map //Request count of downstream hostname
 	UpstreamHostnames   *sync.Map //Forwarded request count of upstream hostname
+
+	// bounded tracks the logical size of each map above and serializes
+	// the trim path so that high-cardinality request inputs (many unique
+	// IPs, UA/Referer strings, or URL paths) don't grow the maps without
+	// bound.
+	bounded boundedCounters
 }
 
 type RequestInfo struct {
@@ -170,21 +176,14 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 			c.DailySummary.ErrorRequest++
 		}
 
-		//Store the request info into correct types of maps
-		ft, ok := c.DailySummary.ForwardTypes.Load(ri.ForwardType)
-		if !ok {
-			c.DailySummary.ForwardTypes.Store(ri.ForwardType, 1)
-		} else {
-			c.DailySummary.ForwardTypes.Store(ri.ForwardType, ft.(int)+1)
-		}
+		//Store the request info into correct types of maps. boundedIncr
+		//caps each map at maxEntriesPerStatMap entries (lowest-count
+		//entries are dropped first when the cap is exceeded) to bound
+		//memory growth under high-cardinality input.
+		boundedIncr(c.DailySummary.ForwardTypes, c.DailySummary.bounded.ForwardTypes, ri.ForwardType, maxEntriesPerStatMap)
 
 		originISO := strings.ToLower(ri.RequestOriginalCountryISOCode)
-		fo, ok := c.DailySummary.RequestOrigin.Load(originISO)
-		if !ok {
-			c.DailySummary.RequestOrigin.Store(originISO, 1)
-		} else {
-			c.DailySummary.RequestOrigin.Store(originISO, fo.(int)+1)
-		}
+		boundedIncr(c.DailySummary.RequestOrigin, c.DailySummary.bounded.RequestOrigin, originISO, maxEntriesPerStatMap)
 
 		//Filter out CF forwarded requests
 		if strings.Contains(ri.IpAddr, ",") {
@@ -196,32 +195,17 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 			}
 		}
 
-		fi, ok := c.DailySummary.RequestClientIp.Load(ri.IpAddr)
-		if !ok {
-			c.DailySummary.RequestClientIp.Store(ri.IpAddr, 1)
-		} else {
-			c.DailySummary.RequestClientIp.Store(ri.IpAddr, fi.(int)+1)
-		}
+		boundedIncr(c.DailySummary.RequestClientIp, c.DailySummary.bounded.RequestClientIp, ri.IpAddr, maxEntriesPerStatMap)
 
 		//Record the referer
 		p := bluemonday.StripTagsPolicy()
 		filteredReferer := p.Sanitize(
 			ri.Referer,
 		)
-		rf, ok := c.DailySummary.Referer.Load(filteredReferer)
-		if !ok {
-			c.DailySummary.Referer.Store(filteredReferer, 1)
-		} else {
-			c.DailySummary.Referer.Store(filteredReferer, rf.(int)+1)
-		}
+		boundedIncr(c.DailySummary.Referer, c.DailySummary.bounded.Referer, filteredReferer, maxEntriesPerStatMap)
 
 		//Record the UserAgent
-		ua, ok := c.DailySummary.UserAgent.Load(ri.UserAgent)
-		if !ok {
-			c.DailySummary.UserAgent.Store(ri.UserAgent, 1)
-		} else {
-			c.DailySummary.UserAgent.Store(ri.UserAgent, ua.(int)+1)
-		}
+		boundedIncr(c.DailySummary.UserAgent, c.DailySummary.bounded.UserAgent, ri.UserAgent, maxEntriesPerStatMap)
 
 		//Record request URL, if it is a page
 		ext := filepath.Ext(ri.RequestURL)
@@ -230,30 +214,15 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 			return
 		}
 
-		ru, ok := c.DailySummary.RequestURL.Load(ri.RequestURL)
-		if !ok {
-			c.DailySummary.RequestURL.Store(ri.RequestURL, 1)
-		} else {
-			c.DailySummary.RequestURL.Store(ri.RequestURL, ru.(int)+1)
-		}
+		boundedIncr(c.DailySummary.RequestURL, c.DailySummary.bounded.RequestURL, ri.RequestURL, maxEntriesPerStatMap)
 
 		//Record the downstream hostname
 		//This is the hostname that the user visited, not the target domain
-		ds, ok := c.DailySummary.DownstreamHostnames.Load(ri.Target)
-		if !ok {
-			c.DailySummary.DownstreamHostnames.Store(ri.Target, 1)
-		} else {
-			c.DailySummary.DownstreamHostnames.Store(ri.Target, ds.(int)+1)
-		}
+		boundedIncr(c.DailySummary.DownstreamHostnames, c.DailySummary.bounded.DownstreamHostnames, ri.Target, maxEntriesPerStatMap)
 
 		//Record the upstream hostname
 		//This is the selected load balancer upstream hostname or ip
-		us, ok := c.DailySummary.UpstreamHostnames.Load(ri.Upstream)
-		if !ok {
-			c.DailySummary.UpstreamHostnames.Store(ri.Upstream, 1)
-		} else {
-			c.DailySummary.UpstreamHostnames.Store(ri.Upstream, us.(int)+1)
-		}
+		boundedIncr(c.DailySummary.UpstreamHostnames, c.DailySummary.bounded.UpstreamHostnames, ri.Upstream, maxEntriesPerStatMap)
 	}()
 
 	//ADD MORE HERE IF NEEDED
@@ -303,6 +272,7 @@ func NewDailySummary() *DailySummary {
 		RequestURL:          &sync.Map{},
 		DownstreamHostnames: &sync.Map{},
 		UpstreamHostnames:   &sync.Map{},
+		bounded:             newBoundedCounters(),
 	}
 }
 
