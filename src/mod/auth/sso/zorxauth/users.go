@@ -1,6 +1,7 @@
 package zorxauth
 
 import (
+	"bytes"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -118,6 +119,39 @@ func (ar *AuthRouter) getUserByEmail(email string) (*User, error) {
 	}
 
 	return nil, errors.New("user not found")
+}
+
+// getUserByID looks up a user by their UUID (User.ID field).
+func (ar *AuthRouter) getUserByID(userID string) (*User, error) {
+	if userID == "" {
+		return nil, errors.New("userID is empty")
+	}
+	users, err := ar.listUsers()
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		if u.ID == userID {
+			return u, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
+// getUserByCredentialID scans all users to find the one that owns the given passkey credential ID.
+func (ar *AuthRouter) getUserByCredentialID(rawID []byte) (*User, error) {
+	users, err := ar.listUsers()
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		for _, c := range u.PasskeyCredentials {
+			if bytes.Equal(c.ID, rawID) {
+				return u, nil
+			}
+		}
+	}
+	return nil, errors.New("no user found for credential")
 }
 
 func (ar *AuthRouter) getUserByUsernameOrEmail(identifier string) (*User, error) {

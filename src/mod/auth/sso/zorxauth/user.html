@@ -255,6 +255,7 @@
             color: white;
             width: 100%;
             margin-top: 4px;
+            margin-bottom: 8px;
         }
 
         .btn-danger {
@@ -279,8 +280,8 @@
             line-height: 1.5;
         }
         .alert.show { display: block; }
-        .alert-success { background: var(--alert-ok-bg);  color: var(--alert-ok-color);  border-left: 4px solid #38a169; }
-        .alert-error   { background: var(--alert-err-bg); color: var(--alert-err-color); border-left: 4px solid #e53e3e; }
+        .alert-success { background: var(--alert-ok-bg);  color: var(--alert-ok-color);  border: 1px solid #38a169; }
+        .alert-error   { background: var(--alert-err-bg); color: var(--alert-err-color); border: 1px solid #e53e3e; }
 
         /* 2FA status row */
         .twofa-status {
@@ -487,6 +488,32 @@
                 <button class="btn btn-danger" id="confirmDisableBtn">Confirm Disable</button>
             </div>
         </div>
+    </div><!-- /2fa card -->
+
+    <!-- ── Passkeys card ──────────────────────────────────────── -->
+    <div class="card">
+        <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="17" r="3"/><path d="M14 10.5A4.5 4.5 0 1 1 21 14h-1l-1 1-1-1-1 1-1-1-1 1-1-1-1 1h-1v-1.5"/></svg>
+            Passkeys
+        </div>
+
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+            Passkeys let you sign in with biometrics (Touch ID, Face ID) or a hardware key—no password needed.
+        </p>
+
+        <!-- Registered passkeys list -->
+        <div id="passkeyList" style="margin-bottom:14px"></div>
+
+        <!-- Add passkey flow -->
+        <div id="addPasskeyPanel">
+            <div class="form-group" style="margin-bottom:8px">
+                <label for="passkeyName">Passkey name (optional)</label>
+                <input type="text" id="passkeyName" placeholder="e.g. MacBook Touch ID" maxlength="64" autocomplete="off">
+            </div>
+            <button class="btn btn-primary" id="addPasskeyBtn">Add a Passkey</button>
+        </div>
+        <div class="alert alert-error"   id="passkeyError"></div>
+        <div class="alert alert-success" id="passkeySuccess"></div>
     </div>
 
 </div><!-- /page-wrapper -->
@@ -558,9 +585,9 @@
         const { ok, data } = await apiGet('/user/api/info');
         if (!ok) { document.getElementById('displayUsername').textContent = 'Error'; return; }
 
-        const username = data.username || '';
-        const email    = data.email    || '';
-        const has2fa   = !!data.enable2fa;
+        const username     = data.username     || '';
+        const email        = data.email        || '';
+        const has2fa       = !!data.enable2fa;
 
         document.getElementById('displayUsername').textContent = username || '—';
         // Replace SVG placeholder with initial letter once username is known
@@ -714,7 +741,157 @@
         }
     });
 
+    /* ── WebAuthn helpers ────────────────────────────────────────── */
+    function bufferToBase64url(buf) {
+        const bytes = new Uint8Array(buf);
+        let str = '';
+        bytes.forEach(b => str += String.fromCharCode(b));
+        return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+    function base64urlToBuffer(b64url) {
+        const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+        const bin = atob(b64);
+        return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
+    }
+    function encodeRegistrationCredential(cred) {
+        return {
+            id: cred.id,
+            rawId: bufferToBase64url(cred.rawId),
+            type: cred.type,
+            response: {
+                clientDataJSON:    bufferToBase64url(cred.response.clientDataJSON),
+                attestationObject: bufferToBase64url(cred.response.attestationObject),
+                transports: cred.response.getTransports ? cred.response.getTransports() : []
+            }
+        };
+    }
+
+    /* ── passkey management ──────────────────────────────────────── */
+    const passkeyListEl  = document.getElementById('passkeyList');
+    const passkeyErrEl   = document.getElementById('passkeyError');
+    const passkeyOkEl    = document.getElementById('passkeySuccess');
+
+    function transportIcon(transports) {
+        if (!transports || transports.length === 0) return '';
+        const t = transports[0];
+        if (t === 'internal')                    return '💻';
+        if (t === 'usb')                         return '🔑';
+        if (t === 'nfc')                         return '📡';
+        if (t === 'ble' || t === 'hybrid')       return '📱';
+        return '🔐';
+    }
+
+    function formatDate(unix) {
+        if (!unix) return '—';
+        return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    async function loadPasskeys() {
+        const { ok, data } = await apiGet('/user/api/passkey/list');
+        passkeyListEl.innerHTML = '';
+        if (!ok || !Array.isArray(data) || data.length === 0) {
+            passkeyListEl.innerHTML = '<p style="font-size:13px;color:var(--text-secondary)">No passkeys registered yet.</p>';
+            return;
+        }
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px';
+        data.forEach(pk => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border)';
+            tr.innerHTML = `
+                <td style="padding:8px 4px;width:28px;font-size:18px">${transportIcon(pk.transports)}</td>
+                <td style="padding:8px 4px;flex:1">
+                    <strong>${escHtml(pk.name)}</strong><br>
+                    <span style="color:var(--text-secondary)">Added ${formatDate(pk.createdAt)} · Used ${formatDate(pk.lastUsedAt)}</span>
+                    ${pk.backedUp ? '<span style="color:var(--text-secondary);margin-left:6px">☁ synced</span>' : ''}
+                </td>
+                <td style="padding:8px 4px;text-align:right">
+                    <button class="btn btn-secondary btn-danger" style="padding:4px 10px;font-size:12px" data-pkid="${escHtml(pk.id)}">Remove</button>
+                </td>`;
+            tr.querySelector('button').addEventListener('click', () => removePasskey(pk.id, pk.name));
+            table.appendChild(tr);
+        });
+        passkeyListEl.appendChild(table);
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function removePasskey(id, name) {
+        if (!confirm(`Remove passkey "${name}"?`)) return;
+        hideAlert(passkeyErrEl); hideAlert(passkeyOkEl);
+        const { ok, data } = await apiPost('/user/api/passkey/remove', { id });
+        if (ok) {
+            showAlert(passkeyOkEl, 'Passkey removed.');
+            loadPasskeys();
+        } else {
+            showAlert(passkeyErrEl, (data && data.error) || 'Failed to remove passkey.');
+        }
+    }
+
+    document.getElementById('addPasskeyBtn').addEventListener('click', async () => {
+        hideAlert(passkeyErrEl); hideAlert(passkeyOkEl);
+        const btn  = document.getElementById('addPasskeyBtn');
+        const name = document.getElementById('passkeyName').value.trim();
+
+        if (!window.PublicKeyCredential) {
+            showAlert(passkeyErrEl, 'Your browser does not support passkeys.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = 'Registering…<span class="spinner"></span>';
+
+        try {
+            // Step 1 – get challenge
+            const resp1 = await fetch('/user/api/passkey/register/begin', { method: 'POST' });
+            const json1 = await resp1.json();
+            if (!resp1.ok || !json1.token) throw new Error(json1.error || 'Failed to start passkey registration.');
+
+            const token   = json1.token;
+            const options = json1.options;
+
+            // Decode binary fields from base64url
+            options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+            options.publicKey.user.id   = base64urlToBuffer(options.publicKey.user.id);
+            if (options.publicKey.excludeCredentials) {
+                options.publicKey.excludeCredentials = options.publicKey.excludeCredentials.map(c => ({
+                    ...c, id: base64urlToBuffer(c.id)
+                }));
+            }
+
+            // Step 2 – platform ceremony
+            const cred = await navigator.credentials.create({ publicKey: options.publicKey });
+
+            // Step 3 – send attestation
+            const url2 = '/user/api/passkey/register/complete?token=' + encodeURIComponent(token)
+                       + (name ? '&name=' + encodeURIComponent(name) : '');
+            const resp2 = await fetch(url2, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(encodeRegistrationCredential(cred))
+            });
+            const json2 = await resp2.json();
+            if (!resp2.ok) throw new Error(json2.error || 'Failed to complete passkey registration.');
+
+            showAlert(passkeyOkEl, 'Passkey registered successfully!');
+            document.getElementById('passkeyName').value = '';
+            loadPasskeys();
+        } catch (e) {
+            if (e && e.name === 'NotAllowedError') {
+                showAlert(passkeyErrEl, 'Passkey registration was cancelled.');
+            } else {
+                showAlert(passkeyErrEl, e.message || 'Passkey registration failed.');
+            }
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Add a Passkey';
+    });
+
     /* ── init ────────────────────────────────────────────────────── */
+    loadPasskeys();
     loadInfo();
 })();
 </script>

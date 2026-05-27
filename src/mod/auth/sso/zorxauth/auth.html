@@ -256,6 +256,17 @@
             <button type="submit" class="btn-submit" id="submitBtn">
                 Sign In
             </button>
+
+            <!-- Passkey divider + button -->
+            <div style="display:flex;align-items:center;gap:12px;margin:18px 0 0">
+                <hr style="flex:1;border:none;border-top:1px solid #e2e8f0">
+                <span style="font-size:13px;color:#a0aec0;white-space:nowrap">or</span>
+                <hr style="flex:1;border:none;border-top:1px solid #e2e8f0">
+            </div>
+            <button type="button" class="btn-submit" id="passkeyBtn" style="margin-top:10px;background:linear-gradient(135deg,#4299e1 0%,#667eea 100%)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><circle cx="7" cy="17" r="3"/><path d="M14 10.5A4.5 4.5 0 1 1 21 14h-1l-1 1-1-1-1 1-1-1-1 1-1-1-1 1h-1v-1.5"/></svg>
+                Sign in with a Passkey
+            </button>
         </form>
         
         <div class="info-box secure" id="secureInfo">
@@ -488,6 +499,94 @@
         // Clear error when user starts typing
         document.getElementById('username').addEventListener('input', hideError);
         document.getElementById('password').addEventListener('input', hideError);
+
+        // ── Passkey helpers ────────────────────────────────────────
+        function bufferToBase64url(buf) {
+            const bytes = new Uint8Array(buf);
+            let str = '';
+            bytes.forEach(b => str += String.fromCharCode(b));
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+        function base64urlToBuffer(b64url) {
+            const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+            const bin = atob(b64);
+            return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
+        }
+        function encodeAssertionCredential(cred) {
+            return {
+                id: cred.id,
+                rawId: bufferToBase64url(cred.rawId),
+                type: cred.type,
+                response: {
+                    clientDataJSON:    bufferToBase64url(cred.response.clientDataJSON),
+                    authenticatorData: bufferToBase64url(cred.response.authenticatorData),
+                    signature:         bufferToBase64url(cred.response.signature),
+                    userHandle:        cred.response.userHandle ? bufferToBase64url(cred.response.userHandle) : null
+                }
+            };
+        }
+
+        // ── Passkey login ──────────────────────────────────────────
+        document.getElementById('passkeyBtn').addEventListener('click', async function() {
+            const btn = document.getElementById('passkeyBtn');
+            hideError();
+
+            if (!window.PublicKeyCredential) {
+                showError('Your browser does not support passkeys.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Authenticating…';
+
+            try {
+                // Step 1 – get challenge
+                const resp1 = await fetch('/passkey/auth/begin', {
+                    method: 'POST',
+                    body: new URLSearchParams({ redirect: redirectUrl })
+                });
+                const json1 = await resp1.json();
+                if (!resp1.ok || !json1.token) throw new Error(json1.error || 'Could not start passkey login.');
+
+                const token   = json1.token;
+                const options = json1.options;
+
+                // Decode binary fields from base64url
+                options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+                if (options.publicKey.allowCredentials) {
+                    options.publicKey.allowCredentials = options.publicKey.allowCredentials.map(c => ({
+                        ...c, id: base64urlToBuffer(c.id)
+                    }));
+                }
+
+                // Step 2 – platform ceremony
+                const cred = await navigator.credentials.get({ publicKey: options.publicKey });
+
+                // Step 3 – send assertion
+                const resp2 = await fetch('/passkey/auth/complete?token=' + encodeURIComponent(token), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(encodeAssertionCredential(cred))
+                });
+                const json2 = await resp2.json();
+                if (json2.success) {
+                    if (!handleSuccessResponse(json2)) {
+                        showError('Invalid response from server. Please try again.');
+                    }
+                } else {
+                    showError(json2.error || 'Passkey authentication failed.');
+                }
+            } catch (e) {
+                if (e && e.name === 'NotAllowedError') {
+                    showError('Passkey authentication was cancelled.');
+                } else {
+                    showError(e.message || 'Passkey authentication failed.');
+                }
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><circle cx="7" cy="17" r="3"/><path d="M14 10.5A4.5 4.5 0 1 1 21 14h-1l-1 1-1-1-1 1-1-1-1 1-1-1-1 1h-1v-1.5"/></svg>Sign in with a Passkey';
+        });
     </script>
 </body>
 </html>

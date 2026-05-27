@@ -31,6 +31,24 @@ type User struct {
 	Enable2FA  bool   `json:"enable2FA"`  //Whether the user has enabled 2FA. If true, the user must complete 2FA verification after password verification to complete login.
 	TOTPSecret string `json:"totpSecret"` //The TOTP secret for 2FA. Required if Enable2FA is true.
 
+	/* Passkeys (WebAuthn) */
+	PasskeyCredentials []PasskeyCredential `json:"passkeyCredentials"` //Registered WebAuthn/passkey credentials
+
+}
+
+// PasskeyCredential stores a single WebAuthn credential for a user.
+type PasskeyCredential struct {
+	ID             []byte   `json:"id"`             // Raw credential ID bytes
+	PublicKey      []byte   `json:"publicKey"`      // COSE-encoded public key
+	AAGUID         []byte   `json:"aaguid"`         // Authenticator AAGUID
+	SignCount      uint32   `json:"signCount"`      // Signature counter (clone detection)
+	CloneWarning   bool     `json:"cloneWarning"`   // Possible clone detected
+	Transports     []string `json:"transports"`     // e.g. ["internal", "hybrid", "usb"]
+	BackupEligible bool     `json:"backupEligible"` // Can be cloud-synced
+	BackupState    bool     `json:"backupState"`    // Currently synced to cloud
+	Name           string   `json:"name"`           // User-assigned display name
+	CreatedAt      int64    `json:"createdAt"`      // Unix timestamp
+	LastUsedAt     int64    `json:"lastUsedAt"`     // Unix timestamp
 }
 
 // AuthRouterOptions contains configuration for the ZorxAuth router
@@ -102,6 +120,10 @@ type AuthRouter struct {
 	/* 2FA */
 	pendingTOTPSessions sync.Map // totp_token (string) -> *PendingTOTPSession (pending login 2FA)
 	pendingTOTPSetup    sync.Map // username (string) -> *PendingTOTPSetup (pending 2FA enrollment)
+
+	/* Passkeys (WebAuthn) */
+	pendingPasskeyReg  sync.Map // token (string) -> *PendingPasskeyRegistration
+	pendingPasskeyAuth sync.Map // token (string) -> *PendingPasskeyAuth
 }
 
 func getDefaultOptions() *AuthRouterOptions {

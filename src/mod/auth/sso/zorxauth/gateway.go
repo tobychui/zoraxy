@@ -60,6 +60,8 @@ func NewGatewayServer(router *AuthRouter) *GatewayServer {
 	mux.HandleFunc("/login", gs.handleLogin)
 	mux.HandleFunc("/logout", gs.handleLogout)
 	mux.HandleFunc("/totp-verify", gs.handleTOTPVerify)
+	mux.HandleFunc("/passkey/auth/begin", gs.handlePasskeyAuthBegin)
+	mux.HandleFunc("/passkey/auth/complete", gs.handlePasskeyAuthComplete)
 	mux.HandleFunc("/user", gs.handleUserPortal)
 	mux.HandleFunc("/user/api/", gs.handleUserPortalAPI)
 

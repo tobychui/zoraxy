@@ -64,6 +64,14 @@ func (gs *GatewayServer) handleUserPortalAPI(w http.ResponseWriter, r *http.Requ
 		gs.handleEnableTOTP(w, r, username)
 	case "2fa/disable":
 		gs.handleDisableTOTP(w, r, username)
+	case "passkey/register/begin":
+		gs.handlePasskeyRegisterBegin(w, r, username)
+	case "passkey/register/complete":
+		gs.handlePasskeyRegisterComplete(w, r, username)
+	case "passkey/list":
+		gs.handlePasskeyList(w, r, username)
+	case "passkey/remove":
+		gs.handlePasskeyRemove(w, r, username)
 	default:
 		http.NotFound(w, r)
 	}
@@ -83,9 +91,10 @@ func (gs *GatewayServer) handleUserInfo(w http.ResponseWriter, r *http.Request, 
 	}
 
 	js, _ := json.Marshal(map[string]interface{}{
-		"username":  u.Username,
-		"email":     u.Email,
-		"enable2fa": u.Enable2FA,
+		"username":     u.Username,
+		"email":        u.Email,
+		"enable2fa":    u.Enable2FA,
+		"passkeyCount": len(u.PasskeyCredentials),
 	})
 	utils.SendJSONResponse(w, string(js))
 }
