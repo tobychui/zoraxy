@@ -142,6 +142,16 @@ type BasicAuthExceptionRule struct {
 	UseTrustedProxy bool              //If true, trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) for CIDR matching. WARNING: enabling this allows header spoofing if the upstream proxy is not trusted.
 }
 
+// ZorxAuthExceptionRule defines an exception rule for ZorxAuth SSO authentication.
+// Requests matching this rule bypass authentication entirely.
+type ZorxAuthExceptionRule struct {
+	RuleType        AuthExceptionType //The type of the exception rule (path or CIDR)
+	PathPattern     string            //Path prefix or regex pattern to match, e.g. /api/v1/ or ^/api/.*$
+	IsRegex         bool              //If true, PathPattern is treated as a regular expression; otherwise it is a path prefix
+	CIDR            string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
+	UseTrustedProxy bool              //If true, trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) for CIDR matching. WARNING: enabling this allows header spoofing if the upstream proxy is not trusted.
+}
+
 /* Routing Rule Data Structures */
 
 // A Virtual Directory endpoint, provide a subset of ProxyEndpoint for better
@@ -197,6 +207,9 @@ type AuthenticationProvider struct {
 	ForwardAuthResponseClientHeaders  []string // List of headers to copy from the forward auth server response to the client response.
 	ForwardAuthRequestHeaders         []string // List of headers to copy from the original request to the auth server. If empty all are copied.
 	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
+
+	/* ZorxAuth SSO Settings */
+	ZorxAuthExceptionRules []*ZorxAuthExceptionRule //Rules to bypass ZorxAuth SSO authentication (path prefix/regex or IP/CIDR)
 }
 
 /* CAPTCHA Provider Configuration */

@@ -22,6 +22,7 @@ type UserResponse struct {
 	UseGroupPolicy bool     `json:"useGroupPolicy"` //Use group policy instead of AllowedHosts for checking access
 	GroupID        string   `json:"groupId"`        //GroupID is the group policy ID that the user belongs to
 	AllowedHosts   []string `json:"allowedHosts"`
+	Enable2FA      bool     `json:"enable2FA"`
 }
 
 func normalizeUsername(username string) string {
@@ -51,6 +52,7 @@ func userToResponse(user *User) *UserResponse {
 		UseGroupPolicy: user.UseGroupPolicy,
 		GroupID:        user.GroupID,
 		AllowedHosts:   user.AllowedHosts,
+		Enable2FA:      user.Enable2FA,
 	}
 }
 
@@ -502,4 +504,37 @@ func (ar *AuthRouter) ValidateUsername(username, password string) bool {
 	}
 
 	return user.PasswordHash != "" && user.PasswordHash == hashPassword(password)
+}
+
+func (ar *AuthRouter) HandleDisableUserTOTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.SendErrorResponse(w, "method not allowed")
+		return
+	}
+
+	username, err := utils.PostPara(r, "username")
+	if err != nil {
+		utils.SendErrorResponse(w, "missing username")
+		return
+	}
+
+	user, err := ar.getUserByUsername(username)
+	if err != nil {
+		utils.SendErrorResponse(w, "user not found")
+		return
+	}
+
+	if !user.Enable2FA {
+		utils.SendErrorResponse(w, "2FA is not enabled for this user")
+		return
+	}
+
+	user.Enable2FA = false
+	user.TOTPSecret = ""
+	if err := ar.saveUser(user, user.Username); err != nil {
+		utils.SendErrorResponse(w, "failed to save user")
+		return
+	}
+
+	utils.SendOK(w)
 }

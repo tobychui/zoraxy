@@ -78,6 +78,10 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/delete", RemoveProxyBasicAuthExceptionPaths)
+	/* ZorxAuth SSO per-endpoint exception rules */
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/list", ListProxyZorxAuthExceptionRules)
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/add", AddProxyZorxAuthExceptionRule)
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/delete", RemoveProxyZorxAuthExceptionRule)
 }
 
 // Register the APIs for TLS / SSL certificate management functions
@@ -115,6 +119,7 @@ func RegisterZorxAuthUserManagementAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/zorxauth/users/update", zorxAuthRouter.HandleUserUpdate)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/delete", zorxAuthRouter.HandleUserDelete)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/logoutAll", zorxAuthRouter.HandleLogoutAllUsers)
+	authRouter.HandleFunc("/api/sso/zorxauth/users/disable2fa", zorxAuthRouter.HandleDisableUserTOTP)
 
 	// Group Policy management
 	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/list", zorxAuthRouter.HandleGroupPolicyList)

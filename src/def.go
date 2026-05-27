@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME    = "Zoraxy"
-	SYSTEM_VERSION = "3.3.3"
+	SYSTEM_VERSION = "3.3.4"
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487

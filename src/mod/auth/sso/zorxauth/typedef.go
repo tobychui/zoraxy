@@ -26,6 +26,11 @@ type User struct {
 	UseGroupPolicy bool     `json:"useGroupPolicy"` //Use group poliy instead of AllowedHosts for checking access
 	GroupID        string   `json:"groupId"`        //GroupID is the group policy ID that the user belongs to
 	AllowedHosts   []string `json:"allowedHosts"`   //optional, if empty, allow all hosts
+
+	/* User Configs */
+	Enable2FA  bool   `json:"enable2FA"`  //Whether the user has enabled 2FA. If true, the user must complete 2FA verification after password verification to complete login.
+	TOTPSecret string `json:"totpSecret"` //The TOTP secret for 2FA. Required if Enable2FA is true.
+
 }
 
 // AuthRouterOptions contains configuration for the ZorxAuth router
@@ -57,6 +62,23 @@ type GatewaySession struct {
 	Expiry   time.Time
 }
 
+// PendingTOTPSession holds login context while waiting for 2FA verification
+type PendingTOTPSession struct {
+	Username       string
+	Host           string
+	Port           string
+	Protocol       string
+	RedirectTarget string
+	RememberMe     bool
+	Expiry         time.Time
+}
+
+// PendingTOTPSetup holds a newly generated TOTP secret before the user confirms it
+type PendingTOTPSetup struct {
+	Secret string
+	Expiry time.Time
+}
+
 // AuthRouter handles ZorxAuth SSO authentication routing
 type AuthRouter struct {
 	Logger   *logger.Logger
@@ -73,9 +95,13 @@ type AuthRouter struct {
 	groupPolicies sync.Map // id (string) -> *GroupPolicy
 
 	/* Login rate limiting */
-	loginAttemptCounter sync.Map  // IP -> *int64, total attempts in current minute window
-	loginFailureCounter sync.Map  // IP -> *int64, consecutive failures used for exponential backoff
+	loginAttemptCounter sync.Map // IP -> *int64, total attempts in current minute window
+	loginFailureCounter sync.Map // IP -> *int64, consecutive failures used for exponential backoff
 	rateLimitResetStop  chan bool // stop channel for the per-minute counter reset ticker
+
+	/* 2FA */
+	pendingTOTPSessions sync.Map // totp_token (string) -> *PendingTOTPSession (pending login 2FA)
+	pendingTOTPSetup    sync.Map // username (string) -> *PendingTOTPSetup (pending 2FA enrollment)
 }
 
 func getDefaultOptions() *AuthRouterOptions {

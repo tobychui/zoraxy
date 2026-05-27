@@ -212,9 +212,11 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">🔐</div>
-        <h1>Welcome Back</h1>
-        <p class="subtitle">Sign in to continue to your application</p>
+        <div id="loginHeader">
+            <div class="icon">🔐</div>
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Sign in to continue to your application</p>
+        </div>
         
         <div class="error-message" id="errorMessage">
             <p id="errorText"></p>
@@ -263,6 +265,24 @@
         <div class="info-box warning" id="warningInfo">
             <p>⚠️ Warning: You are connecting over HTTP (unencrypted). Your credentials may be visible to others. Please use HTTPS for secure authentication.</p>
         </div>
+
+        <!-- TOTP step (hidden until 2FA is required) -->
+        <div id="totpStep" style="display:none">
+            <div style="text-align:center;font-size:48px;margin-bottom:12px">🔐</div>
+            <h2 style="text-align:center;color:#2d3748;font-size:22px;margin-bottom:8px">Two-Factor Authentication</h2>
+            <p style="text-align:center;color:#718096;font-size:14px;margin-bottom:24px">Enter the 6-digit code from your authenticator app.</p>
+            <div class="error-message" id="totpErrorMessage">
+                <p id="totpErrorText"></p>
+            </div>
+            <div class="form-group">
+                <label for="totpCode">Authenticator Code</label>
+                <input type="text" id="totpCode" placeholder="000000" maxlength="6" autocomplete="one-time-code" inputmode="numeric" style="letter-spacing:4px;text-align:center;font-size:22px;">
+            </div>
+            <button class="btn-submit" id="totpSubmitBtn">Verify</button>
+            <p style="text-align:center;margin-top:16px;font-size:13px;color:#718096">
+                <a href="#" id="totpBackLink" style="color:#4299e1;text-decoration:none">← Back to login</a>
+            </p>
+        </div>
     </div>
     
     <script>
@@ -304,7 +324,107 @@
                 submitBtn.textContent = 'Sign In';
             }
         }
-        
+
+        // Helper: redirect to the target site after a successful auth response
+        function handleSuccessResponse(data) {
+            if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
+                return false;
+            }
+            const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
+            const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
+            window.location.href = finalRedirectURL;
+            return true;
+        }
+
+        // ── TOTP step ──────────────────────────────────────────────
+        let pendingTotpToken = null;
+
+        function showTotpStep(token) {
+            pendingTotpToken = token;
+            loginForm.style.display = 'none';
+            secureInfo.classList.remove('show');
+            warningInfo.classList.remove('show');
+            document.getElementById('loginHeader').style.display = 'none';
+            document.getElementById('totpStep').style.display = 'block';
+            document.getElementById('totpCode').value = '';
+            document.getElementById('totpErrorMessage').classList.remove('show');
+            document.getElementById('totpCode').focus();
+        }
+
+        function hideTotpStep() {
+            pendingTotpToken = null;
+            document.getElementById('totpStep').style.display = 'none';
+            document.getElementById('loginHeader').style.display = '';
+            loginForm.style.display = 'block';
+            if (isSecure) {
+                secureInfo.classList.add('show');
+            } else {
+                warningInfo.classList.add('show');
+            }
+        }
+
+        document.getElementById('totpBackLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            hideTotpStep();
+        });
+
+        document.getElementById('totpSubmitBtn').addEventListener('click', async function() {
+            const btn     = document.getElementById('totpSubmitBtn');
+            const errEl   = document.getElementById('totpErrorMessage');
+            const errText = document.getElementById('totpErrorText');
+
+            errEl.classList.remove('show');
+            const code = document.getElementById('totpCode').value.trim();
+            if (code.length !== 6) {
+                errText.textContent = 'Please enter the 6-digit code from your authenticator app.';
+                errEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying<span class="spinner"></span>';
+
+            try {
+                const response = await fetch('/totp-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        totp_token: pendingTotpToken,
+                        totp_code:  code
+                    })
+                });
+
+                let data = null;
+                try { data = await response.json(); } catch { data = null; }
+
+                if (response.ok && data && data.success) {
+                    if (!handleSuccessResponse(data)) {
+                        errText.textContent = 'Invalid response from server. Please try again.';
+                        errEl.classList.add('show');
+                        btn.disabled = false;
+                        btn.textContent = 'Verify';
+                    }
+                    return;
+                }
+
+                errText.textContent = (data && data.error) || 'Invalid code. Please try again.';
+                errEl.classList.add('show');
+            } catch (error) {
+                console.error('TOTP verify error:', error);
+                errText.textContent = 'An error occurred. Please try again.';
+                errEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Verify';
+        });
+
+        // Allow Enter key on the TOTP input
+        document.getElementById('totpCode').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('totpSubmitBtn').click();
+        });
+
+        // ── Login form ─────────────────────────────────────────────
         loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             hideError();
@@ -335,17 +455,21 @@
                     data = null;
                 }
 
-                if (response.ok && data && data.success) {
-                    if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
-                        showError('Invalid login response from server. Please try again.');
+                if (response.ok && data) {
+                    // 2FA required: switch to TOTP step
+                    if (data.require_totp && data.totp_token) {
                         setLoading(false);
+                        showTotpStep(data.totp_token);
                         return;
                     }
 
-                    const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
-                    const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
-                    window.location.href = finalRedirectURL;
-                    return;
+                    if (data.success) {
+                        if (!handleSuccessResponse(data)) {
+                            showError('Invalid login response from server. Please try again.');
+                            setLoading(false);
+                        }
+                        return;
+                    }
                 }
 
                 showError((data && data.error) || 'Invalid username or password. Please try again.');

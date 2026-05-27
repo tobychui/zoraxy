@@ -3,6 +3,7 @@ package dynamicproxy
 import (
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/auth"
@@ -54,7 +55,7 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			return true
 		}
 	case AuthMethodZorxAuth:
-		err := h.handleZorxAuth(w, r)
+		err := h.handleZorxAuth(w, r, sep)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
@@ -161,6 +162,42 @@ func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request) 
 	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r)
 }
 
-func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request) error {
+func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) error {
+	// Check ZorxAuth exception rules before applying authentication
+	if sep != nil && sep.AuthenticationProvider != nil {
+		for _, rule := range sep.AuthenticationProvider.ZorxAuthExceptionRules {
+			switch rule.RuleType {
+			case AuthExceptionType_Paths:
+				if rule.IsRegex {
+					matched, err := regexp.MatchString(rule.PathPattern, r.URL.Path)
+					if err == nil && matched {
+						return nil
+					}
+				} else {
+					if strings.HasPrefix(r.URL.Path, rule.PathPattern) {
+						return nil
+					}
+				}
+			case AuthExceptionType_CIDR:
+				var requesterIp string
+				if rule.UseTrustedProxy {
+					requesterIp = netutils.GetRequesterIP(r)
+				} else {
+					requesterIp = netutils.GetRequesterIPUntrusted(r)
+				}
+				if requesterIp != "" {
+					if requesterIp == rule.CIDR {
+						return nil
+					}
+					if netutils.MatchIpWildcard(requesterIp, rule.CIDR) {
+						return nil
+					}
+					if netutils.MatchIpCIDR(requesterIp, rule.CIDR) {
+						return nil
+					}
+				}
+			}
+		}
+	}
 	return h.Parent.Option.ZorxAuthAgentRouter.HandleAuthRouting(w, r)
 }
