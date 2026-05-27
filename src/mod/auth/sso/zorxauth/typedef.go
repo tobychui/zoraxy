@@ -54,9 +54,9 @@ type PasskeyCredential struct {
 // AuthRouterOptions contains configuration for the ZorxAuth router
 type AuthRouterOptions struct {
 	/* Auth Gateway Options */
-	EnableAuthGateway   bool   `json:"enable_auth_gateway"`   //Whether to enable the authentication gateway. If disabled, all auth request are treated as rejected. Default: false
-	GatewayPort         int    `json:"gateway_port"`          //Port number for the authentication gateway. Default: 5489
-	FallbackRedirectURL string `json:"fallback_redirect_url"` //Fallback redirect URL if the original redirect URL is missing or invalid.
+	EnableAuthGateway bool `json:"enable_auth_gateway"` //Whether to enable the authentication gateway. If disabled, all auth request are treated as rejected. Default: false
+	GatewayPort       int  `json:"gateway_port"`        //Port number for the authentication gateway. Default: 5489
+	//FallbackRedirectURL string `json:"fallback_redirect_url"` //Fallback redirect URL if the original redirect URL is missing or invalid.
 	/* Auth Router Options */
 	EnableRateLimit          bool   `json:"enable_rate_limit"`           //Whether to enable rate limiting for authentication attempts. Default: true
 	RateLimitPerIp           int    `json:"rate_limit_per_ip"`           //Number of allowed authentication attempts per minute per IP. Default: 60
@@ -88,6 +88,7 @@ type PendingTOTPSession struct {
 	Protocol       string
 	RedirectTarget string
 	RememberMe     bool
+	IsDirectLogin  bool // true when no redirect target was provided (direct gateway access)
 	Expiry         time.Time
 }
 
@@ -113,8 +114,8 @@ type AuthRouter struct {
 	groupPolicies sync.Map // id (string) -> *GroupPolicy
 
 	/* Login rate limiting */
-	loginAttemptCounter sync.Map // IP -> *int64, total attempts in current minute window
-	loginFailureCounter sync.Map // IP -> *int64, consecutive failures used for exponential backoff
+	loginAttemptCounter sync.Map  // IP -> *int64, total attempts in current minute window
+	loginFailureCounter sync.Map  // IP -> *int64, consecutive failures used for exponential backoff
 	rateLimitResetStop  chan bool // stop channel for the per-minute counter reset ticker
 
 	/* 2FA */

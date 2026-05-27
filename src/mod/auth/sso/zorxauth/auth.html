@@ -338,6 +338,11 @@
 
         // Helper: redirect to the target site after a successful auth response
         function handleSuccessResponse(data) {
+            if (data.redirectTarget && !data.sessionSetURL) {
+                // Direct login (no SSO session-set needed): go straight to the target
+                window.location.href = data.redirectTarget;
+                return true;
+            }
             if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
                 return false;
             }

@@ -118,10 +118,7 @@ func (ar *AuthRouter) handleSessionSetCallback(w http.ResponseWriter, r *http.Re
 
 	redirectURL := r.URL.Query().Get("redirect")
 	if redirectURL == "" {
-		redirectURL = ar.Options.FallbackRedirectURL
-		if redirectURL == "" {
-			redirectURL = "/"
-		}
+		redirectURL = "/" // default to home page if redirect URL is missing
 	}
 
 	usernameObj, exists := ar.sessionIdStore.Load(sessionID)

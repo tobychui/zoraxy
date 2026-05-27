@@ -183,11 +183,7 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 	if authenticated {
 		redirectURL := r.URL.Query().Get("redirect")
 		if redirectURL == "" {
-			redirectURL = gs.router.Options.FallbackRedirectURL
-			if redirectURL == "" {
-				//Invalid settings, fallback to about:blank to avoid open redirect vulnerability
-				redirectURL = "about:blank"
-			}
+			redirectURL = "./user" // default to user portal if redirect URL is missing
 		}
 
 		host := ""
@@ -312,16 +308,19 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Successful login: clear the consecutive-failure counter for this IP
 	gs.router.loginFailureCounter.Delete(clientIP)
 
-	redirectTarget := r.FormValue("redirect")
-	if redirectTarget == "" {
-		redirectTarget = gs.router.Options.FallbackRedirectURL
-		if redirectTarget == "" {
-			//Invalid settings, fallback to about:blank to avoid open redirect vulnerability
-			redirectTarget = "about:blank"
+	rawRedirect := r.FormValue("redirect")
+	redirectTarget := rawRedirect
+	isDirectLogin := redirectTarget == "/"
+	if redirectTarget == "/" {
+		protocolScheme := "http"
+		if r.URL.Scheme != "" {
+			protocolScheme = r.URL.Scheme
 		}
+		redirectTarget = protocolScheme + "://" + r.Host + "/user" // default to user portal if redirect URL is missing
 	}
 
 	parsedTarget, err := url.Parse(redirectTarget)
+
 	if err != nil || parsedTarget.Host == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -334,6 +333,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	host := parsedTarget.Hostname()
 	port := parsedTarget.Port()
+
 	targetProtocol := parsedTarget.Scheme
 	if targetProtocol == "" {
 		targetProtocol = "http"
@@ -350,7 +350,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !gs.router.ValidateUserAccessToHost(u.Username, host) {
+	if !gs.router.ValidateUserAccessToHost(u.Username, host) && r.Host != host {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -379,6 +379,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 			Port:           port,
 			Protocol:       targetProtocol,
 			RedirectTarget: redirectTarget,
+			IsDirectLogin:  isDirectLogin,
 			RememberMe:     rememberMe,
 			Expiry:         time.Now().Add(5 * time.Minute),
 		})
@@ -428,6 +429,18 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
 		gs.router.gatewaySessionStore.Delete(sessionToken)
 	})
+
+	// Direct login: user accessed the gateway domain directly with no redirect target.
+	// Issue the session cookie and send them to the user-management panel.
+	if isDirectLogin {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":        true,
+			"redirectTarget": "/user",
+		})
+		return
+	}
 
 	sessionId := gs.router.generateValidationCodeForSession(u.Username)
 	hostWithPort := host
@@ -669,6 +682,18 @@ func (gs *GatewayServer) handleTOTPVerify(w http.ResponseWriter, r *http.Request
 		MaxAge:   cookieDuration,
 	})
 
+	// Direct login: user accessed the gateway domain directly with no redirect target.
+	// Issue the session cookie and send them to the user-management panel.
+	if pending.IsDirectLogin {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":        true,
+			"redirectTarget": "/user",
+		})
+		return
+	}
+
 	sessionId := gs.router.generateValidationCodeForSession(u.Username)
 	hostWithPort := pending.Host
 	if pending.Port != "" {
@@ -687,4 +712,3 @@ func (gs *GatewayServer) handleTOTPVerify(w http.ResponseWriter, r *http.Request
 		"rememberMe":     pending.RememberMe,
 	})
 }
-

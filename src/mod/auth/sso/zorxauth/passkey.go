@@ -48,6 +48,7 @@ type PendingPasskeyRegistration struct {
 type PendingPasskeyAuth struct {
 	SessionData    *webauthnlib.SessionData
 	RedirectTarget string
+	IsDirectLogin  bool // true when no redirect target was provided (direct gateway access)
 	Expiry         time.Time
 }
 
@@ -56,7 +57,7 @@ type webAuthnUser struct {
 	u *User
 }
 
-func (w *webAuthnUser) WebAuthnID() []byte         { return []byte(w.u.ID) }
+func (w *webAuthnUser) WebAuthnID() []byte          { return []byte(w.u.ID) }
 func (w *webAuthnUser) WebAuthnName() string        { return w.u.Username }
 func (w *webAuthnUser) WebAuthnDisplayName() string { return w.u.Username }
 func (w *webAuthnUser) WebAuthnCredentials() []webauthnlib.Credential {
@@ -316,12 +317,15 @@ func (gs *GatewayServer) handlePasskeyAuthBegin(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	redirectTarget := r.FormValue("redirect")
-	if redirectTarget == "" {
-		redirectTarget = gs.router.Options.FallbackRedirectURL
-		if redirectTarget == "" {
-			redirectTarget = "about:blank"
+	rawRedirect := r.FormValue("redirect")
+	redirectTarget := rawRedirect
+	isDirectLogin := redirectTarget == "/"
+	if redirectTarget == "/" {
+		protocolScheme := "http"
+		if r.URL.Scheme != "" {
+			protocolScheme = r.URL.Scheme
 		}
+		redirectTarget = protocolScheme + "://" + r.Host + "/user"
 	}
 
 	wa, err := newWebAuthnFromRequest(r)
@@ -340,6 +344,7 @@ func (gs *GatewayServer) handlePasskeyAuthBegin(w http.ResponseWriter, r *http.R
 	gs.router.pendingPasskeyAuth.Store(token, &PendingPasskeyAuth{
 		SessionData:    sessionData,
 		RedirectTarget: redirectTarget,
+		IsDirectLogin:  isDirectLogin,
 		Expiry:         time.Now().Add(5 * time.Minute),
 	})
 	time.AfterFunc(5*time.Minute, func() { gs.router.pendingPasskeyAuth.Delete(token) })
@@ -460,7 +465,7 @@ func (gs *GatewayServer) handlePasskeyAuthComplete(w http.ResponseWriter, r *htt
 		targetProtocol = "http"
 	}
 
-	if !gs.router.ValidateUserAccessToHost(foundUser.Username, host) {
+	if !gs.router.ValidateUserAccessToHost(foundUser.Username, host) && r.Host != host {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -493,6 +498,18 @@ func (gs *GatewayServer) handlePasskeyAuthComplete(w http.ResponseWriter, r *htt
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   cookieDuration,
 	})
+
+	// Direct login: user accessed the gateway domain directly with no redirect target.
+	// Issue the session cookie and send them to the user-management panel.
+	if pending.IsDirectLogin {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":        true,
+			"redirectTarget": "/user",
+		})
+		return
+	}
 
 	sessionId := gs.router.generateValidationCodeForSession(foundUser.Username)
 	hostWithPort := host
