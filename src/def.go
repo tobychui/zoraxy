@@ -88,6 +88,11 @@ var (
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
 
+	/* Proxy Timeout Configuration Flags */
+	proxyReadHeaderTimeout = flag.Int("readheadertimeout", 30, "Proxy server read header timeout in seconds (0 = disabled)")
+	proxyWriteTimeout      = flag.Int("writetimeout", 0, "Proxy server write timeout in seconds (0 = disabled, recommended for long-running requests)")
+	proxyIdleTimeout       = flag.Int("idletimeout", 300, "Proxy server idle keep-alive connection timeout in seconds (0 = disabled)")
+
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
 	path_conf      = flag.String("conf", "./conf", "Configuration folder path")

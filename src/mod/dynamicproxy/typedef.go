@@ -69,6 +69,11 @@ type RouterOption struct {
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
 	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
 
+	/* Timeouts */
+	ReadHeaderTimeout int64 //HTTP server read timeout in seconds
+	WriteTimeout      int64 //HTTP server write timeout in seconds
+	IdleTimeout       int64 //HTTP server idle timeout in seconds
+
 	/* Authentication Providers */
 	ForwardAuthRouter   *forward.AuthRouter
 	OAuth2Router        *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication

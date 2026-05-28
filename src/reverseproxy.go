@@ -196,6 +196,10 @@ func ReverseProxyInit() {
 		ZorxAuthAgentRouter: zorxAuthRouter,
 		LoadBalancer:        loadBalancer,
 		PluginManager:       pluginManager,
+		/* Timeouts */
+		ReadHeaderTimeout: int64(*proxyReadHeaderTimeout),
+		WriteTimeout:      int64(*proxyWriteTimeout),
+		IdleTimeout:       int64(*proxyIdleTimeout),
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -827,6 +831,51 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	//Update uptime monitor targets
 	UpdateUptimeMonitorTargets()
+
+	utils.SendOK(w)
+}
+
+// ReverseProxyHandleSetTags handles updating only the tags of a proxy endpoint
+func ReverseProxyHandleSetTags(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.SendErrorResponse(w, "Method not supported")
+		return
+	}
+
+	rootNameOrMatchingDomain, err := utils.PostPara(r, "rootname")
+	if err != nil {
+		utils.SendErrorResponse(w, "Target proxy rule not defined")
+		return
+	}
+
+	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
+	if err != nil {
+		utils.SendErrorResponse(w, "Target proxy config not found or could not be loaded")
+		return
+	}
+
+	tagStr, _ := utils.PostPara(r, "tags")
+	tags := []string{}
+	if tagStr != "" {
+		tags = strings.Split(tagStr, ",")
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
+	}
+
+	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
+	newProxyEndpoint.Tags = tags
+
+	readyRoutingRule, err := dynamicProxyRouter.PrepareProxyRoute(newProxyEndpoint)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+	targetProxyEntry.Remove()
+	loadBalancer.ResetSessions()
+	dynamicProxyRouter.AddProxyRouteToRuntime(readyRoutingRule)
+
+	SaveReverseProxyConfig(newProxyEndpoint)
 
 	utils.SendOK(w)
 }
