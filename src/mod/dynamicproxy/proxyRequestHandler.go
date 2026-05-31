@@ -294,7 +294,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
 		}
 
-		if target.parent.HeaderRewriteRules != nil {
+		if target.parent.HeaderRewriteRules == nil {
 			target.parent.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
 		}
 
@@ -342,6 +342,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ProxyDomain:                    target.Domain,
 		OriginalHost:                   reqHostname,
 		UseTLS:                         target.RequireTLS,
+		NoCache:                        target.parent.parent.Option.NoCache,
 		PathPrefix:                     target.MatchingPath,
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
@@ -349,6 +350,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ForceHTTP11:                    target.parent.ForceHTTP11,
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
+		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		Version:                        target.parent.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
 	})
