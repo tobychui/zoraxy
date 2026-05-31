@@ -101,11 +101,21 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		} else {
 			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
 		}
-
 	}
 
-	// Create a new transport instance instead of modifying the shared DefaultTransport
 	thisTransporter := newBaseTransport(dpcOptions)
+
+	// Set the correct SNI for HTTPS backends at creation time.
+	// Each ReverseProxy instance targets one backend, so this is safe and avoids
+	// per-request transport cloning that defeats connection pooling.
+	if strings.EqualFold(target.Scheme, "https") {
+		serverName := target.Hostname()
+		cfg := &tls.Config{ServerName: serverName}
+		if dpcOptions.IgnoreTLSVerification {
+			cfg.InsecureSkipVerify = true
+		}
+		thisTransporter.TLSClientConfig = cfg
+	}
 
 	return &ReverseProxy{
 		Director:      director,
@@ -115,7 +125,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		Transport:     thisTransporter,
 	}
 }
-
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	apath, bpath := a.EscapedPath(), b.EscapedPath()
 	aslash, bslash := strings.HasSuffix(apath, "/"), strings.HasPrefix(bpath, "/")
@@ -298,51 +307,20 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Fix for #997
-	// Only clone transport when configuration needs to change to preserve connection pooling
+	// Only clone transport when configuration needs to change to preserve connection pooling.
+	// Fix for #1088
+	// No per-request SNI cloning is needed because ServerName is set on the shared
+	// transport during NewDynamicProxyCore initialization.
 	needClone := false
 	var trc *http.Transport
 
 	if tr, ok := transport.(*http.Transport); ok {
-		// Check if we need to modify transport configuration
 		if rrr.ForceHTTP11 {
-			if !needClone {
-				//Proxy rule config changed. Clone a new transport instance
-				trc = tr.Clone()
-				needClone = true
-			}
+			trc = tr.Clone()
+			needClone = true
 			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
 			trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
 			trc.ForceAttemptHTTP2 = false
-		}
-
-		// Fix for issue #821 - only clone if ServerName needs updating
-		if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
-			serverName := outreq.Host
-			if h, _, err := net.SplitHostPort(serverName); err == nil {
-				serverName = h
-			}
-
-			// Only clone if ServerName actually needs to be updated
-			currentServerName := ""
-			if tr.TLSClientConfig != nil {
-				currentServerName = tr.TLSClientConfig.ServerName
-			}
-
-			if currentServerName != serverName {
-				if !needClone {
-					trc = tr.Clone()
-					needClone = true
-				}
-
-				var cfg *tls.Config
-				if trc.TLSClientConfig != nil {
-					cfg = trc.TLSClientConfig.Clone()
-				} else {
-					cfg = &tls.Config{}
-				}
-				cfg.ServerName = serverName
-				trc.TLSClientConfig = cfg
-			}
 		}
 
 		if needClone {
