@@ -14,38 +14,40 @@
         <script src="../script/darktheme.js"></script>
         <br>
         <div class="ui container">
-            <h3 class="ui header">Basic Auth Credential</h3>
-            <div class="scrolling content ui form">
-                <div id="inlineEditBasicAuthCredentials" class="field">
-                    <p>Enter the username and password for allowing them to access this proxy endpoint</p>
-                    <table class="ui basic very compacted unstackable celled table">
-                        <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Password</th>
-                            <th>Remove</th>
-                        </tr></thead>
-                        <tbody id="inlineEditBasicAuthCredentialTable">
-                        <tr>
-                            <td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <div class="three small fields credentialEntry">
-                        <div class="field">
-                            <input id="inlineEditBasicAuthCredUsername" type="text" placeholder="Username" autocomplete="off">
+            <div id="basicAuthCredentialSection">
+                <h3 class="ui header">Basic Auth Credential</h3>
+                <div class="scrolling content ui form">
+                    <div id="inlineEditBasicAuthCredentials" class="field">
+                        <p>Enter the username and password for allowing them to access this proxy endpoint</p>
+                        <table class="ui basic very compacted unstackable celled table">
+                            <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Password</th>
+                                <th>Remove</th>
+                            </tr></thead>
+                            <tbody id="inlineEditBasicAuthCredentialTable">
+                            <tr>
+                                <td colspan="3"><i class="ui green circle check icon"></i> No Entered Credential</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                        <div class="three small fields credentialEntry">
+                            <div class="field">
+                                <input id="inlineEditBasicAuthCredUsername" type="text" placeholder="Username" autocomplete="off">
+                            </div>
+                            <div class="field">
+                                <input id="inlineEditBasicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
+                            </div>
+                            <div class="field" >
+                                <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="green add icon"></i> Add Credential</button>
+                            </div>
+                            <div class="ui divider"></div>
                         </div>
-                        <div class="field">
-                            <input id="inlineEditBasicAuthCredPassword" type="password" placeholder="Password" autocomplete="off">
-                        </div>
-                        <div class="field" >
-                            <button class="ui basic button" onclick="addCredentialsToEditingList();"><i class="green add icon"></i> Add Credential</button>
-                        </div>
-                        <div class="ui divider"></div>
                     </div>
                 </div>
+                <div class="ui divider"></div>
             </div>
-            <div class="ui divider"></div>
             <h3 class="ui header">Authentication Exclusion</h3>
             <div class="scrolling content ui form">
                 <p>Exclude <b>specific directories which contains the following subpath prefix</b> or <b>IP / CIDR</b> from authentication. Useful if you are hosting services require remote API access.</p>
@@ -86,8 +88,9 @@
                     </div>
                     <div class="ui yellow message" style="margin-top: 0.6em;">
                         <i class="ui exclamation triangle icon"></i>
-                        <b>Security Warning</b><br> 
+                        <b>Security Warning</b><br>
                         Enabling this option lets Zoraxy read the client IP from HTTP headers that can be set by any client on the internet. Only enable this if Zoraxy sits <em>behind a reverse proxy you trust</em> (e.g. Cloudflare).
+                    </div>
                 </div>
                 <div class="field" >
                     <button class="ui basic button" onclick="addExceptionPath();"><i class="yellow add icon"></i> Add Exception</button>
@@ -116,9 +119,14 @@
                 let payloadHash = window.location.hash.substr(1);
                 try{
                     payloadHash = JSON.parse(decodeURIComponent(payloadHash));
-                    loadBasicAuthCredentials(payloadHash.ep);
-                    $("#epname").text(payloadHash.ep);
                     editingEndpoint = payloadHash;
+                    if (editingEndpoint.authMethod && editingEndpoint.authMethod != 1) {
+                        // Not Basic Auth: hide credentials section, show only exceptions
+                        $("#basicAuthCredentialSection").hide();
+                    } else {
+                        loadBasicAuthCredentials(payloadHash.ep);
+                    }
+                    $("#epname").text(payloadHash.ep);
                 }catch(ex){
                     console.log("Unable to load endpoint data from hash")
                 }

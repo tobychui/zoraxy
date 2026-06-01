@@ -530,7 +530,37 @@
                                 </div>
                             </div>
                             <br>
-                            <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em; display: none;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            <!-- Per-route OAuth2 provider config (shown only when OAuth2 is selected) -->
+                            <div class="oauth2PerRouteConfig" style="display:none; margin-top: 0.8em;">
+                                <div class="ui segment" style="margin-top:0.4em;">
+                                    <h4 class="ui header" style="margin-bottom:0.6em;"><i class="yellow key icon"></i> Per-Route OAuth2 Provider</h4>
+                                    <p style="font-size:0.9em; color:#666;">Configure a dedicated OAuth2/OIDC provider for this route (e.g. a different Authentik application). Leave <b>Client ID</b> empty to use the global provider.</p>
+                                    <div class="ui form">
+                                        <div class="field">
+                                            <label>OIDC Well-Known URL <small style="color:#999">(recommended)</small></label>
+                                            <input type="text" class="oauth2PerRouteWellKnown" placeholder="https://auth.example.com/application/o/myapp/.well-known/openid-configuration" autocomplete="off">
+                                        </div>
+                                        <div class="two fields">
+                                            <div class="field">
+                                                <label>Client ID</label>
+                                                <input type="text" class="oauth2PerRouteClientId" placeholder="client-id-for-this-route" autocomplete="off">
+                                            </div>
+                                            <div class="field">
+                                                <label>Client Secret</label>
+                                                <input type="password" class="oauth2PerRouteClientSecret" placeholder="client-secret" autocomplete="off">
+                                            </div>
+                                        </div>
+                                        <div class="field">
+                                            <label>Scopes <small style="color:#999">(optional, comma-separated)</small></label>
+                                            <input type="text" class="oauth2PerRouteScopes" placeholder="openid,profile,email" autocomplete="off">
+                                        </div>
+                                        <button class="ui basic green compact small button oauth2PerRouteSaveBtn" style="margin-top:0.4em;">
+                                            <i class="save icon"></i> Save OAuth2 Config
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="ui divider"></div>
                             <!-- Block Common Exploits -->
                             <label><b>Exploits Prevention</b></label>
@@ -1137,6 +1167,10 @@
         let uptimeMonitorURI = $(editor).find(".UptimeMonitorURI").val().trim();
         let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
+        let oauth2PerRouteWellKnown = $(editor).find(".oauth2PerRouteWellKnown").val().trim();
+        let oauth2PerRouteClientId = $(editor).find(".oauth2PerRouteClientId").val().trim();
+        let oauth2PerRouteClientSecret = $(editor).find(".oauth2PerRouteClientSecret").val().trim();
+        let oauth2PerRouteScopes = $(editor).find(".oauth2PerRouteScopes").val().trim();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
@@ -1178,6 +1212,10 @@
                 "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "authprovider" :authProviderType,
+                "oauth2PerRouteWellKnown": oauth2PerRouteWellKnown,
+                "oauth2PerRouteClientId": oauth2PerRouteClientId,
+                "oauth2PerRouteClientSecret": oauth2PerRouteClientSecret,
+                "oauth2PerRouteScopes": oauth2PerRouteScopes,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
                 "forceHTTP11": forceHTTP11,
@@ -1240,10 +1278,12 @@
 
     
     /* button events */
-    function editBasicAuthCredentials(uuid){
+    function editBasicAuthCredentials(uuid, authMethod){
+        authMethod = authMethod || 1;
         let payload = encodeURIComponent(JSON.stringify({
             ept: "host",
-            ep: uuid
+            ep: uuid,
+            authMethod: authMethod
         }));
         showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
     }
@@ -1907,12 +1947,58 @@
             break;
         }
 
+        function updateAuthCredBtn(authMethod, editorCtx) {
+            let btn = editorCtx.find(".editBasicAuthCredentialsBtn");
+            let oauth2Panel = editorCtx.find(".oauth2PerRouteConfig");
+            if (authMethod == 0) {
+                btn.hide();
+                oauth2Panel.hide();
+            } else if (authMethod == 1) {
+                btn.show().html('<i class="ui blue user circle icon"></i> Basic Auth Credentials');
+                oauth2Panel.hide();
+            } else if (authMethod == 3) {
+                btn.show().html('<i class="ui blue shield alternate icon"></i> Auth Exceptions');
+                oauth2Panel.show();
+            } else {
+                btn.show().html('<i class="ui blue shield alternate icon"></i> Auth Exceptions');
+                oauth2Panel.hide();
+            }
+        }
+        updateAuthCredBtn(subd.AuthenticationProvider.AuthMethod, editor);
+
+        // Populate per-route OAuth2 fields from saved config
+        if (subd.AuthenticationProvider.OAuth2Config) {
+            let cfg = subd.AuthenticationProvider.OAuth2Config;
+            editor.find(".oauth2PerRouteWellKnown").val(cfg.OAuth2WellKnownUrl || "");
+            editor.find(".oauth2PerRouteClientId").val(cfg.OAuth2ClientId || "");
+            editor.find(".oauth2PerRouteClientSecret").val(cfg.OAuth2ClientSecret || "");
+            editor.find(".oauth2PerRouteScopes").val(cfg.OAuth2Scopes || "");
+        }
+
         editor.find(".authProviderPicker input[type='radio']").off("change").on("change", function() {
+            let selectedMethod = parseInt(editor.find(".authProviderPicker input[type='radio']:checked").val() || "0");
+            updateAuthCredBtn(selectedMethod, editor);
             saveProxyInlineEdit(uuid);
         });
 
+        // Save per-route OAuth2 fields on blur (when user leaves a field)
+        editor.find(".oauth2PerRouteWellKnown, .oauth2PerRouteClientId, .oauth2PerRouteClientSecret, .oauth2PerRouteScopes").off("blur").on("blur", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        // Save button for per-route OAuth2 config
+        editor.find(".oauth2PerRouteSaveBtn").off("click").on("click", function() {
+            saveProxyInlineEdit(uuid);
+            $(this).html('<i class="check icon"></i> Saved!').addClass("green");
+            let btn = $(this);
+            setTimeout(function() {
+                btn.html('<i class="save icon"></i> Save OAuth2 Config').removeClass("green");
+            }, 2000);
+        });
+
         editor.find(".editBasicAuthCredentialsBtn").off("click").on("click", function(){
-            editBasicAuthCredentials(uuid);
+            let selectedMethod = parseInt(editor.find(".authProviderPicker input[type='radio']:checked").val() || "0");
+            editBasicAuthCredentials(uuid, selectedMethod);
         });
 
         //Rate limit

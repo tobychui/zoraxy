@@ -197,6 +197,11 @@ type AuthenticationProvider struct {
 	ForwardAuthResponseClientHeaders  []string // List of headers to copy from the forward auth server response to the client response.
 	ForwardAuthRequestHeaders         []string // List of headers to copy from the original request to the auth server. If empty all are copied.
 	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
+
+	/* OAuth2 Per-Route Settings */
+	// When OAuth2Config is non-nil and has a ClientId set, this route uses its own
+	// OAuth2 provider instead of the global one — enabling per-route Authentik providers.
+	OAuth2Config *oauth2.OAuth2ProviderConfig
 }
 
 /* CAPTCHA Provider Configuration */

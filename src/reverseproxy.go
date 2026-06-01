@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -784,14 +785,33 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	switch authProviderType {
 	case 1:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodBasic
+		newProxyEndpoint.AuthenticationProvider.OAuth2Config = nil
 	case 2:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodForward
+		newProxyEndpoint.AuthenticationProvider.OAuth2Config = nil
 	case 3:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodOauth2
+		// Read per-route OAuth2 provider settings
+		oauth2WellKnown, _ := utils.PostPara(r, "oauth2PerRouteWellKnown")
+		oauth2ClientId, _ := utils.PostPara(r, "oauth2PerRouteClientId")
+		oauth2ClientSecret, _ := utils.PostPara(r, "oauth2PerRouteClientSecret")
+		oauth2Scopes, _ := utils.PostPara(r, "oauth2PerRouteScopes")
+		if oauth2ClientId != "" {
+			newProxyEndpoint.AuthenticationProvider.OAuth2Config = &oauth2.OAuth2ProviderConfig{
+				OAuth2WellKnownUrl: oauth2WellKnown,
+				OAuth2ClientId:     oauth2ClientId,
+				OAuth2ClientSecret: oauth2ClientSecret,
+				OAuth2Scopes:       oauth2Scopes,
+			}
+		} else {
+			newProxyEndpoint.AuthenticationProvider.OAuth2Config = nil
+		}
 	case 4:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodZorxAuth
+		newProxyEndpoint.AuthenticationProvider.OAuth2Config = nil
 	default:
 		newProxyEndpoint.AuthenticationProvider.AuthMethod = dynamicproxy.AuthMethodNone
+		newProxyEndpoint.AuthenticationProvider.OAuth2Config = nil
 	}
 
 	disableAutoFallback, _ := utils.PostBool(r, "dAutoFallback")

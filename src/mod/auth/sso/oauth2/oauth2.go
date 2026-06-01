@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -53,8 +54,23 @@ type OIDCDiscoveryDocument struct {
 	UserinfoEndpoint                  string   `json:"userinfo_endpoint"`
 }
 
+// OAuth2ProviderConfig holds per-route OAuth2 provider configuration.
+// Non-empty fields override the global OAuth2 router settings for a specific route.
+// Assign this to AuthenticationProvider.OAuth2Config on a ProxyEndpoint to use
+// a dedicated OAuth2 application (e.g. a different Authentik provider) for that route.
+type OAuth2ProviderConfig struct {
+	OAuth2WellKnownUrl string // OIDC discovery URL, e.g. https://auth.example.com/app/.well-known/openid-configuration
+	OAuth2ServerURL    string // Authorization endpoint (used when WellKnown is not set)
+	OAuth2TokenURL     string // Token endpoint (used when WellKnown is not set)
+	OAuth2UserInfoUrl  string // Userinfo endpoint (optional, discovered from WellKnown if empty)
+	OAuth2ClientId     string // Client ID for this route
+	OAuth2ClientSecret string // Client Secret for this route
+	OAuth2Scopes       string // Comma-separated scopes (optional, overrides global)
+}
+
 type OAuth2Router struct {
-	options *OAuth2RouterOptions
+	options          *OAuth2RouterOptions
+	userInfoUrlCache sync.Map // map[cacheKey string]string — resolved userInfoUrl per cache entry
 }
 
 // NewOAuth2Router creates a new OAuth2Router object
@@ -230,39 +246,56 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	utils.SendOK(w)
 }
 
+// fetchOAuth2ConfigurationFromURL fetches the OIDC discovery document from the given wellKnownUrl
+// and populates missing fields in config. Returns the updated config and the resolved userInfoUrl.
+// Unlike the old fetchOAuth2Configuration, this does NOT modify ar.options (no global side-effects).
+func (ar *OAuth2Router) fetchOAuth2ConfigurationFromURL(config *oauth2.Config, wellKnownUrl string, existingUserInfoUrl string) (*oauth2.Config, string, error) {
+	req, err := http.NewRequest("GET", wellKnownUrl, nil)
+	if err != nil {
+		return nil, existingUserInfoUrl, err
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, existingUserInfoUrl, err
+	}
+	defer resp.Body.Close()
+
+	oidcDiscoveryDocument := OIDCDiscoveryDocument{}
+	if err := json.NewDecoder(resp.Body).Decode(&oidcDiscoveryDocument); err != nil {
+		ar.options.Logger.PrintAndLog("OAuth2Router", fmt.Sprintf("Failed to decode ([%d] %s)", resp.StatusCode, resp.Status), err)
+		return nil, existingUserInfoUrl, err
+	}
+
+	if len(config.Scopes) == 0 {
+		config.Scopes = oidcDiscoveryDocument.ScopesSupported
+	}
+	if config.Endpoint.AuthURL == "" {
+		config.Endpoint.AuthURL = oidcDiscoveryDocument.AuthorizationEndpoint
+	}
+	if config.Endpoint.TokenURL == "" {
+		config.Endpoint.TokenURL = oidcDiscoveryDocument.TokenEndpoint
+	}
+
+	resolvedUserInfoUrl := existingUserInfoUrl
+	if resolvedUserInfoUrl == "" {
+		resolvedUserInfoUrl = oidcDiscoveryDocument.UserinfoEndpoint
+	}
+
+	return config, resolvedUserInfoUrl, nil
+}
+
+// fetchOAuth2Configuration is kept for backward compatibility with the global config path.
 func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2.Config, error) {
-	req, err := http.NewRequest("GET", ar.options.OAuth2WellKnownUrl, nil)
+	updated, userInfoUrl, err := ar.fetchOAuth2ConfigurationFromURL(config, ar.options.OAuth2WellKnownUrl, ar.options.OAuth2UserInfoUrl)
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{}
-	if resp, err := client.Do(req); err != nil {
-		return nil, err
-	} else {
-		defer resp.Body.Close()
-		oidcDiscoveryDocument := OIDCDiscoveryDocument{}
-		if err := json.NewDecoder(resp.Body).Decode(&oidcDiscoveryDocument); err != nil {
-			ar.options.Logger.PrintAndLog("OAuth2Router", fmt.Sprintf("Failed to decode ([%d] %s)", resp.StatusCode, resp.Status), err)
-			return nil, err
-		}
-		if len(config.Scopes) == 0 {
-			config.Scopes = oidcDiscoveryDocument.ScopesSupported
-		}
-
-		if config.Endpoint.AuthURL == "" {
-			config.Endpoint.AuthURL = oidcDiscoveryDocument.AuthorizationEndpoint
-		}
-
-		if config.Endpoint.TokenURL == "" {
-			config.Endpoint.TokenURL = oidcDiscoveryDocument.TokenEndpoint
-		}
-
-		if ar.options.OAuth2UserInfoUrl == "" {
-			ar.options.OAuth2UserInfoUrl = oidcDiscoveryDocument.UserinfoEndpoint
-		}
-
+	// Update global options only for the global config path (backward compat)
+	if ar.options.OAuth2UserInfoUrl == "" {
+		ar.options.OAuth2UserInfoUrl = userInfoUrl
 	}
-	return config, nil
+	return updated, nil
 }
 
 func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error) {
@@ -285,10 +318,87 @@ func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error
 	return config, nil
 }
 
-// HandleOAuth2Auth is the internal handler for OAuth authentication
-// Set useHTTPS to true if your OAuth server is using HTTPS
-// Set OAuthURL to the URL of the OAuth server, e.g. OAuth.example.com
-func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
+// newOAuth2ConfFromRouteConfig creates an OAuth2 config using effective (merged) settings.
+// Returns the config and the resolved userInfoUrl (discovered from well-known if necessary).
+func (ar *OAuth2Router) newOAuth2ConfFromRouteConfig(redirectUrl string, eff *effectiveOAuth2Config) (*oauth2.Config, string, error) {
+	config := &oauth2.Config{
+		ClientID:     eff.clientId,
+		ClientSecret: eff.clientSecret,
+		RedirectURL:  redirectUrl,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  eff.serverURL,
+			TokenURL: eff.tokenURL,
+		},
+	}
+	if eff.scopes != "" {
+		config.Scopes = strings.Split(eff.scopes, ",")
+	}
+	resolvedUserInfoUrl := eff.userInfoUrl
+	if eff.wellKnownUrl != "" && (config.Endpoint.AuthURL == "" || config.Endpoint.TokenURL == "" || resolvedUserInfoUrl == "") {
+		updated, resolved, err := ar.fetchOAuth2ConfigurationFromURL(config, eff.wellKnownUrl, resolvedUserInfoUrl)
+		if err != nil {
+			return nil, "", err
+		}
+		return updated, resolved, nil
+	}
+	return config, resolvedUserInfoUrl, nil
+}
+
+// effectiveOAuth2Config holds the resolved OAuth2 settings for a single request,
+// merging per-route overrides on top of global defaults.
+type effectiveOAuth2Config struct {
+	clientId    string
+	clientSecret string
+	wellKnownUrl string
+	serverURL   string
+	tokenURL    string
+	userInfoUrl string
+	scopes      string
+	cacheKey    string // unique key for the config cache
+}
+
+// resolveEffectiveConfig merges a per-route OAuth2ProviderConfig over the global options.
+// If routeConfig is nil or has no ClientId, the global config is used unchanged.
+func (ar *OAuth2Router) resolveEffectiveConfig(host string, routeConfig *OAuth2ProviderConfig) *effectiveOAuth2Config {
+	eff := &effectiveOAuth2Config{
+		clientId:     ar.options.OAuth2ClientId,
+		clientSecret: ar.options.OAuth2ClientSecret,
+		wellKnownUrl: ar.options.OAuth2WellKnownUrl,
+		serverURL:    ar.options.OAuth2ServerURL,
+		tokenURL:     ar.options.OAuth2TokenURL,
+		userInfoUrl:  ar.options.OAuth2UserInfoUrl,
+		scopes:       ar.options.OAuth2Scopes,
+		cacheKey:     host,
+	}
+	if routeConfig != nil && routeConfig.OAuth2ClientId != "" {
+		eff.clientId = routeConfig.OAuth2ClientId
+		eff.clientSecret = routeConfig.OAuth2ClientSecret
+		if routeConfig.OAuth2WellKnownUrl != "" {
+			eff.wellKnownUrl = routeConfig.OAuth2WellKnownUrl
+		}
+		if routeConfig.OAuth2ServerURL != "" {
+			eff.serverURL = routeConfig.OAuth2ServerURL
+		}
+		if routeConfig.OAuth2TokenURL != "" {
+			eff.tokenURL = routeConfig.OAuth2TokenURL
+		}
+		if routeConfig.OAuth2UserInfoUrl != "" {
+			eff.userInfoUrl = routeConfig.OAuth2UserInfoUrl
+		}
+		if routeConfig.OAuth2Scopes != "" {
+			eff.scopes = routeConfig.OAuth2Scopes
+		}
+		// Use a unique cache key so per-route config does not collide with global
+		eff.cacheKey = host + "|" + eff.clientId
+	}
+	return eff
+}
+
+// HandleOAuth2Auth is the internal handler for OAuth authentication.
+// Pass a non-nil routeConfig to use per-route OAuth2 settings (e.g. a different
+// Authentik provider per virtual host). When routeConfig is nil or has no ClientId,
+// the global OAuth2 settings are used.
+func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request, routeConfig *OAuth2ProviderConfig) error {
 	const callbackPrefix = "/internal/oauth2"
 	const tokenCookie = "z-token"
 	const verifierCookie = "z-verifier"
@@ -297,9 +407,26 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		scheme = "https"
 	}
 
+	// Resolve effective config (per-route overrides global)
+	eff := ar.resolveEffectiveConfig(r.Host, routeConfig)
+
 	reqUrl := scheme + "://" + r.Host + r.RequestURI
-	oauthConfigCache, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(r.Host, func() *oauth2.Config {
-		oauthConfig, err := ar.newOAuth2Conf(scheme + "://" + r.Host + callbackPrefix)
+	oauthConfigCache, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(eff.cacheKey, func() *oauth2.Config {
+		var oauthConfig *oauth2.Config
+		var err error
+		if eff.cacheKey == r.Host {
+			// Global config path — keeps existing behaviour including side-effect on ar.options
+			oauthConfig, err = ar.newOAuth2Conf(scheme + "://" + r.Host + callbackPrefix)
+		} else {
+			// Per-route path — no side-effects on global options
+			var resolvedUserInfoUrl string
+			oauthConfig, resolvedUserInfoUrl, err = ar.newOAuth2ConfFromRouteConfig(
+				scheme+"://"+r.Host+callbackPrefix, eff,
+			)
+			if err == nil {
+				ar.userInfoUrlCache.Store(eff.cacheKey, resolvedUserInfoUrl)
+			}
+		}
 		if err != nil {
 			ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
 			return nil
@@ -313,7 +440,13 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		return errors.New("failed to fetch OIDC configuration")
 	}
 
-	if oauthConfig.Endpoint.AuthURL == "" || oauthConfig.Endpoint.TokenURL == "" || ar.options.OAuth2UserInfoUrl == "" {
+	// Resolve effective userInfoUrl (per-route cache > per-route config > global)
+	effectiveUserInfoUrl := eff.userInfoUrl
+	if cached, ok := ar.userInfoUrlCache.Load(eff.cacheKey); ok {
+		effectiveUserInfoUrl = cached.(string)
+	}
+
+	if oauthConfig.Endpoint.AuthURL == "" || oauthConfig.Endpoint.TokenURL == "" || effectiveUserInfoUrl == "" {
 		ar.options.Logger.PrintAndLog("OAuth2Router", "Invalid OAuth2 configuration", nil)
 		w.WriteHeader(500)
 		return errors.New("invalid OAuth2 configuration")
@@ -387,7 +520,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		} else {
 			ctx := context.Background()
 			client := oauthConfig.Client(ctx, &oauth2.Token{AccessToken: cookie.Value})
-			req, err := client.Get(ar.options.OAuth2UserInfoUrl)
+			req, err := client.Get(effectiveUserInfoUrl)
 			if err != nil {
 				ar.options.Logger.PrintAndLog("OAuth2", "Failed to get user info", err)
 				unauthorized = true
