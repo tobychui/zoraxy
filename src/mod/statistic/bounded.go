@@ -107,6 +107,9 @@ func evictLeastFrequent(m *sync.Map, b *boundedCounter, capN int) {
 	})
 
 	target := capN * 9 / 10
+	if target < 1 {
+		target = 1
+	}
 	if len(entries) <= target {
 		// Range observed fewer entries than expected (concurrent deletes
 		// from another path, or the size counter overshot). Reconcile.

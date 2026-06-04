@@ -85,9 +85,9 @@ func newIncrFn(maxEntries int) incrFn {
 	if maxEntries <= 0 {
 		return unboundedIncr
 	}
-	cap := maxEntries
+	capN := maxEntries
 	return func(m *sync.Map, b *boundedCounter, key string) {
-		boundedIncr(m, b, key, cap)
+		boundedIncr(m, b, key, capN)
 	}
 }
 

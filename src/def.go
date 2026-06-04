@@ -85,7 +85,7 @@ var (
 	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
 
 	/* Statistics Configuration Flags */
-	statsMaxEntriesPerMap = flag.Int("stats_max_entries", 0, "Cap per-dimension statistics maps at N entries; when the cap is exceeded the entries with the lowest request counts are dropped first (0 = unbounded, matches upstream behavior; recommended value when enabled: 20000)")
+	statsMaxEntriesPerMap = flag.Int("stats_max_entries", 0, "Soft-cap per-dimension statistics maps at N entries; when exceeded the entries with the lowest request counts are dropped first (0 = unbounded; recommended value when enabled: 20000)")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
