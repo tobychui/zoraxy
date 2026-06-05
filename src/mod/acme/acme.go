@@ -1,7 +1,7 @@
+// Package acme handles the acme issuing process
 package acme
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -39,39 +39,17 @@ var defaultNameservers = []string{
 }
 
 type CertificateInfoJSON struct {
-	AcmeName    string   `json:"acme_name"`  //ACME provider name
-	AcmeUrl     string   `json:"acme_url"`   //Custom ACME URL (if any)
-	SkipTLS     bool     `json:"skip_tls"`   //Skip TLS verification of upstream
-	UseDNS      bool     `json:"dns"`        //Use DNS challenge
-	PropTimeout int      `json:"prop_time"`  //Propagation timeout
+	AcmeName    string   `json:"acme_name"`  // ACME provider name
+	AcmeUrl     string   `json:"acme_url"`   // Custom ACME URL (if any)
+	SkipTLS     bool     `json:"skip_tls"`   // Skip TLS verification of upstream
+	UseDNS      bool     `json:"dns"`        // Use DNS challenge
+	PropTimeout int      `json:"prop_time"`  // Propagation timeout
 	DNSServers  []string `json:"dnsServers"` // DNS servers
-}
-
-// ACMEUser represents a user in the ACME system.
-type ACMEUser struct {
-	Email        string
-	Registration *registration.Resource
-	key          crypto.PrivateKey
 }
 
 type EABConfig struct {
 	Kid     string `json:"kid"`
 	HmacKey string `json:"HmacKey"`
-}
-
-// GetEmail returns the email of the ACMEUser.
-func (u *ACMEUser) GetEmail() string {
-	return u.Email
-}
-
-// GetRegistration returns the registration resource of the ACMEUser.
-func (u ACMEUser) GetRegistration() *registration.Resource {
-	return u.Registration
-}
-
-// GetPrivateKey returns the private key of the ACMEUser.
-func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
-	return u.key
 }
 
 // ACMEHandler handles ACME-related operations.
@@ -87,7 +65,8 @@ type ACMEHandler struct {
 // NewACME creates a new ACMEHandler instance.
 func NewACME(
 	port string, database *database.Database,
-	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode) *ACMEHandler {
+	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode,
+) *ACMEHandler {
 	return &ACMEHandler{
 		Port:           port,
 		Database:       database,
@@ -156,7 +135,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	}
 
-	//Fallback to Let's Encrypt if it is not set
+	// Fallback to Let's Encrypt if it is not set
 	if caName == "" {
 		caName = "Let's Encrypt"
 	}
@@ -477,7 +456,7 @@ func (a *ACMEHandler) HandleGetExpiredDomains(w http.ResponseWriter, r *http.Req
 func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
 	domainPara, err := utils.PostPara(r, "domains")
 
-	//Clean each domain
+	// Clean each domain
 	cleanedDomains := []string{}
 	if domainPara != "" {
 		for _, d := range strings.Split(domainPara, ",") {
@@ -501,7 +480,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
 	}
-	//Make sure the wildcard * do not goes into the filename
+	// Make sure the wildcard * do not goes into the filename
 	filename = strings.ReplaceAll(filename, "*", "_")
 
 	email, err := utils.PostPara(r, "email")
@@ -527,7 +506,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	if ca == "" {
-		//default. Use Let's Encrypt
+		// default. Use Let's Encrypt
 		ca = "Let's Encrypt"
 	}
 
@@ -562,7 +541,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 				return
 			}
 			if propagationTimeout < 60 {
-				//Minimum propagation timeout is 60 seconds
+				// Minimum propagation timeout is 60 seconds
 				propagationTimeout = 60
 			}
 		}
@@ -633,7 +612,6 @@ func IsPortInUse(port int) bool {
 	}
 	defer listener.Close()
 	return false // Port is not in use
-
 }
 
 // Load cert information from json file

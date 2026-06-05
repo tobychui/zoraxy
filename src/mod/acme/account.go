@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -30,6 +31,28 @@ import (
 	account even if the renewer email differs from the email used at first
 	issuance.
 */
+
+// ACMEUser represents a user in the ACME system.
+type ACMEUser struct {
+	Email        string
+	Registration *registration.Resource
+	key          crypto.PrivateKey
+}
+
+// GetEmail returns the email of the ACMEUser.
+func (u *ACMEUser) GetEmail() string {
+	return u.Email
+}
+
+// GetRegistration returns the registration resource of the ACMEUser.
+func (u ACMEUser) GetRegistration() *registration.Resource {
+	return u.Registration
+}
+
+// GetPrivateKey returns the private key of the ACMEUser.
+func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
+	return u.key
+}
 
 // acmeAccountTable is the database table reusable ACME accounts are stored in.
 // It is intentionally the same table used for this module's DNS and EAB
