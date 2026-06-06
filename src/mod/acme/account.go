@@ -38,7 +38,7 @@ import (
 // acmeAccountTable is the database table reusable ACME accounts are stored in.
 // It is intentionally the same table used for this module's DNS and EAB
 // credentials so all per-CA ACME state lives together.
-const acmeAccountTable = "acme_pref"
+const acmeAccountTable = "acmepref"
 
 // ACMEUser represents a user in the ACME system.
 type ACMEUser struct {
