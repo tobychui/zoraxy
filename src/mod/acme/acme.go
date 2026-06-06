@@ -101,21 +101,61 @@ func (a *ACMEHandler) writeFileWithMode(filename string, data []byte, mode os.Fi
 func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string) (bool, error) {
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
 
-	// generate private key
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		a.Logf("Private key generation failed", err)
-		return false, err
+	// Resolve the CA directory URL before creating an account or config,
+	// so we can check for an existing account before generating a new key.
+	//
+	// Fallback to Let's Encrypt if it is not set
+	if caName == "" {
+		caName = "Let's Encrypt"
 	}
 
-	// create a admin user for our new generation
-	adminUser := ACMEUser{
-		Email: email,
-		key:   privateKey,
+	// setup the custom ACME url endpoint.
+	if caName == "custom" {
+		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
+	} else if caUrl == "" {
+		// if not custom ACME url, load it from ca.json
+		caLinkOverwrite, err := loadCAApiServerFromName(caName, a.TestMode)
+		if err == nil {
+			caUrl = caLinkOverwrite
+			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
+		} else {
+			caUrl, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
+			a.Logf("Using Default ACME "+caUrl+" for CA Directory URL", nil)
+		}
+	} else {
+		a.Logf("Using "+caUrl+" for CA Directory URL", nil)
+	}
+
+	// Reuse a previously registered ACME account for this CA if one is stored
+	// in the database. Only generate a new account key if no stored account
+	// is found.
+	var adminUser ACMEUser
+	accountLoaded := false
+	if loadedKey, loadedReg, ok := a.loadACMEAccount(caUrl, email); ok {
+		adminUser = ACMEUser{
+			Email:        email,
+			key:          loadedKey,
+			Registration: loadedReg,
+		}
+		accountLoaded = true
+		a.Logf("Reusing existing ACME account for "+caUrl, nil)
+	} else {
+		// generate private key
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			a.Logf("Private key generation failed", err)
+			return false, err
+		}
+		// create a admin user for our new generation
+		adminUser = ACMEUser{
+			Email: email,
+			key:   privateKey,
+		}
 	}
 
 	// create config
 	config := lego.NewConfig(&adminUser)
+	config.CADirURL = caUrl
 
 	// skip TLS verify if need
 	// Ref: https://github.com/go-acme/lego/blob/6af2c756ac73a9cb401621afca722d0f4112b1b8/lego/client_config.go#L74
@@ -133,45 +173,6 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 				InsecureSkipVerify: true,
 			},
 		}
-	}
-
-	// Fallback to Let's Encrypt if it is not set
-	if caName == "" {
-		caName = "Let's Encrypt"
-	}
-
-	// setup the custom ACME url endpoint.
-	if caUrl != "" {
-		config.CADirURL = caUrl
-	}
-
-	// if not custom ACME url, load it from ca.json
-	if caName == "custom" {
-		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
-	} else {
-		caLinkOverwrite, err := loadCAApiServerFromName(caName, a.TestMode)
-		if err == nil {
-			config.CADirURL = caLinkOverwrite
-			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
-		} else {
-			// wrong caName => use default acme
-			config.CADirURL, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
-			a.Logf("Using Default ACME "+config.CADirURL+" for CA Directory URL", nil)
-		}
-	}
-
-	// Reuse a previously registered ACME account for this CA if one is stored
-	// in the database. Generating a fresh account key on every call makes
-	// Let's Encrypt treat every renewal as a brand new registration, which
-	// hits the "new registrations per IP" rate limit. config.CADirURL is fully
-	// resolved by this point, and lego.NewClient (below) reads the user key
-	// lazily, so overriding adminUser.key/Registration here is safe.
-	accountLoaded := false
-	if loadedKey, loadedReg, ok := a.loadACMEAccount(config.CADirURL); ok {
-		adminUser.key = loadedKey
-		adminUser.Registration = loadedReg
-		accountLoaded = true
-		a.Logf("Reusing existing ACME account for "+config.CADirURL, nil)
 	}
 
 	config.Certificate.KeyType = certcrypto.RSA2048

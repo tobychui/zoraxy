@@ -3,7 +3,9 @@ package acme
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -123,23 +125,24 @@ func (u *ACMEUser) UnmarshalJSON(data []byte) error {
 }
 
 // accountDBKey returns the database key for the account of a given CA
-// directory URL. It mirrors the "<caDirURL>_<field>" key convention this
-// module already uses for EAB (kid/hmacEncoded) credentials.
-func accountDBKey(caDirURL string) string {
-	return caDirURL + "_account"
+// directory URL and email. Using both ensures unique keys per account
+// even when the same CA is used with different emails.
+func accountDBKey(caDirURL string, email string) string {
+	h := sha256.Sum256([]byte(caDirURL + "|" + email))
+	return "acme_account_" + hex.EncodeToString(h[:8])
 }
 
 // loadACMEAccount tries to load a previously persisted account for the given
-// CA directory URL. It returns (key, registration, true) only when a complete,
-// reusable account is found; otherwise ok is false and the caller should
-// register a new account.
-func (a *ACMEHandler) loadACMEAccount(caDirURL string) (*ecdsa.PrivateKey, *registration.Resource, bool) {
+// CA directory URL and email. It returns (key, registration, true) only when
+// a complete, reusable account is found; otherwise ok is false and the caller
+// should register a new account.
+func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string) (*ecdsa.PrivateKey, *registration.Resource, bool) {
 	if !a.Database.TableExists(acmeAccountTable) {
 		// No ACME table yet (first run) - not an error.
 		return nil, nil, false
 	}
 
-	dbKey := accountDBKey(caDirURL)
+	dbKey := accountDBKey(caDirURL, email)
 	if !a.Database.KeyExists(acmeAccountTable, dbKey) {
 		// No stored account for this CA yet - not an error.
 		return nil, nil, false
@@ -179,5 +182,5 @@ func (a *ACMEHandler) saveACMEAccount(caDirURL string, user *ACMEUser) error {
 		}
 	}
 
-	return a.Database.Write(acmeAccountTable, accountDBKey(caDirURL), user)
+	return a.Database.Write(acmeAccountTable, accountDBKey(caDirURL, user.Email), user)
 }
