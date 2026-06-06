@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 
@@ -32,6 +33,11 @@ import (
 	issuance.
 */
 
+// acmeAccountTable is the database table reusable ACME accounts are stored in.
+// It is intentionally the same table used for this module's DNS and EAB
+// credentials so all per-CA ACME state lives together.
+const acmeAccountTable = "acme_pref"
+
 // ACMEUser represents a user in the ACME system.
 type ACMEUser struct {
 	Email        string
@@ -54,10 +60,54 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 	return u.key
 }
 
-// acmeAccountTable is the database table reusable ACME accounts are stored in.
-// It is intentionally the same table used for this module's DNS and EAB
-// credentials so all per-CA ACME state lives together.
-const acmeAccountTable = "acme"
+// MarshalJSON implements json.Marshaler for ACMEUser.
+// It serializes the private key as a PEM string because
+// crypto.PrivateKey cannot be marshalled directly.
+func (u *ACMEUser) MarshalJSON() ([]byte, error) {
+	pemData := ""
+	if u.key != nil {
+		if ecKey, ok := u.key.(*ecdsa.PrivateKey); ok {
+			der, _ := x509.MarshalECPrivateKey(ecKey)
+			pemData = string(pem.EncodeToMemory(&pem.Block{
+				Type: "EC PRIVATE KEY", Bytes: der,
+			}))
+		}
+	}
+	return json.Marshal(struct {
+		Email        string                 `json:"email"`
+		Registration *registration.Resource `json:"registration"`
+		KeyPEM       string                 `json:"key"`
+	}{
+		Email:        u.Email,
+		Registration: u.Registration,
+		KeyPEM:       pemData,
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler for ACMEUser.
+// It deserializes the private key from the PEM string field
+// back into a crypto.PrivateKey.
+func (u *ACMEUser) UnmarshalJSON(data []byte) error {
+	aux := struct {
+		Email        string                 `json:"email"`
+		Registration *registration.Resource `json:"registration"`
+		KeyPEM       string                 `json:"key"`
+	}{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	u.Email = aux.Email
+	u.Registration = aux.Registration
+	if aux.KeyPEM != "" {
+		block, _ := pem.Decode([]byte(aux.KeyPEM))
+		if block != nil {
+			if parsedKey, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
+				u.key = parsedKey
+			}
+		}
+	}
+	return nil
+}
 
 // acmeAccountStore is the stored representation of a reusable ACME account.
 type acmeAccountStore struct {
