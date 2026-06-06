@@ -70,24 +70,25 @@ func DailySummaryExportToSummary(export DailySummaryExport) DailySummary {
 		TotalRequest:        export.TotalRequest,
 		ErrorRequest:        export.ErrorRequest,
 		ValidRequest:        export.ValidRequest,
-		ForwardTypes:        &sync.Map{},
-		RequestOrigin:       &sync.Map{},
-		RequestClientIp:     &sync.Map{},
-		Referer:             &sync.Map{},
-		UserAgent:           &sync.Map{},
-		RequestURL:          &sync.Map{},
-		DownstreamHostnames: &sync.Map{},
-		UpstreamHostnames:   &sync.Map{},
+		ForwardTypes:        MapStringIntToSyncMap(export.ForwardTypes),
+		RequestOrigin:       MapStringIntToSyncMap(export.RequestOrigin),
+		RequestClientIp:     MapStringIntToSyncMap(export.RequestClientIp),
+		Referer:             MapStringIntToSyncMap(export.Referer),
+		UserAgent:           MapStringIntToSyncMap(export.UserAgent),
+		RequestURL:          MapStringIntToSyncMap(export.RequestURL),
+		DownstreamHostnames: MapStringIntToSyncMap(export.Downstreams),
+		UpstreamHostnames:   MapStringIntToSyncMap(export.Upstreams),
+		bounded: boundedCounters{
+			ForwardTypes:        newBoundedCounter(len(export.ForwardTypes)),
+			RequestOrigin:       newBoundedCounter(len(export.RequestOrigin)),
+			RequestClientIp:     newBoundedCounter(len(export.RequestClientIp)),
+			Referer:             newBoundedCounter(len(export.Referer)),
+			UserAgent:           newBoundedCounter(len(export.UserAgent)),
+			RequestURL:          newBoundedCounter(len(export.RequestURL)),
+			DownstreamHostnames: newBoundedCounter(len(export.Downstreams)),
+			UpstreamHostnames:   newBoundedCounter(len(export.Upstreams)),
+		},
 	}
-
-	summary.ForwardTypes = MapStringIntToSyncMap(export.ForwardTypes)
-	summary.RequestOrigin = MapStringIntToSyncMap(export.RequestOrigin)
-	summary.RequestClientIp = MapStringIntToSyncMap(export.RequestClientIp)
-	summary.Referer = MapStringIntToSyncMap(export.Referer)
-	summary.UserAgent = MapStringIntToSyncMap(export.UserAgent)
-	summary.RequestURL = MapStringIntToSyncMap(export.RequestURL)
-	summary.DownstreamHostnames = MapStringIntToSyncMap(export.Downstreams)
-	summary.UpstreamHostnames = MapStringIntToSyncMap(export.Upstreams)
 
 	return summary
 }
