@@ -1,7 +1,7 @@
+// Package acme handles the acme issuing process
 package acme
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -39,39 +39,17 @@ var defaultNameservers = []string{
 }
 
 type CertificateInfoJSON struct {
-	AcmeName    string   `json:"acme_name"`  //ACME provider name
-	AcmeUrl     string   `json:"acme_url"`   //Custom ACME URL (if any)
-	SkipTLS     bool     `json:"skip_tls"`   //Skip TLS verification of upstream
-	UseDNS      bool     `json:"dns"`        //Use DNS challenge
-	PropTimeout int      `json:"prop_time"`  //Propagation timeout
+	AcmeName    string   `json:"acme_name"`  // ACME provider name
+	AcmeUrl     string   `json:"acme_url"`   // Custom ACME URL (if any)
+	SkipTLS     bool     `json:"skip_tls"`   // Skip TLS verification of upstream
+	UseDNS      bool     `json:"dns"`        // Use DNS challenge
+	PropTimeout int      `json:"prop_time"`  // Propagation timeout
 	DNSServers  []string `json:"dnsServers"` // DNS servers
-}
-
-// ACMEUser represents a user in the ACME system.
-type ACMEUser struct {
-	Email        string
-	Registration *registration.Resource
-	key          crypto.PrivateKey
 }
 
 type EABConfig struct {
 	Kid     string `json:"kid"`
 	HmacKey string `json:"HmacKey"`
-}
-
-// GetEmail returns the email of the ACMEUser.
-func (u *ACMEUser) GetEmail() string {
-	return u.Email
-}
-
-// GetRegistration returns the registration resource of the ACMEUser.
-func (u ACMEUser) GetRegistration() *registration.Resource {
-	return u.Registration
-}
-
-// GetPrivateKey returns the private key of the ACMEUser.
-func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
-	return u.key
 }
 
 // ACMEHandler handles ACME-related operations.
@@ -87,7 +65,8 @@ type ACMEHandler struct {
 // NewACME creates a new ACMEHandler instance.
 func NewACME(
 	port string, database *database.Database,
-	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode) *ACMEHandler {
+	logger *logger.Logger, testMode bool, keyFileMode os.FileMode, publicFileMode os.FileMode,
+) *ACMEHandler {
 	return &ACMEHandler{
 		Port:           port,
 		Database:       database,
@@ -122,21 +101,61 @@ func (a *ACMEHandler) writeFileWithMode(filename string, data []byte, mode os.Fi
 func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string) (bool, error) {
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
 
-	// generate private key
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		a.Logf("Private key generation failed", err)
-		return false, err
+	// Resolve the CA directory URL before creating an account or config,
+	// so we can check for an existing account before generating a new key.
+	//
+	// Fallback to Let's Encrypt if it is not set
+	if caName == "" {
+		caName = "Let's Encrypt"
 	}
 
-	// create a admin user for our new generation
-	adminUser := ACMEUser{
-		Email: email,
-		key:   privateKey,
+	// setup the custom ACME url endpoint.
+	if caName == "custom" {
+		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
+	} else if caUrl == "" {
+		// if not custom ACME url, load it from ca.json
+		caLinkOverwrite, err := loadCAApiServerFromName(caName, a.TestMode)
+		if err == nil {
+			caUrl = caLinkOverwrite
+			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
+		} else {
+			caUrl, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
+			a.Logf("Using Default ACME "+caUrl+" for CA Directory URL", nil)
+		}
+	} else {
+		a.Logf("Using "+caUrl+" for CA Directory URL", nil)
+	}
+
+	// Reuse a previously registered ACME account for this CA if one is stored
+	// in the database. Only generate a new account key if no stored account
+	// is found.
+	var adminUser ACMEUser
+	accountLoaded := false
+	if loadedKey, loadedReg, ok := a.loadACMEAccount(caUrl, email); ok {
+		adminUser = ACMEUser{
+			Email:        email,
+			key:          loadedKey,
+			Registration: loadedReg,
+		}
+		accountLoaded = true
+		a.Logf("Reusing existing ACME account for "+caUrl, nil)
+	} else {
+		// generate private key
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			a.Logf("Private key generation failed", err)
+			return false, err
+		}
+		// create a admin user for our new generation
+		adminUser = ACMEUser{
+			Email: email,
+			key:   privateKey,
+		}
 	}
 
 	// create config
 	config := lego.NewConfig(&adminUser)
+	config.CADirURL = caUrl
 
 	// skip TLS verify if need
 	// Ref: https://github.com/go-acme/lego/blob/6af2c756ac73a9cb401621afca722d0f4112b1b8/lego/client_config.go#L74
@@ -153,31 +172,6 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
-		}
-	}
-
-	//Fallback to Let's Encrypt if it is not set
-	if caName == "" {
-		caName = "Let's Encrypt"
-	}
-
-	// setup the custom ACME url endpoint.
-	if caUrl != "" {
-		config.CADirURL = caUrl
-	}
-
-	// if not custom ACME url, load it from ca.json
-	if caName == "custom" {
-		a.Logf("Using Custom ACME "+caUrl+" for CA Directory URL", nil)
-	} else {
-		caLinkOverwrite, err := loadCAApiServerFromName(caName, a.TestMode)
-		if err == nil {
-			config.CADirURL = caLinkOverwrite
-			a.Logf("Using "+caLinkOverwrite+" for CA Directory URL", nil)
-		} else {
-			// wrong caName => use default acme
-			config.CADirURL, _ = loadCAApiServerFromName("Let's Encrypt", a.TestMode)
-			a.Logf("Using Default ACME "+config.CADirURL+" for CA Directory URL", nil)
 		}
 	}
 
@@ -264,8 +258,12 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	*/
 	var reg *registration.Resource
-	// New users will need to register
-	if client.GetExternalAccountRequired() {
+	// New users will need to register. If we reused an account loaded from
+	// disk, it is already registered - registering again would count against
+	// the CA's "new registrations per IP" rate limit, so skip it entirely.
+	if accountLoaded {
+		reg = adminUser.Registration
+	} else if client.GetExternalAccountRequired() {
 		a.Logf("External Account Required for this ACME Provider", nil)
 		// IF KID and HmacEncoded is overidden
 
@@ -313,6 +311,16 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	}
 	adminUser.Registration = reg
+
+	// Persist a freshly registered account so future certificate requests and
+	// renewals reuse it instead of registering a brand new account each time.
+	if !accountLoaded && reg != nil {
+		if serr := a.saveACMEAccount(config.CADirURL, &adminUser); serr != nil {
+			a.Logf("Failed to persist ACME account (renewals may hit rate limits)", serr)
+		} else {
+			a.Logf("Persisted ACME account for reuse on "+config.CADirURL, nil)
+		}
+	}
 
 	// obtain the certificate
 	request := certificate.ObtainRequest{
@@ -449,7 +457,7 @@ func (a *ACMEHandler) HandleGetExpiredDomains(w http.ResponseWriter, r *http.Req
 func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Request) {
 	domainPara, err := utils.PostPara(r, "domains")
 
-	//Clean each domain
+	// Clean each domain
 	cleanedDomains := []string{}
 	if domainPara != "" {
 		for _, d := range strings.Split(domainPara, ",") {
@@ -473,7 +481,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
 	}
-	//Make sure the wildcard * do not goes into the filename
+	// Make sure the wildcard * do not goes into the filename
 	filename = strings.ReplaceAll(filename, "*", "_")
 
 	email, err := utils.PostPara(r, "email")
@@ -499,7 +507,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	if ca == "" {
-		//default. Use Let's Encrypt
+		// default. Use Let's Encrypt
 		ca = "Let's Encrypt"
 	}
 
@@ -534,7 +542,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 				return
 			}
 			if propagationTimeout < 60 {
-				//Minimum propagation timeout is 60 seconds
+				// Minimum propagation timeout is 60 seconds
 				propagationTimeout = 60
 			}
 		}
@@ -605,7 +613,6 @@ func IsPortInUse(port int) bool {
 	}
 	defer listener.Close()
 	return false // Port is not in use
-
 }
 
 // Load cert information from json file
