@@ -65,14 +65,19 @@ func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
 // crypto.PrivateKey cannot be marshalled directly.
 func (u *ACMEUser) MarshalJSON() ([]byte, error) {
 	pemData := ""
-	if u.key != nil {
-		if ecKey, ok := u.key.(*ecdsa.PrivateKey); ok {
-			der, _ := x509.MarshalECPrivateKey(ecKey)
-			pemData = string(pem.EncodeToMemory(&pem.Block{
-				Type: "EC PRIVATE KEY", Bytes: der,
-			}))
-		}
+	if u.key == nil {
+		return nil, errors.New("no ACME account key found")
 	}
+	ecKey, ok := u.key.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, errors.New("ACME account private key is not an ECDSA key")
+	}
+
+	der, _ := x509.MarshalECPrivateKey(ecKey)
+	pemData = string(pem.EncodeToMemory(&pem.Block{
+		Type: "EC PRIVATE KEY", Bytes: der,
+	}))
+
 	return json.Marshal(struct {
 		Email        string                 `json:"email"`
 		Registration *registration.Resource `json:"registration"`
@@ -98,22 +103,23 @@ func (u *ACMEUser) UnmarshalJSON(data []byte) error {
 	}
 	u.Email = aux.Email
 	u.Registration = aux.Registration
-	if aux.KeyPEM != "" {
-		block, _ := pem.Decode([]byte(aux.KeyPEM))
-		if block != nil {
-			if parsedKey, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
-				u.key = parsedKey
-			}
-		}
-	}
-	return nil
-}
 
-// acmeAccountStore is the stored representation of a reusable ACME account.
-type acmeAccountStore struct {
-	Email         string                 `json:"email"`
-	Registration  *registration.Resource `json:"registration"`
-	PrivateKeyPEM string                 `json:"private_key_pem"`
+	if aux.KeyPEM == "" {
+		return errors.New("no ACME account key stored")
+	}
+
+	block, _ := pem.Decode([]byte(aux.KeyPEM))
+	if block == nil || block.Type != "EC PRIVATE KEY" {
+		return errors.New("stored ACME account key could not be decoded as EC private key")
+	}
+
+	parsedKey, err := x509.ParseECPrivateKey(block.Bytes)
+	if err != nil {
+		return errors.New("stored ACME account key could not be parsed")
+	}
+	u.key = parsedKey
+
+	return nil
 }
 
 // accountDBKey returns the database key for the account of a given CA
@@ -139,30 +145,24 @@ func (a *ACMEHandler) loadACMEAccount(caDirURL string) (*ecdsa.PrivateKey, *regi
 		return nil, nil, false
 	}
 
-	var store acmeAccountStore
-	if err := a.Database.Read(acmeAccountTable, dbKey, &store); err != nil {
+	var user ACMEUser
+	if err := a.Database.Read(acmeAccountTable, dbKey, &user); err != nil {
 		a.Logf("Stored ACME account for "+caDirURL+" is invalid, registering a new account", err)
 		return nil, nil, false
 	}
 
-	block, _ := pem.Decode([]byte(store.PrivateKeyPEM))
-	if block == nil {
-		a.Logf("Stored ACME account key for "+caDirURL+" could not be decoded, registering a new account", nil)
-		return nil, nil, false
-	}
-
-	key, err := x509.ParseECPrivateKey(block.Bytes)
-	if err != nil {
-		a.Logf("Stored ACME account key for "+caDirURL+" could not be parsed, registering a new account", err)
-		return nil, nil, false
-	}
-
-	if store.Registration == nil || store.Registration.URI == "" {
+	if user.Registration == nil || user.Registration.URI == "" {
 		// A key without a usable registration URI cannot be reused on its own.
 		return nil, nil, false
 	}
 
-	return key, store.Registration, true
+	ecKey, ok := user.key.(*ecdsa.PrivateKey)
+	if !ok {
+		a.Logf("Stored ACME account key for "+caDirURL+" is not an ECDSA key", nil)
+		return nil, nil, false
+	}
+
+	return ecKey, user.Registration, true
 }
 
 // saveACMEAccount persists the account (key + registration) so that subsequent
@@ -173,28 +173,11 @@ func (a *ACMEHandler) saveACMEAccount(caDirURL string, user *ACMEUser) error {
 		return errors.New("no ACME registration to persist")
 	}
 
-	ecKey, ok := user.GetPrivateKey().(*ecdsa.PrivateKey)
-	if !ok {
-		return errors.New("ACME account private key is not an ECDSA key")
-	}
-
-	der, err := x509.MarshalECPrivateKey(ecKey)
-	if err != nil {
-		return err
-	}
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
-
-	store := acmeAccountStore{
-		Email:         user.GetEmail(),
-		Registration:  user.GetRegistration(),
-		PrivateKeyPEM: string(keyPEM),
-	}
-
 	if !a.Database.TableExists(acmeAccountTable) {
 		if err := a.Database.NewTable(acmeAccountTable); err != nil {
 			return err
 		}
 	}
 
-	return a.Database.Write(acmeAccountTable, accountDBKey(caDirURL), &store)
+	return a.Database.Write(acmeAccountTable, accountDBKey(caDirURL), user)
 }
