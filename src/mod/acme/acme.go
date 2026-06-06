@@ -316,7 +316,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	// renewals reuse it instead of registering a brand new account each time.
 	if !accountLoaded && reg != nil {
 		if serr := a.saveACMEAccount(config.CADirURL, &adminUser); serr != nil {
-			a.Logf("Failed to persist ACME account (renewals may hit rate limits)", serr)
+			a.Logf("Failed to persist ACME account (may hit account create limits, try a different IP)", serr)
 		} else {
 			a.Logf("Persisted ACME account for reuse on "+config.CADirURL, nil)
 		}
