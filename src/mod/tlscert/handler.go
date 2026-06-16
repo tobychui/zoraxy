@@ -24,6 +24,11 @@ func (m *Manager) HandleCertRemove(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "invalid domain given")
 		return
 	}
+	domain, err = sanitizeCertDomain(domain)
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid domain given")
+		return
+	}
 	err = m.RemoveCert(domain)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())

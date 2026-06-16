@@ -289,19 +289,38 @@ func (m *Manager) DefaultCertExistsSep() (bool, bool) {
 	return utils.FileExists(filepath.Join(m.CertStore, "default.pem")), utils.FileExists(filepath.Join(m.CertStore, "default.key"))
 }
 
+func sanitizeCertDomain(domain string) (string, error) {
+	domain = strings.TrimSpace(domain)
+	if domain != filepath.Base(domain) {
+		return "", fmt.Errorf("invalid domain")
+	}
+	if strings.Contains(domain, "/") || strings.Contains(domain, "\\") {
+		return "", fmt.Errorf("invalid domain")
+	}
+	if domain == "" || domain == "." || domain == ".." {
+		return "", fmt.Errorf("invalid domain")
+	}
+	return domain, nil
+}
+
 // Delete the cert if exists
 func (m *Manager) RemoveCert(domain string) error {
+	domain, err := sanitizeCertDomain(domain)
+	if err != nil {
+		return err
+	}
+
 	pubKey := filepath.Join(m.CertStore, domain+".pem")
 	priKey := filepath.Join(m.CertStore, domain+".key")
 	if utils.FileExists(pubKey) {
-		err := os.Remove(pubKey)
+		err = os.Remove(pubKey)
 		if err != nil {
 			return err
 		}
 	}
 
 	if utils.FileExists(priKey) {
-		err := os.Remove(priKey)
+		err = os.Remove(priKey)
 		if err != nil {
 			return err
 		}
