@@ -328,8 +328,11 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	bypassGlobalTLS, _ := utils.PostPara(r, "bypassGlobalTLS")
 	if bypassGlobalTLS == "" {
 		bypassGlobalTLS = "false"
-
 	}
+
+	// Allow HTTP CONNECT tunneling to the configured upstream (disabled by default)
+	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
+	enableConnectSupport := enableConnectSupportStr == "true"
 
 	// Enable uptime monitor?
 	enableUtm, err := utils.PostBool(r, "enableUtm")
@@ -519,9 +522,10 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			UseStickySession: useStickySession,
 
 			//TLS
-			BypassGlobalTLS:  useBypassGlobalTLS,
-			AccessFilterUUID: accessRuleID,
-			TlsOptions:       tlscert.GetDefaultHostSpecificTlsBehavior(),
+			BypassGlobalTLS:      useBypassGlobalTLS,
+			EnableConnectSupport: enableConnectSupport,
+			AccessFilterUUID:     accessRuleID,
+			TlsOptions:           tlscert.GetDefaultHostSpecificTlsBehavior(),
 
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
@@ -673,6 +677,10 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassGlobalTLS := (bpgtls == "true")
 
+	// Allow HTTP CONNECT tunneling to the configured upstream (disabled by default)
+	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
+	enableConnectSupport := enableConnectSupportStr == "true"
+
 	//Disable uptime monitor
 	disbleUtm, err := utils.PostBool(r, "dutm")
 	if err != nil {
@@ -775,6 +783,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
+	newProxyEndpoint.EnableConnectSupport = enableConnectSupport
 	if newProxyEndpoint.AuthenticationProvider == nil {
 		newProxyEndpoint.AuthenticationProvider = &dynamicproxy.AuthenticationProvider{
 			AuthMethod:              dynamicproxy.AuthMethodNone,

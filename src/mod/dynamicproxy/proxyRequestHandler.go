@@ -247,6 +247,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
+		AllowConnect:                   target.EnableConnectSupport,
 		Version:                        target.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.Option.DevelopmentMode,
 	})

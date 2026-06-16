@@ -123,6 +123,12 @@
                                         <label>Allow plain HTTP access<br><small>Allow this subdomain to be connected without TLS (Require HTTP server enabled on port 80)</small></label>
                                     </div>
                                 </div>
+                                <div class="field">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" id="enableConnectSupport">
+                                        <label>Enable HTTP CONNECT tunneling<br><small>Allow CONNECT method only to this route's configured upstream. Leave disabled unless you specifically need forward-proxy tunneling.</small></label>
+                                    </div>
+                                </div>
                                 <br>
                                 <div class="field">
                                     <label><b>Exploits Prevention</b></label>
@@ -337,6 +343,7 @@
         let useTLS = $("#reqTls")[0].checked;
         let skipTLSValidation = $("#skipTLSValidation")[0].checked;
         let bypassGlobalTLS = $("#bypassGlobalTLS")[0].checked;
+        let enableConnectSupport = $("#enableConnectSupport")[0].checked;
         let requireBasicAuth = $("#requireBasicAuth")[0].checked;
         let proxyRateLimit = $("#proxyRateLimit").val();
         let requireRateLimit = $("#requireRateLimit")[0].checked;
@@ -382,6 +389,7 @@
                 tlsval: skipTLSValidation,
                 bpwsorg: skipWebSocketOriginCheck,
                 bypassGlobalTLS: bypassGlobalTLS,
+                enableConnectSupport: enableConnectSupport,
                 bauth: requireBasicAuth,
                 rate: requireRateLimit,
                 ratenum: proxyRateLimit,

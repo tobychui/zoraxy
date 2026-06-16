@@ -240,8 +240,9 @@ type ProxyEndpoint struct {
 	ListeningPorts       []string                //Alternative listening ports in format "ip:port" or ":port" (e.g., ":8080", "192.168.1.1:8080")
 
 	//Inbound TLS/SSL Related
-	BypassGlobalTLS bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
-	TlsOptions      *tlscert.HostSpecificTlsBehavior //TLS options for this endpoint, if nil, use global TLS options
+	BypassGlobalTLS      bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
+	EnableConnectSupport bool                             //Allow HTTP CONNECT tunneling to the configured upstream (disabled by default to prevent open-proxy abuse)
+	TlsOptions           *tlscert.HostSpecificTlsBehavior //TLS options for this endpoint, if nil, use global TLS options
 
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint

@@ -318,12 +318,10 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	//Validate basic auth
-	if sep.AuthenticationProvider.AuthMethod == AuthMethodBasic {
-		err := handleBasicAuth(w, r, sep)
-		if err != nil {
-			return
-		}
+	//Validate authentication using all configured auth methods (Basic, ForwardAuth, OAuth2, ZorxAuth)
+	proxyHandler := router.mux.(*ProxyHandler)
+	if handleAuthProviderRouting(sep, w, r, proxyHandler) {
+		return
 	}
 
 	//Check if any virtual directory rules matches
@@ -365,6 +363,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		HostHeaderOverwrite:     endpointProxyRewriteRules.RequestHostOverwrite,
 		NoRemoveHopByHop:        endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
 		NoRemoveUserAgentHeader: endpointProxyRewriteRules.DisableUserAgentHeaderRemoval,
+		AllowConnect:            sep.EnableConnectSupport,
 		PathPrefix:              "",
 		Version:                 sep.parent.Option.HostVersion,
 		DevelopmentMode:         sep.parent.Option.DevelopmentMode,

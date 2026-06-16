@@ -1,6 +1,7 @@
 package dpcore
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -76,6 +77,7 @@ type ResponseRewriteRuleSet struct {
 	NoRemoveUserAgentHeader        bool   //Do not remove User-Agent header from server response (advanced usecase)
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 	ForceHTTP11                    bool   //Force use HTTP/1.1 for upstream connection
+	AllowConnect                   bool   //Allow HTTP CONNECT tunneling; when true the target is validated against ProxyDomain
 
 	/* System Information Payload */
 	DevelopmentMode bool   //Inject dev mode information to requests
@@ -306,6 +308,22 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
+	// Fix for #1204 HTTP/2 to HTTP/1.1 translation for bodyless POST requests.
+	if outreq.ContentLength == -1 && outreq.Body != nil && outreq.Body != http.NoBody {
+		buf := make([]byte, 1)
+		n, err := outreq.Body.Read(buf)
+		switch {
+		case n == 0 && err == io.EOF:
+			// Body is confirmed empty, prevent chunked encoding downstream.
+			outreq.Body = http.NoBody
+			outreq.ContentLength = 0
+			outreq.GetBody = nil
+		case n > 0:
+			// Body has content; put the peeked byte back.
+			outreq.Body = io.NopCloser(io.MultiReader(bytes.NewReader(buf[:n]), outreq.Body))
+		}
+	}
+
 	// Fix for #997
 	// Only clone transport when configuration needs to change to preserve connection pooling.
 	// Fix for #1088
@@ -442,7 +460,26 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	return res.StatusCode, nil
 }
 
-func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
+func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
+	// Validate the CONNECT target against the configured upstream before hijacking
+	// so that http.Error still works if validation fails.
+	connectTarget := req.URL.Host
+	if !strings.Contains(connectTarget, ":") {
+		connectTarget += ":443"
+	}
+	allowedHost := rrr.ProxyDomain
+	if !strings.Contains(allowedHost, ":") {
+		if rrr.UseTLS {
+			allowedHost += ":443"
+		} else {
+			allowedHost += ":80"
+		}
+	}
+	if connectTarget != allowedHost {
+		http.Error(rw, "Forbidden", http.StatusForbidden)
+		return http.StatusForbidden, errors.New("CONNECT to " + connectTarget + " denied: target must match the configured upstream")
+	}
+
 	hij, ok := rw.(http.Hijacker)
 	if !ok {
 		p.logf("http server does not support hijacker")
@@ -537,8 +574,11 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (in
 
 func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	if req.Method == "CONNECT" {
-		return p.ProxyHTTPS(rw, req)
-	} else {
-		return p.ProxyHTTP(rw, req, rrr)
+		if !rrr.AllowConnect {
+			http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return http.StatusMethodNotAllowed, nil
+		}
+		return p.ProxyHTTPS(rw, req, rrr)
 	}
+	return p.ProxyHTTP(rw, req, rrr)
 }
