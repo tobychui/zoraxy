@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -15,14 +16,26 @@ import (
 	UDP Proxy Module
 */
 
+// defaultUDPTimeout is the idle-session timeout used for UDP proxy sessions
+const defaultUDPTimeout = 60 * time.Second
+
 // Information maintained for each client/server connection
 type udpClientServerConn struct {
-	ClientAddr *net.UDPAddr // Address of the client
-	ServerConn *net.UDPConn // UDP connection to server
+	ClientAddr *net.UDPAddr  // Address of the client
+	ServerConn *net.UDPConn  // UDP connection to server
+	timeout    time.Duration // Idle timeout for this session; 0 disables expiry
+}
+
+// udpIdleTimeout returns the timeout value of this rule
+func (c *ProxyRelayInstance) udpIdleTimeout() time.Duration {
+	if c.Timeout > 0 {
+		return time.Duration(c.Timeout) * time.Second
+	}
+	return defaultUDPTimeout
 }
 
 // Generate a new connection by opening a UDP connection to the server
-func createNewUDPConn(srvAddr, cliAddr *net.UDPAddr) *udpClientServerConn {
+func createNewUDPConn(srvAddr, cliAddr *net.UDPAddr, timeout time.Duration) *udpClientServerConn {
 	conn := new(udpClientServerConn)
 	conn.ClientAddr = cliAddr
 	srvudp, err := net.DialUDP("udp", nil, srvAddr)
@@ -30,6 +43,7 @@ func createNewUDPConn(srvAddr, cliAddr *net.UDPAddr) *udpClientServerConn {
 		return nil
 	}
 	conn.ServerConn = srvudp
+	conn.timeout = timeout
 	return conn
 }
 
@@ -57,19 +71,46 @@ func initUDPConnections(listenAddr string, targetAddress string) (*net.UDPConn, 
 
 // Go routine which manages connection from server to single client
 func (c *ProxyRelayInstance) RunUDPConnectionRelay(conn *udpClientServerConn, lisenter *net.UDPConn) {
+	// Fix for #1207:
+	// Release the per-client socket and remove the map entry on start
+	saddr := conn.ClientAddr.String()
+	defer func() {
+		conn.ServerConn.Close()
+		// Only delete if the map still points to *this* connection so we never
+		// clobber a freshly recreated session for the same client address.
+		c.udpClientMap.CompareAndDelete(saddr, conn)
+	}()
+
 	var buffer [1500]byte
 	for {
+		// Refresh the idle deadline before each read
+		if conn.timeout > 0 {
+			conn.ServerConn.SetReadDeadline(time.Now().Add(conn.timeout))
+		}
+
 		// Read from server
 		n, err := conn.ServerConn.Read(buffer[0:])
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
+				// Socket closed by proxy shutdown or session teardown
 				return
 			}
-			continue
+			if errors.Is(err, os.ErrDeadlineExceeded) {
+				// Session was idle for longer than the timeout window
+				c.LogMsg("[UDP] Idle session for client "+saddr+" expired after "+conn.timeout.String(), nil)
+				return
+			}
+
+			c.LogMsg("[UDP] Read error for client "+saddr+", closing session: "+err.Error(), nil)
+			return
 		}
 		// Relay it to client
 		_, err = lisenter.WriteToUDP(buffer[0:n], conn.ClientAddr)
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				// Inbound listener gone (proxy stopping)
+				return
+			}
 			continue
 		}
 
@@ -161,7 +202,7 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 				continue
 			}
 
-			conn = createNewUDPConn(targetAddr, cliaddr)
+			conn = createNewUDPConn(targetAddr, cliaddr, c.udpIdleTimeout())
 			if conn == nil {
 				continue
 			}
@@ -177,6 +218,11 @@ func (c *ProxyRelayInstance) ForwardUDP(address1, address2 string, stopChan chan
 		} else {
 			c.LogMsg("[UDP] Found connection for client "+saddr, nil)
 			conn = rawConn.(*udpClientServerConn)
+		}
+
+		// The client just sent a packet, update idle deadline
+		if conn.timeout > 0 {
+			conn.ServerConn.SetReadDeadline(time.Now().Add(conn.timeout))
 		}
 
 		// Relay to server
