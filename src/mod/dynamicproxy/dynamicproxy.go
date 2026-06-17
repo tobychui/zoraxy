@@ -215,8 +215,9 @@ func (router *Router) StartProxyService() error {
 
 		//Start the TLS server
 		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (TLS mode)", nil)
-		go func() {
-			ln, err := net.Listen("tcp", router.server.Addr)
+		// Fixed #1206: passing the router.server into go routine to prevent nil pointer exception
+		go func(srv *http.Server) {
+			ln, err := net.Listen("tcp", srv.Addr)
 			if err != nil {
 				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server (listen failed)", err)
 				return
@@ -233,11 +234,11 @@ func (router *Router) StartProxyService() error {
 				finalListener = ln
 			}
 
-			if err := router.server.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
+			if err := srv.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
 				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
 			}
 
-		}()
+		}(router.server)
 	} else {
 		//Serve with non TLS mode
 		router.tlsListener = nil
@@ -251,9 +252,10 @@ func (router *Router) StartProxyService() error {
 		}
 		router.Running = true
 		router.Option.Logger.PrintAndLog("dprouter", "Reverse proxy service started in the background (Plain HTTP mode)", nil)
-		go func() {
-			router.server.ListenAndServe()
-		}()
+
+		go func(srv *http.Server) {
+			srv.ListenAndServe()
+		}(router.server) // Fixed #1206
 	}
 
 	// Start secondary listeners for alternative listening ports
