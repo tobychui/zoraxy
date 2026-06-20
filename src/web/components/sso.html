@@ -28,7 +28,7 @@
             <div class="field">
                 <label for="forwardAuthAddress">Address</label>
                 <input type="text" id="forwardAuthAddress" name="forwardAuthAddress" placeholder="Enter Forward Auth Address">
-                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth</small>
+                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth<br><b>Using Authentik in single-application (per-app) mode?</b> You also need to set <b>Ignored Paths</b> under Advanced Options below, and add a matching Virtual Directory on each protected host — see the note on that field.</small>
             </div>
             <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
                 <div class="ui advancedSSOForwardAuthOptions accordion">
@@ -89,9 +89,13 @@
                         <div class="field" style="margin-top: 1em;">
                             <label for="forwardAuthIgnoredPaths">Ignored Paths</label>
                             <input type="text" id="forwardAuthIgnoredPaths" name="forwardAuthIgnoredPaths" placeholder="/outpost.goauthentik.io">
-                            <div class="ui warning message" style="margin-top: 0.5em;">
-                                <div class="header"><i class="exclamation triangle icon"></i> No authentication is performed on these paths</div>
-                                <p>Comma-separated list of path prefixes that <b>bypass Forward Auth entirely</b>. Any request whose path starts with one of these prefixes is served with <b>no authentication check</b>. Use only for auth callback paths that must not be gated (e.g. Authentik per-application mode uses <code>/outpost.goauthentik.io</code>) or paths you intentionally want public. Matching is normalized — path traversal and prefix-boundary tricks are rejected.</p>
+                            <small>
+                                Comma-separated list of request path prefixes that are <b>excluded from Forward Auth</b>. Matching is normalized (path traversal and prefix-boundary tricks are rejected). <br>
+                                <strong>Authentik (single application):</strong> set this to <code>/outpost.goauthentik.io</code> and add a Virtual Directory for the same path pointing to your outpost, so the login callback can complete.
+                            </small>
+                            <div class="ui visible warning message" style="margin-top: 0.5em;">
+                                <i class="exclamation triangle icon"></i>
+                                <b>No authentication is performed on these paths.</b> Every request whose path starts with one of these prefixes bypasses Forward Auth entirely and is served with no auth check — only list paths you intentionally want public.
                             </div>
                         </div>
                     </div>
