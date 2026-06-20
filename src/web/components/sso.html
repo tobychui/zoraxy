@@ -86,6 +86,14 @@
                             <input type="checkbox" id="forwardAuthRequestUseXOriginalHeaders" name="forwardAuthRequestUseXOriginalHeaders" value="Use X-Original-* Headers">
                             <label for="forwardAuthRequestUseXOriginalHeaders">Use X-Original-* Headers<br><small>This is used for implementations which do not use the X-Forwarded-* headers. In addition if the authorization server responds with a 401 and Location header the status will be changed to 302.</small></label>
                         </div>
+                        <div class="field" style="margin-top: 1em;">
+                            <label for="forwardAuthIgnoredPaths">Ignored Paths</label>
+                            <input type="text" id="forwardAuthIgnoredPaths" name="forwardAuthIgnoredPaths" placeholder="/outpost.goauthentik.io">
+                            <div class="ui warning message" style="margin-top: 0.5em;">
+                                <div class="header"><i class="exclamation triangle icon"></i> No authentication is performed on these paths</div>
+                                <p>Comma-separated list of path prefixes that <b>bypass Forward Auth entirely</b>. Any request whose path starts with one of these prefixes is served with <b>no authentication check</b>. Use only for auth callback paths that must not be gated (e.g. Authentik per-application mode uses <code>/outpost.goauthentik.io</code>) or paths you intentionally want public. Matching is normalized — path traversal and prefix-boundary tricks are rejected.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -370,6 +378,11 @@
                 } else {
                     $("#forwardAuthRequestUseXOriginalHeaders").parent().checkbox("set unchecked");
                 }
+                if (data.ignoredPaths != null) {
+                    $('#forwardAuthIgnoredPaths').val(data.ignoredPaths.join(","));
+                } else {
+                    $('#forwardAuthIgnoredPaths').val("");
+                }
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
@@ -391,6 +404,7 @@
         const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
         const requestIncludeBody = $('#forwardAuthRequestIncludeBody').is(':checked');
         const useXOriginalHeaders = $('#forwardAuthRequestUseXOriginalHeaders').is(':checked');
+        const ignoredPaths = $('#forwardAuthIgnoredPaths').val();
 
         console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Included Cookies: ${requestIncludedCookies}. Request Excluded Cookies: ${requestExcludedCookies}. Request Include Body: ${requestIncludeBody}. Use X-Original-* Headers: ${useXOriginalHeaders}.`);
 
@@ -406,6 +420,7 @@
                 requestExcludedCookies: requestExcludedCookies,
                 requestIncludeBody: requestIncludeBody,
                 useXOriginalHeaders: useXOriginalHeaders,
+                ignoredPaths: ignoredPaths,
             },
             success: function(data) {
                 if (data.error !== undefined) {

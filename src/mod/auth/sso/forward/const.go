@@ -15,6 +15,7 @@ const (
 	DatabaseKeyRequestExcludedCookies = "requestExcludedCookies"
 	DatabaseKeyRequestIncludeBody     = "requestIncludeBody"
 	DatabaseKeyUseXOriginalHeaders    = "useXOriginalHeaders"
+	DatabaseKeyIgnoredPaths           = "ignoredPaths"
 
 	HeaderXForwardedProto  = "X-Forwarded-Proto"
 	HeaderXForwardedHost   = "X-Forwarded-Host"
