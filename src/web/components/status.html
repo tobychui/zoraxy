@@ -117,7 +117,7 @@
         </div>
     </div>
     <div class="ui basic segment advanceoptions">
-        <div class="ui accordion advanceSettings">
+        <div id="statusAdvanceSettings" class="ui accordion advanceSettings">
             <div class="title">
               <i class="dropdown icon"></i>
                 Advance Settings
@@ -226,7 +226,9 @@
 <script>
     let loopbackProxiedInterface = false;
     let currentListeningPort = 80;
-    $(".advanceSettings").accordion();
+    // Scope to this page's accordion only; .advanceSettings is reused by
+    // other webmin components loaded dynamically via ajax.
+    $("#statusAdvanceSettings").accordion();
 
     //Initial the start stop button if this is reverse proxied
     $.get("/api/proxy/requestIsProxied", function(data){

@@ -1,3 +1,26 @@
+# v3.3.3 09 Jun 2026
+
++ ACME: url.URL support for dnsCredentials by [t510599](https://github.com/t510599)
++ Add a basic CI script by [AnthonyMichaelTDM](https://github.com/AnthonyMichaelTDM)
++ Features: Turnstile for directory by [Klarulor](https://github.com/Klarulor)
++ Fix: Allow Location header rewrite when target matches OriginalHost by [TuxLux40](https://github.com/TuxLux40)
++ Fix certificate file permissions by [devilmonastery](https://github.com/devilmonastery)
++ Update lego to v4.35.2 by [zen8841](https://github.com/zen8841)
++ Update golang version in ci by [zen8841](https://github.com/zen8841)
++ Fix typo in customHeaders.html by [jeremyy294]([zen8841](https://github.com/jeremyy294)
++ Fix [#1169](https://github.com/tobychui/zoraxy/issues/1169) by [zen8841](https://github.com/zen8841)
++ Chore: clean up Docker related files by [PassiveLemon](https://github.com/PassiveLemon)
++ Sync docker change to dev branch by [tobychui]([zen8841](https://github.com/tobychui)
++ Add custom URI for Uptime Monitor health check by [barto95100]([zen8841](https://github.com/barto95100)
++ Fix: set ReadHeaderTimeout and IdleTimeout on main listeners by [ElmoViggiani]([zen8841](https://github.com/ElmoViggiani)
++ Fixed: "Require TLS" upstream on a proxy breaks if upstream sends 302 redirects [#1089](https://github.com/tobychui/zoraxy/issues/1089)
++ Fixed: Virtual Directory duplicating path in redirect [#1106](https://github.com/tobychui/zoraxy/issues/1106)
++ Fixed: Custom check interval for the Uptime Montior [#1091](https://github.com/tobychui/zoraxy/issues/1091)
++ Fixed: Ability to pause redirection rules [#1094](https://github.com/tobychui/zoraxy/issues/1094)
++ Implemented: Disable request logging but don't disable statistical logging [#1072](https://github.com/tobychui/zoraxy/issues/1072)
++ Fixed: Zoraxy crashes with SIGSEGV when using TCP Stream Proxy [#1157](https://github.com/tobychui/zoraxy/issues/1157)
++ Fixed: Configurable WebSocket timeout per proxy rule [#1159](https://github.com/tobychui/zoraxy/issues/1159)
+
 # v3.3.2 21 Mar 2026
 
 + Added Zoraxy Auth SSO

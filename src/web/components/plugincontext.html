@@ -45,10 +45,9 @@
     function resizeIframe() {
         let iframe = document.getElementById('pluginContextLoader');
         let mainMenuHeight = document.getElementById('mainmenu').offsetHeight;
-        if (mainMenuHeight == 0){
-            mainMenuHeight = window.innerHeight - 198; //Fallback to window height
-        }
-        iframe.style.height = mainMenuHeight + 'px';
+        //Size to the taller of the sidebar and the viewport so the iframe
+        //fills the window on tall browsers instead of leaving a footer gap
+        iframe.style.height = Math.max(mainMenuHeight, window.innerHeight - 198) + 'px';
     }
 
     $(window).on("resize", function(){

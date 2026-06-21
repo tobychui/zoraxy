@@ -35,7 +35,7 @@
     </div>
     <!-- Options -->
     <div class="ui basic segment advanceoptions">
-      <div class="ui accordion advanceSettings">
+      <div id="redirectionAdvanceSettings" class="ui accordion advanceSettings">
           <div class="title">
             <i class="dropdown icon"></i>
               Advance Settings
@@ -144,7 +144,9 @@
     */
 
     $(".checkbox").checkbox();
-    $(".advanceSettings").accordion();
+    // Scope to this page's accordion only; .advanceSettings is reused by
+    // other webmin components loaded dynamically via ajax.
+    $("#redirectionAdvanceSettings").accordion();
     function resetForm() {
       document.getElementById("rurl").value = "";
       document.getElementsByName("destination-url")[0].value = "";
