@@ -771,10 +771,8 @@ function uninstallPlugin(pluginId, pluginName, btn=undefined) {
   }
 
   initDeveloperSettings();
-  // Scope the accordion init to this page's Developer Settings only.
-  // Webmin components are loaded dynamically via ajax and several of them
-  // (redirection, status, access) reuse the .advanceSettings class, so a
-  // bare $(".advanceSettings") would re-initialize other pages' accordions.
+  // Scope to this page's accordion only; .advanceSettings is reused by
+  // other webmin components loaded dynamically via ajax.
   $("#pluginDeveloperSettings").accordion();
 </script>
 
