@@ -798,6 +798,28 @@ body.darkTheme .menudivider{
     background: var(--theme_green) !important;
 }
 
+/*
+    Generic state for Running State Wrapper (used by multiple modules)
+*/
+[class*="RunningStateWrapper"] {
+    padding: 1em;
+    border-radius: 1em !important;
+}
+
+[class*="RunningStateWrapper"] .ui.header,
+[class*="RunningStateWrapper"] .sub.header {
+    color: white !important;
+}
+
+[class*="RunningStateWrapper"]:not(.enabled) {
+    background: var(--theme_red) !important;
+}
+
+[class*="RunningStateWrapper"].enabled {
+    background: var(--theme_green) !important;
+}
+
+
 
 /*
     Static Web Server
