@@ -155,6 +155,12 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 
 // Handle forward auth routing
 func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request) error {
+	// Skip forward auth for SSO-ignored paths. These paths are served WITHOUT authentication
+	// (e.g. an auth provider callback subpath that must reach its own handler), so matching is
+	// hardened against path traversal / boundary tricks (see forward.IsIgnoredPath).
+	if h.Parent.Option.ForwardAuthRouter.IsIgnoredPath(r.RequestURI) {
+		return nil
+	}
 	return h.Parent.Option.ForwardAuthRouter.HandleAuthProviderRouting(w, r)
 }
 
