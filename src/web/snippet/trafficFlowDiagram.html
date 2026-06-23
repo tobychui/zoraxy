@@ -320,6 +320,8 @@
             <div class="zoom-divider"></div>
             <button class="zoom-btn" id="btn-refresh" title="Refresh" onclick="loadDiagram()"><i class="refresh icon" style="color:#21ba45; font-size:13px;"></i></button>
             <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="btn-rotate" title="Rotate layout"><i class="redo alternate icon" style="font-size:12px;"></i></button>
+            <div class="zoom-divider"></div>
             <button class="zoom-btn" id="btn-fullscreen" title="Fullscreen"><i class="expand icon" style="font-size:11px;"></i></button>
         </div>
         <div id="legend-overlay">
@@ -349,6 +351,12 @@
     let zoom = 1.0;
     const ZOOM_MIN = 0.25, ZOOM_MAX = 3.0, ZOOM_STEP = 0.15;
     let _firstLoad = true;
+
+    /* Layout orientation: "horizontal" (Internet on the left) or
+       "vertical" (Internet on top, upstreams at the bottom).
+       Persisted in localStorage so the user's preference sticks. */
+    let orientation = localStorage.getItem("zoraxy_trafficflow_orientation") || "horizontal";
+    let _lastData = null; // cache of the most recent API payload for re-render on rotate
 
     /* SVG namespace helper */
     function svgEl(tag, attrs) {
@@ -488,9 +496,11 @@
         globeG.appendChild(svgEl("ellipse", { cx, cy, rx: 14, ry: r - 1 }));
         g.appendChild(globeG);
 
-        // Label
+        // Label — placed below the circle in horizontal mode, above it in
+        // vertical mode so it does not sit on top of the downward flow edges.
+        const labelY = (orientation === "vertical") ? (cy - r - 8) : (cy + r + 14);
         const label = svgEl("text", {
-            x: cx, y: cy + r + 14,
+            x: cx, y: labelY,
             class: "internet-label",
             "font-size": "11",
             "text-anchor": "middle"
@@ -504,9 +514,17 @@
     /* Draw an animated cubic Bezier flow edge between two points */
     function buildFlowEdge(x1, y1, x2, y2, strokeW, colorClass, count, maxCount, edgeIndex) {
         const g = svgEl("g", {});
-        const mx = (x1 + x2) / 2;
 
-        const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+        // S-curve oriented along the flow axis: horizontal mode bends left↔right,
+        // vertical mode bends top↔bottom.
+        let d;
+        if (orientation === "vertical") {
+            const my = (y1 + y2) / 2;
+            d = `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+        } else {
+            const mx = (x1 + x2) / 2;
+            d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+        }
 
         // Background solid path
         const base = svgEl("path", {
@@ -549,6 +567,25 @@
         }
         document.getElementById("noDataMsg").style.display = "none";
         svg.style.display = "block";
+
+        const vertical = orientation === "vertical";
+
+        // Map a (primary, cross) layout coordinate to screen (x, y).
+        //   primary = flow axis (Internet → Proxy → Upstream)
+        //   cross   = stacking axis (rows of proxies / upstreams)
+        // In vertical mode the two axes are swapped so the flow runs top→bottom.
+        function toXY(primary, cross) {
+            return vertical ? { x: cross, y: primary } : { x: primary, y: cross };
+        }
+
+        // Node boxes are always drawn the same size (so text stays horizontal and
+        // readable), but which box dimension lies along the flow vs. the stacking
+        // axis swaps with orientation.
+        const proxyPrimaryExtent    = vertical ? PROXY_H    : PROXY_W;
+        const proxyCrossExtent      = vertical ? PROXY_W    : PROXY_H;
+        const upstreamPrimaryExtent = vertical ? UPSTREAM_H : UPSTREAM_W;
+        const upstreamCrossExtent   = vertical ? UPSTREAM_W : UPSTREAM_H;
+        const internetCrossExtent   = INTERNET_W; // square node — same either way
 
         // Build SVG defs: drop-shadow filter
         const defs = svgEl("defs");
@@ -607,16 +644,20 @@
         const totalUpstreamRows = nextRow;
         const maxUpstreamCount  = Math.max(...Array.from(upstreamMap.values()).map(u => u.requestCount), 1);
 
-        const upstreamColumnHeight = totalUpstreamRows * (UPSTREAM_H + ROW_GAP_UPSTREAM) - ROW_GAP_UPSTREAM;
-        const proxyColumnHeight = proxies.length * (PROXY_H + ROW_GAP_PROXY) - ROW_GAP_PROXY;
-        const canvasHeight = Math.max(upstreamColumnHeight, proxyColumnHeight, INTERNET_H + 40) + CANVAS_PADDING_Y * 2;
+        // Column sizes along the cross (stacking) axis
+        const upstreamColumnCross = totalUpstreamRows * (upstreamCrossExtent + ROW_GAP_UPSTREAM) - ROW_GAP_UPSTREAM;
+        const proxyColumnCross    = proxies.length * (proxyCrossExtent + ROW_GAP_PROXY) - ROW_GAP_PROXY;
+        const crossSize = Math.max(upstreamColumnCross, proxyColumnCross, internetCrossExtent + 40) + CANVAS_PADDING_Y * 2;
 
-        // Vertical centre of each column
-        const proxyCenterStart = CANVAS_PADDING_Y + Math.max(0, (canvasHeight - CANVAS_PADDING_Y * 2 - proxyColumnHeight) / 2);
-        const upstreamCenterStart = CANVAS_PADDING_Y + Math.max(0, (canvasHeight - CANVAS_PADDING_Y * 2 - upstreamColumnHeight) / 2);
-        const internetCY = canvasHeight / 2;
+        // Cross-axis start (centres each column within the canvas)
+        const proxyCrossStart    = CANVAS_PADDING_Y + Math.max(0, (crossSize - CANVAS_PADDING_Y * 2 - proxyColumnCross) / 2);
+        const upstreamCrossStart = CANVAS_PADDING_Y + Math.max(0, (crossSize - CANVAS_PADDING_Y * 2 - upstreamColumnCross) / 2);
+        const internetCrossCenter = crossSize / 2;
 
-        const canvasWidth = COL_UPSTREAM_X + UPSTREAM_W + 40;
+        // Primary axis is fixed by the column positions; swap into width/height
+        const primarySize = COL_UPSTREAM_X + upstreamPrimaryExtent + 40;
+        const canvasWidth  = vertical ? crossSize   : primarySize;
+        const canvasHeight = vertical ? primarySize : crossSize;
         svg.setAttribute("width", canvasWidth);
         svg.setAttribute("height", canvasHeight);
         svg.setAttribute("viewBox", `0 0 ${canvasWidth} ${canvasHeight}`);
@@ -627,53 +668,50 @@
         svg.appendChild(edgeGroup);
         svg.appendChild(nodeGroup);
 
-        // Place Internet node at vertical center of canvas left column
-        const internetNodeX = COL_INTERNET_X;
-        const internetNodeY = internetCY - INTERNET_W / 2;
-        nodeGroup.appendChild(buildInternetNode(internetNodeX, internetNodeY, INTERNET_W));
+        // Place Internet node at the start of the primary axis, centred on cross axis
+        const internetPrimaryCenter = COL_INTERNET_X + INTERNET_W / 2;
+        const internetTL = toXY(COL_INTERNET_X, internetCrossCenter - internetCrossExtent / 2);
+        nodeGroup.appendChild(buildInternetNode(internetTL.x, internetTL.y, INTERNET_H));
 
-        // Right-hand connection point of Internet node
-        const internetRX = internetNodeX + INTERNET_W / 2 + 32; // circle edge
-        const internetRY = internetCY;
+        // Internet exit connection point (far primary edge of the circle, cross centre)
+        const internetExit = toXY(internetPrimaryCenter + 32, internetCrossCenter);
 
         let edgeIndex = 0;
 
         for (let pi = 0; pi < proxies.length; pi++) {
             const proxy = proxies[pi];
-            const proxyY = proxyCenterStart + pi * (PROXY_H + ROW_GAP_PROXY);
-            const proxyCY = proxyY + PROXY_H / 2;
+            const proxyCrossCenter = proxyCrossStart + pi * (proxyCrossExtent + ROW_GAP_PROXY) + proxyCrossExtent / 2;
 
-            // Proxy node connection points
-            const proxyLX = COL_PROXY_X;          // left edge
-            const proxyLY = proxyCY;
-            const proxyRX = COL_PROXY_X + PROXY_W; // right edge
-            const proxyRY = proxyCY;
+            // Proxy node top-left and connection points
+            const proxyTL    = toXY(COL_PROXY_X, proxyCrossCenter - proxyCrossExtent / 2);
+            const proxyEntry = toXY(COL_PROXY_X, proxyCrossCenter);                       // near primary edge
+            const proxyExit  = toXY(COL_PROXY_X + proxyPrimaryExtent, proxyCrossCenter);  // far primary edge
 
             // Draw edge from Internet node to proxy node
             const w1 = proxy.disabled ? MIN_EDGE_W : edgeWidth(proxy.requestCount, maxProxyCount);
             edgeGroup.appendChild(buildFlowEdge(
-                internetRX, internetRY,
-                proxyLX, proxyLY,
+                internetExit.x, internetExit.y,
+                proxyEntry.x, proxyEntry.y,
                 w1, "flow-edge-internet",
                 proxy.disabled ? 0 : proxy.requestCount, maxProxyCount, edgeIndex++
             ));
 
             // Proxy node
-            nodeGroup.appendChild(buildProxyNode(proxy, COL_PROXY_X, proxyY));
+            nodeGroup.appendChild(buildProxyNode(proxy, proxyTL.x, proxyTL.y));
 
             // Draw edges from proxy to each deduplicated upstream
             if (proxy.upstreams.length > 0) {
                 for (const upstream of proxy.upstreams) {
                     const dedupedUs = upstreamMap.get(upstream.origin);
-                    const upstreamY  = upstreamCenterStart + dedupedUs.rowIndex * (UPSTREAM_H + ROW_GAP_UPSTREAM);
-                    const upstreamCY = upstreamY + UPSTREAM_H / 2;
+                    const upstreamCrossCenter = upstreamCrossStart + dedupedUs.rowIndex * (upstreamCrossExtent + ROW_GAP_UPSTREAM) + upstreamCrossExtent / 2;
+                    const upstreamEntry = toXY(COL_UPSTREAM_X, upstreamCrossCenter);
 
                     const linkDisabled = upstream.inactive || proxy.disabled;
                     const w2 = linkDisabled ? MIN_EDGE_W
                         : edgeWidth(Math.min(proxy.requestCount, upstream.requestCount), maxUpstreamCount);
                     edgeGroup.appendChild(buildFlowEdge(
-                        proxyRX, proxyRY,
-                        COL_UPSTREAM_X, upstreamCY,
+                        proxyExit.x, proxyExit.y,
+                        upstreamEntry.x, upstreamEntry.y,
                         w2, linkDisabled ? "flow-edge-disabled" : "flow-edge-upstream",
                         linkDisabled ? 0 : Math.min(proxy.requestCount, upstream.requestCount),
                         maxUpstreamCount, edgeIndex++
@@ -681,20 +719,21 @@
                 }
             } else {
                 // No upstreams — draw edge to this proxy's placeholder row
-                const phRow    = noUpstreamProxyRows.get(proxy.domain);
-                const upstreamY  = upstreamCenterStart + phRow * (UPSTREAM_H + ROW_GAP_UPSTREAM);
-                const upstreamCY = upstreamY + UPSTREAM_H / 2;
+                const phRow = noUpstreamProxyRows.get(proxy.domain);
+                const upstreamCrossCenter = upstreamCrossStart + phRow * (upstreamCrossExtent + ROW_GAP_UPSTREAM) + upstreamCrossExtent / 2;
+                const upstreamEntry = toXY(COL_UPSTREAM_X, upstreamCrossCenter);
                 edgeGroup.appendChild(buildFlowEdge(
-                    proxyRX, proxyRY,
-                    COL_UPSTREAM_X, upstreamCY,
+                    proxyExit.x, proxyExit.y,
+                    upstreamEntry.x, upstreamEntry.y,
                     MIN_EDGE_W, "flow-edge-upstream", 0, 1, edgeIndex++
                 ));
+                const phTL = toXY(COL_UPSTREAM_X, upstreamCrossCenter - upstreamCrossExtent / 2);
                 const ph = svgEl("g", { class: "upstream-node inactive" });
                 ph.appendChild(svgEl("rect", {
-                    x: COL_UPSTREAM_X, y: upstreamY,
+                    x: phTL.x, y: phTL.y,
                     width: UPSTREAM_W, height: UPSTREAM_H, rx: 8, ry: 8
                 }));
-                const phText = svgEl("text", { x: COL_UPSTREAM_X + 10, y: upstreamY + 27, class: "node-subtitle" });
+                const phText = svgEl("text", { x: phTL.x + 10, y: phTL.y + 27, class: "node-subtitle" });
                 phText.textContent = "No upstreams configured";
                 ph.appendChild(phText);
                 nodeGroup.appendChild(ph);
@@ -703,8 +742,9 @@
 
         // Render each unique upstream node exactly once
         for (const dedupedUs of upstreamMap.values()) {
-            const upstreamY = upstreamCenterStart + dedupedUs.rowIndex * (UPSTREAM_H + ROW_GAP_UPSTREAM);
-            nodeGroup.appendChild(buildUpstreamNode(dedupedUs, COL_UPSTREAM_X, upstreamY));
+            const upstreamCrossCenter = upstreamCrossStart + dedupedUs.rowIndex * (upstreamCrossExtent + ROW_GAP_UPSTREAM) + upstreamCrossExtent / 2;
+            const usTL = toXY(COL_UPSTREAM_X, upstreamCrossCenter - upstreamCrossExtent / 2);
+            nodeGroup.appendChild(buildUpstreamNode(dedupedUs, usTL.x, usTL.y));
         }
     }
 
@@ -716,21 +756,49 @@
 
         $.get("/api/stats/trafficmap", function(data) {
             document.getElementById("loadingMsg").style.display = "none";
+            _lastData = data;
             renderDiagram(data);
             if (_firstLoad) {
                 _firstLoad = false;
-                const _wEl = document.getElementById("diagram-wrapper");
-                const _svgCanvas = document.getElementById("diagram-canvas");
-                const svgW = parseFloat(_svgCanvas.getAttribute("width") || 0);
-                const svgH = parseFloat(_svgCanvas.getAttribute("height") || 0);
-                panX = (_wEl.clientWidth  - svgW * zoom) / 2;
-                panY = (_wEl.clientHeight - svgH * zoom) / 2;
-                applyTransform();
+                recenterDiagram();
             }
         }).fail(function() {
             document.getElementById("loadingMsg").innerHTML =
                 '<i class="exclamation triangle icon"></i> Failed to load traffic data.';
         });
+    }
+
+    /* Centre the diagram canvas within the viewport at the current zoom */
+    function recenterDiagram() {
+        const wEl = document.getElementById("diagram-wrapper");
+        const c = document.getElementById("diagram-canvas");
+        const svgW = parseFloat(c.getAttribute("width") || 0);
+        const svgH = parseFloat(c.getAttribute("height") || 0);
+        panX = (wEl.clientWidth  - svgW * zoom) / 2;
+        panY = (wEl.clientHeight - svgH * zoom) / 2;
+        applyTransform();
+    }
+
+    /* Toggle between horizontal and vertical flow layouts */
+    function toggleOrientation() {
+        orientation = (orientation === "vertical") ? "horizontal" : "vertical";
+        localStorage.setItem("zoraxy_trafficflow_orientation", orientation);
+        updateRotateButton();
+        if (_lastData) {
+            renderDiagram(_lastData);
+            recenterDiagram();
+        } else {
+            loadDiagram();
+        }
+    }
+
+    /* Keep the rotate button tooltip in sync with the current orientation */
+    function updateRotateButton() {
+        const btn = document.getElementById("btn-rotate");
+        if (!btn) return;
+        btn.title = (orientation === "vertical")
+            ? "Switch to horizontal layout"
+            : "Switch to vertical layout";
     }
 
     /* Compact number formatter (referenced before renderDiagram definition) */
@@ -855,6 +923,11 @@
         toggleFullscreen();
     });
 
+    document.getElementById("btn-rotate").addEventListener("click", e => {
+        e.stopPropagation();
+        toggleOrientation();
+    });
+
     document.addEventListener("fullscreenchange", () => {
         const btn = document.getElementById("btn-fullscreen");
         if (document.fullscreenElement) {
@@ -867,6 +940,7 @@
     });
 
     /* Initialize: apply transform, load data, start 30-second auto-refresh */
+    updateRotateButton();
     applyTransform();
     loadDiagram();
     setInterval(loadDiagram, 30000);

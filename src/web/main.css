@@ -470,6 +470,41 @@ body.darkTheme .menugroup-header:hover {
     flex-shrink: 0;
 }
 
+.recent-item-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Pin toggle on each recent item */
+.recent-item .recent-pin-toggle {
+    margin-right: 0;
+    margin-left: 0.4em;
+    font-size: 0.8em;
+    flex-shrink: 0;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease, color 0.12s ease;
+    margin-top: -10px;
+}
+
+/* Reveal the (un-pinned) toggle when hovering the row */
+.recent-item:hover .recent-pin-toggle {
+    opacity: 0.45;
+}
+
+.recent-item .recent-pin-toggle:hover {
+    opacity: 0.9 !important;
+}
+
+/* A pinned item keeps its toggle visible and themed */
+.recent-item .recent-pin-toggle.pinned {
+    opacity: 1;
+    transform: rotate(45deg);
+}
+
+
 .recent-empty-hint {
     font-size: 0.82em;
     opacity: 0.42;
