@@ -97,6 +97,55 @@ func (ep *ProxyEndpoint) GetVirtualDirectoryRuleByMatchingPath(matchingPath stri
 	return nil
 }
 
+// HasSameTarget reports whether this virtual directory points at the same target as the given
+// spec (domain + TLS settings). The matching path is assumed to already be equal. Used to decide
+// whether a bulk apply/remove may treat an existing directory as "ours" (safe to skip or remove)
+// or as a user-customized one that must be left untouched.
+func (vdir *VirtualDirectoryEndpoint) HasSameTarget(domain string, requireTLS bool, skipCertValidations bool) bool {
+	return vdir.Domain == domain && vdir.RequireTLS == requireTLS && vdir.SkipCertValidations == skipCertValidations
+}
+
+// BulkVdirAction describes what a bulk virtual-directory apply/remove operation should do for one host.
+type BulkVdirAction string
+
+const (
+	BulkVdirCreate   BulkVdirAction = "create"   // directory is missing and should be created
+	BulkVdirRemove   BulkVdirAction = "remove"   // an identical directory exists and should be removed
+	BulkVdirSkip     BulkVdirAction = "skip"     // an identical directory already exists; nothing to do
+	BulkVdirConflict BulkVdirAction = "conflict" // a directory exists at this path with different settings; leave it untouched
+	BulkVdirNoop     BulkVdirAction = "noop"     // nothing present to remove
+)
+
+// ClassifyBulkVdir decides the action for a single host in a bulk virtual-directory operation,
+// given the desired target spec and the host's existing directory at the same matching path
+// (nil if none).
+//
+//	ensurePresent = true  -> make sure the directory exists (used for forward-auth hosts)
+//	ensurePresent = false -> make sure the directory is absent (used for non-forward-auth hosts)
+//
+// An existing directory is only ever skipped (when ensuring present) or removed (when ensuring
+// absent) if it has the SAME target as the spec. A directory at the same path with different
+// settings is reported as a conflict and left untouched, so user-customized directories are
+// never silently changed or deleted.
+func ClassifyBulkVdir(ensurePresent bool, existing *VirtualDirectoryEndpoint, domain string, requireTLS bool, skipCertValidations bool) BulkVdirAction {
+	if ensurePresent {
+		if existing == nil {
+			return BulkVdirCreate
+		}
+		if existing.HasSameTarget(domain, requireTLS, skipCertValidations) {
+			return BulkVdirSkip
+		}
+		return BulkVdirConflict
+	}
+	if existing == nil {
+		return BulkVdirNoop
+	}
+	if existing.HasSameTarget(domain, requireTLS, skipCertValidations) {
+		return BulkVdirRemove
+	}
+	return BulkVdirConflict
+}
+
 // Delete a vdir rule by its matching path
 func (ep *ProxyEndpoint) RemoveVirtualDirectoryRuleByMatchingPath(matchingPath string) error {
 	entryFound := false
