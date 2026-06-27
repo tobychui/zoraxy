@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"embed"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -29,9 +30,10 @@ type HostSpecificTlsBehavior struct {
 }
 
 type Manager struct {
-	CertStore   string         //Path where all the certs are stored
-	LoadedCerts []*CertCache   //A list of loaded certs
-	Logger      *logger.Logger //System wide logger for debug mesage
+	CertStore    string         //Path where all the certs are stored
+	LoadedCerts  []*CertCache   //A list of loaded certs
+	Logger       *logger.Logger //System wide logger for debug mesage
+	FallbackCert string        //Name of the fallback/default certificate (no file renaming)
 
 	/* External handlers */
 	hostSpecificTlsBehavior func(serverName string) (*HostSpecificTlsBehavior, error) // Function to get host specific TLS behavior, if nil, use global TLS options
@@ -88,6 +90,16 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 		LoadedCerts:             []*CertCache{},
 		hostSpecificTlsBehavior: defaultHostSpecificTlsBehavior, //Default to no SNI and no auto HTTPS
 		Logger:                  logger,
+	}
+
+	// Restore fallback cert name from metadata file
+	if data, err := os.ReadFile(filepath.Join(certStore, "fallback.json")); err == nil {
+		var fb struct {
+			FallbackCert string `json:"fallbackCert"`
+		}
+		if json.Unmarshal(data, &fb) == nil && fb.FallbackCert != "" {
+			thisManager.FallbackCert = fb.FallbackCert
+		}
 	}
 
 	err := thisManager.UpdateLoadedCertList()
@@ -268,11 +280,10 @@ func (m *Manager) GetCertificateByHostname(hostname string) (string, string, err
 			//Get certificate from CA, WIP
 			//TODO: Implement AutoHTTPS
 		} else {
-			//Fallback to legacy method of matching certificates
+			//Fallback to the configured fallback certificate
 			if m.DefaultCertExists() {
-				//Use default.pem and default.key
-				pubKey = filepath.Join(m.CertStore, "default.pem")
-				priKey = filepath.Join(m.CertStore, "default.key")
+				pubKey = filepath.Join(m.CertStore, m.FallbackCert+".pem")
+				priKey = filepath.Join(m.CertStore, m.FallbackCert+".key")
 			}
 		}
 	}
@@ -281,12 +292,18 @@ func (m *Manager) GetCertificateByHostname(hostname string) (string, string, err
 
 // Check if both the default cert public key and private key exists
 func (m *Manager) DefaultCertExists() bool {
-	return utils.FileExists(filepath.Join(m.CertStore, "default.pem")) && utils.FileExists(filepath.Join(m.CertStore, "default.key"))
+	if m.FallbackCert == "" {
+		return false
+	}
+	return utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".pem")) && utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".key"))
 }
 
 // Check if the default cert exists returning seperate results for pubkey and prikey
 func (m *Manager) DefaultCertExistsSep() (bool, bool) {
-	return utils.FileExists(filepath.Join(m.CertStore, "default.pem")), utils.FileExists(filepath.Join(m.CertStore, "default.key"))
+	if m.FallbackCert == "" {
+		return false, false
+	}
+	return utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".pem")), utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".key"))
 }
 
 func sanitizeCertDomain(domain string) (string, error) {
