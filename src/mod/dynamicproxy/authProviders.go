@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/netutils"
 )
 
@@ -42,18 +43,27 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			return true
 		}
 	case AuthMethodForward:
+		if matchesAuthExceptionRule(r, sep) {
+			break
+		}
 		err := h.handleForwardAuth(w, r)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
 	case AuthMethodOauth2:
-		err := h.handleOAuth2Auth(w, r)
+		if matchesAuthExceptionRule(r, sep) {
+			break
+		}
+		err := h.handleOAuth2Auth(w, r, sep.AuthenticationProvider.OAuth2Config)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
 			return true
 		}
 	case AuthMethodZorxAuth:
+		if matchesAuthExceptionRule(r, sep) {
+			break
+		}
 		err := h.handleZorxAuth(w, r)
 		if err != nil {
 			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
@@ -62,6 +72,34 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 	}
 
 	//No authentication provider, do not need to handle
+	return false
+}
+
+// matchesAuthExceptionRule checks if the request matches any configured auth exception rule.
+// Returns true if the request should bypass authentication.
+func matchesAuthExceptionRule(r *http.Request, pe *ProxyEndpoint) bool {
+	for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
+		switch exceptionRule.RuleType {
+		case AuthExceptionType_Paths:
+			if strings.HasPrefix(r.RequestURI, exceptionRule.PathPrefix) {
+				return true
+			}
+		case AuthExceptionType_CIDR:
+			var requesterIp string
+			if exceptionRule.UseTrustedProxy {
+				requesterIp = netutils.GetRequesterIP(r)
+			} else {
+				requesterIp = netutils.GetRequesterIPUntrusted(r)
+			}
+			if requesterIp != "" {
+				if requesterIp == exceptionRule.CIDR ||
+					netutils.MatchIpWildcard(requesterIp, exceptionRule.CIDR) ||
+					netutils.MatchIpCIDR(requesterIp, exceptionRule.CIDR) {
+					return true
+				}
+			}
+		}
+	}
 	return false
 }
 
@@ -74,49 +112,8 @@ func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Req
 // Handle basic auth logic
 // do not write to http.ResponseWriter if err return is not nil (already handled by this function)
 func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
-	if len(pe.AuthenticationProvider.BasicAuthExceptionRules) > 0 {
-		//Check if the current path matches the exception rules
-		for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
-			exceptionType := exceptionRule.RuleType
-			switch exceptionType {
-			case AuthExceptionType_Paths:
-				if strings.HasPrefix(r.RequestURI, exceptionRule.PathPrefix) {
-					//This path is excluded from basic auth
-					return nil
-				}
-			case AuthExceptionType_CIDR:
-				// By default, use the untrusted (RemoteAddr-only) IP to prevent header-spoofing bypass.
-				// Only trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) when the rule
-				// was explicitly configured with UseTrustedProxy = true.
-				var requesterIp string
-				if exceptionRule.UseTrustedProxy {
-					requesterIp = netutils.GetRequesterIP(r)
-				} else {
-					requesterIp = netutils.GetRequesterIPUntrusted(r)
-				}
-				if requesterIp != "" {
-					if requesterIp == exceptionRule.CIDR {
-						// This IP is excluded from basic auth
-						return nil
-					}
-
-					wildcardMatch := netutils.MatchIpWildcard(requesterIp, exceptionRule.CIDR)
-					if wildcardMatch {
-						// This IP is excluded from basic auth
-						return nil
-					}
-
-					cidrMatch := netutils.MatchIpCIDR(requesterIp, exceptionRule.CIDR)
-					if cidrMatch {
-						// This IP is excluded from basic auth
-						return nil
-					}
-				}
-			default:
-				//Unknown exception type, skip this rule
-				continue
-			}
-		}
+	if matchesAuthExceptionRule(r, pe) {
+		return nil
 	}
 
 	u, p, ok := r.BasicAuth()
@@ -157,8 +154,8 @@ func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request)
 	return h.Parent.Option.ForwardAuthRouter.HandleAuthProviderRouting(w, r)
 }
 
-func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
-	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r)
+func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request, routeConfig *oauth2.OAuth2ProviderConfig) error {
+	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r, routeConfig)
 }
 
 func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request) error {
