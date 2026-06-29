@@ -43,24 +43,24 @@ func (m *Manager) HandleCertDownload(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "invalid certname given")
 		return
 	}
-	certname = filepath.Base(certname) //prevent path escape
+	certname = filepath.Base(certname) // prevent path escape
 
 	// check if the cert exists
 	pubKey := filepath.Join(filepath.Join(m.CertStore), certname+".key")
 	priKey := filepath.Join(filepath.Join(m.CertStore), certname+".pem")
 
 	if utils.FileExists(pubKey) && utils.FileExists(priKey) {
-		//Zip them and serve them via http download
+		// Zip them and serve them via http download
 		seeking, _ := utils.GetBool(r, "seek")
 		if seeking {
-			//This request only check if the key exists. Do not provide download
+			// This request only check if the key exists. Do not provide download
 			utils.SendOK(w)
 			return
 		}
 
-		//Serve both file in zip
+		// Serve both file in zip
 		zipTmpFolder := "./tmp/download"
-		os.MkdirAll(zipTmpFolder, 0775)
+		os.MkdirAll(zipTmpFolder, 0o775)
 		zipFileName := filepath.Join(zipTmpFolder, certname+".zip")
 		err := utils.ZipFiles(zipFileName, pubKey, priKey)
 		if err != nil {
@@ -74,7 +74,7 @@ func (m *Manager) HandleCertDownload(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/zip")
 		http.ServeFile(w, r, zipFileName)
 	} else {
-		//Not both key exists
+		// Not both key exists
 		utils.SendErrorResponse(w, "invalid key-pairs: private key or public key not found in key store")
 		return
 	}
@@ -88,53 +88,28 @@ func (m *Manager) SetCertAsDefault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Check if the previous default cert exists. If yes, get its hostname from cert contents
-	defaultPubKey := filepath.Join(m.CertStore, "default.pem")
-	defaultPriKey := filepath.Join(m.CertStore, "default.key")
-	defaultJSON := filepath.Join(m.CertStore, "default.json")
+	certname = filepath.Base(certname) // prevent path escape
 
-	if utils.FileExists(defaultPubKey) && utils.FileExists(defaultPriKey) {
-		//Move the existing default cert to its original name
-		certBytes, err := os.ReadFile(defaultPubKey)
-		if err == nil {
-			block, _ := pem.Decode(certBytes)
-			if block != nil {
-				cert, err := x509.ParseCertificate(block.Bytes)
-				if err == nil {
-					originalKeyName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "key"))
-					originalPemName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "pem"))
-					originalJSONName := filepath.Join(m.CertStore, domainToFilename(cert.Subject.CommonName, "json"))
+	pubKey := filepath.Join(m.CertStore, certname+".pem")
+	priKey := filepath.Join(m.CertStore, certname+".key")
 
-					os.Rename(defaultPubKey, originalPemName)
-					os.Rename(defaultPriKey, originalKeyName)
-					if utils.FileExists(defaultJSON) {
-						os.Rename(defaultJSON, originalJSONName)
-					}
-				}
-			}
-		}
-	}
-
-	//Check if the cert exists
-	certname = filepath.Base(certname) //prevent path escape
-	pubKey := filepath.Join(filepath.Join(m.CertStore), certname+".pem")
-	priKey := filepath.Join(filepath.Join(m.CertStore), certname+".key")
-	certJSON := filepath.Join(filepath.Join(m.CertStore), certname+".json")
-	if utils.FileExists(pubKey) && utils.FileExists(priKey) {
-		os.Rename(pubKey, filepath.Join(m.CertStore, "default.pem"))
-		os.Rename(priKey, filepath.Join(m.CertStore, "default.key"))
-		if utils.FileExists(certJSON) {
-			os.Rename(certJSON, filepath.Join(m.CertStore, "default.json"))
-		}
-		utils.SendOK(w)
-
-		//Update cert list
-		m.UpdateLoadedCertList()
-
-	} else {
+	// Check if the cert exists
+	if !utils.FileExists(pubKey) || !utils.FileExists(priKey) {
 		utils.SendErrorResponse(w, "invalid key-pairs: private key or public key not found in key store")
 		return
 	}
+
+	m.FallbackCert = certname
+	m.saveFallbackConfig()
+	// Update cert list
+	m.UpdateLoadedCertList()
+	utils.SendOK(w)
+}
+
+func (m *Manager) saveFallbackConfig() {
+	fbPath := filepath.Join(m.CertStore, "fallback.json")
+	data, _ := json.Marshal(map[string]string{"fallbackCert": m.FallbackCert})
+	os.WriteFile(fbPath, data, 0o644)
 }
 
 // Handle upload of the certificate
@@ -156,7 +131,7 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 	// get the domain
 	domain, err := utils.GetPara(r, "domain")
 	if err != nil {
-		//Assume localhost
+		// Assume localhost
 		domain = "default"
 	}
 
@@ -193,7 +168,7 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	os.MkdirAll(m.CertStore, 0775)
+	os.MkdirAll(m.CertStore, 0o775)
 	fileMode := defaultPublicCertFileMode
 	if keytype == "pri" {
 		fileMode = defaultPrivateKeyFileMode
@@ -205,7 +180,7 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Update cert list
+	// Update cert list
 	m.UpdateLoadedCertList()
 
 	// send response
@@ -215,7 +190,6 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 // List all certificates and map all their domains to the cert filename
 func (m *Manager) HandleListDomains(w http.ResponseWriter, r *http.Request) {
 	filenames, err := os.ReadDir(m.CertStore)
-
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -306,10 +280,10 @@ func (m *Manager) HandleListCertificate(w http.ResponseWriter, r *http.Request) 
 			certBtyes, err := os.ReadFile(certFilepath)
 			expiredIn := 0
 			if err != nil {
-				//Unable to load this file
+				// Unable to load this file
 				continue
 			} else {
-				//Cert loaded. Check its expire time
+				// Cert loaded. Check its expire time
 				block, _ := pem.Decode(certBtyes)
 				if block != nil {
 					cert, err := x509.ParseCertificate(block.Bytes)
@@ -324,8 +298,8 @@ func (m *Manager) HandleListCertificate(w http.ResponseWriter, r *http.Request) 
 				}
 			}
 			certInfoFilename := filepath.Join(m.CertStore, filename+".json")
-			useDNSValidation := false                                //Default to false for HTTP TLS certificates
-			certInfo, err := acme.LoadCertInfoJSON(certInfoFilename) //Note: Not all certs have info json
+			useDNSValidation := false                                // Default to false for HTTP TLS certificates
+			certInfo, err := acme.LoadCertInfoJSON(certInfoFilename) // Note: Not all certs have info json
 			if err == nil {
 				useDNSValidation = certInfo.UseDNS
 			}
@@ -346,7 +320,7 @@ func (m *Manager) HandleListCertificate(w http.ResponseWriter, r *http.Request) 
 				ExpireDate:       certExpireTime,
 				RemainingDays:    expiredIn,
 				UseDNS:           useDNSValidation,
-				IsFallback:       (filename == "default"), //TODO: figure out a better implementation
+				IsFallback:       (filename == m.FallbackCert), // TODO: figure out a better implementation
 			}
 
 			results = append(results, &thisCertInfo)
@@ -401,7 +375,7 @@ func (m *Manager) HandleSelfSignCertGenerate(w http.ResponseWriter, r *http.Requ
 
 	domains, err := utils.PostPara(r, "domains")
 	if err != nil {
-		//No alias domains provided, use the common name as the only domain
+		// No alias domains provided, use the common name as the only domain
 		domains = "[]"
 	}
 
@@ -421,7 +395,7 @@ func (m *Manager) HandleSelfSignCertGenerate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	//Update the certificate store
+	// Update the certificate store
 	err = m.UpdateLoadedCertList()
 	if err != nil {
 		utils.SendErrorResponse(w, "Failed to update certificate store: "+err.Error())

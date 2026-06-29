@@ -33,16 +33,15 @@ func getCertPairs(certFiles []string) []string {
 func domainToFilename(domain string, ext string) string {
 	// Replace wildcard '*' with '_'
 	domain = strings.TrimSpace(domain)
-	if strings.HasPrefix(domain, "*") {
-		domain = "_" + strings.TrimPrefix(domain, "*")
+	if trimDomain, ok := strings.CutPrefix(domain, "*"); ok {
+		domain = "_" + trimDomain
 	}
 
 	if strings.HasPrefix(".", ext) {
-		ext = strings.TrimPrefix(ext, ".")
+		ext = strings.TrimPrefix(ext, ".") // Ensure ext does not start with a dot
 	}
 
 	// Add .pem extension
-	ext = strings.TrimPrefix(ext, ".") // Ensure ext does not start with a dot
 	return domain + "." + ext
 }
 
