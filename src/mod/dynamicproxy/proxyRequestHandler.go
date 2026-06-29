@@ -114,14 +114,20 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 }
 
 // Rewrite URL rewrite the prefix part of a virtual directory URL with /
+// Only the path portion is normalized (collapsing duplicated slashes)
 func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	rewrittenURL := requestURL
 	rewrittenURL = strings.TrimPrefix(rewrittenURL, strings.TrimSuffix(rooturl, "/"))
 
-	if strings.Contains(rewrittenURL, "//") {
-		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	path, query, hasQuery := strings.Cut(rewrittenURL, "?") //Fixed #1216
+	if strings.Contains(path, "//") {
+		path = strings.ReplaceAll(path, "//", "/")
 	}
-	return rewrittenURL
+
+	if hasQuery {
+		return path + "?" + query
+	}
+	return path
 }
 
 // upstreamHostSwap check if this loopback to one of the proxy rule in the system. If yes, do a shortcut target swap

@@ -134,6 +134,11 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 		// Assume localhost
 		domain = "default"
 	}
+	domain, err = sanitizeCertDomain(domain)
+	if err != nil {
+		http.Error(w, "Invalid domain given", http.StatusBadRequest)
+		return
+	}
 
 	switch keytype {
 	case "pub":
@@ -174,7 +179,7 @@ func (m *Manager) HandleCertUpload(w http.ResponseWriter, r *http.Request) {
 		fileMode = defaultPrivateKeyFileMode
 	}
 
-	err = writeFileWithMode(filepath.Join(m.CertStore, overWriteFilename), fileBytes, fileMode)
+	err = writeFileWithMode(m.CertStore, overWriteFilename, fileBytes, fileMode)
 	if err != nil {
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
 		return

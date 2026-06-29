@@ -46,7 +46,7 @@ type requestDebugInfo struct {
 
 	// Body
 	BodyPreview   string
-	BodySize      int  // actual bytes read; -1 when truncated
+	BodySize      int // actual bytes read; -1 when truncated
 	BodyTruncated bool
 
 	// Connection
@@ -277,7 +277,7 @@ h1{font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:2px}
 table{border-collapse:collapse;width:100%}
 tr:last-child td{border-bottom:none}
 td{padding:5px 0;border-bottom:1px solid #f0f0f0;vertical-align:top;word-break:break-all}
-td.k{color:#1d1d1f;font-weight:500;white-space:nowrap;width:36%;padding-right:16px}
+td.k{color:#1d1d1f;font-weight:500;white-space:nowrap;width:36%;padding-right:16px;}
 td.v{color:#3c3c43;font-family:'SF Mono','Menlo','Courier New',monospace;font-size:12px}
 td.empty{color:#8a8a8e;font-style:italic}
 pre{font-family:'SF Mono','Menlo','Courier New',monospace;font-size:12px;background:#f5f5f7;border:1px solid #d2d2d7;border-radius:6px;padding:12px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#1d1d1f}

@@ -47,23 +47,39 @@ const (
 	defaultPrivateKeyFileMode os.FileMode = 0600
 )
 
-func writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
-	// Clean the path and reject any path traversal sequences (e.g. "..")
-	// to prevent a crafted filename from escaping the intended directory.
-	cleanedPath := filepath.Clean(filename)
-	if strings.Contains(cleanedPath, "..") {
-		return fmt.Errorf("invalid filename: path traversal detected in %q", filename)
+// writeFileWithMode joins relativeName onto baseDir and writes data to the
+// result with the exact requested permission bits.
+func writeFileWithMode(baseDir, relativeName string, data []byte, mode os.FileMode) error {
+	resolvedPath, err := safeJoin(baseDir, relativeName)
+	if err != nil {
+		return err
 	}
 
-	err := os.WriteFile(cleanedPath, data, mode)
-	if err != nil {
+	if err := os.WriteFile(resolvedPath, data, mode); err != nil {
 		return err
 	}
 
 	// os.WriteFile honours the process umask, so the on-disk permissions may
 	// differ from the requested mode. os.Chmod sets the exact bits regardless
 	// of the umask — essential for private-key files (e.g. 0600).
-	return os.Chmod(cleanedPath, mode)
+	return os.Chmod(resolvedPath, mode)
+}
+
+// safeJoin joins name onto baseDir and verifies the resulting absolute path
+// is still located inside baseDir, rejecting any ../
+func safeJoin(baseDir, name string) (string, error) {
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", err
+	}
+	absBase = filepath.Clean(absBase)
+
+	joined := filepath.Join(absBase, name)
+
+	if joined != absBase && !strings.HasPrefix(joined, absBase+string(filepath.Separator)) {
+		return "", fmt.Errorf("invalid filename %q: resolved path escapes base directory %q", name, baseDir)
+	}
+	return joined, nil
 }
 
 func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
@@ -77,12 +93,12 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	//Check if this is initial setup
 	if !utils.FileExists(pubKey) {
 		buildInPubKey, _ := buildinCertStore.ReadFile(filepath.Base(pubKey))
-		writeFileWithMode(pubKey, buildInPubKey, defaultPublicCertFileMode)
+		writeFileWithMode(filepath.Dir(pubKey), filepath.Base(pubKey), buildInPubKey, defaultPublicCertFileMode)
 	}
 
 	if !utils.FileExists(priKey) {
 		buildInPriKey, _ := buildinCertStore.ReadFile(filepath.Base(priKey))
-		writeFileWithMode(priKey, buildInPriKey, defaultPrivateKeyFileMode)
+		writeFileWithMode(filepath.Dir(priKey), filepath.Base(priKey), buildInPriKey, defaultPrivateKeyFileMode)
 	}
 
 	thisManager := Manager{

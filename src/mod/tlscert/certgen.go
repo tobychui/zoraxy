@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"math/big"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -46,20 +45,32 @@ func (m *Manager) GenerateSelfSignedCertificate(cn string, sans []string, certFi
 		return err
 	}
 
+	// Resolve and validate both paths stay within the certificate store
+	// before touching the filesystem (certFile/keyFile are expected to
+	// already be sanitized by the caller, e.g. via domainToFilename).
+	certPath, err := safeJoin(m.CertStore, certFile)
+	if err != nil {
+		m.Logger.PrintAndLog("tls-router", "Rejected unsafe certificate filename: "+certFile, err)
+		return err
+	}
+	keyPath, err := safeJoin(m.CertStore, keyFile)
+	if err != nil {
+		m.Logger.PrintAndLog("tls-router", "Rejected unsafe key filename: "+keyFile, err)
+		return err
+	}
+
 	// Remove old certificate file if it exists
-	certPath := filepath.Join(m.CertStore, certFile)
 	if _, err := os.Stat(certPath); err == nil {
 		os.Remove(certPath)
 	}
 
 	// Remove old key file if it exists
-	keyPath := filepath.Join(m.CertStore, keyFile)
 	if _, err := os.Stat(keyPath); err == nil {
 		os.Remove(keyPath)
 	}
 
 	// Write certificate to file
-	err = writeFileWithMode(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), defaultPublicCertFileMode)
+	err = writeFileWithMode(m.CertStore, certFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), defaultPublicCertFileMode)
 	if err != nil {
 		m.Logger.PrintAndLog("tls-router", "Failed to write certificate to file: "+certFile, err)
 		return err
@@ -71,7 +82,7 @@ func (m *Manager) GenerateSelfSignedCertificate(cn string, sans []string, certFi
 		m.Logger.PrintAndLog("tls-router", "Unable to marshal ECDSA private key", err)
 		return err
 	}
-	err = writeFileWithMode(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes}), defaultPrivateKeyFileMode)
+	err = writeFileWithMode(m.CertStore, keyFile, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes}), defaultPrivateKeyFileMode)
 	if err != nil {
 		m.Logger.PrintAndLog("tls-router", "Failed to write private key to file: "+keyFile, err)
 		return err
