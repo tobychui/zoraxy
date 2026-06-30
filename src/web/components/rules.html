@@ -438,7 +438,7 @@
                                 console.log("Trying to get a new certificate via ACME");
 
                                 //Request ACME for certificate, see cert.html component
-                                obtainCertificate(rootname, defaultCA.trim(), function(){
+                                obtainCertificate(rootname, false, defaultCA.trim(), function(){
                                      // Renew the parent certificate list
                                     initManagedDomainCertificateList();
                                 });
