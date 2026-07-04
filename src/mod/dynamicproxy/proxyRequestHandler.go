@@ -114,14 +114,20 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 }
 
 // Rewrite URL rewrite the prefix part of a virtual directory URL with /
+// Only the path portion is normalized (collapsing duplicated slashes)
 func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	rewrittenURL := requestURL
 	rewrittenURL = strings.TrimPrefix(rewrittenURL, strings.TrimSuffix(rooturl, "/"))
 
-	if strings.Contains(rewrittenURL, "//") {
-		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	path, query, hasQuery := strings.Cut(rewrittenURL, "?") //Fixed #1216
+	if strings.Contains(path, "//") {
+		path = strings.ReplaceAll(path, "//", "/")
 	}
-	return rewrittenURL
+
+	if hasQuery {
+		return path + "?" + query
+	}
+	return path
 }
 
 // upstreamHostSwap check if this loopback to one of the proxy rule in the system. If yes, do a shortcut target swap
@@ -247,6 +253,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
+		AllowConnect:                   target.EnableConnectSupport,
 		Version:                        target.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.Option.DevelopmentMode,
 	})
@@ -294,7 +301,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
 		}
 
-		if target.parent.HeaderRewriteRules != nil {
+		if target.parent.HeaderRewriteRules == nil {
 			target.parent.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
 		}
 
@@ -342,6 +349,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ProxyDomain:                    target.Domain,
 		OriginalHost:                   reqHostname,
 		UseTLS:                         target.RequireTLS,
+		NoCache:                        target.parent.parent.Option.NoCache,
 		PathPrefix:                     target.MatchingPath,
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
@@ -349,6 +357,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ForceHTTP11:                    target.parent.ForceHTTP11,
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
+		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		Version:                        target.parent.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
 	})

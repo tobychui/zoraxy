@@ -28,7 +28,7 @@
             <div class="field">
                 <label for="forwardAuthAddress">Address</label>
                 <input type="text" id="forwardAuthAddress" name="forwardAuthAddress" placeholder="Enter Forward Auth Address">
-                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth</small>
+                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth<br><b>Using Authentik in single-application (per-app) mode?</b> You also need to set <b>Ignored Paths</b> under Advanced Options below, and add a matching Virtual Directory on each protected host, see the note on that field.</small>
             </div>
             <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
                 <div class="ui advancedSSOForwardAuthOptions accordion">
@@ -85,6 +85,18 @@
                         <div class="ui checkbox">
                             <input type="checkbox" id="forwardAuthRequestUseXOriginalHeaders" name="forwardAuthRequestUseXOriginalHeaders" value="Use X-Original-* Headers">
                             <label for="forwardAuthRequestUseXOriginalHeaders">Use X-Original-* Headers<br><small>This is used for implementations which do not use the X-Forwarded-* headers. In addition if the authorization server responds with a 401 and Location header the status will be changed to 302.</small></label>
+                        </div>
+                        <div class="field" style="margin-top: 1em;">
+                            <label for="forwardAuthIgnoredPaths">Ignored Paths</label>
+                            <input type="text" id="forwardAuthIgnoredPaths" name="forwardAuthIgnoredPaths" placeholder="/outpost.goauthentik.io">
+                            <small>
+                                Comma-separated list of request path prefixes that are <b>excluded from Forward Auth</b>. Matching is normalized (path traversal and prefix-boundary tricks are rejected). <br>
+                                <strong>Authentik (single application):</strong> set this to <code>/outpost.goauthentik.io</code> and add a Virtual Directory for the same path pointing to your outpost, so the login callback can complete.
+                            </small>
+                            <div class="ui visible warning message" style="margin-top: 0.5em;">
+                                <i class="exclamation triangle icon"></i>
+                                <b>No authentication is performed on these paths.</b> Every request whose path starts with one of these prefixes bypasses Forward Auth entirely and is served with no auth check — only list paths you intentionally want public.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -370,6 +382,11 @@
                 } else {
                     $("#forwardAuthRequestUseXOriginalHeaders").parent().checkbox("set unchecked");
                 }
+                if (data.ignoredPaths != null) {
+                    $('#forwardAuthIgnoredPaths').val(data.ignoredPaths.join(","));
+                } else {
+                    $('#forwardAuthIgnoredPaths').val("");
+                }
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
@@ -391,6 +408,7 @@
         const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
         const requestIncludeBody = $('#forwardAuthRequestIncludeBody').is(':checked');
         const useXOriginalHeaders = $('#forwardAuthRequestUseXOriginalHeaders').is(':checked');
+        const ignoredPaths = $('#forwardAuthIgnoredPaths').val();
 
         console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Included Cookies: ${requestIncludedCookies}. Request Excluded Cookies: ${requestExcludedCookies}. Request Include Body: ${requestIncludeBody}. Use X-Original-* Headers: ${useXOriginalHeaders}.`);
 
@@ -406,6 +424,7 @@
                 requestExcludedCookies: requestExcludedCookies,
                 requestIncludeBody: requestIncludeBody,
                 useXOriginalHeaders: useXOriginalHeaders,
+                ignoredPaths: ignoredPaths,
             },
             success: function(data) {
                 if (data.error !== undefined) {

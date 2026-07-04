@@ -376,7 +376,7 @@
                     <i class="ui green checkmark icon"></i> Setting Saved
                 </div>
                 <div class="ui basic segment advanceoptions">
-                    <div class="ui accordion advanceSettings">
+                    <div id="accessAdvanceSettings" class="ui accordion advanceSettings">
                         <div class="title">
                           <i class="dropdown icon"></i>
                             Advance Settings
@@ -1674,5 +1674,7 @@
     }
 
     //Bind UI events
-    $(".advanceSettings").accordion();
+    // Scope to this page's accordion only; .advanceSettings is reused by
+    // other webmin components loaded dynamically via ajax.
+    $("#accessAdvanceSettings").accordion();
 </script>

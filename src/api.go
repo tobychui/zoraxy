@@ -78,6 +78,10 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/delete", RemoveProxyBasicAuthExceptionPaths)
+	/* ZorxAuth SSO per-endpoint exception rules */
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/list", ListProxyZorxAuthExceptionRules)
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/add", AddProxyZorxAuthExceptionRule)
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/delete", RemoveProxyZorxAuthExceptionRule)
 }
 
 // Register the APIs for TLS / SSL certificate management functions
@@ -115,6 +119,7 @@ func RegisterZorxAuthUserManagementAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/zorxauth/users/update", zorxAuthRouter.HandleUserUpdate)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/delete", zorxAuthRouter.HandleUserDelete)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/logoutAll", zorxAuthRouter.HandleLogoutAllUsers)
+	authRouter.HandleFunc("/api/sso/zorxauth/users/disable2fa", zorxAuthRouter.HandleDisableUserTOTP)
 
 	// Group Policy management
 	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/list", zorxAuthRouter.HandleGroupPolicyList)
@@ -249,6 +254,15 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/webdav/setPort", staticWebServer.HandleWebDAVPortChange)
 	authRouter.HandleFunc("/api/webserv/webdav/setUseCustomCredentials", staticWebServer.HandleSetUseCustomCredentials)
 	authRouter.HandleFunc("/api/webserv/webdav/setCustomCredentials", staticWebServer.HandleSetCustomCredentials)
+}
+
+// Register the APIs for Route Debugger management functions
+func RegisterRouteDebuggerAPIs(authRouter *auth.RouterDef) {
+	authRouter.HandleFunc("/api/routedebugger/status", routeDebugger.HandleGetStatus)
+	authRouter.HandleFunc("/api/routedebugger/start", routeDebugger.HandleStart)
+	authRouter.HandleFunc("/api/routedebugger/stop", routeDebugger.HandleStop)
+	authRouter.HandleFunc("/api/routedebugger/setPort", routeDebugger.HandlePortChange)
+	authRouter.HandleFunc("/api/routedebugger/setPrettyPrint", routeDebugger.HandleSetPrettyPrint)
 }
 
 // Register the APIs for Network Utilities functions
@@ -405,6 +419,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterNetworkUtilsAPIs(authRouter)
 	RegisterACMEAndAutoRenewerAPIs(authRouter)
 	RegisterStaticWebServerAPIs(authRouter)
+	RegisterRouteDebuggerAPIs(authRouter)
 	RegisterPluginAPIs(authRouter)
 
 	//Docker UX Optimizations

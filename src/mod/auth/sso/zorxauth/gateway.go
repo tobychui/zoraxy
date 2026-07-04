@@ -11,8 +11,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pquerna/otp/totp"
 	"imuslab.com/zoraxy/mod/netutils"
 )
+
+// validateTOTPCode is a thin wrapper so that gateway.go can validate
+// TOTP codes without a direct call-site import of the otp package elsewhere.
+func validateTOTPCode(code, secret string) bool {
+	return totp.Validate(code, secret)
+}
 
 //go:embed auth.html
 var authPageHTML []byte
@@ -52,6 +59,11 @@ func NewGatewayServer(router *AuthRouter) *GatewayServer {
 	})
 	mux.HandleFunc("/login", gs.handleLogin)
 	mux.HandleFunc("/logout", gs.handleLogout)
+	mux.HandleFunc("/totp-verify", gs.handleTOTPVerify)
+	mux.HandleFunc("/passkey/auth/begin", gs.handlePasskeyAuthBegin)
+	mux.HandleFunc("/passkey/auth/complete", gs.handlePasskeyAuthComplete)
+	mux.HandleFunc("/user", gs.handleUserPortal)
+	mux.HandleFunc("/user/api/", gs.handleUserPortalAPI)
 
 	return gs
 }
@@ -171,11 +183,8 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 	if authenticated {
 		redirectURL := r.URL.Query().Get("redirect")
 		if redirectURL == "" {
-			redirectURL = gs.router.Options.FallbackRedirectURL
-			if redirectURL == "" {
-				//Invalid settings, fallback to about:blank to avoid open redirect vulnerability
-				redirectURL = "about:blank"
-			}
+			redirectURL = "/user" // default to user portal if redirect URL is missing
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		}
 
 		host := ""
@@ -300,16 +309,19 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Successful login: clear the consecutive-failure counter for this IP
 	gs.router.loginFailureCounter.Delete(clientIP)
 
-	redirectTarget := r.FormValue("redirect")
-	if redirectTarget == "" {
-		redirectTarget = gs.router.Options.FallbackRedirectURL
-		if redirectTarget == "" {
-			//Invalid settings, fallback to about:blank to avoid open redirect vulnerability
-			redirectTarget = "about:blank"
+	rawRedirect := r.FormValue("redirect")
+	redirectTarget := rawRedirect
+	isDirectLogin := redirectTarget == "/"
+	if redirectTarget == "/" {
+		protocolScheme := "http"
+		if r.URL.Scheme != "" {
+			protocolScheme = r.URL.Scheme
 		}
+		redirectTarget = protocolScheme + "://" + r.Host + "/user" // default to user portal if redirect URL is missing
 	}
 
 	parsedTarget, err := url.Parse(redirectTarget)
+
 	if err != nil || parsedTarget.Host == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -322,6 +334,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	host := parsedTarget.Hostname()
 	port := parsedTarget.Port()
+
 	targetProtocol := parsedTarget.Scheme
 	if targetProtocol == "" {
 		targetProtocol = "http"
@@ -338,7 +351,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !gs.router.ValidateUserAccessToHost(u.Username, host) {
+	if !gs.router.ValidateUserAccessToHost(u.Username, host) && r.Host != host {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -355,6 +368,33 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.FormValue("rememberMe") == "on" || strings.EqualFold(r.FormValue("rememberMe"), "true") {
 		rememberMe = true
+	}
+
+	// If 2FA is enabled for this user, pause here and issue a short-lived pending
+	// TOTP session so the client can supply the authenticator code.
+	if u.Enable2FA {
+		totpToken := gs.router.generateSessionToken()
+		gs.router.pendingTOTPSessions.Store(totpToken, &PendingTOTPSession{
+			Username:       u.Username,
+			Host:           host,
+			Port:           port,
+			Protocol:       targetProtocol,
+			RedirectTarget: redirectTarget,
+			IsDirectLogin:  isDirectLogin,
+			RememberMe:     rememberMe,
+			Expiry:         time.Now().Add(5 * time.Minute),
+		})
+		time.AfterFunc(5*time.Minute, func() {
+			gs.router.pendingTOTPSessions.Delete(totpToken)
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":      false,
+			"require_totp": true,
+			"totp_token":   totpToken,
+		})
+		return
 	}
 
 	//Generate a cookie for the authentication gateway domain with Domain
@@ -390,6 +430,18 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
 		gs.router.gatewaySessionStore.Delete(sessionToken)
 	})
+
+	// Direct login: user accessed the gateway domain directly with no redirect target.
+	// Issue the session cookie and send them to the user-management panel.
+	if isDirectLogin {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":        true,
+			"redirectTarget": "/user",
+		})
+		return
+	}
 
 	sessionId := gs.router.generateValidationCodeForSession(u.Username)
 	hostWithPort := host
@@ -522,4 +574,142 @@ func (gs *GatewayServer) ServeGatewayDisabled(w http.ResponseWriter, r *http.Req
 		return true
 	}
 	return false
+}
+
+// handleTOTPVerify completes the second step of a 2FA login.
+// The client posts the totp_token issued by handleLogin together with
+// the 6-digit code from their authenticator app.
+func (gs *GatewayServer) handleTOTPVerify(w http.ResponseWriter, r *http.Request) {
+	if gs.ServeGatewayDisabled(w, r) {
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Method not allowed",
+		})
+		return
+	}
+
+	totpToken := r.FormValue("totp_token")
+	totpCode := r.FormValue("totp_code")
+
+	if totpToken == "" || totpCode == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "totp_token and totp_code are required",
+		})
+		return
+	}
+
+	// Look up the pending session
+	pendingObj, exists := gs.router.pendingTOTPSessions.Load(totpToken)
+	if !exists {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Invalid or expired TOTP session; please log in again",
+		})
+		return
+	}
+
+	pending, ok := pendingObj.(*PendingTOTPSession)
+	if !ok || time.Now().After(pending.Expiry) {
+		gs.router.pendingTOTPSessions.Delete(totpToken)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "TOTP session expired; please log in again",
+		})
+		return
+	}
+
+	// One-time use: consume the pending session immediately
+	gs.router.pendingTOTPSessions.Delete(totpToken)
+
+	// Fetch user and validate the TOTP code
+	u, err := gs.router.getUserByUsername(pending.Username)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Internal server error",
+		})
+		return
+	}
+
+	if !validateTOTPCode(totpCode, u.TOTPSecret) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Invalid authenticator code",
+		})
+		return
+	}
+
+	// TOTP is valid – create the gateway session exactly as handleLogin would.
+	cookieDuration := gs.router.Options.CookieDuration
+	if pending.RememberMe {
+		cookieDuration = gs.router.Options.CookieDurationRememberMe
+	}
+	isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+
+	sessionToken := gs.router.generateSessionToken()
+	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
+	gs.router.gatewaySessionStore.Store(sessionToken, &GatewaySession{
+		Username: u.Username,
+		Expiry:   expiryTime,
+	})
+	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
+		gs.router.gatewaySessionStore.Delete(sessionToken)
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     gs.router.Options.CookieName,
+		Value:    sessionToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   isSecure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   cookieDuration,
+	})
+
+	// Direct login: user accessed the gateway domain directly with no redirect target.
+	// Issue the session cookie and send them to the user-management panel.
+	if pending.IsDirectLogin {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":        true,
+			"redirectTarget": "/user",
+		})
+		return
+	}
+
+	sessionId := gs.router.generateValidationCodeForSession(u.Username)
+	hostWithPort := pending.Host
+	if pending.Port != "" {
+		hostWithPort = pending.Host + ":" + pending.Port
+	}
+	sessionSetURL := fmt.Sprintf("%s://%s/%s", pending.Protocol, hostWithPort,
+		strings.TrimPrefix(gs.router.Options.SSOSessionSetURL, "/"))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":        true,
+		"sessionId":      sessionId,
+		"redirectTarget": pending.RedirectTarget,
+		"sessionSetURL":  sessionSetURL,
+		"rememberMe":     pending.RememberMe,
+	})
 }

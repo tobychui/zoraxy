@@ -186,7 +186,7 @@
         </tbody>
       </table>
       <div class="ui basic segment advanceoptions">
-          <div class="ui accordion advanceSettings">
+          <div id="pluginDeveloperSettings" class="ui accordion advanceSettings">
               <div class="title">
                 <i class="dropdown icon"></i>
                   Developer Settings
@@ -771,6 +771,9 @@ function uninstallPlugin(pluginId, pluginName, btn=undefined) {
   }
 
   initDeveloperSettings();
+  // Scope to this page's accordion only; .advanceSettings is reused by
+  // other webmin components loaded dynamically via ajax.
+  $("#pluginDeveloperSettings").accordion();
 </script>
 
 

@@ -1,6 +1,7 @@
 package dpcore
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -76,6 +77,7 @@ type ResponseRewriteRuleSet struct {
 	NoRemoveUserAgentHeader        bool   //Do not remove User-Agent header from server response (advanced usecase)
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 	ForceHTTP11                    bool   //Force use HTTP/1.1 for upstream connection
+	AllowConnect                   bool   //Allow HTTP CONNECT tunneling; when true the target is validated against ProxyDomain
 
 	/* System Information Payload */
 	DevelopmentMode bool   //Inject dev mode information to requests
@@ -101,11 +103,21 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		} else {
 			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
 		}
-
 	}
 
-	// Create a new transport instance instead of modifying the shared DefaultTransport
 	thisTransporter := newBaseTransport(dpcOptions)
+
+	// Set the correct SNI for HTTPS backends at creation time.
+	// Each ReverseProxy instance targets one backend, so this is safe and avoids
+	// per-request transport cloning that defeats connection pooling.
+	if strings.EqualFold(target.Scheme, "https") {
+		serverName := target.Hostname()
+		cfg := &tls.Config{ServerName: serverName}
+		if dpcOptions.IgnoreTLSVerification {
+			cfg.InsecureSkipVerify = true
+		}
+		thisTransporter.TLSClientConfig = cfg
+	}
 
 	return &ReverseProxy{
 		Director:      director,
@@ -115,7 +127,6 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		Transport:     thisTransporter,
 	}
 }
-
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	apath, bpath := a.EscapedPath(), b.EscapedPath()
 	aslash, bslash := strings.HasSuffix(apath, "/"), strings.HasPrefix(bpath, "/")
@@ -297,52 +308,37 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
+	// Fix for #1204 HTTP/2 to HTTP/1.1 translation for bodyless POST requests.
+	if outreq.ContentLength == -1 && outreq.Body != nil && outreq.Body != http.NoBody {
+		buf := make([]byte, 1)
+		n, err := outreq.Body.Read(buf)
+		switch {
+		case n == 0 && err == io.EOF:
+			// Body is confirmed empty, prevent chunked encoding downstream.
+			outreq.Body = http.NoBody
+			outreq.ContentLength = 0
+			outreq.GetBody = nil
+		case n > 0:
+			// Body has content; put the peeked byte back.
+			outreq.Body = io.NopCloser(io.MultiReader(bytes.NewReader(buf[:n]), outreq.Body))
+		}
+	}
+
 	// Fix for #997
-	// Only clone transport when configuration needs to change to preserve connection pooling
+	// Only clone transport when configuration needs to change to preserve connection pooling.
+	// Fix for #1088
+	// No per-request SNI cloning is needed because ServerName is set on the shared
+	// transport during NewDynamicProxyCore initialization.
 	needClone := false
 	var trc *http.Transport
 
 	if tr, ok := transport.(*http.Transport); ok {
-		// Check if we need to modify transport configuration
 		if rrr.ForceHTTP11 {
-			if !needClone {
-				//Proxy rule config changed. Clone a new transport instance
-				trc = tr.Clone()
-				needClone = true
-			}
+			trc = tr.Clone()
+			needClone = true
 			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
 			trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
 			trc.ForceAttemptHTTP2 = false
-		}
-
-		// Fix for issue #821 - only clone if ServerName needs updating
-		if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
-			serverName := outreq.Host
-			if h, _, err := net.SplitHostPort(serverName); err == nil {
-				serverName = h
-			}
-
-			// Only clone if ServerName actually needs to be updated
-			currentServerName := ""
-			if tr.TLSClientConfig != nil {
-				currentServerName = tr.TLSClientConfig.ServerName
-			}
-
-			if currentServerName != serverName {
-				if !needClone {
-					trc = tr.Clone()
-					needClone = true
-				}
-
-				var cfg *tls.Config
-				if trc.TLSClientConfig != nil {
-					cfg = trc.TLSClientConfig.Clone()
-				} else {
-					cfg = &tls.Config{}
-				}
-				cfg.ServerName = serverName
-				trc.TLSClientConfig = cfg
-			}
 		}
 
 		if needClone {
@@ -464,7 +460,26 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	return res.StatusCode, nil
 }
 
-func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
+func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
+	// Validate the CONNECT target against the configured upstream before hijacking
+	// so that http.Error still works if validation fails.
+	connectTarget := req.URL.Host
+	if !strings.Contains(connectTarget, ":") {
+		connectTarget += ":443"
+	}
+	allowedHost := rrr.ProxyDomain
+	if !strings.Contains(allowedHost, ":") {
+		if rrr.UseTLS {
+			allowedHost += ":443"
+		} else {
+			allowedHost += ":80"
+		}
+	}
+	if connectTarget != allowedHost {
+		http.Error(rw, "Forbidden", http.StatusForbidden)
+		return http.StatusForbidden, errors.New("CONNECT to " + connectTarget + " denied: target must match the configured upstream")
+	}
+
 	hij, ok := rw.(http.Hijacker)
 	if !ok {
 		p.logf("http server does not support hijacker")
@@ -559,8 +574,11 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (in
 
 func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	if req.Method == "CONNECT" {
-		return p.ProxyHTTPS(rw, req)
-	} else {
-		return p.ProxyHTTP(rw, req, rrr)
+		if !rrr.AllowConnect {
+			http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return http.StatusMethodNotAllowed, nil
+		}
+		return p.ProxyHTTPS(rw, req, rrr)
 	}
+	return p.ProxyHTTP(rw, req, rrr)
 }

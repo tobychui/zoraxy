@@ -26,14 +26,37 @@ type User struct {
 	UseGroupPolicy bool     `json:"useGroupPolicy"` //Use group poliy instead of AllowedHosts for checking access
 	GroupID        string   `json:"groupId"`        //GroupID is the group policy ID that the user belongs to
 	AllowedHosts   []string `json:"allowedHosts"`   //optional, if empty, allow all hosts
+
+	/* User Configs */
+	Enable2FA  bool   `json:"enable2FA"`  //Whether the user has enabled 2FA. If true, the user must complete 2FA verification after password verification to complete login.
+	TOTPSecret string `json:"totpSecret"` //The TOTP secret for 2FA. Required if Enable2FA is true.
+
+	/* Passkeys (WebAuthn) */
+	PasskeyCredentials []PasskeyCredential `json:"passkeyCredentials"` //Registered WebAuthn/passkey credentials
+
+}
+
+// PasskeyCredential stores a single WebAuthn credential for a user.
+type PasskeyCredential struct {
+	ID             []byte   `json:"id"`             // Raw credential ID bytes
+	PublicKey      []byte   `json:"publicKey"`      // COSE-encoded public key
+	AAGUID         []byte   `json:"aaguid"`         // Authenticator AAGUID
+	SignCount      uint32   `json:"signCount"`      // Signature counter (clone detection)
+	CloneWarning   bool     `json:"cloneWarning"`   // Possible clone detected
+	Transports     []string `json:"transports"`     // e.g. ["internal", "hybrid", "usb"]
+	BackupEligible bool     `json:"backupEligible"` // Can be cloud-synced
+	BackupState    bool     `json:"backupState"`    // Currently synced to cloud
+	Name           string   `json:"name"`           // User-assigned display name
+	CreatedAt      int64    `json:"createdAt"`      // Unix timestamp
+	LastUsedAt     int64    `json:"lastUsedAt"`     // Unix timestamp
 }
 
 // AuthRouterOptions contains configuration for the ZorxAuth router
 type AuthRouterOptions struct {
 	/* Auth Gateway Options */
-	EnableAuthGateway   bool   `json:"enable_auth_gateway"`   //Whether to enable the authentication gateway. If disabled, all auth request are treated as rejected. Default: false
-	GatewayPort         int    `json:"gateway_port"`          //Port number for the authentication gateway. Default: 5489
-	FallbackRedirectURL string `json:"fallback_redirect_url"` //Fallback redirect URL if the original redirect URL is missing or invalid.
+	EnableAuthGateway bool `json:"enable_auth_gateway"` //Whether to enable the authentication gateway. If disabled, all auth request are treated as rejected. Default: false
+	GatewayPort       int  `json:"gateway_port"`        //Port number for the authentication gateway. Default: 5489
+	//FallbackRedirectURL string `json:"fallback_redirect_url"` //Fallback redirect URL if the original redirect URL is missing or invalid.
 	/* Auth Router Options */
 	EnableRateLimit          bool   `json:"enable_rate_limit"`           //Whether to enable rate limiting for authentication attempts. Default: true
 	RateLimitPerIp           int    `json:"rate_limit_per_ip"`           //Number of allowed authentication attempts per minute per IP. Default: 60
@@ -57,6 +80,24 @@ type GatewaySession struct {
 	Expiry   time.Time
 }
 
+// PendingTOTPSession holds login context while waiting for 2FA verification
+type PendingTOTPSession struct {
+	Username       string
+	Host           string
+	Port           string
+	Protocol       string
+	RedirectTarget string
+	RememberMe     bool
+	IsDirectLogin  bool // true when no redirect target was provided (direct gateway access)
+	Expiry         time.Time
+}
+
+// PendingTOTPSetup holds a newly generated TOTP secret before the user confirms it
+type PendingTOTPSetup struct {
+	Secret string
+	Expiry time.Time
+}
+
 // AuthRouter handles ZorxAuth SSO authentication routing
 type AuthRouter struct {
 	Logger   *logger.Logger
@@ -76,6 +117,14 @@ type AuthRouter struct {
 	loginAttemptCounter sync.Map  // IP -> *int64, total attempts in current minute window
 	loginFailureCounter sync.Map  // IP -> *int64, consecutive failures used for exponential backoff
 	rateLimitResetStop  chan bool // stop channel for the per-minute counter reset ticker
+
+	/* 2FA */
+	pendingTOTPSessions sync.Map // totp_token (string) -> *PendingTOTPSession (pending login 2FA)
+	pendingTOTPSetup    sync.Map // username (string) -> *PendingTOTPSetup (pending 2FA enrollment)
+
+	/* Passkeys (WebAuthn) */
+	pendingPasskeyReg  sync.Map // token (string) -> *PendingPasskeyRegistration
+	pendingPasskeyAuth sync.Map // token (string) -> *PendingPasskeyAuth
 }
 
 func getDefaultOptions() *AuthRouterOptions {

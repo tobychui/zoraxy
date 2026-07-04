@@ -212,9 +212,11 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">🔐</div>
-        <h1>Welcome Back</h1>
-        <p class="subtitle">Sign in to continue to your application</p>
+        <div id="loginHeader">
+            <div class="icon">🔐</div>
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Sign in to continue to your application</p>
+        </div>
         
         <div class="error-message" id="errorMessage">
             <p id="errorText"></p>
@@ -254,6 +256,17 @@
             <button type="submit" class="btn-submit" id="submitBtn">
                 Sign In
             </button>
+
+            <!-- Passkey divider + button -->
+            <div style="display:flex;align-items:center;gap:12px;margin:18px 0 0">
+                <hr style="flex:1;border:none;border-top:1px solid #e2e8f0">
+                <span style="font-size:13px;color:#a0aec0;white-space:nowrap">or</span>
+                <hr style="flex:1;border:none;border-top:1px solid #e2e8f0">
+            </div>
+            <button type="button" class="btn-submit" id="passkeyBtn" style="margin-top:10px;background:linear-gradient(135deg,#4299e1 0%,#667eea 100%)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><circle cx="7" cy="17" r="3"/><path d="M14 10.5A4.5 4.5 0 1 1 21 14h-1l-1 1-1-1-1 1-1-1-1 1-1-1-1 1h-1v-1.5"/></svg>
+                Sign in with a Passkey
+            </button>
         </form>
         
         <div class="info-box secure" id="secureInfo">
@@ -262,6 +275,24 @@
         
         <div class="info-box warning" id="warningInfo">
             <p>⚠️ Warning: You are connecting over HTTP (unencrypted). Your credentials may be visible to others. Please use HTTPS for secure authentication.</p>
+        </div>
+
+        <!-- TOTP step (hidden until 2FA is required) -->
+        <div id="totpStep" style="display:none">
+            <div style="text-align:center;font-size:48px;margin-bottom:12px">🔐</div>
+            <h2 style="text-align:center;color:#2d3748;font-size:22px;margin-bottom:8px">Two-Factor Authentication</h2>
+            <p style="text-align:center;color:#718096;font-size:14px;margin-bottom:24px">Enter the 6-digit code from your authenticator app.</p>
+            <div class="error-message" id="totpErrorMessage">
+                <p id="totpErrorText"></p>
+            </div>
+            <div class="form-group">
+                <label for="totpCode">Authenticator Code</label>
+                <input type="text" id="totpCode" placeholder="000000" maxlength="6" autocomplete="one-time-code" inputmode="numeric" style="letter-spacing:4px;text-align:center;font-size:22px;">
+            </div>
+            <button class="btn-submit" id="totpSubmitBtn">Verify</button>
+            <p style="text-align:center;margin-top:16px;font-size:13px;color:#718096">
+                <a href="#" id="totpBackLink" style="color:#4299e1;text-decoration:none">← Back to login</a>
+            </p>
         </div>
     </div>
     
@@ -304,7 +335,112 @@
                 submitBtn.textContent = 'Sign In';
             }
         }
-        
+
+        // Helper: redirect to the target site after a successful auth response
+        function handleSuccessResponse(data) {
+            if (data.redirectTarget && !data.sessionSetURL) {
+                // Direct login (no SSO session-set needed): go straight to the target
+                window.location.href = data.redirectTarget;
+                return true;
+            }
+            if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
+                return false;
+            }
+            const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
+            const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
+            window.location.href = finalRedirectURL;
+            return true;
+        }
+
+        // ── TOTP step ──────────────────────────────────────────────
+        let pendingTotpToken = null;
+
+        function showTotpStep(token) {
+            pendingTotpToken = token;
+            loginForm.style.display = 'none';
+            secureInfo.classList.remove('show');
+            warningInfo.classList.remove('show');
+            document.getElementById('loginHeader').style.display = 'none';
+            document.getElementById('totpStep').style.display = 'block';
+            document.getElementById('totpCode').value = '';
+            document.getElementById('totpErrorMessage').classList.remove('show');
+            document.getElementById('totpCode').focus();
+        }
+
+        function hideTotpStep() {
+            pendingTotpToken = null;
+            document.getElementById('totpStep').style.display = 'none';
+            document.getElementById('loginHeader').style.display = '';
+            loginForm.style.display = 'block';
+            if (isSecure) {
+                secureInfo.classList.add('show');
+            } else {
+                warningInfo.classList.add('show');
+            }
+        }
+
+        document.getElementById('totpBackLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            hideTotpStep();
+        });
+
+        document.getElementById('totpSubmitBtn').addEventListener('click', async function() {
+            const btn     = document.getElementById('totpSubmitBtn');
+            const errEl   = document.getElementById('totpErrorMessage');
+            const errText = document.getElementById('totpErrorText');
+
+            errEl.classList.remove('show');
+            const code = document.getElementById('totpCode').value.trim();
+            if (code.length !== 6) {
+                errText.textContent = 'Please enter the 6-digit code from your authenticator app.';
+                errEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying<span class="spinner"></span>';
+
+            try {
+                const response = await fetch('/totp-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        totp_token: pendingTotpToken,
+                        totp_code:  code
+                    })
+                });
+
+                let data = null;
+                try { data = await response.json(); } catch { data = null; }
+
+                if (response.ok && data && data.success) {
+                    if (!handleSuccessResponse(data)) {
+                        errText.textContent = 'Invalid response from server. Please try again.';
+                        errEl.classList.add('show');
+                        btn.disabled = false;
+                        btn.textContent = 'Verify';
+                    }
+                    return;
+                }
+
+                errText.textContent = (data && data.error) || 'Invalid code. Please try again.';
+                errEl.classList.add('show');
+            } catch (error) {
+                console.error('TOTP verify error:', error);
+                errText.textContent = 'An error occurred. Please try again.';
+                errEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Verify';
+        });
+
+        // Allow Enter key on the TOTP input
+        document.getElementById('totpCode').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('totpSubmitBtn').click();
+        });
+
+        // ── Login form ─────────────────────────────────────────────
         loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             hideError();
@@ -335,17 +471,21 @@
                     data = null;
                 }
 
-                if (response.ok && data && data.success) {
-                    if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
-                        showError('Invalid login response from server. Please try again.');
+                if (response.ok && data) {
+                    // 2FA required: switch to TOTP step
+                    if (data.require_totp && data.totp_token) {
                         setLoading(false);
+                        showTotpStep(data.totp_token);
                         return;
                     }
 
-                    const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
-                    const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
-                    window.location.href = finalRedirectURL;
-                    return;
+                    if (data.success) {
+                        if (!handleSuccessResponse(data)) {
+                            showError('Invalid login response from server. Please try again.');
+                            setLoading(false);
+                        }
+                        return;
+                    }
                 }
 
                 showError((data && data.error) || 'Invalid username or password. Please try again.');
@@ -364,6 +504,94 @@
         // Clear error when user starts typing
         document.getElementById('username').addEventListener('input', hideError);
         document.getElementById('password').addEventListener('input', hideError);
+
+        // ── Passkey helpers ────────────────────────────────────────
+        function bufferToBase64url(buf) {
+            const bytes = new Uint8Array(buf);
+            let str = '';
+            bytes.forEach(b => str += String.fromCharCode(b));
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+        function base64urlToBuffer(b64url) {
+            const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+            const bin = atob(b64);
+            return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
+        }
+        function encodeAssertionCredential(cred) {
+            return {
+                id: cred.id,
+                rawId: bufferToBase64url(cred.rawId),
+                type: cred.type,
+                response: {
+                    clientDataJSON:    bufferToBase64url(cred.response.clientDataJSON),
+                    authenticatorData: bufferToBase64url(cred.response.authenticatorData),
+                    signature:         bufferToBase64url(cred.response.signature),
+                    userHandle:        cred.response.userHandle ? bufferToBase64url(cred.response.userHandle) : null
+                }
+            };
+        }
+
+        // ── Passkey login ──────────────────────────────────────────
+        document.getElementById('passkeyBtn').addEventListener('click', async function() {
+            const btn = document.getElementById('passkeyBtn');
+            hideError();
+
+            if (!window.PublicKeyCredential) {
+                showError('Your browser does not support passkeys.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Authenticating…';
+
+            try {
+                // Step 1 – get challenge
+                const resp1 = await fetch('/passkey/auth/begin', {
+                    method: 'POST',
+                    body: new URLSearchParams({ redirect: redirectUrl })
+                });
+                const json1 = await resp1.json();
+                if (!resp1.ok || !json1.token) throw new Error(json1.error || 'Could not start passkey login.');
+
+                const token   = json1.token;
+                const options = json1.options;
+
+                // Decode binary fields from base64url
+                options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+                if (options.publicKey.allowCredentials) {
+                    options.publicKey.allowCredentials = options.publicKey.allowCredentials.map(c => ({
+                        ...c, id: base64urlToBuffer(c.id)
+                    }));
+                }
+
+                // Step 2 – platform ceremony
+                const cred = await navigator.credentials.get({ publicKey: options.publicKey });
+
+                // Step 3 – send assertion
+                const resp2 = await fetch('/passkey/auth/complete?token=' + encodeURIComponent(token), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(encodeAssertionCredential(cred))
+                });
+                const json2 = await resp2.json();
+                if (json2.success) {
+                    if (!handleSuccessResponse(json2)) {
+                        showError('Invalid response from server. Please try again.');
+                    }
+                } else {
+                    showError(json2.error || 'Passkey authentication failed.');
+                }
+            } catch (e) {
+                if (e && e.name === 'NotAllowedError') {
+                    showError('Passkey authentication was cancelled.');
+                } else {
+                    showError(e.message || 'Passkey authentication failed.');
+                }
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><circle cx="7" cy="17" r="3"/><path d="M14 10.5A4.5 4.5 0 1 1 21 14h-1l-1 1-1-1-1 1-1-1-1 1-1-1-1 1h-1v-1.5"/></svg>Sign in with a Passkey';
+        });
     </script>
 </body>
 </html>

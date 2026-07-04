@@ -98,6 +98,7 @@
 					</div>
 					</div>
 					<button class="ui basic button" onclick="saveUser();"><i class="ui green save icon"></i> Save Changes</button>
+					<button class="ui basic yellow button" id="disable2faBtn" style="display:none;" onclick="disableUserTOTP();"><i class="ui shield icon"></i> Disable 2FA</button>
 					<button class="ui basic button" onclick="cancelEdit();"><i class="ui grey cancel icon"></i> Cancel</button>
 				</div>
 
@@ -414,7 +415,7 @@
                         accessDisplay = '<span style="opacity:0.5;">all hosts</span>';
                     }
                     const emailDisplay = escapeHtml(user.email) || '<span style="opacity:0.5;">—</span>';
-                    body.append(`<tr class="userRow" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}" data-usegrouppolicy="${user.useGroupPolicy ? '1' : '0'}" data-groupid="${escapeHtml(user.groupId || '')}">
+                    body.append(`<tr class="userRow" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}" data-usegrouppolicy="${user.useGroupPolicy ? '1' : '0'}" data-groupid="${escapeHtml(user.groupId || '')}" data-enable2fa="${user.enable2FA ? '1' : '0'}">
                         <td>${escapeHtml(user.username)}</td>
                         <td>${emailDisplay}</td>
                         <td>${accessDisplay}</td>
@@ -446,6 +447,10 @@
 				$('#editGroupId').val(groupId);
 				toggleGroupPolicyMode('edit');
 
+				// Show/hide the Disable 2FA button based on whether 2FA is enabled
+				const enable2fa = row.attr('data-enable2fa') === '1';
+				$('#disable2faBtn').toggle(enable2fa);
+
 				$('#newUserSection').hide();
 				$('#editUserSection').show();
 
@@ -457,6 +462,27 @@
 				populateHostTable('editHostsTable', '');
 				$('#editUserSection').hide();
 				$('#newUserSection').show();
+			}
+
+			function disableUserTOTP(){
+				const username = $('#editOriginalUsername').val();
+				if (!confirm('Disable 2FA for user "' + username + '"? The user will no longer need a TOTP code to sign in.')){
+					return;
+				}
+				$.cjax({
+					url: '/api/sso/zorxauth/users/disable2fa',
+					method: 'POST',
+					data: { username: username },
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('2FA disabled for ' + username);
+						$('#disable2faBtn').hide();
+						loadUsers();
+					}
+				});
 			}
 
 			function createUser(){

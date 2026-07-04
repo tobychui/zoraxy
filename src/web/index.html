@@ -141,6 +141,9 @@
                             <a class="item" tag="utm" tab_group="services">
                                 <i class="simplistic time icon"></i> Uptime Monitor
                             </a>
+                            <a class="item" tag="routedebugger" tab_group="services">
+                                <i class="simplistic bug icon"></i> Route Debugger
+                            </a>
                         </div>
                     </div>
 
@@ -241,8 +244,11 @@
                 <!-- Plugins -->
                 <div id="plugins" class="functiontab" target="plugins.html"></div>
 
-                <!-- Up Time Monitor -->    
+                <!-- Up Time Monitor -->
                 <div id="utm" class="functiontab" target="uptime.html"></div>
+
+                <!-- Route Debugger -->
+                <div id="routedebugger" class="functiontab" target="routedebugger.html"></div>
 
                 <!-- Network Tools -->
                 <div id="networktool" class="functiontab" target="networktools.html"></div>
@@ -763,9 +769,39 @@
             }
 
             /* Recent Items */
+            var RECENT_DISPLAY_MAX = 5; // max number of (non-pinned) recent items shown
+            var RECENT_HISTORY_MAX = 15; // how many recent entries to retain in storage
+
             function getRecentTabs() {
                 try { return JSON.parse(localStorage.getItem('zoraxy_recent_tabs') || '[]'); }
                 catch(e) { return []; }
+            }
+
+            function getPinnedTabs() {
+                try { return JSON.parse(localStorage.getItem('zoraxy_pinned_tabs') || '[]'); }
+                catch(e) { return []; }
+            }
+
+            function savePinnedTabs(pinned) {
+                localStorage.setItem('zoraxy_pinned_tabs', JSON.stringify(pinned));
+            }
+
+            function isTabPinned(tabID) {
+                return getPinnedTabs().some(function(t) { return t.tag === tabID; });
+            }
+
+            function pinTab(tabID, label, icon) {
+                if (!tabID || isTabPinned(tabID)) return;
+                var pinned = getPinnedTabs();
+                pinned.push({ tag: tabID, label: label, icon: icon });
+                savePinnedTabs(pinned);
+                renderRecentItems();
+            }
+
+            function unpinTab(tabID) {
+                var pinned = getPinnedTabs().filter(function(t) { return t.tag !== tabID; });
+                savePinnedTabs(pinned);
+                renderRecentItems();
             }
 
             function recordRecentTab(tabID, $btn) {
@@ -775,27 +811,65 @@
                 var iconClass = $btn.children('i').first().attr('class') || '';
                 var recent    = getRecentTabs().filter(function(t) { return t.tag !== tabID; });
                 recent.unshift({ tag: tabID, label: label, icon: iconClass });
-                recent = recent.slice(0, 5);
+                recent = recent.slice(0, RECENT_HISTORY_MAX);
                 localStorage.setItem('zoraxy_recent_tabs', JSON.stringify(recent));
                 renderRecentItems();
+            }
+
+            // Build a single recent/pinned menu entry. `pinned` controls whether
+            // the pin toggle is shown as active (filled) and which action it fires.
+            function buildRecentItem(tab, pinned) {
+                var $item = $('<a class="recent-item"></a>');
+                $item.append($('<i style="margin-top: -8px;"></i>').addClass(tab.icon));
+                $item.append($('<span class="recent-item-label"></span>').text(tab.label));
+                $item.attr('title', tab.label);
+                $item.on('click', function() { openTabById(tab.tag); });
+
+                var $pin = $('<i class="thumbtack icon recent-pin-toggle"></i>');
+                if (pinned) {
+                    $pin.addClass('pinned');
+                    $pin.attr('title', 'Unpin');
+                } else {
+                    $pin.attr('title', 'Pin to top');
+                }
+                $pin.on('click', function(e) {
+                    e.stopPropagation();
+                    if (pinned) {
+                        unpinTab(tab.tag);
+                    } else {
+                        pinTab(tab.tag, tab.label, tab.icon);
+                    }
+                });
+                $item.append($pin);
+                return $item;
             }
 
             function renderRecentItems() {
                 var $container = $('#group-recent');
                 $container.empty();
-                var recent = getRecentTabs();
-                if (recent.length === 0) {
-                    $container.html('<div class="recent-empty-hint">No recent items</div>');
-                    return;
-                }
-                recent.forEach(function(tab) {
-                    var $item = $('<a class="recent-item"></a>');
-                    $item.append($('<i style="margin-top: -8px;"></i>').addClass(tab.icon));
-                    $item.append(document.createTextNode(tab.label));
-                    $item.attr('title', tab.label);
-                    $item.on('click', function() { openTabById(tab.tag); });
-                    $container.append($item);
+
+                var pinned = getPinnedTabs();
+                var pinnedTags = pinned.map(function(t) { return t.tag; });
+
+                // Pinned items always shown on top (and do not count towards the
+                // recent display limit).
+                pinned.forEach(function(tab) {
+                    $container.append(buildRecentItem(tab, true));
                 });
+
+                // Recent items, excluding anything already pinned, capped at the
+                // display limit.
+                var recent = getRecentTabs().filter(function(t) {
+                    return pinnedTags.indexOf(t.tag) === -1;
+                }).slice(0, RECENT_DISPLAY_MAX);
+
+                recent.forEach(function(tab) {
+                    $container.append(buildRecentItem(tab, false));
+                });
+
+                if (pinned.length === 0 && recent.length === 0) {
+                    $container.html('<div class="recent-empty-hint">No recent items</div>');
+                }
             }
         </script>
     </body>

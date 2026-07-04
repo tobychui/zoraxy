@@ -1,9 +1,12 @@
 package update
 
 import (
+	"fmt"
+
 	v308 "imuslab.com/zoraxy/mod/update/v308"
 	v315 "imuslab.com/zoraxy/mod/update/v315"
 	v322 "imuslab.com/zoraxy/mod/update/v322"
+	v334 "imuslab.com/zoraxy/mod/update/v334"
 )
 
 // Updater Core logic
@@ -25,6 +28,12 @@ func runUpdateRoutineWithVersion(fromVersion int, toVersion int) {
 		err := v322.UpdateFrom321To322()
 		if err != nil {
 			panic(err)
+		}
+	} else if fromVersion == 333 && toVersion == 334 {
+		//Updating from v3.3.3 to v3.3.4
+		//Migrate legacy default.* cert files to name-based fallback system
+		if err := v334.UpdateFrom333To334(); err != nil {
+			fmt.Println("Warning: fallback cert migration failed (non-fatal):", err)
 		}
 	}
 

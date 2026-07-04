@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -327,8 +328,11 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	bypassGlobalTLS, _ := utils.PostPara(r, "bypassGlobalTLS")
 	if bypassGlobalTLS == "" {
 		bypassGlobalTLS = "false"
-
 	}
+
+	// Allow HTTP CONNECT tunneling to the configured upstream (disabled by default)
+	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
+	enableConnectSupport := enableConnectSupportStr == "true"
 
 	// Enable uptime monitor?
 	enableUtm, err := utils.PostBool(r, "enableUtm")
@@ -518,9 +522,10 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			UseStickySession: useStickySession,
 
 			//TLS
-			BypassGlobalTLS:  useBypassGlobalTLS,
-			AccessFilterUUID: accessRuleID,
-			TlsOptions:       tlscert.GetDefaultHostSpecificTlsBehavior(),
+			BypassGlobalTLS:      useBypassGlobalTLS,
+			EnableConnectSupport: enableConnectSupport,
+			AccessFilterUUID:     accessRuleID,
+			TlsOptions:           tlscert.GetDefaultHostSpecificTlsBehavior(),
 
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
@@ -672,6 +677,10 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 	bypassGlobalTLS := (bpgtls == "true")
 
+	// Allow HTTP CONNECT tunneling to the configured upstream (disabled by default)
+	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
+	enableConnectSupport := enableConnectSupportStr == "true"
+
 	//Disable uptime monitor
 	disbleUtm, err := utils.PostBool(r, "dutm")
 	if err != nil {
@@ -774,6 +783,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	//Generate a new proxyEndpoint from the new config
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
+	newProxyEndpoint.EnableConnectSupport = enableConnectSupport
 	if newProxyEndpoint.AuthenticationProvider == nil {
 		newProxyEndpoint.AuthenticationProvider = &dynamicproxy.AuthenticationProvider{
 			AuthMethod:              dynamicproxy.AuthMethodNone,
@@ -1454,6 +1464,220 @@ func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) 
 	utils.SendOK(w)
 }
 
+// ListProxyZorxAuthExceptionRules lists all ZorxAuth exception rules for a given proxy endpoint.
+func ListProxyZorxAuthExceptionRules(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ep, err := utils.GetPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	results := targetProxy.AuthenticationProvider.ZorxAuthExceptionRules
+	if results == nil {
+		results = []*dynamicproxy.ZorxAuthExceptionRule{}
+	}
+	js, _ := json.Marshal(results)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// AddProxyZorxAuthExceptionRule adds a new ZorxAuth exception rule to a proxy endpoint.
+func AddProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
+	ep, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	exceptionType, err := utils.PostInt(r, "type")
+	if err != nil {
+		exceptionType = EXCEPTION_TYPE_PATH
+	}
+
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	if targetProxy.AuthenticationProvider.ZorxAuthExceptionRules == nil {
+		targetProxy.AuthenticationProvider.ZorxAuthExceptionRules = []*dynamicproxy.ZorxAuthExceptionRule{}
+	}
+
+	switch exceptionType {
+	case EXCEPTION_TYPE_PATH:
+		pattern, err := utils.PostPara(r, "pattern")
+		if err != nil || strings.TrimSpace(pattern) == "" {
+			utils.SendErrorResponse(w, "Invalid path pattern given")
+			return
+		}
+		pattern = strings.TrimSpace(pattern)
+
+		isRegexStr, _ := utils.PostPara(r, "isRegex")
+		isRegex := strings.EqualFold(isRegexStr, "true")
+
+		if isRegex {
+			if _, err := regexp.Compile(pattern); err != nil {
+				utils.SendErrorResponse(w, "Invalid regex pattern: "+err.Error())
+				return
+			}
+		} else {
+			if !strings.HasPrefix(pattern, "/") {
+				pattern = "/" + pattern
+			}
+		}
+
+		// Check for duplicates
+		for _, rule := range targetProxy.AuthenticationProvider.ZorxAuthExceptionRules {
+			if rule.RuleType == dynamicproxy.AuthExceptionType_Paths && rule.PathPattern == pattern && rule.IsRegex == isRegex {
+				utils.SendErrorResponse(w, "This rule already exists")
+				return
+			}
+		}
+
+		targetProxy.AuthenticationProvider.ZorxAuthExceptionRules = append(targetProxy.AuthenticationProvider.ZorxAuthExceptionRules, &dynamicproxy.ZorxAuthExceptionRule{
+			RuleType:    dynamicproxy.AuthExceptionType_Paths,
+			PathPattern: pattern,
+			IsRegex:     isRegex,
+		})
+
+	case EXCEPTION_TYPE_IP:
+		cidr, err := utils.PostPara(r, "cidr")
+		if err != nil || strings.TrimSpace(cidr) == "" {
+			utils.SendErrorResponse(w, "Invalid CIDR given")
+			return
+		}
+		cidr = strings.TrimSpace(cidr)
+
+		// Validate the CIDR / IP / wildcard
+		isValid := false
+		if _, _, err := net.ParseCIDR(cidr); err == nil {
+			isValid = true
+		} else if ip := net.ParseIP(cidr); ip != nil {
+			isValid = true
+		} else if strings.Contains(cidr, "*") {
+			parts := strings.Split(cidr, ".")
+			if len(parts) == 4 && parts[3] == "*" {
+				validParts := true
+				for i := 0; i < 3; i++ {
+					n, err := strconv.Atoi(parts[i])
+					if err != nil || n < 0 || n > 255 {
+						validParts = false
+						break
+					}
+				}
+				if validParts {
+					isValid = true
+				}
+			}
+		}
+		if !isValid {
+			utils.SendErrorResponse(w, "Invalid CIDR, IP, or wildcard given")
+			return
+		}
+
+		// Check for duplicates
+		for _, rule := range targetProxy.AuthenticationProvider.ZorxAuthExceptionRules {
+			if rule.RuleType == dynamicproxy.AuthExceptionType_CIDR && rule.CIDR == cidr {
+				utils.SendErrorResponse(w, "This rule already exists")
+				return
+			}
+		}
+
+		useTrustedProxy, _ := utils.PostBool(r, "trustproxy")
+		targetProxy.AuthenticationProvider.ZorxAuthExceptionRules = append(targetProxy.AuthenticationProvider.ZorxAuthExceptionRules, &dynamicproxy.ZorxAuthExceptionRule{
+			RuleType:        dynamicproxy.AuthExceptionType_CIDR,
+			CIDR:            cidr,
+			UseTrustedProxy: useTrustedProxy,
+		})
+
+	default:
+		utils.SendErrorResponse(w, "Invalid exception type given")
+		return
+	}
+
+	targetProxy.UpdateToRuntime()
+	SaveReverseProxyConfig(targetProxy)
+	utils.SendOK(w)
+}
+
+// RemoveProxyZorxAuthExceptionRule removes a ZorxAuth exception rule from a proxy endpoint.
+func RemoveProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
+	ep, err := utils.PostPara(r, "ep")
+	if err != nil {
+		utils.SendErrorResponse(w, "Invalid ep given")
+		return
+	}
+
+	exceptionType, err := utils.PostInt(r, "type")
+	if err != nil {
+		exceptionType = EXCEPTION_TYPE_PATH
+	}
+
+	targetProxy, err := dynamicProxyRouter.LoadProxy(ep)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	newRules := []*dynamicproxy.ZorxAuthExceptionRule{}
+	matchingExists := false
+
+	switch exceptionType {
+	case EXCEPTION_TYPE_PATH:
+		pattern, err := utils.PostPara(r, "pattern")
+		if err != nil || strings.TrimSpace(pattern) == "" {
+			utils.SendErrorResponse(w, "Invalid path pattern given")
+			return
+		}
+		isRegexStr, _ := utils.PostPara(r, "isRegex")
+		isRegex := strings.EqualFold(isRegexStr, "true")
+		for _, rule := range targetProxy.AuthenticationProvider.ZorxAuthExceptionRules {
+			if rule.RuleType == dynamicproxy.AuthExceptionType_Paths && rule.PathPattern == pattern && rule.IsRegex == isRegex {
+				matchingExists = true
+			} else {
+				newRules = append(newRules, rule)
+			}
+		}
+	case EXCEPTION_TYPE_IP:
+		cidr, err := utils.PostPara(r, "cidr")
+		if err != nil || strings.TrimSpace(cidr) == "" {
+			utils.SendErrorResponse(w, "Invalid CIDR given")
+			return
+		}
+		for _, rule := range targetProxy.AuthenticationProvider.ZorxAuthExceptionRules {
+			if rule.RuleType == dynamicproxy.AuthExceptionType_CIDR && rule.CIDR == cidr {
+				matchingExists = true
+			} else {
+				newRules = append(newRules, rule)
+			}
+		}
+	default:
+		utils.SendErrorResponse(w, "Invalid exception type given")
+		return
+	}
+
+	if !matchingExists {
+		utils.SendErrorResponse(w, "Target rule not found")
+		return
+	}
+
+	targetProxy.AuthenticationProvider.ZorxAuthExceptionRules = newRules
+	targetProxy.UpdateToRuntime()
+	SaveReverseProxyConfig(targetProxy)
+	utils.SendOK(w)
+}
+
 // Report the current status of the reverse proxy server
 func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
 	js, err := json.Marshal(dynamicProxyRouter)
@@ -1615,7 +1839,7 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 		switch enabled {
 		case "true":
 			//Check if port 80 is already used by other services
-			if netutils.CheckIfPortOccupied(80) {
+			if netutils.CheckIfPortOccupied(80) && !dynamicProxyRouter.GetPort80ListenerState() {
 				utils.SendErrorResponse(w, "Port 80 is already used by other services")
 				return
 			}

@@ -318,6 +318,22 @@
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
                                 <br>
+                                <div class="ui basic segment hostAdvancedSettingsWrapper" style="margin: 0.4em 0 0 0; padding: 0;">
+                                    <div class="ui hostDownstreamAdvancedSettings accordion">
+                                        <div class="title" style="color: inherit; padding: 0.4em 0;">
+                                            <i class="dropdown icon"></i>
+                                            Advanced Settings
+                                        </div>
+                                        <div class="content">
+                                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                <input type="checkbox" class="EnableConnectSupport">
+                                                <label>Enable HTTP CONNECT tunneling<br>
+                                                    <small>Allow CONNECT method only to this route's configured upstream. Leave disabled unless you specifically need forward-proxy tunneling.</small></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ui divider"></div>
                                 <div class="ui checkbox" style="margin-top: 0.4em;">
                                     <input type="checkbox" class="DisableLogging">
                                     <label>Disable Requests Logging<br>
@@ -366,7 +382,6 @@
                                 <input type="text" class="UptimeMonitorURI" placeholder="/" autocomplete="off">
                             </div>
                             <small style="opacity:0.7;">Path appended to the upstream URL when the uptime monitor performs its check (e.g. <code>/identity</code> for Plex, <code>/healthz</code>). Leave empty to use <code>/</code>.</small>
-                            <br><br>
                             <br>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
@@ -531,6 +546,7 @@
                             </div>
                             <br>
                             <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            <button class="ui basic compact small button editZorxAuthExceptionsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui purple shield alternate icon"></i> ZorxAuth Exceptions</button>
                             <div class="ui divider"></div>
                             <!-- Block Common Exploits -->
                             <label><b>Exploits Prevention</b></label>
@@ -661,6 +677,7 @@
     var httpProxyList = []; //Proxy list of the current node
 
     $('#httprpEditModal .tabular.menu .item').tab();
+    $('.hostDownstreamAdvancedSettings.accordion').accordion();
 
     /* Renderers */
     function renderUpstreamList(subd){
@@ -1140,6 +1157,7 @@
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
+        let enableConnectSupport = $(editor).find(".EnableConnectSupport")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
         let disableWebSocket = !$(editor).find(".EnableWebSocket")[0].checked;
@@ -1177,6 +1195,7 @@
                 "utmURI": uptimeMonitorURI,
                 "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
+                "enableConnectSupport": enableConnectSupport,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
@@ -1246,6 +1265,14 @@
             ep: uuid
         }));
         showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function editZorxAuthExceptions(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showEditorSideWrapper("snippet/zorxAuthExceptionEditor.html?t=" + Date.now() + "#" + payload);
     }
 
 
@@ -1644,6 +1671,12 @@
             saveProxyInlineEdit(uuid);
         });
 
+        editor.find(".EnableConnectSupport").off('change');
+        editor.find(".EnableConnectSupport").prop("checked", subd.EnableConnectSupport || false);
+        editor.find(".EnableConnectSupport").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
         editor.find(".DisableLogging").off('change');
         editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
         editor.find(".DisableLogging").on("change", function() {
@@ -1913,6 +1946,10 @@
 
         editor.find(".editBasicAuthCredentialsBtn").off("click").on("click", function(){
             editBasicAuthCredentials(uuid);
+        });
+
+        editor.find(".editZorxAuthExceptionsBtn").off("click").on("click", function(){
+            editZorxAuthExceptions(uuid);
         });
 
         //Rate limit

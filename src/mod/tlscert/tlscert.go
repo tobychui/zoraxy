@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"embed"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -29,9 +30,10 @@ type HostSpecificTlsBehavior struct {
 }
 
 type Manager struct {
-	CertStore   string         //Path where all the certs are stored
-	LoadedCerts []*CertCache   //A list of loaded certs
-	Logger      *logger.Logger //System wide logger for debug mesage
+	CertStore    string         //Path where all the certs are stored
+	LoadedCerts  []*CertCache   //A list of loaded certs
+	Logger       *logger.Logger //System wide logger for debug mesage
+	FallbackCert string        //Name of the fallback/default certificate (no file renaming)
 
 	/* External handlers */
 	hostSpecificTlsBehavior func(serverName string) (*HostSpecificTlsBehavior, error) // Function to get host specific TLS behavior, if nil, use global TLS options
@@ -45,23 +47,39 @@ const (
 	defaultPrivateKeyFileMode os.FileMode = 0600
 )
 
-func writeFileWithMode(filename string, data []byte, mode os.FileMode) error {
-	// Clean the path and reject any path traversal sequences (e.g. "..")
-	// to prevent a crafted filename from escaping the intended directory.
-	cleanedPath := filepath.Clean(filename)
-	if strings.Contains(cleanedPath, "..") {
-		return fmt.Errorf("invalid filename: path traversal detected in %q", filename)
+// writeFileWithMode joins relativeName onto baseDir and writes data to the
+// result with the exact requested permission bits.
+func writeFileWithMode(baseDir, relativeName string, data []byte, mode os.FileMode) error {
+	resolvedPath, err := safeJoin(baseDir, relativeName)
+	if err != nil {
+		return err
 	}
 
-	err := os.WriteFile(cleanedPath, data, mode)
-	if err != nil {
+	if err := os.WriteFile(resolvedPath, data, mode); err != nil {
 		return err
 	}
 
 	// os.WriteFile honours the process umask, so the on-disk permissions may
 	// differ from the requested mode. os.Chmod sets the exact bits regardless
 	// of the umask — essential for private-key files (e.g. 0600).
-	return os.Chmod(cleanedPath, mode)
+	return os.Chmod(resolvedPath, mode)
+}
+
+// safeJoin joins name onto baseDir and verifies the resulting absolute path
+// is still located inside baseDir, rejecting any ../
+func safeJoin(baseDir, name string) (string, error) {
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", err
+	}
+	absBase = filepath.Clean(absBase)
+
+	joined := filepath.Join(absBase, name)
+
+	if joined != absBase && !strings.HasPrefix(joined, absBase+string(filepath.Separator)) {
+		return "", fmt.Errorf("invalid filename %q: resolved path escapes base directory %q", name, baseDir)
+	}
+	return joined, nil
 }
 
 func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
@@ -75,12 +93,12 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 	//Check if this is initial setup
 	if !utils.FileExists(pubKey) {
 		buildInPubKey, _ := buildinCertStore.ReadFile(filepath.Base(pubKey))
-		writeFileWithMode(pubKey, buildInPubKey, defaultPublicCertFileMode)
+		writeFileWithMode(filepath.Dir(pubKey), filepath.Base(pubKey), buildInPubKey, defaultPublicCertFileMode)
 	}
 
 	if !utils.FileExists(priKey) {
 		buildInPriKey, _ := buildinCertStore.ReadFile(filepath.Base(priKey))
-		writeFileWithMode(priKey, buildInPriKey, defaultPrivateKeyFileMode)
+		writeFileWithMode(filepath.Dir(priKey), filepath.Base(priKey), buildInPriKey, defaultPrivateKeyFileMode)
 	}
 
 	thisManager := Manager{
@@ -88,6 +106,16 @@ func NewManager(certStore string, logger *logger.Logger) (*Manager, error) {
 		LoadedCerts:             []*CertCache{},
 		hostSpecificTlsBehavior: defaultHostSpecificTlsBehavior, //Default to no SNI and no auto HTTPS
 		Logger:                  logger,
+	}
+
+	// Restore fallback cert name from metadata file
+	if data, err := os.ReadFile(filepath.Join(certStore, "fallback.json")); err == nil {
+		var fb struct {
+			FallbackCert string `json:"fallbackCert"`
+		}
+		if json.Unmarshal(data, &fb) == nil && fb.FallbackCert != "" {
+			thisManager.FallbackCert = fb.FallbackCert
+		}
 	}
 
 	err := thisManager.UpdateLoadedCertList()
@@ -268,11 +296,10 @@ func (m *Manager) GetCertificateByHostname(hostname string) (string, string, err
 			//Get certificate from CA, WIP
 			//TODO: Implement AutoHTTPS
 		} else {
-			//Fallback to legacy method of matching certificates
+			//Fallback to the configured fallback certificate
 			if m.DefaultCertExists() {
-				//Use default.pem and default.key
-				pubKey = filepath.Join(m.CertStore, "default.pem")
-				priKey = filepath.Join(m.CertStore, "default.key")
+				pubKey = filepath.Join(m.CertStore, m.FallbackCert+".pem")
+				priKey = filepath.Join(m.CertStore, m.FallbackCert+".key")
 			}
 		}
 	}
@@ -281,27 +308,52 @@ func (m *Manager) GetCertificateByHostname(hostname string) (string, string, err
 
 // Check if both the default cert public key and private key exists
 func (m *Manager) DefaultCertExists() bool {
-	return utils.FileExists(filepath.Join(m.CertStore, "default.pem")) && utils.FileExists(filepath.Join(m.CertStore, "default.key"))
+	if m.FallbackCert == "" {
+		return false
+	}
+	return utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".pem")) && utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".key"))
 }
 
 // Check if the default cert exists returning seperate results for pubkey and prikey
 func (m *Manager) DefaultCertExistsSep() (bool, bool) {
-	return utils.FileExists(filepath.Join(m.CertStore, "default.pem")), utils.FileExists(filepath.Join(m.CertStore, "default.key"))
+	if m.FallbackCert == "" {
+		return false, false
+	}
+	return utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".pem")), utils.FileExists(filepath.Join(m.CertStore, m.FallbackCert+".key"))
+}
+
+func sanitizeCertDomain(domain string) (string, error) {
+	domain = strings.TrimSpace(domain)
+	if domain != filepath.Base(domain) {
+		return "", fmt.Errorf("invalid domain")
+	}
+	if strings.Contains(domain, "/") || strings.Contains(domain, "\\") {
+		return "", fmt.Errorf("invalid domain")
+	}
+	if domain == "" || domain == "." || domain == ".." {
+		return "", fmt.Errorf("invalid domain")
+	}
+	return domain, nil
 }
 
 // Delete the cert if exists
 func (m *Manager) RemoveCert(domain string) error {
+	domain, err := sanitizeCertDomain(domain)
+	if err != nil {
+		return err
+	}
+
 	pubKey := filepath.Join(m.CertStore, domain+".pem")
 	priKey := filepath.Join(m.CertStore, domain+".key")
 	if utils.FileExists(pubKey) {
-		err := os.Remove(pubKey)
+		err = os.Remove(pubKey)
 		if err != nil {
 			return err
 		}
 	}
 
 	if utils.FileExists(priKey) {
-		err := os.Remove(priKey)
+		err = os.Remove(priKey)
 		if err != nil {
 			return err
 		}

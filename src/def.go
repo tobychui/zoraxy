@@ -38,16 +38,18 @@ import (
 	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/uptime"
+	"imuslab.com/zoraxy/mod/routedebug"
 	"imuslab.com/zoraxy/mod/webserv"
 )
 
 const (
 	/* Build Constants */
 	SYSTEM_NAME    = "Zoraxy"
-	SYSTEM_VERSION = "3.3.3"
+	SYSTEM_VERSION = "3.3.4"
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487
+	ROUTEDEBUGGER_DEFAULT_PORT   = 5490
 	MDNS_HOSTNAME_PREFIX         = "zoraxy_" /* Follow by node UUID */
 	MDNS_IDENTIFY_DEVICE_TYPE    = "Network Gateway"
 	MDNS_IDENTIFY_DOMAIN         = "zoraxy.aroz.org"
@@ -83,6 +85,9 @@ var (
 
 	/* Logging Configuration Flags */
 	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
+
+	/* Statistics Configuration Flags */
+	statsMaxEntriesPerMap = flag.Int("stats_max_entries", 0, "Soft-cap per-dimension statistics maps at N entries; when exceeded the entries with the lowest request counts are dropped first (0 = unbounded; recommended value when enabled: 20000)")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
@@ -162,6 +167,7 @@ var (
 	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew
 	acmeAutoRenewer    *acme.AutoRenewer         //Handler for ACME auto renew ticking
 	staticWebServer    *webserv.WebServer        //Static web server for hosting simple stuffs
+	routeDebugger      *routedebug.RouteDebugger //Route debugger for inspecting proxied requests
 	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins

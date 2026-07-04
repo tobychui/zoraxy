@@ -10,8 +10,10 @@
 #
 # Thank you — from the bottom of our hearts!
 #
-# Last update: 17/5/2026
+# Last update: 11/6/2026
 
+Mirano Verhoef
+Robin Schambach
 Samuel Sachs
 Mathias König
 Jonathan Asikis
