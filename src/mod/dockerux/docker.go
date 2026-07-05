@@ -8,9 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -28,14 +26,14 @@ func (d *UXOptimizer) HandleDockerContainersList(w http.ResponseWriter, r *http.
 	}
 	defer apiClient.Close()
 
-	containers, err := apiClient.ContainerList(context.Background(), container.ListOptions{All: true})
+	containers, err := apiClient.ContainerList(context.Background(), client.ContainerListOptions{All: true})
 	if err != nil {
 		d.SystemWideLogger.PrintAndLog("Docker", "List docker container failed", err)
 		utils.SendErrorResponse(w, "List docker container failed")
 		return
 	}
 
-	networks, err := apiClient.NetworkList(context.Background(), types.NetworkListOptions{})
+	networks, err := apiClient.NetworkList(context.Background(), client.NetworkListOptions{})
 	if err != nil {
 		d.SystemWideLogger.PrintAndLog("Docker", "List docker network failed", err)
 		utils.SendErrorResponse(w, "List docker network failed")
@@ -43,8 +41,8 @@ func (d *UXOptimizer) HandleDockerContainersList(w http.ResponseWriter, r *http.
 	}
 
 	result := map[string]interface{}{
-		"network":    networks,
-		"containers": containers,
+		"network":    networks.Items,
+		"containers": containers.Items,
 	}
 
 	js, err := json.Marshal(result)

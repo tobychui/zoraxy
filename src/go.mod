@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/armon/go-radix v1.0.0
 	github.com/c0va23/go-proxyprotocol v0.9.1
-	github.com/docker/docker v27.1.1+incompatible
+	github.com/moby/moby/client v0.3.0
 	github.com/go-acme/lego/v4 v4.35.2
 	github.com/go-ping/ping v1.1.0
 	github.com/go-webauthn/webauthn v0.17.4
@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/syndtr/goleveldb v1.0.0
 	go.etcd.io/bbolt v1.4.1
-	golang.org/x/net v0.54.0
+	golang.org/x/net v0.55.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/text v0.37.0
 )
