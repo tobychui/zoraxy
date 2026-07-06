@@ -107,7 +107,7 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 // Add user customizable reverse proxy
 func ReverseProxyInit() {
 	/*
-		Load Reverse Proxy Global Settings
+		Load Reverse Proxy Ingress Settings
 	*/
 	inboundPort := *defaultInboundPort
 	autoStartReverseProxy := *defaultEnableInboundTraffic

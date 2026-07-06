@@ -5,12 +5,12 @@
         user-select: none;
     }
 </style>
-<!-- Global Settings -->
+<!-- Ingress Settings -->
 <div class="standardContainer">
-    <h3>Global Settings</h3>
-    <p>Global settings for the reverse proxy server</p>
+    <h2>Ingress Settings</h2>
+    <p>Ingress settings for the reverse proxy server (Previously named Global Settings)</p>
     <div class="ui divider"></div>
-    <p>Inbound Port (Reverse Proxy Listening Port)</p>
+    <p>Inbound / Proxy Listening Port</p>
     <div class="ui action fluid notloopbackOnly input" tourstep="incomingPort">
         <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
         <input type="text" id="incomingPort" placeholder="Incoming Port" value="443">
@@ -102,7 +102,7 @@
 
     <div id="gsloopbackWarning" class="ui segment" style="display:none;">
         <b><i class="yellow warning icon"></i> Loopback Routing Warning</b><br>
-        <small>This management interface is a loopback proxied service. <br>Some global settings are disabled to prevent accidentally cutting off access to this management interface.</small>
+        <small>This management interface is a loopback proxied service. <br>Some ingress settings are disabled to prevent accidentally cutting off access to this management interface.</small>
     </div>
     <div class="ui divider"></div>
     <h4>Secondary Listening Ports</h4>
