@@ -1,0 +1,29 @@
+services:
+  test-zoraxy:
+    image: test-zoraxy
+    container_name: test-zoraxy
+    restart: 'no'
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./test/config/:/opt/zoraxy/config/:rw
+      - ./test/plugin/:/opt/zoraxy/plugin/:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: "America/New_York"
+      DB: "auto"
+      PORT: "8005"
+      FASTGEOIP: "true"
+      EARLYRENEW: "14"
+      AUTORENEW: "2000"
+      ZEROTIER: "true"
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+      - 8005:8005/tcp
+      - 6754:6754
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
