@@ -426,9 +426,9 @@ var tourSteps = {
         tourStepFactory({
             title: "➡️ Change Listening Port",
             desc: `HTTPS listen on port 443 instead of 80. If your Zoraxy is currently listening to ports other than 443, change it to 443 in incoming port option and click "Apply"`,
-            tab: "status",
-            element: "#status div[tourstep='incomingPort']",
-            scrollto: "#status div[tourstep='incomingPort']",
+            tab: "globalsettings",
+            element: "#globalsettings div[tourstep='incomingPort']",
+            scrollto: "#globalsettings div[tourstep='incomingPort']",
             pos: "bottomright",
         }),
         tourStepFactory({
@@ -448,7 +448,7 @@ var tourSteps = {
         tourStepFactory({
             title: "↩️ Force redirect HTTP request to HTTPS",
             desc: `By default, if a HTTP host-name is not found, 404 error page will be returned. However, in common scenerio for self-hosting, you might want to redirect that request to your HTTPS server instead. <br><br>Enabling this option allows such redirection to be done automatically.`,
-            element: "#status div[tourstep='forceHttpsRedirect']",
+            element: "#globalsettings div[tourstep='forceHttpsRedirect']",
             scrollto: "#tls",
             pos: "bottomright",
         }),

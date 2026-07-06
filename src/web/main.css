@@ -97,22 +97,6 @@ body.darkTheme .menubar{
     font-weight: 300;
 }
 
-.serverstatusWrapper{
-   padding-right: 0 !important;
-}
-
-.statisticWrapper{
-    margin-top: 1em;
-    padding-left: 0 !important;
-    padding-bottom: 0 !important;
-    padding-right: 1em !important;
-}
-
-.statisticWrapper .statustab{
-    margin-right: 1em;
-}
-
-
 /* Message Box */
 #messageBox{
     position: fixed;
@@ -249,12 +233,6 @@ body.darkTheme .menubar{
 
 @media screen and (max-width: 748px) {
     #serverstatus{
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-    }
-
-
-    .statisticWrapper .statustab{
         margin-left: 0 !important;
         margin-right: 0 !important;
     }
@@ -411,6 +389,11 @@ body.darkTheme .menugroup-header:hover {
     margin-left: 0px;
     padding-top: 0.6em;
     padding-bottom: 0.6em;
+}
+
+#pluginContextWindow{
+    border-radius: 0.6em;
+    overflow: hidden;
 }
 
 /* ========================================
@@ -607,10 +590,6 @@ body.darkTheme .menudivider{
 }
 
 
-#serverstatus:not(.green) .dot-container{
-    display:none;
-}
-
 #serverstatus:not(.green){
     background: var(--theme_background_inverted);
 }
@@ -627,83 +606,6 @@ body.darkTheme .menudivider{
     margin: 1em;
     border-radius: 1em !important;
 }
-
-#summaryTotalCount{
-    font-size: 1.6em;
-    font-weight: 300;
-}
-
-.statustab.summary{
-    background-color: #f1f1f1 !important;
-    border: 0px solid transparent !important;
-}
-
-.statustab.summary span, .statustab.summary i{
-    color: rgb(37, 37, 37);
-}
-
-#networkActivityPlaceHolder{
-    color:rgb(206, 206, 206);
-    height: 200px;
-    width: 100%;
-    text-align: center;
-    padding-top: 80px;
-    display:none;
-}
-
-/* Decorative Animation */
-.dot-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 40px;
-    position: absolute;
-    bottom: 0.6em;
-    right: 1.2em;
-}
-  
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #ffffff;
-    margin-right: 6px;
-    animation-name: dot-animation;
-    animation-duration: 4s;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-  }
-  
-  .dot:nth-child(1) {
-    animation-delay: 0s;
-  }
-  
-  .dot:nth-child(2) {
-    animation-delay: 1s;
-  }
-  
-  .dot:nth-child(3) {
-    animation-delay: 2s;
-  }
-  
-  .dot:nth-child(4) {
-    animation-delay: 3s;
-  }
-  
-  @keyframes dot-animation {
-    0% {
-      background-color: #ffffff;
-      transform: scale(1);
-    }
-    50% {
-      background-color: white;
-      transform: scale(1.5);
-    }
-    100% {
-      background-color: #ffffff;
-      transform: scale(1);
-    }
-  }
 
   /* Remind message for user forgetting to click Apply button*/
   #applyButtonReminder{

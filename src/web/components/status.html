@@ -1,234 +1,528 @@
 <style>
-    #redirect.disabled{
-        opacity: 0.7;
-        pointer-events: none;
-        user-select: none;
+    /* Status Dashboard */
+    #status .dashboard-card{
+        background: var(--theme_bg_primary);
+        border: 1px solid var(--divider_color);
+        border-radius: 1em;
+        padding: 1.2em;
+        height: 100%;
+        position: relative;
+    }
+
+    #status .dashboard-card h4{
+        margin-bottom: 0.2em;
+    }
+
+    #status .dashboard-card .cardSubtitle{
+        color: var(--text_color_secondary);
+        font-size: 0.9em;
+    }
+
+    /* Hero banner */
+    #serverstatus{
+        position: relative;
+        padding: 1.5em;
+    }
+
+    #serverstatus .heroMetrics{
+        margin-top: 0.4em;
+    }
+
+    #serverstatus .heroMetric .heroMetricLabel{
+        font-size: 0.9em;
+        opacity: 0.8;
+    }
+
+    #serverstatus .heroMetric .heroMetricValue{
+        font-size: 1.5em;
+        font-weight: 300;
+        display: block;
+        margin-top: 0.1em;
+    }
+
+    #serverstatus.green .heroMetric span,
+    #serverstatus.green .heroMetric .heroMetricLabel{
+        color: #ffffff;
+    }
+
+    #serverstatus:not(.green) .heroMetric span,
+    #serverstatus:not(.green) .heroMetric .heroMetricLabel{
+        color: #ffffff;
+    }
+
+    #serverstatus .heroDivider{
+        border-top: 1px solid rgba(255,255,255,0.35);
+        margin: 1em 0;
+    }
+
+    #serverstatus .poweroptions{
+        position: absolute;
+        top: 1.2em;
+        right: 1.2em;
+        z-index: 2;
+    }
+
+    /* Statistic summary cards */
+    #status .dbstatCard .dbstatLabel{
+        color: var(--text_color_secondary);
+        font-size: 0.92em;
+    }
+
+    #status .dbstatCard .dbstatValue{
+        font-size: 1.8em;
+        font-weight: 300;
+        color: var(--text_color);
+        display: block;
+        margin-top: 0.1em;
+    }
+
+    #status .dbstatCard .dbstatDelta{
+        font-size: 0.85em;
+        margin-top: 0.2em;
+        display: block;
+        color: var(--text_color_secondary);
+    }
+
+    #status .dbstatCard .dbstatDelta.trendUp{
+        color: #21ba45;
+    }
+
+    #status .dbstatCard .dbstatDelta.trendDown{
+        color: #db2828;
+    }
+
+    /* Realtime network graphs */
+    #status .realtimeChartWrapper{
+        position: relative;
+        height: 180px;
+        width: 100%;
+        margin-top: 0.6em;
+    }
+
+    #status .realtimeNetValue{
+        font-size: 1.6em;
+        font-weight: 300;
+        color: var(--text_color);
+    }
+
+    /* Visitor location & ranking bars */
+    #status .rankingBarRow{
+        margin-bottom: 0.7em;
+    }
+
+    #status .rankingBarRow .rankingLabel{
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.92em;
+        color: var(--text_color);
+        margin-bottom: 0.25em;
+        word-break: break-all;
+    }
+
+    #status .rankingBarRow .rankingLabel .rankingCount{
+        color: var(--text_color_secondary);
+        white-space: nowrap;
+        margin-left: 0.6em;
+    }
+
+    #status .rankingBarTrack{
+        height: 6px;
+        border-radius: 3px;
+        background: var(--theme_bg_active);
+        overflow: hidden;
+    }
+
+    #status .rankingBarTrack .rankingBarFill{
+        height: 100%;
+        border-radius: 3px;
+        background: var(--theme_background);
+    }
+
+    #status .topCountryRow{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.45em 0;
+        border-bottom: 1px solid var(--divider_color);
+    }
+
+    #status .topCountryRow:last-child{
+        border-bottom: none;
+    }
+
+    #status .worldMapRow{
+        display: flex;
+        align-items: stretch;
+        gap: 1em;
+    }
+
+    #status .mapLegend{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 0 0 auto;
+        padding: 0.6em 0;
+    }
+
+    #status .mapLegend .mapLegendLabel{
+        font-size: 0.78em;
+        color: var(--text_color_secondary);
+    }
+
+    #status .mapLegend .mapLegendGradient{
+        width: 8px;
+        flex: 1;
+        min-height: 140px;
+        border-radius: 4px;
+        margin: 0.5em 0;
+        background: linear-gradient(to bottom, #1c4e9c 0%, #dbe9fb 100%);
+    }
+
+    #status .worldMapWrapper{
+        position: relative;
+        flex: 1;
+        height: 280px;
+        width: 100%;
+    }
+
+    #status .worldMapWrapper .jvm-tooltip{
+        background-color: #1a1a1e;
+        font-size: 0.85em;
+    }
+
+    #status .methodChartWrapper{
+        position: relative;
+        height: 240px;
+        width: 100%;
+    }
+
+    /* System resource bars */
+    #status .resourceBarRow{
+        margin-bottom: 1em;
+    }
+
+    #status .resourceBarRow .resourceLabel{
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.95em;
+        color: var(--text_color);
+        margin-bottom: 0.3em;
+    }
+
+    #status .resourceBarTrack{
+        height: 8px;
+        border-radius: 4px;
+        background: var(--theme_bg_active);
+        overflow: hidden;
+    }
+
+    #status .resourceBarTrack .resourceBarFill{
+        height: 100%;
+        border-radius: 4px;
+        background: var(--theme_background);
+        transition: width 0.6s ease;
+    }
+
+    #status .resourceBarTrack .resourceBarFill.warning{
+        background: linear-gradient(45deg, #f2c037 21%, #f26202 79%);
+    }
+
+    #status .resourceBarTrack .resourceBarFill.danger{
+        background: var(--theme_red);
+    }
+
+    /* SSL/TLS overview */
+    #status .certOverviewBox{
+        display: flex;
+        border: 1px solid var(--divider_color);
+        border-radius: 0.8em;
+        margin-top: 0.6em;
+        padding: 1em 0.4em;
+    }
+
+    #status .certOverviewItem{
+        flex: 1;
+        padding: 0 1em;
+    }
+
+    #status .certOverviewItem:not(:last-child){
+        border-right: 1px solid var(--divider_color);
+    }
+
+    #status .certOverviewLabel{
+        font-size: 0.9em;
+        color: var(--text_color_secondary);
+        white-space: nowrap;
+    }
+
+    #status .certOverviewLabel i{
+        margin-right: 0.2em;
+    }
+
+    #status .certOverviewValue{
+        font-size: 1.8em;
+        font-weight: 300;
+        color: var(--text_color);
+        margin-top: 0.15em;
     }
 </style>
-<div class="ui stackable grid">
-    <div class="ten wide column serverstatusWrapper">
-        <div id="serverstatus" class="ui statustab inverted segment">
-            <h1 class="ui header" style="margin-top: 1em; margin-left: 0.4em; padding-bottom: 1em;">
-                <i id="rpStatusIcon" class="loading spinner icon"></i>
-                <div class="content">
-                    <span id="statusTitle">Loading</span>
-                    <div class="sub header" id="statusText">Checking server status</div>
-                </div>
-            </h1>
-            <div class="dot-container">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-            </div>
-        </div>
-    </div>
-    <div class="six wide column statisticWrapper">
-        <div class="ui statustab segment">
-            <h5 class="ui header">
-                <i class="exchange icon"></i>
-                <div class="content">
-                    <span id="summaryTotalCount"></span> <small>Req. Today</small>
-                    <div class="sub header" style="margin-top: 0.4em;">
-                    <i class="green circle check icon"></i> <span id="summarySuccCount"></span>
-                        / <i class="red red exclamation circle icon"></i> <span id="summaryErrCount"></span>
-                    </div>
-                </div>
-            </h5>
-            <div class="ui divider"></div>
-            <h5 class="ui header" style="margin-top: 0px;">
-                <i class="arrows alternate horizontal icon"></i>
-                <div class="content">
-                    <span id="forwardtype"></span>
-                    <div class="sub header" id="forwardtypeList">
 
-                    </div>
-                </div>
-            </h5>
-            <div class="ui divider"></div>
-            <h5 class="ui header"  style="margin-top: 0px;">
-                <i class="map marker alternate icon"></i>
-                <div class="content">
-                    <span id="country"></span>
-                    <div class="sub header" id="countryList">
-                        <i class="ui loading circle notch icon"></i> Resolving GeoIP
-                    </div>
-                </div>
-            </h5>
+<!-- Server Status Hero Banner -->
+<div class="standardContainer nobottom">
+    <div id="serverstatus" class="ui statustab inverted segment" style="margin: 0;">
+        <div class="poweroptions">
+            <button id="startbtn" class="ui small basic inverted disabled button" onclick="startService();"><i class="ui arrow alternate circle up icon"></i> Start</button>
+            <button id="stopbtn" class="ui small basic inverted notloopbackOnly disabled button" onclick="stopService();"><i class="ui minus circle icon"></i> Stop</button>
         </div>
-    </div>
-</div>
-<div class="standardContainer" style="padding-bottom: 0 !important;">
-    <!-- Power Buttons-->
-    <div class="poweroptions" style="display:inline-block;">
-        <button id="startbtn" class="ui basic button" onclick="startService();"><i class="ui green arrow alternate circle up icon"></i> Start Service</button>
-        <button id="stopbtn" class="ui basic notloopbackOnly disabled button" onclick="stopService();"><i class="ui red minus circle icon"></i> Stop Service</button>
-    </div>
-    <div class="ui divider"></div>
-   
-</div>
-<!-- Network Activity -->
-<div class="standardContainer">
-    <h4>Network Status</h4>
-    <p>Overall Network I/O in Current Host Server</p>
-</div>
-<div id="networkActWrapper" class="standardContainer" style="position: relative;">
-    <canvas id="networkActivity"></canvas>
-</div>
-<div id="networkActivityPlaceHolder">
-    <p style="opacity: 0.5;"> Graph Render Paused</p>
-</div>
-<!-- Traffic Flow Diagram -->
-<div id="trafficFlowDiagramWrapper" class="standardContainer" ">
-    <iframe id="trafficFlowDiagram" src="snippet/trafficFlowDiagram.html" style="width: 100%; height: 480px; border: none; border-radius: 1em;" allowfullscreen></iframe>
-</div>
-<!-- Global Settings -->
-<div class="standardContainer">
-    <div class="ui divider"></div>
-    <h4>Global Settings</h4>
-    <p>Inbound Port (Reverse Proxy Listening Port)</p>
-    <div class="ui action fluid notloopbackOnly input" tourstep="incomingPort">
-        <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
-        <input type="text" id="incomingPort" placeholder="Incoming Port" value="443">
-        <button class="ui green notloopbackOnly button" style="background: var(--theme_green);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
-    </div>
-    <br>
-    <div id="tls" class="ui toggle notloopbackOnly checkbox">
-        <input type="checkbox">
-        <label>Use TLS to serve proxy request<br>
-        <small>Also known as HTTPS mode</small></label>
-    </div>
-    <br>
-    <div id="listenP80" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;" >
-        <input type="checkbox">
-        <label>Enable HTTP server on port 80<br>
-        <small>Accept HTTP requests even if you are using HTTPS mode</small></label>
-    </div>
-    <div id="port80Warning" class="ui tiny yellow message" style="display: none; margin-top: 0.5em; margin-bottom: 0.5em;">
-        <i class="warning icon"></i>
-        Port 80 is occupied by another service and might not be working properly
-    </div>
-    <br>
-    <div tourstep="forceHttpsRedirect" style="display: inline-block;">
-        <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;">
-            <input type="checkbox">
-            <label>Force redirect HTTP request to HTTPS<br>
-            <small>Redirect web traffic from port 80 to 443, require enabling HTTP server on port 80</small></label>
-        </div>
-    </div>
-    <div class="ui basic segment advanceoptions">
-        <div id="statusAdvanceSettings" class="ui accordion advanceSettings">
-            <div class="title">
-              <i class="dropdown icon"></i>
-                Advance Settings
-            </div>
+        <h1 class="ui header" style="margin: 0;">
+            <i id="rpStatusIcon" class="loading spinner icon"></i>
             <div class="content">
-                <div id="tlsMinVer" class="ui notloopbackOnly tlsEnabledOnly" style="margin-top: 0.6em;">
-                    <div style="display: flex; align-items: center; gap: 1em;">
-                        <select id="tlsVersionSelect" class="ui dropdown">
-                            <option value="1.0">TLS v1.0</option>
-                            <option value="1.1">TLS v1.1</option>
-                            <option value="1.2">TLS v1.2</option>
-                            <option value="1.3">TLS v1.3</option>
-                        </select>
-                        <p for="tlsVersionSelect" style="margin: 0;">
-                            Minimum TLS Version<br>
-                            <small>(Enhance security, but may not be compatible with legacy browsers)</small>
-                        </p>
-                    </div>
-                </div>
-                <br>
-                <div id="developmentMode" class="ui toggle checkbox" style="margin-top: 0.6em;">
-                    <input type="checkbox">
-                    <label>Development Mode<br>
-                    <small>(Set Cache-Control to no-store so browser will always fetch new contents from your sites)</small></label>
-                </div>
-                <br>
-                <div id="proxyProtocol" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
-                    <input type="checkbox">
-                    <label>Enable PROXY Protocol<br>
-                    <small>(Enable PROXY protocol v1/v2 support for TLS listener)</small></label>
-                </div>
-                <br>
+                <span id="statusTitle">Loading</span>
+                <div class="sub header" id="statusText">Checking server status</div>
+            </div>
+        </h1>
+        <div class="heroDivider"></div>
+        <div class="ui four column stackable grid heroMetrics">
+            <div class="column heroMetric">
+                <span class="heroMetricLabel"><i class="clock outline icon"></i> Uptime</span>
+                <span class="heroMetricValue" id="heroUptime">-</span>
+            </div>
+            <div class="column heroMetric">
+                <span class="heroMetricLabel"><i class="exchange icon"></i> Requests (Today)</span>
+                <span class="heroMetricValue" id="heroRequests">-</span>
+            </div>
+            <div class="column heroMetric">
+                <span class="heroMetricLabel"><i class="chart area icon"></i> Bandwidth (Today)</span>
+                <span class="heroMetricValue" id="heroBandwidth">-</span>
+            </div>
+            <div class="column heroMetric">
+                <span class="heroMetricLabel"><i class="share alternate icon"></i> Active Connections</span>
+                <span class="heroMetricValue" id="heroConnections">-</span>
             </div>
         </div>
     </div>
-   
     <div id="rploopbackWarning" class="ui segment" style="display:none;">
         <b><i class="yellow warning icon"></i> Loopback Routing Warning</b><br>
         <small>This management interface is a loopback proxied service. <br>If you want to shutdown the reverse proxy server, please remove the proxy rule for the management interface and refresh.</small>
     </div>
-    <div class="ui divider"></div>
-    <h4>Secondary Listening Ports</h4>
-    <p>Additional ports configured for specific proxy rules</p>
-    <div id="secondaryListenersContainer">
-        <table class="ui unstackable basic celled table">
-            <thead>
-                <tr>
-                    <th>Listening Address</th>
-                    <th>Domains / Hostnames</th>
-                </tr>
-            </thead>
-            <tbody id="secondaryListenersTable">
-                <tr>
-                    <td colspan="2" style="text-align: center;">
-                        <i class="ui loading circle notch icon"></i> Loading...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <br>
-    <button class="ui right floated basic button" onclick="loadSecondaryListeners();"><i class="green refresh icon"></i> Refresh</button>
-    <br><br>
-    <div class="ui divider"></div>
-    <div class="">
-    <h4>Statistic Overview</h4>
-    <div class="ui two column stackable grid">
-        <div class="column">
-        <p>Visitor Counts</p>
-        <table class="ui unstackable very basic celled table">
-            <thead>
-            <tr>
-                <th style="padding: 0.4em;">Country ISO Code</th>
-                <th style="padding: 0.4em;">Unique Visitors</th>
-            </tr>
-            </thead>
-            <tbody id="countryCodetable">
-                <tr>
-                    <td colspan="2">No Data</td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
-        <div class="column">
-        <p>Proxy Request Types</p>
-        <table class="ui unstackable very basic celled table">
-            <thead>
-            <tr>
-                <th style="padding: 0.4em;">Proxy Type</th>
-                <th style="padding: 0.4em;">Count</th>
-            </tr>
-            </thead>
-            <tbody id="forwardTypeTable">
-                <tr>
-                    <td colspan="2">No Data</td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
-    </div>
-    </div>
-    <br>
-    <button class="ui right floated basic button" onclick="getDailySummaryDetails();"><i class="green refresh icon"></i> Refresh</button>
-    <br><br>
 </div>
+
+<!-- Traffic Flow Diagram -->
+<div id="trafficFlowDiagramWrapper" class="standardContainer nobottom">
+    <iframe id="trafficFlowDiagram" src="snippet/trafficFlowDiagram.html" style="width: 100%; height: 480px; border: none; border-radius: 1em;" allowfullscreen></iframe>
+</div>
+
+<!-- Realtime Network In / Out -->
+<div class="standardContainer nobottom">
+    <div class="ui two column stackable grid" style="margin: 0;">
+        <div class="column" style="padding-left: 0;">
+            <div class="dashboard-card">
+                <h4 class="ui header" style="margin-bottom: 0;">
+                    <i class="blue download icon"></i>
+                    <div class="content">
+                        Realtime Network Input
+                        <div class="sub header realtimeNetValue" id="netInValue">0 bps</div>
+                    </div>
+                </h4>
+                <div class="realtimeChartWrapper">
+                    <canvas id="networkInChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="column" style="padding-right: 0;">
+            <div class="dashboard-card">
+                <h4 class="ui header" style="margin-bottom: 0;">
+                    <i class="violet upload icon"></i>
+                    <div class="content">
+                        Realtime Network Output
+                        <div class="sub header realtimeNetValue" id="netOutValue">0 bps</div>
+                    </div>
+                </h4>
+                <div class="realtimeChartWrapper">
+                    <canvas id="networkOutChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visitor Locations -->
+<div class="standardContainer nobottom">
+    <div class="dashboard-card">
+        <h4>Visitor Locations (Today)</h4>
+        <p class="cardSubtitle">Unique visitor distribution resolved by GeoIP</p>
+        <div class="ui stackable grid" style="margin-top: 0.2em;">
+            <div class="ten wide column">
+                <div class="worldMapRow" id="worldMapRow">
+                    <div class="mapLegend">
+                        <span class="mapLegendLabel">High</span>
+                        <div class="mapLegendGradient"></div>
+                        <span class="mapLegendLabel">Low</span>
+                    </div>
+                    <div class="worldMapWrapper" id="worldMapWrapper">
+                        <div id="worldMap" style="width: 100%; height: 100%;"></div>
+                    </div>
+                </div>
+                <div id="countryChartNoData" style="display:none; text-align: center; padding: 3em; color: var(--text_color_secondary);">
+                    <i class="green circle check icon"></i> No visitor data recorded today
+                </div>
+            </div>
+            <div class="six wide column">
+                <h5 style="margin-bottom: 0.4em;">Top Countries</h5>
+                <div id="topCountriesList">
+                    <p style="color: var(--text_color_secondary);"><i class="ui loading circle notch icon"></i> Resolving GeoIP</p>
+                </div>
+                <button class="ui fluid basic small button" style="margin-top: 1em;" onclick="openTabById('stats');">View All</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistic Cards -->
+<div class="standardContainer nobottom">
+    <div class="ui four column stackable grid" style="margin: -0.5em;">
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Total Requests</span>
+                <span class="dbstatValue" id="cardTotalRequests">-</span>
+                <span class="dbstatDelta" id="cardTotalRequestsDelta"></span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Unique Visitors</span>
+                <span class="dbstatValue" id="cardUniqueVisitors">-</span>
+                <span class="dbstatDelta" id="cardUniqueVisitorsDelta"></span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Bandwidth (Today)</span>
+                <span class="dbstatValue" id="cardBandwidth">-</span>
+                <span class="dbstatDelta" id="cardBandwidthDetail"></span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Error Rate (Today)</span>
+                <span class="dbstatValue" id="cardErrorRate">-</span>
+                <span class="dbstatDelta" id="cardErrorRateDelta"></span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Active Connections</span>
+                <span class="dbstatValue" id="cardActiveConns">-</span>
+                <span class="dbstatDelta">Established on proxy ports</span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Proxy Hosts</span>
+                <span class="dbstatValue" id="cardProxyHosts">-</span>
+                <span class="dbstatDelta">Configured proxy rules</span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Upstream Servers</span>
+                <span class="dbstatValue" id="cardUpstreams">-</span>
+                <span class="dbstatDelta">Active upstream origins</span>
+            </div>
+        </div>
+        <div class="column">
+            <div class="dashboard-card dbstatCard">
+                <span class="dbstatLabel">Countries (Today)</span>
+                <span class="dbstatValue" id="cardCountries">-</span>
+                <span class="dbstatDelta">Distinct visitor origins</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Requested Paths & Request Methods -->
+<div class="standardContainer nobottom">
+    <div class="ui two column stackable grid" style="margin: 0;">
+        <div class="column" style="padding-left: 0;">
+            <div class="dashboard-card">
+                <h4>Top Requested Paths</h4>
+                <p class="cardSubtitle">Most requested URLs today</p>
+                <div id="topPathsList">
+                    <p style="color: var(--text_color_secondary);"><i class="green circle check icon"></i> No data</p>
+                </div>
+            </div>
+        </div>
+        <div class="column" style="padding-right: 0;">
+            <div class="dashboard-card">
+                <h4>Request Methods</h4>
+                <p class="cardSubtitle">HTTP methods of proxied requests today</p>
+                <div class="methodChartWrapper">
+                    <canvas id="methodChart"></canvas>
+                </div>
+                <div id="methodChartNoData" style="display:none; text-align: center; padding: 3em; color: var(--text_color_secondary);">
+                    <i class="green circle check icon"></i> No request method data recorded today
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SSL/TLS Overview & System Resources -->
+<div class="standardContainer">
+    <div class="ui two column stackable grid" style="margin: 0;">
+        <div class="column" style="padding-left: 0;">
+            <div class="dashboard-card">
+                <h4>SSL / TLS Overview</h4>
+                <p class="cardSubtitle">Certificates in the local certificate store</p>
+                <div class="certOverviewBox">
+                    <div class="certOverviewItem">
+                        <div class="certOverviewLabel"><i class="blue info circle icon"></i>Total Certificates</div>
+                        <div class="certOverviewValue" id="certTotal">-</div>
+                    </div>
+                    <div class="certOverviewItem">
+                        <div class="certOverviewLabel"><i class="yellow shield alternate icon"></i>Expiring Soon</div>
+                        <div class="certOverviewValue" id="certExpiringSoon">-</div>
+                    </div>
+                    <div class="certOverviewItem">
+                        <div class="certOverviewLabel"><i class="red times circle icon"></i>Expired</div>
+                        <div class="certOverviewValue" id="certExpired">-</div>
+                    </div>
+                </div>
+                <button class="ui fluid basic small button" style="margin-top: 1em;" onclick="openTabById('cert');">Manage Certificates</button>
+            </div>
+        </div>
+        <div class="column" style="padding-right: 0;">
+            <div class="dashboard-card">
+                <h4>System Resources</h4>
+                <p class="cardSubtitle" id="hostInfoLine">Loading host information</p>
+                <div class="resourceBarRow">
+                    <div class="resourceLabel">
+                        <span>CPU Usage</span>
+                        <span id="cpuUsageText">-</span>
+                    </div>
+                    <div class="resourceBarTrack"><div class="resourceBarFill" id="cpuUsageBar" style="width: 0%;"></div></div>
+                </div>
+                <div class="resourceBarRow">
+                    <div class="resourceLabel">
+                        <span>Memory Usage</span>
+                        <span id="ramUsageText">-</span>
+                    </div>
+                    <div class="resourceBarTrack"><div class="resourceBarFill" id="ramUsageBar" style="width: 0%;"></div></div>
+                </div>
+                <div class="resourceBarRow" style="margin-bottom: 0.2em;">
+                    <div class="resourceLabel">
+                        <span>Disk Usage</span>
+                        <span id="diskUsageText">-</span>
+                    </div>
+                    <div class="resourceBarTrack"><div class="resourceBarFill" id="diskUsageBar" style="width: 0%;"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     let loopbackProxiedInterface = false;
-    let currentListeningPort = 80;
-    // Scope to this page's accordion only; .advanceSettings is reused by
-    // other webmin components loaded dynamically via ajax.
-    $("#statusAdvanceSettings").accordion();
 
     //Initial the start stop button if this is reverse proxied
     $.get("/api/proxy/requestIsProxied", function(data){
@@ -238,14 +532,12 @@
             $(".notloopbackOnly").addClass("disabled");
             loopbackProxiedInterface = true;
             $("#rploopbackWarning").show();
-        }   
+        }
     });
 
     //Get the latest server status from proxy server
     function initRPStaste(){
         $.get("/api/proxy/status", function(data){
-            $("#incomingPort").off("change");
-
             if (data.Running == true){
                 $("#startbtn").addClass("disabled");
                 if (!loopbackProxiedInterface){
@@ -254,7 +546,7 @@
                 $("#serverstatus").addClass("green");
                 $("#statusTitle").text("Online");
                 $("#rpStatusIcon").attr("class", "white circle check icon");
-                $("#statusText").text("Serving request on port: " + data.Option.Port);
+                $("#statusText").text("Zoraxy is listening on port " + data.Option.Port);
             }else{
                 $("#startbtn").removeClass("disabled");
                 $("#stopbtn").addClass("disabled");
@@ -263,162 +555,8 @@
                 $("#statusText").text("Reverse proxy server is offline");
                 $("#serverstatus").removeClass("green");
             }
-            $("#incomingPort").val(data.Option.Port);
-            currentListeningPort = data.Option.Port;
-            $("#incomingPort").on("change", function(){
-                let newPortValue = $("#incomingPort").val().trim();
-                if (currentListeningPort != newPortValue){
-                    $("#applyButtonReminder").show();
-                }else{
-                    $("#applyButtonReminder").hide();
-                }
-            });
-            
-        });
-        
-    }
-
-    function getDailySummaryDetails(){
-        function sortObjectByValue(obj) {
-            // Convert object to array of [key, value] pairs
-            const entries = Object.entries(obj);
-            
-            // Sort array based on value of each pair
-            entries.sort((a, b) => {
-                return b[1] - a[1];
-            });
-            
-            // Convert sorted array back to object
-            const sortedObj = {};
-            for (const [key, value] of entries) {
-                sortedObj[key] = value;
-            }
-            
-            return sortedObj;
-        }
-
-        $.get("/api/stats/countries", function(data){
-            data = sortObjectByValue(data);
-            $("#country").html((Object.keys(data)[0])?Object.keys(data)[0]:"No Data");
-            $("#countryList").html(`
-            <div>
-                ${(Object.keys(data)[1])?Object.keys(data)[1]:"-"}<br>
-                ${(Object.keys(data)[2])?Object.keys(data)[2]:"-"}
-            </div>
-            `);
-
-            //populate the table
-            $("#countryCodetable").html("");
-            for (const [key, value] of Object.entries(data)) {
-                var countryName = getCountryName(key);
-                if (countryName == ""){
-                    countryName = "LAN"
-                }
-                $("#countryCodetable").append(`<tr>
-                    <td>${key} (${countryName})</td>
-                    <td>${value}</td>
-                </tr>`);
-            }
-
-            if (Object.keys(data).length == 0){
-                $("#countryCodetable").append(`<tr>
-                    <td colspan="2"><i class="ui green circle check icon"></i> No Data</td>
-                </tr>`);
-            }
-            
-        });
-
-        //Filter forward type
-        function fft(ft){
-            if (ft.indexOf("-") >= 0){
-                ft = ft.replace("-", " (");
-                ft = ft + ")";
-            }
-
-            ft = ft.charAt(0).toUpperCase() + ft.slice(1);
-            return ft;
-        }
-
-        $.get("/api/stats/summary", function(data){
-            data = sortObjectByValue(data.ForwardTypes);
-            $("#forwardtype").html((Object.keys(data)[0])?fft(Object.keys(data)[0]) + ": " + abbreviateNumber(data[Object.keys(data)[0]]):"No Data");
-            $("#forwardtypeList").html(`
-            <div>
-                ${(Object.keys(data)[1])?fft(Object.keys(data)[1]) + ": " + abbreviateNumber(data[Object.keys(data)[1]]):"-"}<br>
-                ${(Object.keys(data)[2])?fft(Object.keys(data)[2]) + ": " + abbreviateNumber(data[Object.keys(data)[2]]):"-"}
-            </div>
-            `);
-
-            $("#forwardTypeTable").html("");
-            for (const [key, value] of Object.entries(data)) {
-                $("#forwardTypeTable").append(`<tr>
-                    <td>${key}</td>
-                    <td>${value}</td>
-                </tr>`);
-            }
-
-            if (Object.keys(data).length == 0){
-                $("#forwardTypeTable").append(`<tr>
-                    <td colspan="2"><i class="ui green circle check icon"></i> No Data</td>
-                </tr>`);
-            }
         });
     }
-    getDailySummaryDetails();
-
-
-    function getDailySummary(){
-        $.get("/api/stats/summary?fast=true", function(data){
-            $("#summaryTotalCount").text(abbreviateNumber(data.TotalRequest));
-            $("#summarySuccCount").text(abbreviateNumber(data.ValidRequest));
-            $("#summaryErrCount").text(abbreviateNumber(data.ErrorRequest));
-        });
-    }
-    setInterval(function(){
-        getDailySummary();
-    }, 10000);
-    getDailySummary();
-
-    function loadSecondaryListeners(){
-        $.get("/api/proxy/listeningPorts/list", function(data){
-            $("#secondaryListenersTable").html("");
-            if (!data || data.length === 0){
-                $("#secondaryListenersTable").append(`<tr>
-                    <td colspan="2" style="text-align: center;">
-                        <i class="ui grey info circle icon"></i> No secondary listening ports configured
-                    </td>
-                </tr>`);
-            } else {
-                data.forEach(function(listener){
-                    let domainsHTML = "";
-                    if (listener.domains && listener.domains.length > 0){
-                        domainsHTML = listener.domains.map(domain => 
-                            `<span class="ui tiny label">${domain}</span>`
-                        ).join(" ");
-                    } else {
-                        domainsHTML = '<i style="opacity: 0.5;">No domains</i>';
-                    }
-                    
-                    $("#secondaryListenersTable").append(`<tr>
-                        <td style="white-space: nowrap;">
-                            <i class="angle double right blue icon"></i> <b>${listener.address}</b>
-                        </td>
-                        <td>${domainsHTML}</td>
-                    </tr>`);
-                });
-            }
-        }).fail(function(){
-            $("#secondaryListenersTable").html(`<tr>
-                <td colspan="2" style="text-align: center;">
-                    <i class="ui red exclamation triangle icon"></i> Failed to load secondary listeners
-                </td>
-            </tr>`);
-        });
-    }
-    
-    // Load secondary listeners on page load and refresh periodically
-    loadSecondaryListeners();
-    setInterval(loadSecondaryListeners, 10000);
 
     //Start and stop service button
     function startService(){
@@ -431,10 +569,10 @@
                     msgbox(data.error, false, 5000);
                 }
                 initRPStaste();
+                updateDashboardOverview();
             }
-
         });
-    }   
+    }
 
     function stopService(){
         $.cjax({
@@ -446,337 +584,14 @@
                     msgbox(data.error, false, 5000);
                 }
                 initRPStaste();
-            }
-
-        });
-    }
-
-    function handleP80ListenerStateChange(enabled){
-        $.cjax({
-            url: "/api/proxy/listenPort80",
-            method: "POST",
-            data: {"enable": enabled},
-            success: function(data){
-                if (data.error != undefined){
-                    console.log(data.error);
-                    msgbox(data.error, false, 3000);
-                    initPort80ListenerSetting();
-                    return;
-                }
-                if (enabled){
-                    //$("#redirect").show();
-                    $("#redirect").removeClass("disabled");
-                    msgbox("Port 80 listener enabled");
-                }else{
-                    //$("#redirect").hide();
-                    $("#redirect").addClass("disabled");
-                    msgbox("Port 80 listener disabled");
-                }
-                initPort80ListenerSetting();
-            }
-        });
-       
-    }
-
-
-    function handlePortChange(){
-        var newPortValue = $("#incomingPort").val();
-        if (isNaN(newPortValue - 1) || newPortValue < 1 || newPortValue > 65535){
-            msgbox("Invalid incoming port value", false, 5000);
-            return;
-        }
-
-        $.cjax({
-            url: "/api/proxy/setIncoming",
-            method: "POST",
-            data: {incoming: newPortValue},
-            success: function(data){
-                if (data.error != undefined){
-                    msgbox(data.error, false, 5000);
-                    return;
-                }
-                msgbox("Listening Port Updated");
-                initRPStaste();
-
-                //Hide the reminder text
-                $("#applyButtonReminder").hide();
+                updateDashboardOverview();
             }
         });
     }
-
-    function initPort80ListenerSetting(){
-        $("#listenP80").find("input").off("change");
-        $.get("/api/proxy/listenPort80", function(data){
-            let configEnabled = data.config || false;
-            let runtimeEnabled = data.runtime || false;
-            
-            if (configEnabled){
-                $("#listenP80").checkbox("set checked");
-                $("#redirect").removeClass("disabled");
-                //$("#redirect").show();
-            }else{
-                $("#listenP80").checkbox("set unchecked");
-                $("#redirect").addClass("disabled");
-                //$("#redirect").hide();
-            }
-            
-            // Show warning if config is enabled but runtime is disabled
-            if (configEnabled && !runtimeEnabled) {
-                $("#port80Warning").show();
-            } else {
-                $("#port80Warning").hide();
-            }
-
-            $("#listenP80").find("input").on("change", function(){
-                let enabled = $(this)[0].checked;
-                handleP80ListenerStateChange(enabled);
-            })
-        });
-        
-    }
-    initPort80ListenerSetting();
-
-    function initHTTPtoHTTPSRedirectSetting(){
-        $.get("/api/proxy/useHttpsRedirect", function(data){
-            if (data == true){
-                $("#redirect").checkbox("set checked");
-            }
-
-            //Initiate the input listener on the checkbox
-            $("#redirect").find("input").on("change", function(){
-                let thisValue = $("#redirect").checkbox("is checked");
-                    $.cjax({
-                        url: "/api/proxy/useHttpsRedirect",
-                        method: "POST",
-                        data: {set: thisValue},
-                        success: function(data){
-                            if (data.error != undefined){
-                                msgbox(data.error, false, 8000);
-
-                                //Restore backend value to make sure the UI is always in sync
-                                $.get("/api/proxy/useHttpsRedirect", function(data){
-                                    if (data == true){
-                                        $("#redirect").checkbox("set checked");
-                                    }else{
-                                        $("#redirect").checkbox("set unchecked");
-                                    }
-                                });
-                            }else{
-                                //Updated
-                                msgbox("Setting Updated");
-                                initRPStaste();
-                            }
-                        }
-                    })
-            });
-        });
-    }
-    initHTTPtoHTTPSRedirectSetting();
-
-    function initTlsVersionSetting(){
-        $.get("/api/cert/tlsMinVersion", function(data){
-            // Set dropdown value
-            if (data && typeof data === "string") {
-                $("#tlsVersionSelect").val(data);
-            }
-            // Bind change event
-            $("#tlsVersionSelect").off("change").on("change", function(){
-                var selectedVersion = $(this).val();
-                $.cjax({
-                    url: "/api/cert/tlsMinVersion",
-                    method: "POST",
-                    data: {set: selectedVersion},
-                    success: function(data){
-                        if (data.error != undefined){
-                            msgbox(data.error, false, 5000);
-                        }else{
-                            msgbox("TLS minimum version updated");
-                        }
-                    }
-                });
-            });
-        });
-    }
-    initTlsVersionSetting();
-
-    function initDevelopmentMode(){
-        $.get("/api/proxy/developmentMode", function(data){
-            if (data === true){
-                $("#developmentMode").checkbox("set checked")
-            }else{
-                $("#developmentMode").checkbox("set unchecked")
-            }
-            
-            //Bind change events
-            $("#developmentMode").off("change").on("change", function(data){
-                let enableDevMode = ($(this).find("input[type='checkbox']")[0].checked);
-                $.get("/api/proxy/developmentMode?enable=" + enableDevMode, function(data){
-                    if (enableDevMode){
-                        msgbox("Development mode enabled");
-                    }else{
-                        msgbox("Development mode disabled");
-                    }
-                    
-                });
-            });
-        });
-    }
-    initDevelopmentMode();
-
-    function initProxyProtocol(){
-        $.get("/api/proxy/proxyProtocol", function(data){
-            if (data === true){
-                $("#proxyProtocol").checkbox("set checked")
-            }else{
-                $("#proxyProtocol").checkbox("set unchecked")
-            }
-            
-            //Bind change events
-            $("#proxyProtocol").off("change").on("change", function(data){
-                let enableProxyProtocol = ($(this).find("input[type='checkbox']")[0].checked);
-                $.get("/api/proxy/proxyProtocol?enable=" + enableProxyProtocol, function(data){
-                    if (data.error != undefined){
-                        msgbox(data.error, false, 5000);
-                        //Revert checkbox state on error
-                        if (enableProxyProtocol){
-                            $("#proxyProtocol").checkbox("set unchecked");
-                        }else{
-                            $("#proxyProtocol").checkbox("set checked");
-                        }
-                    }else{
-                        if (enableProxyProtocol){
-                            msgbox("PROXY protocol enabled");
-                        }else{
-                            msgbox("PROXY protocol disabled");
-                        }
-                    }
-                });
-            });
-        });
-    }
-    initProxyProtocol();
-
-    function initTlsSetting(){
-        $.get("/api/cert/tls", function(data){
-            if (data == true){
-                $("#tls").checkbox("set checked");
-            }else{
-                $(".tlsEnabledOnly").addClass('disabled');
-            }
-
-            //Initiate the input listener on the checkbox
-            $("#tls").find("input").on("change", function(){
-                let thisValue = $("#tls").checkbox("is checked");
-                if (thisValue){
-                    $(".tlsEnabledOnly").removeClass('disabled');
-                }else{
-                    $(".tlsEnabledOnly").addClass('disabled');
-                }
-                $.cjax({
-                    url: "/api/cert/tls",
-                    method: "POST",
-                    data: {set: thisValue},
-                    success: function(data){
-                        if (data.error != undefined){
-                            msgbox(data.error, false);
-                        }else{
-                            //Updated
-                            //Check for case if the port is invalid default ports
-                            if ($("#incomingPort").val() == "80" && thisValue == true){
-                                confirmBox("Change listen port to :443?", function(choice){
-                                    if (choice == true){
-                                        $("#incomingPort").val("443");
-                                        handlePortChange();
-                                    }
-                                });
-                                   
-                            }else if ($("#incomingPort").val() == "443" && thisValue == false){
-                                confirmBox("Change listen port to :80?", function(choice){
-                                    if (choice == true){
-                                        $("#incomingPort").val("80");
-                                        handlePortChange();
-                                    }
-                                });
-                            }else{
-                                msgbox("Setting Updated");
-                            }
-
-                            initRPStaste();
-                        }
-                    }
-                })
-            });
-        })
-      
-    }
-    initTlsSetting();
-
-</script>
-
-<script>
-    /*
-        Render Network Activity Graph
-    */
 
     /*
-        Setup Graph
+        Formatting Helpers
     */
-   
-
-    let rxValues = [];
-    let txValues = [];
-    let dataCount = 300;
-    let timestamps = [];
-    let isFetchingData = false;  // Prevent overlapping requests
-    let chartInitialized = false; // Track chart initialization state
-
-    for(var i = 0; i < dataCount; i++){
-        timestamps.push(new Date(Date.now() + i * 1000).toLocaleString().replace(',', ''));
-    }
-
-    function fetchData() {
-        // Prevent overlapping requests and ensure chart is initialized
-        if (isFetchingData || !chartInitialized) {
-            return;
-        }
-        isFetchingData = true;
-        
-        $.ajax({
-            url: '/api/stats/netstatgraph?array=true',
-            timeout: 5000, // 5 second timeout to prevent hanging requests
-            success: function(data){
-                if (!data || !data.Rx || !data.Tx) {
-                    return;
-                }
-                
-                if (rxValues.length == 0){
-                    rxValues.push(...data.Rx);
-                }else{
-                    rxValues.push(data.Rx[dataCount-1]);
-                    rxValues.shift();
-                }
-
-                if (txValues.length == 0){
-                    txValues.push(...data.Tx);
-                }else{
-                    txValues.push(data.Tx[dataCount-1]);
-                    txValues.shift();
-                }
-                
-                timestamps.push(new Date(Date.now()).toLocaleString().replace(',', ''));
-                timestamps.shift();
-                updateChart();
-            },
-            error: function() {
-                // Silently handle errors, will retry on next interval
-            },
-            complete: function() {
-                // Always release the lock when request completes
-                isFetchingData = false;
-            }
-        });
-    }
-
     function formatBandwidth(bps) {
         const KBPS = 1000;
         const MBPS = 1000 * KBPS;
@@ -793,143 +608,537 @@
         }
     }
 
-    var networkStatisticChart;
-    function initChart(){
-        $.get("/api/stats/netstat", function(data){
-            networkStatisticChart = new Chart(
-                document.getElementById('networkActivity'),
-                {
-                    type: 'line',
-                    responsive: true,
-                    resizeDelay: 300,
-                    options: {
-                        animation: false,
-                        maintainAspectRatio: false,
-                        bezierCurve: true,
-                        tooltips: {enabled: false},
-                        hover: {mode: null},
-                        //stepped: 'middle',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: "right",
-                            },
-                            title: {
-                                display: false,
-                                text: 'Network Statistic'
-                            },
-                        },
-                        scales: {
-                            x: {
-                                display: false,
-                                },
-                            y: {
-                                display: true,
-                                scaleLabel: {
-                                display: true,
-                                labelString: 'Value'
-                                },
-                                ticks: {
-                                    stepSize: 10000000,
-                                    callback: function(label, index, labels) {
-                                        return formatBandwidth(parseInt(label));
-                                    }
-                                },
-                                gridLines: {
-                                    display: true
-                                }
-                            }
-                        }
-                    },
-                    data: {
-                        labels: timestamps,
-                        datasets: [
-                            {
-                                label: 'Inbound',
-                                data: rxValues,
-                                borderColor: "#484bb8",
-                                borderWidth: 1,
-                                backgroundColor: 'rgba(72, 75, 184, 0.2)',
-                                fill: true,
-                                pointStyle: false,
-                            },
-                            {
-                                label: 'Outbound',
-                                data: txValues,
-                                borderColor: '#02a9c1',
-                                borderWidth: 1,
-                                backgroundColor: 'rgba(2, 169, 193, 0.2)',
-                                fill: true,
-                                pointStyle: false,
-                            }
-                        ]
-                    }
+    function formatByteSize(bytes){
+        if (isNaN(bytes) || bytes < 0){
+            return "-";
+        }
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        let i = 0;
+        let value = bytes;
+        while (value >= 1000 && i < units.length - 1){
+            value = value / 1000;
+            i++;
+        }
+        return value.toFixed(value >= 100 || i == 0 ? 0 : 2) + " " + units[i];
+    }
+
+    function formatUptime(seconds){
+        if (isNaN(seconds) || seconds < 0){
+            return "-";
+        }
+        let days = Math.floor(seconds / 86400);
+        let hours = Math.floor((seconds % 86400) / 3600);
+        let mins = Math.floor((seconds % 3600) / 60);
+        if (days > 0){
+            return days + "d " + hours + "h " + mins + "m";
+        }else if (hours > 0){
+            return hours + "h " + mins + "m";
+        }
+        return mins + "m";
+    }
+
+    //Render a "△x% vs yesterday" style delta into the given element
+    function renderTrendDelta(elementId, today, yesterday, invertColor=false){
+        let element = $("#" + elementId);
+        if (yesterday <= 0){
+            element.attr("class", "dbstatDelta").text("No data from yesterday");
+            return;
+        }
+        let change = ((today - yesterday) / yesterday) * 100;
+        let arrow = change >= 0 ? "▲" : "▼";
+        let trendClass = change >= 0 ? "trendUp" : "trendDown";
+        if (invertColor){
+            //For metrics where increase is bad (e.g. error rate)
+            trendClass = change >= 0 ? "trendDown" : "trendUp";
+        }
+        element.attr("class", "dbstatDelta " + trendClass);
+        element.text(arrow + " " + Math.abs(change).toFixed(1) + "% vs yesterday");
+    }
+
+    /*
+        Dashboard Overview (hero metrics + summary cards)
+    */
+    function updateDashboardOverview(){
+        $.ajax({
+            url: "/api/stats/overview",
+            timeout: 5000,
+            success: function(data){
+                if (!data || data.error != undefined){
+                    return;
                 }
-            );
-            // Mark chart as initialized after creation
-            chartInitialized = true;
-            // Fetch initial data now that chart is ready
-            fetchData();
+
+                //Hero metrics
+                $("#heroUptime").text(formatUptime(data.SystemUptime));
+                $("#heroRequests").text(abbreviateNumber(data.TotalRequestToday));
+                $("#heroBandwidth").text(formatByteSize(data.BandwidthRxToday + data.BandwidthTxToday));
+                $("#heroConnections").text(data.ActiveConnections >= 0 ? data.ActiveConnections : "-");
+
+                //Summary cards
+                $("#cardTotalRequests").text(abbreviateNumber(data.TotalRequestToday));
+                renderTrendDelta("cardTotalRequestsDelta", data.TotalRequestToday, data.Yesterday.TotalRequest);
+
+                $("#cardUniqueVisitors").text(abbreviateNumber(data.UniqueVisitorsToday));
+                renderTrendDelta("cardUniqueVisitorsDelta", data.UniqueVisitorsToday, data.Yesterday.UniqueVisitors);
+
+                $("#cardBandwidth").text(formatByteSize(data.BandwidthRxToday + data.BandwidthTxToday));
+                $("#cardBandwidthDetail").text("▼ " + formatByteSize(data.BandwidthRxToday) + " / ▲ " + formatByteSize(data.BandwidthTxToday));
+
+                let errorRateToday = data.TotalRequestToday > 0 ? (data.ErrorRequestToday / data.TotalRequestToday * 100) : 0;
+                let errorRateYtd = data.Yesterday.TotalRequest > 0 ? (data.Yesterday.ErrorRequest / data.Yesterday.TotalRequest * 100) : 0;
+                $("#cardErrorRate").text(errorRateToday.toFixed(2) + "%");
+                renderTrendDelta("cardErrorRateDelta", errorRateToday, errorRateYtd, true);
+
+                $("#cardActiveConns").text(data.ActiveConnections >= 0 ? data.ActiveConnections : "-");
+                $("#cardProxyHosts").text(data.ProxyHostCount);
+                $("#cardUpstreams").text(data.UpstreamCount);
+            }
         });
     }
 
-    function updateChart() {
-        //Do not remove these 3 lines, it will cause memory leak
-        if (typeof(networkStatisticChart) == "undefined"){
+    /*
+        Visitor Locations
+
+        Note: jsVectorMap's built-in series/scale system (series.regions[].scale)
+        indexes its scale array directly by the raw data value instead of
+        interpolating between two colors by a normalized min/max ratio, so it
+        cannot produce a continuous gradient here. Region colors are instead
+        computed and applied directly against the low-level map.regions API.
+    */
+    let worldMap = undefined;
+    let currentMapValues = {};
+    let coloredRegionCodes = [];
+    const mapColorLow = "#c7ddf7";
+    const mapColorHigh = "#1c4e9c";
+    const mapDefaultFill = "#dde6f0";
+
+    function hexToRgbArr(hex){
+        hex = hex.replace('#', '');
+        return [parseInt(hex.substring(0, 2), 16), parseInt(hex.substring(2, 4), 16), parseInt(hex.substring(4, 6), 16)];
+    }
+
+    function interpolateHexColor(hexA, hexB, t){
+        let a = hexToRgbArr(hexA);
+        let b = hexToRgbArr(hexB);
+        let rgb = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+        return "#" + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
+    function applyMapColors(mapValues){
+        if (worldMap == undefined || !worldMap.regions){
             return;
         }
-        networkStatisticChart.data.datasets[0].data = rxValues;
-        networkStatisticChart.data.datasets[1].data = txValues;
-        networkStatisticChart.data.labels = timestamps;
-        if (networkStatisticChart != undefined){
-            networkStatisticChart.update();
-        }
+        let maxCount = Math.max(0, ...Object.values(mapValues));
+
+        //Reset regions that had a color applied previously but have no data now
+        coloredRegionCodes.forEach(function(code){
+            if (!(code in mapValues) && worldMap.regions[code]){
+                worldMap.regions[code].element.setStyle('fill', mapDefaultFill);
+            }
+        });
+
+        let newColoredCodes = [];
+        Object.entries(mapValues).forEach(function(entry){
+            let code = entry[0];
+            let count = entry[1];
+            if (!worldMap.regions[code]){
+                //Unknown / non-mappable region code (e.g. reserved test IP ranges)
+                return;
+            }
+            let ratio = maxCount > 0 ? count / maxCount : 0;
+            worldMap.regions[code].element.setStyle('fill', interpolateHexColor(mapColorLow, mapColorHigh, ratio));
+            newColoredCodes.push(code);
+        });
+        coloredRegionCodes = newColoredCodes;
     }
 
-    function updateChartSize(){
-        let newSize = $("#networkActWrapper").width() - 300;
-        if (window.innerWidth > 750){
-            newSize = window.innerWidth - $(".toolbar").width() - 500;
-        }else{
-            newSize = $("#networkActWrapper").width() - 500;
-        }
-        if (networkStatisticChart != undefined){
-            networkStatisticChart.resize(newSize, 200);
-        }
+    function updateVisitorLocations(){
+        $.get("/api/stats/countries", function(data){
+            if (!data || data.error != undefined){
+                return;
+            }
+
+            //Sort by visitor count descending
+            let entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+            $("#cardCountries").text(entries.length);
+
+            if (entries.length == 0){
+                $("#worldMapRow").hide();
+                $("#countryChartNoData").show();
+                $("#topCountriesList").html(`<p style="color: var(--text_color_secondary);"><i class="green circle check icon"></i> No Data</p>`);
+                return;
+            }
+            $("#countryChartNoData").hide();
+            $("#worldMapRow").show();
+
+            //Build the choropleth values, keyed by uppercase ISO2 code
+            //(the "local"/LAN pseudo-entry has no map region, so it is excluded here)
+            let mapValues = {};
+            entries.forEach(function(entry){
+                if (entry[0] != "local"){
+                    mapValues[entry[0].toUpperCase()] = entry[1];
+                }
+            });
+            currentMapValues = mapValues;
+
+            if (worldMap == undefined){
+                worldMap = new jsVectorMap({
+                    selector: "#worldMap",
+                    map: "world",
+                    zoomButtons: false,
+                    zoomOnScroll: false,
+                    regionsSelectable: false,
+                    backgroundColor: "transparent",
+                    regionStyle: {
+                        initial: {
+                            fill: mapDefaultFill,
+                            fillOpacity: 1,
+                            stroke: "#ffffff",
+                            strokeWidth: 1,
+                        },
+                        hover: {
+                            fillOpacity: 0.8,
+                        }
+                    },
+                    onRegionTooltipShow: function(event, tooltip, code){
+                        let name = getCountryName(code);
+                        if (name == ""){ name = code; }
+                        let count = currentMapValues[code] || 0;
+                        tooltip.text(name + ": " + abbreviateNumber(count) + " visitor" + (count == 1 ? "" : "s"), false);
+                    }
+                });
+                //Regions are only available once the map has finished its initial render
+                setTimeout(function(){ applyMapColors(currentMapValues); }, 50);
+            }else{
+                applyMapColors(currentMapValues);
+            }
+
+            //Render top countries list (top 5 + others)
+            let top5 = entries.slice(0, 5);
+            let othersCount = entries.slice(5).reduce((acc, e) => acc + e[1], 0);
+            $("#topCountriesList").empty();
+            top5.forEach(function(entry){
+                let isoCode = entry[0].toLowerCase();
+                let countryName = getCountryName(entry[0]);
+                let flagIcon = `<i class="${isoCode} flag"></i>`;
+                if (countryName == "" || isoCode == "local"){
+                    countryName = "LAN / Reserved";
+                    flagIcon = `<i class="home icon"></i>`;
+                }
+                let row = $(`<div class="topCountryRow"></div>`);
+                row.append($(`<span>${flagIcon}</span>`).append($("<span>").text(" " + countryName)));
+                row.append($(`<span style="color: var(--text_color_secondary);"></span>`).text(abbreviateNumber(entry[1])));
+                $("#topCountriesList").append(row);
+            });
+            if (othersCount > 0){
+                let row = $(`<div class="topCountryRow"></div>`);
+                row.append($(`<span><i class="globe icon"></i> Others</span>`));
+                row.append($(`<span style="color: var(--text_color_secondary);"></span>`).text(abbreviateNumber(othersCount)));
+                $("#topCountriesList").append(row);
+            }
+        });
     }
 
-    function handleChartAccumulateResize(){
-        $("#networkActivity").hide();
-        $("#networkActivityPlaceHolder").show();
-        if (chartResizeTimeout != undefined){
-            clearTimeout(chartResizeTimeout);
+    /*
+        Top Requested Paths & Request Methods
+    */
+    let methodChart = undefined;
+    const methodChartColors = ["#4b75ff", "#fbbd08", "#21ba45", "#a333c8", "#f2711c", "#00b5ad"];
+    function updatePathsAndMethods(){
+        $.ajax({
+            url: "/api/stats/summary",
+            timeout: 10000,
+            success: function(data){
+                if (!data || data.error != undefined){
+                    return;
+                }
+
+                //Top requested paths
+                let pathEntries = Object.entries(data.RequestURL || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+                let totalRequests = data.TotalRequest;
+                $("#topPathsList").empty();
+                if (pathEntries.length == 0){
+                    $("#topPathsList").html(`<p style="color: var(--text_color_secondary);"><i class="green circle check icon"></i> No Data</p>`);
+                }else{
+                    let maxCount = pathEntries[0][1];
+                    pathEntries.forEach(function(entry){
+                        let percentage = totalRequests > 0 ? (entry[1] / totalRequests * 100).toFixed(1) : 0;
+                        let barWidth = maxCount > 0 ? (entry[1] / maxCount * 100) : 0;
+                        let row = $(`<div class="rankingBarRow"></div>`);
+                        let label = $(`<div class="rankingLabel"></div>`);
+                        label.append($(`<span></span>`).text(entry[0]));
+                        label.append($(`<span class="rankingCount"></span>`).text(abbreviateNumber(entry[1]) + " (" + percentage + "%)"));
+                        row.append(label);
+                        row.append($(`<div class="rankingBarTrack"><div class="rankingBarFill" style="width: ${barWidth}%;"></div></div>`));
+                        $("#topPathsList").append(row);
+                    });
+                }
+
+                //Request methods doughnut
+                let methodEntries = Object.entries(data.RequestMethods || {}).sort((a, b) => b[1] - a[1]);
+                if (methodEntries.length == 0){
+                    $("#methodChart").hide();
+                    $("#methodChartNoData").show();
+                    return;
+                }
+                $("#methodChartNoData").hide();
+                $("#methodChart").show();
+
+                //Group tail entries into "Others"
+                let displayEntries = methodEntries.slice(0, 5);
+                let othersTotal = methodEntries.slice(5).reduce((acc, e) => acc + e[1], 0);
+                if (othersTotal > 0){
+                    displayEntries.push(["Others", othersTotal]);
+                }
+
+                let labels = displayEntries.map(e => e[0]);
+                let values = displayEntries.map(e => e[1]);
+
+                if (methodChart == undefined){
+                    methodChart = new Chart(document.getElementById('methodChart'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: methodChartColors,
+                                borderWidth: 0,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: false,
+                            cutout: "65%",
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                }
+                            }
+                        }
+                    });
+                }else{
+                    methodChart.data.labels = labels;
+                    methodChart.data.datasets[0].data = values;
+                    methodChart.update();
+                }
+            }
+        });
+    }
+
+    /*
+        SSL / TLS Overview
+    */
+    function updateCertOverview(){
+        $.get("/api/cert/list?date=true", function(data){
+            if (!data || data.error != undefined || !Array.isArray(data)){
+                return;
+            }
+            let total = data.length;
+            let expired = data.filter(cert => cert.RemainingDays <= 0).length;
+            let expiringSoon = data.filter(cert => cert.RemainingDays > 0 && cert.RemainingDays <= 30).length;
+            $("#certTotal").text(total);
+            $("#certExpiringSoon").text(expiringSoon);
+            $("#certExpired").text(expired);
+        });
+    }
+
+    /*
+        System Resources
+    */
+    function renderResourceBar(barId, textId, percentage, text){
+        if (isNaN(percentage) || percentage < 0){
+            percentage = 0;
         }
-        chartResizeTimeout = setTimeout(function(){
-            chartResizeTimeout = undefined;
-            $("#networkActivityPlaceHolder").hide();
-            $("#networkActivity").show();
-            updateChartSize();
+        if (percentage > 100){
+            percentage = 100;
+        }
+        let bar = $("#" + barId);
+        bar.css("width", percentage.toFixed(1) + "%");
+        bar.attr("class", "resourceBarFill" + (percentage >= 90 ? " danger" : (percentage >= 70 ? " warning" : "")));
+        $("#" + textId).text(text);
+    }
+
+    function updateSystemResources(){
+        $.ajax({
+            url: "/api/stats/system",
+            timeout: 5000,
+            success: function(data){
+                if (!data || data.error != undefined){
+                    return;
+                }
+
+                if (!data.Ready){
+                    //Background monitor still taking its first sample
+                    return;
+                }
+
+                renderResourceBar("cpuUsageBar", "cpuUsageText", data.CPUUsage, data.CPUUsage.toFixed(1) + "%");
+
+                let ramText = data.RAMUsage.toFixed(1) + "%";
+                if (data.UsedRAM != "Unknown" && data.TotalRAM != "Unknown"){
+                    ramText = data.UsedRAM + " / " + data.TotalRAM + " (" + data.RAMUsage.toFixed(1) + "%)";
+                }
+                renderResourceBar("ramUsageBar", "ramUsageText", data.RAMUsage, ramText);
+
+                if (data.DiskTotal > 0){
+                    let diskText = formatByteSize(data.DiskUsed) + " / " + formatByteSize(data.DiskTotal) + " (" + data.DiskUsage.toFixed(1) + "%)";
+                    renderResourceBar("diskUsageBar", "diskUsageText", data.DiskUsage, diskText);
+                }
+
+                let hostParts = [];
+                if (data.HostName != ""){
+                    hostParts.push(data.HostName);
+                }
+                hostParts.push(data.HostOS + "/" + data.HostArch);
+                $("#hostInfoLine").text(hostParts.join(" · "));
+            }
+        });
+    }
+
+    /*
+        Realtime Network Activity Charts
+    */
+    let netIOChartInitialized = false;
+    let netIOFetching = false;
+    let networkInChart = undefined;
+    let networkOutChart = undefined;
+    let rxValues = [];
+    let txValues = [];
+    let netTimestamps = [];
+    const netDataCount = 300;
+
+    function createRealtimeChart(canvasId, borderColor, backgroundColor){
+        return new Chart(document.getElementById(canvasId), {
+            type: 'line',
+            data: {
+                labels: netTimestamps,
+                datasets: [{
+                    data: [],
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    backgroundColor: backgroundColor,
+                    fill: true,
+                    pointStyle: false,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                animation: false,
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        display: true,
+                        beginAtZero: true,
+                        ticks: {
+                            maxTicksLimit: 5,
+                            callback: function(label){
+                                return formatBandwidth(parseInt(label));
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function initNetIOCharts(){
+        for (var i = 0; i < netDataCount; i++){
+            netTimestamps.push("");
+        }
+        networkInChart = createRealtimeChart('networkInChart', "#484bb8", 'rgba(72, 75, 184, 0.2)');
+        networkOutChart = createRealtimeChart('networkOutChart', '#8b5cf6', 'rgba(139, 92, 246, 0.2)');
+        netIOChartInitialized = true;
+        fetchNetIOData();
+    }
+
+    function fetchNetIOData(){
+        if (netIOFetching || !netIOChartInitialized){
+            return;
+        }
+        netIOFetching = true;
+
+        $.ajax({
+            url: '/api/stats/netstatgraph?array=true',
+            timeout: 5000,
+            success: function(data){
+                if (!data || !data.Rx || !data.Tx) {
+                    return;
+                }
+
+                if (rxValues.length == 0){
+                    rxValues.push(...data.Rx);
+                    txValues.push(...data.Tx);
+                }else{
+                    rxValues.push(data.Rx[netDataCount - 1]);
+                    rxValues.shift();
+                    txValues.push(data.Tx[netDataCount - 1]);
+                    txValues.shift();
+                }
+
+                $("#netInValue").text(formatBandwidth(rxValues[rxValues.length - 1]));
+                $("#netOutValue").text(formatBandwidth(txValues[txValues.length - 1]));
+
+                if (networkInChart != undefined){
+                    networkInChart.data.datasets[0].data = rxValues;
+                    networkInChart.update();
+                }
+                if (networkOutChart != undefined){
+                    networkOutChart.data.datasets[0].data = txValues;
+                    networkOutChart.update();
+                }
+            },
+            complete: function(){
+                netIOFetching = false;
+            }
+        });
+    }
+
+    /*
+        Initialization & Refresh Timers
+    */
+    function initStatusDashboard(){
+        updateDashboardOverview();
+        updateVisitorLocations();
+        updatePathsAndMethods();
+        updateCertOverview();
+        updateSystemResources();
+    }
+
+    initNetIOCharts();
+    initStatusDashboard();
+    setInterval(fetchNetIOData, 1000);
+    setInterval(updateDashboardOverview, 10000);
+    setInterval(updateSystemResources, 10000);
+    setInterval(function(){
+        updateVisitorLocations();
+        updatePathsAndMethods();
+        updateCertOverview();
+    }, 60000);
+
+    //Resize charts when switching back to this tab
+    tabSwitchEventBind["status"] = function(){
+        setTimeout(function(){
+            [networkInChart, networkOutChart, methodChart].forEach(function(chart){
+                if (chart != undefined){
+                    chart.resize();
+                }
+            });
+            if (worldMap != undefined){
+                worldMap.updateSize();
+            }
         }, 300);
     }
 
-    var chartResizeTimeout;
-    window.addEventListener('resize', () => {
-        handleChartAccumulateResize();
+    //jsVectorMap does not auto-resize its SVG on window/container resize
+    window.addEventListener('resize', function(){
+        if (worldMap != undefined){
+            worldMap.updateSize();
+        }
     });
-
-    //Bind event to tab switch
-    tabSwitchEventBind["status"] = function(){
-        //On switch over to this page, resize the chart
-        handleChartAccumulateResize();
-        
-    }
-
-    window.addEventListener("focus", function(event){
-        handleChartAccumulateResize();
-    });
-
-
-    //Initialize chart data
-    initChart();
-    setInterval(fetchData, 1000);
 </script>

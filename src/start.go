@@ -27,8 +27,10 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
+	"imuslab.com/zoraxy/mod/info/usageinfo"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -233,6 +235,14 @@ func startupSequence() {
 		SystemWideLogger.PrintAndLog("Network", "Failed to load network statistic info", err)
 		panic(err)
 	}
+
+	//Start the status page host resource monitors
+	//CPU / RAM usage is sampled once per second in the background so the
+	//dashboard API can return cached values without blocking
+	usageinfo.StartBackgroundMonitor()
+	hardwareinfo.SetLogger(SystemWideLogger)
+	hardwareinfo.StartHostInfoCache()
+	initDashboardBandwidthTracker()
 
 	/*
 		Path Rules

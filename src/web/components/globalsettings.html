@@ -1,0 +1,503 @@
+<style>
+    #globalsettings #redirect.disabled{
+        opacity: 0.7;
+        pointer-events: none;
+        user-select: none;
+    }
+</style>
+<!-- Global Settings -->
+<div class="standardContainer">
+    <h3>Global Settings</h3>
+    <p>Global settings for the reverse proxy server</p>
+    <div class="ui divider"></div>
+    <p>Inbound Port (Reverse Proxy Listening Port)</p>
+    <div class="ui action fluid notloopbackOnly input" tourstep="incomingPort">
+        <small id="applyButtonReminder">Click "Apply" button to confirm listening port changes</small>
+        <input type="text" id="incomingPort" placeholder="Incoming Port" value="443">
+        <button class="ui green notloopbackOnly button" style="background: var(--theme_green);" onclick="handlePortChange();"><i class="ui checkmark icon"></i> Apply</button>
+    </div>
+    <br>
+    <div id="tls" class="ui toggle notloopbackOnly checkbox">
+        <input type="checkbox">
+        <label>Use TLS to serve proxy request<br>
+        <small>Also known as HTTPS mode</small></label>
+    </div>
+    <br>
+    <div id="listenP80" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;" >
+        <input type="checkbox">
+        <label>Enable HTTP server on port 80<br>
+        <small>Accept HTTP requests even if you are using HTTPS mode</small></label>
+    </div>
+    <div id="port80Warning" class="ui tiny yellow message" style="display: none; margin-top: 0.5em; margin-bottom: 0.5em;">
+        <i class="warning icon"></i>
+        Port 80 is occupied by another service and might not be working properly
+    </div>
+    <br>
+    <div tourstep="forceHttpsRedirect" style="display: inline-block;">
+        <div id="redirect" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.4em;">
+            <input type="checkbox">
+            <label>Force redirect HTTP request to HTTPS<br>
+            <small>Redirect web traffic from port 80 to 443, require enabling HTTP server on port 80</small></label>
+        </div>
+    </div>
+    <div class="ui basic segment advanceoptions">
+        <div id="statusAdvanceSettings" class="ui accordion advanceSettings">
+            <div class="title">
+              <i class="dropdown icon"></i>
+                Advance Settings
+            </div>
+            <div class="content">
+                <div id="tlsMinVer" class="ui notloopbackOnly tlsEnabledOnly" style="margin-top: 0.6em;">
+                    <div style="display: flex; align-items: center; gap: 1em;">
+                        <select id="tlsVersionSelect" class="ui dropdown">
+                            <option value="1.0">TLS v1.0</option>
+                            <option value="1.1">TLS v1.1</option>
+                            <option value="1.2">TLS v1.2</option>
+                            <option value="1.3">TLS v1.3</option>
+                        </select>
+                        <p for="tlsVersionSelect" style="margin: 0;">
+                            Minimum TLS Version<br>
+                            <small>(Enhance security, but may not be compatible with legacy browsers)</small>
+                        </p>
+                    </div>
+                </div>
+                <br>
+                <div id="developmentMode" class="ui toggle checkbox" style="margin-top: 0.6em;">
+                    <input type="checkbox">
+                    <label>Development Mode<br>
+                    <small>(Set Cache-Control to no-store so browser will always fetch new contents from your sites)</small></label>
+                </div>
+                <br>
+                <div id="proxyProtocol" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
+                    <input type="checkbox">
+                    <label>Enable PROXY Protocol<br>
+                    <small>(Enable PROXY protocol v1/v2 support for TLS listener)</small></label>
+                </div>
+                <br>
+                <div class="ui notloopbackOnly form" style="margin-top: 0.6em;">
+                    <div class="field">
+                        <label>Global Proxy Timeouts</label>
+                        <small>Timeouts are in seconds. Set any value to 0 to disable it. Changes will restart the reverse proxy if it is running.</small>
+                    </div>
+                    <div class="three stackable fields" style="margin-top: 0.8em; margin-bottom: 0.6em;">
+                        <div class="field">
+                            <label for="readHeaderTimeoutInput">Read Header Timeout</label>
+                            <input type="number" id="readHeaderTimeoutInput" min="0" step="1" placeholder="30">
+                        </div>
+                        <div class="field">
+                            <label for="writeTimeoutInput">Write Timeout</label>
+                            <input type="number" id="writeTimeoutInput" min="0" step="1" placeholder="0">
+                        </div>
+                        <div class="field">
+                            <label for="idleTimeoutInput">Idle Timeout</label>
+                            <input type="number" id="idleTimeoutInput" min="0" step="1" placeholder="300">
+                        </div>
+                    </div>
+                    <button class="ui basic green button" onclick="saveProxyTimeoutSettings();"><i class="ui checkmark icon"></i> Apply Timeout Settings</button>
+                </div>
+                <br>
+            </div>
+        </div>
+    </div>
+
+    <div id="gsloopbackWarning" class="ui segment" style="display:none;">
+        <b><i class="yellow warning icon"></i> Loopback Routing Warning</b><br>
+        <small>This management interface is a loopback proxied service. <br>Some global settings are disabled to prevent accidentally cutting off access to this management interface.</small>
+    </div>
+    <div class="ui divider"></div>
+    <h4>Secondary Listening Ports</h4>
+    <p>Additional ports configured for specific proxy rules</p>
+    <div id="secondaryListenersContainer">
+        <table class="ui unstackable basic celled table">
+            <thead>
+                <tr>
+                    <th>Listening Address</th>
+                    <th>Domains / Hostnames</th>
+                </tr>
+            </thead>
+            <tbody id="secondaryListenersTable">
+                <tr>
+                    <td colspan="2" style="text-align: center;">
+                        <i class="ui loading circle notch icon"></i> Loading...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <br>
+    <button class="ui right floated basic button" onclick="loadSecondaryListeners();"><i class="green refresh icon"></i> Refresh</button>
+    <br><br>
+</div>
+<script>
+    let currentListeningPort = 80;
+    // Scope to this page's accordion only; .advanceSettings is reused by
+    // other webmin components loaded dynamically via ajax.
+    $("#statusAdvanceSettings").accordion();
+
+    //Disable modification of critical settings if the management interface
+    //is accessed through a loopback proxied route
+    $.get("/api/proxy/requestIsProxied", function(data){
+        if (data == true){
+            $("#globalsettings .notloopbackOnly").addClass("disabled");
+            $("#gsloopbackWarning").show();
+        }
+    });
+
+    //Load the current listening port state into the input field
+    function initIncomingPortSetting(){
+        $.get("/api/proxy/status", function(data){
+            $("#incomingPort").off("change");
+            $("#incomingPort").val(data.Option.Port);
+            currentListeningPort = data.Option.Port;
+            $("#incomingPort").on("change", function(){
+                let newPortValue = $("#incomingPort").val().trim();
+                if (currentListeningPort != newPortValue){
+                    $("#applyButtonReminder").show();
+                }else{
+                    $("#applyButtonReminder").hide();
+                }
+            });
+        });
+    }
+    initIncomingPortSetting();
+
+    function handlePortChange(){
+        var newPortValue = $("#incomingPort").val();
+        if (isNaN(newPortValue - 1) || newPortValue < 1 || newPortValue > 65535){
+            msgbox("Invalid incoming port value", false, 5000);
+            return;
+        }
+
+        $.cjax({
+            url: "/api/proxy/setIncoming",
+            method: "POST",
+            data: {incoming: newPortValue},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                    return;
+                }
+                msgbox("Listening Port Updated");
+                initIncomingPortSetting();
+                initRPStaste();
+
+                //Hide the reminder text
+                $("#applyButtonReminder").hide();
+            }
+        });
+    }
+
+    function handleP80ListenerStateChange(enabled){
+        $.cjax({
+            url: "/api/proxy/listenPort80",
+            method: "POST",
+            data: {"enable": enabled},
+            success: function(data){
+                if (data.error != undefined){
+                    console.log(data.error);
+                    msgbox(data.error, false, 3000);
+                    initPort80ListenerSetting();
+                    return;
+                }
+                if (enabled){
+                    $("#redirect").removeClass("disabled");
+                    msgbox("Port 80 listener enabled");
+                }else{
+                    $("#redirect").addClass("disabled");
+                    msgbox("Port 80 listener disabled");
+                }
+                initPort80ListenerSetting();
+            }
+        });
+    }
+
+    function initPort80ListenerSetting(){
+        $("#listenP80").find("input").off("change");
+        $.get("/api/proxy/listenPort80", function(data){
+            let configEnabled = data.config || false;
+            let runtimeEnabled = data.runtime || false;
+
+            if (configEnabled){
+                $("#listenP80").checkbox("set checked");
+                $("#redirect").removeClass("disabled");
+            }else{
+                $("#listenP80").checkbox("set unchecked");
+                $("#redirect").addClass("disabled");
+            }
+
+            // Show warning if config is enabled but runtime is disabled
+            if (configEnabled && !runtimeEnabled) {
+                $("#port80Warning").show();
+            } else {
+                $("#port80Warning").hide();
+            }
+
+            $("#listenP80").find("input").on("change", function(){
+                let enabled = $(this)[0].checked;
+                handleP80ListenerStateChange(enabled);
+            })
+        });
+    }
+    initPort80ListenerSetting();
+
+    function initHTTPtoHTTPSRedirectSetting(){
+        $.get("/api/proxy/useHttpsRedirect", function(data){
+            if (data == true){
+                $("#redirect").checkbox("set checked");
+            }
+
+            //Initiate the input listener on the checkbox
+            $("#redirect").find("input").on("change", function(){
+                let thisValue = $("#redirect").checkbox("is checked");
+                    $.cjax({
+                        url: "/api/proxy/useHttpsRedirect",
+                        method: "POST",
+                        data: {set: thisValue},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false, 8000);
+
+                                //Restore backend value to make sure the UI is always in sync
+                                $.get("/api/proxy/useHttpsRedirect", function(data){
+                                    if (data == true){
+                                        $("#redirect").checkbox("set checked");
+                                    }else{
+                                        $("#redirect").checkbox("set unchecked");
+                                    }
+                                });
+                            }else{
+                                //Updated
+                                msgbox("Setting Updated");
+                                initRPStaste();
+                            }
+                        }
+                    })
+            });
+        });
+    }
+    initHTTPtoHTTPSRedirectSetting();
+
+    function initTlsVersionSetting(){
+        $.get("/api/cert/tlsMinVersion", function(data){
+            // Set dropdown value
+            if (data && typeof data === "string") {
+                $("#tlsVersionSelect").val(data);
+            }
+            // Bind change event
+            $("#tlsVersionSelect").off("change").on("change", function(){
+                var selectedVersion = $(this).val();
+                $.cjax({
+                    url: "/api/cert/tlsMinVersion",
+                    method: "POST",
+                    data: {set: selectedVersion},
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false, 5000);
+                        }else{
+                            msgbox("TLS minimum version updated");
+                        }
+                    }
+                });
+            });
+        });
+    }
+    initTlsVersionSetting();
+
+    function initDevelopmentMode(){
+        $.get("/api/proxy/developmentMode", function(data){
+            if (data === true){
+                $("#developmentMode").checkbox("set checked")
+            }else{
+                $("#developmentMode").checkbox("set unchecked")
+            }
+
+            //Bind change events
+            $("#developmentMode").off("change").on("change", function(data){
+                let enableDevMode = ($(this).find("input[type='checkbox']")[0].checked);
+                $.get("/api/proxy/developmentMode?enable=" + enableDevMode, function(data){
+                    if (enableDevMode){
+                        msgbox("Development mode enabled");
+                    }else{
+                        msgbox("Development mode disabled");
+                    }
+
+                });
+            });
+        });
+    }
+    initDevelopmentMode();
+
+    function initProxyProtocol(){
+        $.get("/api/proxy/proxyProtocol", function(data){
+            if (data === true){
+                $("#proxyProtocol").checkbox("set checked")
+            }else{
+                $("#proxyProtocol").checkbox("set unchecked")
+            }
+
+            //Bind change events
+            $("#proxyProtocol").off("change").on("change", function(data){
+                let enableProxyProtocol = ($(this).find("input[type='checkbox']")[0].checked);
+                $.get("/api/proxy/proxyProtocol?enable=" + enableProxyProtocol, function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 5000);
+                        //Revert checkbox state on error
+                        if (enableProxyProtocol){
+                            $("#proxyProtocol").checkbox("set unchecked");
+                        }else{
+                            $("#proxyProtocol").checkbox("set checked");
+                        }
+                    }else{
+                        if (enableProxyProtocol){
+                            msgbox("PROXY protocol enabled");
+                        }else{
+                            msgbox("PROXY protocol disabled");
+                        }
+                    }
+                });
+            });
+        });
+    }
+    initProxyProtocol();
+
+    function initProxyTimeoutSettings(){
+        $.get("/api/proxy/timeouts", function(data){
+            if (!data){
+                return;
+            }
+
+            $("#readHeaderTimeoutInput").val(data.readHeaderTimeout);
+            $("#writeTimeoutInput").val(data.writeTimeout);
+            $("#idleTimeoutInput").val(data.idleTimeout);
+        });
+    }
+    initProxyTimeoutSettings();
+
+    function saveProxyTimeoutSettings(){
+        const readHeaderTimeout = parseInt($("#readHeaderTimeoutInput").val(), 10);
+        const writeTimeout = parseInt($("#writeTimeoutInput").val(), 10);
+        const idleTimeout = parseInt($("#idleTimeoutInput").val(), 10);
+
+        if ([readHeaderTimeout, writeTimeout, idleTimeout].some(value => Number.isNaN(value) || value < 0)){
+            msgbox("Timeout values must be non-negative integers", false, 5000);
+            return;
+        }
+
+        $.cjax({
+            url: "/api/proxy/timeouts",
+            method: "POST",
+            data: {
+                readHeaderTimeout: readHeaderTimeout,
+                writeTimeout: writeTimeout,
+                idleTimeout: idleTimeout,
+            },
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                    initProxyTimeoutSettings();
+                    return;
+                }
+
+                msgbox("Proxy timeout settings updated");
+                initProxyTimeoutSettings();
+                initRPStaste();
+            }
+        });
+    }
+
+    function initTlsSetting(){
+        $.get("/api/cert/tls", function(data){
+            if (data == true){
+                $("#tls").checkbox("set checked");
+            }else{
+                $(".tlsEnabledOnly").addClass('disabled');
+            }
+
+            //Initiate the input listener on the checkbox
+            $("#tls").find("input").on("change", function(){
+                let thisValue = $("#tls").checkbox("is checked");
+                if (thisValue){
+                    $(".tlsEnabledOnly").removeClass('disabled');
+                }else{
+                    $(".tlsEnabledOnly").addClass('disabled');
+                }
+                $.cjax({
+                    url: "/api/cert/tls",
+                    method: "POST",
+                    data: {set: thisValue},
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false);
+                        }else{
+                            //Updated
+                            //Check for case if the port is invalid default ports
+                            if ($("#incomingPort").val() == "80" && thisValue == true){
+                                confirmBox("Change listen port to :443?", function(choice){
+                                    if (choice == true){
+                                        $("#incomingPort").val("443");
+                                        handlePortChange();
+                                    }
+                                });
+
+                            }else if ($("#incomingPort").val() == "443" && thisValue == false){
+                                confirmBox("Change listen port to :80?", function(choice){
+                                    if (choice == true){
+                                        $("#incomingPort").val("80");
+                                        handlePortChange();
+                                    }
+                                });
+                            }else{
+                                msgbox("Setting Updated");
+                            }
+
+                            initRPStaste();
+                        }
+                    }
+                })
+            });
+        })
+
+    }
+    initTlsSetting();
+
+    function loadSecondaryListeners(){
+        $.get("/api/proxy/listeningPorts/list", function(data){
+            $("#secondaryListenersTable").html("");
+            if (!data || data.length === 0){
+                $("#secondaryListenersTable").append(`<tr>
+                    <td colspan="2" style="text-align: center;">
+                        <i class="ui grey info circle icon"></i> No secondary listening ports configured
+                    </td>
+                </tr>`);
+            } else {
+                data.forEach(function(listener){
+                    let domainsHTML = "";
+                    if (listener.domains && listener.domains.length > 0){
+                        domainsHTML = listener.domains.map(domain =>
+                            `<span class="ui tiny label">${domain}</span>`
+                        ).join(" ");
+                    } else {
+                        domainsHTML = '<i style="opacity: 0.5;">No domains</i>';
+                    }
+
+                    $("#secondaryListenersTable").append(`<tr>
+                        <td style="white-space: nowrap;">
+                            <i class="angle double right blue icon"></i> <b>${listener.address}</b>
+                        </td>
+                        <td>${domainsHTML}</td>
+                    </tr>`);
+                });
+            }
+        }).fail(function(){
+            $("#secondaryListenersTable").html(`<tr>
+                <td colspan="2" style="text-align: center;">
+                    <i class="ui red exclamation triangle icon"></i> Failed to load secondary listeners
+                </td>
+            </tr>`);
+        });
+    }
+
+    // Load secondary listeners on page load and refresh periodically
+    loadSecondaryListeners();
+    setInterval(loadSecondaryListeners, 10000);
+</script>

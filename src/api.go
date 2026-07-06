@@ -11,6 +11,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
+	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -53,6 +54,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
 	authRouter.HandleFunc("/api/proxy/proxyProtocol", HandleProxyProtocolChange)
+	authRouter.HandleFunc("/api/proxy/timeouts", HandleGlobalProxyTimeoutSettings)
 	/* Reverse proxy upstream (load balance) */
 	authRouter.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
 	authRouter.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
@@ -185,11 +187,19 @@ func RegisterPathRuleAPIs(authRouter *auth.RouterDef) {
 func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	/* Traffic Summary */
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
+	authRouter.HandleFunc("/api/stats/overview", HandleDashboardOverview)
 	authRouter.HandleFunc("/api/stats/trafficmap", HandleTrafficMapData)
 	authRouter.HandleFunc("/api/stats/countries", HandleCountryDistrSummary)
 	authRouter.HandleFunc("/api/stats/netstat", netstatBuffers.HandleGetNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/netstatgraph", netstatBuffers.HandleGetBufferedNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/listnic", netstat.HandleListNetworkInterfaces)
+	/* Host System Information */
+	authRouter.HandleFunc("/api/stats/system", HandleSystemResourceUsage)
+	authRouter.HandleFunc("/api/sysinfo/cpu", hardwareinfo.CachedGetCPUInfo)
+	authRouter.HandleFunc("/api/sysinfo/ram", hardwareinfo.CachedGetRamInfo)
+	authRouter.HandleFunc("/api/sysinfo/drives", hardwareinfo.CachedGetDriveStat)
+	authRouter.HandleFunc("/api/sysinfo/nic", hardwareinfo.CachedIfconfig)
+	authRouter.HandleFunc("/api/sysinfo/usb", hardwareinfo.CachedGetUSB)
 	/* Zoraxy Analytic */
 	authRouter.HandleFunc("/api/analytic/list", AnalyticLoader.HandleSummaryList)
 	authRouter.HandleFunc("/api/analytic/load", AnalyticLoader.HandleLoadTargetDaySummary)
