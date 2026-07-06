@@ -214,7 +214,7 @@
       </div>
 
       <br>
-      <button class="ui basic violet button" onclick="openPluginStore();"><i class="download icon"></i>Plugin Store (Experimental)</button>
+      <button class="ui basic violet button" onclick="openPluginStore();"><i class="shopping bag icon"></i>Open App Store</button>
 </div>
 
 <script>
@@ -652,8 +652,8 @@ function getPluginInfo(pluginId, btn){
 }
 
 function openPluginStore(){
-  //Open plugin store in extended mode
-  showSideWrapper("snippet/pluginstore.html?t=" + Date.now(), true);
+  //The Plugin Store side wrapper is replaced by the App Store tab
+  openTabById("appstore");
 }
 
 function uninstallPlugin(pluginId, pluginName, btn=undefined) {

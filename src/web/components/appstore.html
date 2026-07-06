@@ -1,0 +1,1343 @@
+<style>
+  /* ===== App Store layout ===== */
+  #appstore .as-header{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1em;
+  }
+  #appstore .as-header h2{
+    margin-bottom: 0.2em;
+  }
+  #appstore .as-header p{
+    color: var(--text_color_secondary);
+  }
+
+  /* Stat cards */
+  #appstore .as-stats{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1em;
+    margin-top: 1em;
+  }
+  #appstore .as-stat-card{
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    background-color: var(--theme_bg_primary);
+    border: 1px solid var(--divider_color);
+    border-radius: 0.8em;
+    padding: 1.2em;
+  }
+  #appstore .as-stat-icon{
+    width: 3em;
+    height: 3em;
+    border-radius: 0.6em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    flex-shrink: 0;
+  }
+  #appstore .as-stat-icon.blue{ background-color: rgba(85,131,238,0.15); color: #5583ee; }
+  #appstore .as-stat-icon.purple{ background-color: rgba(163,85,238,0.15); color: #a355ee; }
+  #appstore .as-stat-icon.green{ background-color: rgba(65,199,175,0.15); color: #21ba45; }
+  #appstore .as-stat-icon.yellow{ background-color: rgba(250,172,38,0.15); color: #f2a20c; }
+  #appstore .as-stat-title{
+    color: var(--text_color_secondary);
+    font-size: 0.9em;
+  }
+  #appstore .as-stat-value{
+    font-size: 1.6em;
+    font-weight: bold;
+    color: var(--text_color);
+    line-height: 1.2em;
+  }
+  #appstore .as-stat-sub{
+    color: var(--text_color_secondary);
+    font-size: 0.85em;
+  }
+
+  /* Toolbar */
+  #appstore .as-toolbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.8em;
+    margin-top: 1.2em;
+  }
+  #appstore .as-toolbar .as-search{
+    flex: 1;
+    min-width: 220px;
+    max-width: 420px;
+  }
+  #appstore .as-toolbar-right{
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    flex-wrap: wrap;
+  }
+
+  /* Main area: sidebar + content */
+  #appstore .as-main{
+    display: flex;
+    align-items: flex-start;
+    gap: 1.2em;
+    margin-top: 1.2em;
+  }
+  #appstore .as-sidebar{
+    width: 220px;
+    flex-shrink: 0;
+  }
+  #appstore .as-content{
+    flex: 1;
+    min-width: 0;
+  }
+  #appstore .as-panel{
+    background-color: var(--theme_bg_primary);
+    border: 1px solid var(--divider_color);
+    border-radius: 0.8em;
+    padding: 1em;
+    margin-bottom: 1em;
+  }
+  #appstore .as-panel-title{
+    font-weight: bold;
+    color: var(--text_color);
+    margin-bottom: 0.6em;
+  }
+  #appstore .as-cat-item{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45em 0.6em;
+    border-radius: 0.4em;
+    cursor: pointer;
+    color: var(--text_color);
+  }
+  #appstore .as-cat-item:hover{
+    background-color: var(--theme_bg_active);
+  }
+  #appstore .as-cat-item.active{
+    background-color: rgba(85,131,238,0.15);
+    color: #5583ee;
+    font-weight: bold;
+  }
+  #appstore .as-count-chip{
+    background-color: var(--theme_bg_active);
+    color: var(--text_color_secondary);
+    border-radius: 0.8em;
+    font-size: 0.8em;
+    padding: 0.1em 0.7em;
+  }
+  #appstore .as-cat-item.active .as-count-chip{
+    background-color: rgba(85,131,238,0.2);
+    color: #5583ee;
+  }
+  #appstore .as-source-item{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3em 0;
+    color: var(--text_color);
+  }
+  #appstore .as-source-item label{
+    cursor: pointer;
+    color: var(--text_color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+  }
+  #appstore .as-compat-chip{
+    display: inline-block;
+    background-color: var(--theme_bg_active);
+    color: var(--text_color_secondary);
+    border-radius: 0.4em;
+    font-size: 0.8em;
+    padding: 0.25em 0.6em;
+    margin: 0 0.3em 0.3em 0;
+  }
+
+  /* Featured banner */
+  #appstore .as-featured{
+    position: relative;
+    background: linear-gradient(90deg, rgba(85,131,238,0.12) 0%, rgba(65,216,221,0.10) 100%);
+    border: 1px solid var(--divider_color);
+    border-radius: 0.8em;
+    padding: 1.5em;
+    margin-bottom: 1.2em;
+    display: none;
+  }
+  #appstore .as-featured-inner{
+    display: flex;
+    align-items: center;
+    gap: 1.5em;
+  }
+  #appstore .as-featured-icon{
+    width: 72px;
+    height: 72px;
+    border-radius: 1em;
+    background-color: var(--theme_bg_primary);
+    border: 1px solid var(--divider_color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  #appstore .as-featured-icon img{
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  #appstore .as-featured-label{
+    display: inline-block;
+    background-color: rgba(85,131,238,0.15);
+    color: #5583ee;
+    border-radius: 0.8em;
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 0.2em 0.8em;
+    margin-bottom: 0.4em;
+  }
+  #appstore .as-featured-title{
+    font-size: 1.4em;
+    font-weight: bold;
+    color: var(--text_color);
+    margin: 0.1em 0 0.2em 0;
+  }
+  #appstore .as-featured-desc{
+    color: var(--text_color_secondary);
+    margin-bottom: 0.6em;
+  }
+  #appstore .as-featured-meta{
+    flex-shrink: 0;
+    text-align: right;
+  }
+  #appstore .as-featured-version{
+    color: var(--text_color_secondary);
+    font-size: 0.9em;
+    margin-bottom: 0.8em;
+  }
+  #appstore .as-featured-dots{
+    text-align: center;
+    margin-top: 1em;
+  }
+  #appstore .as-featured-dot{
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--divider_color);
+    margin: 0 3px;
+    cursor: pointer;
+  }
+  #appstore .as-featured-dot.active{
+    background-color: #5583ee;
+  }
+
+  /* App cards */
+  #appstore .as-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1em;
+  }
+  #appstore .as-grid.as-listview{
+    grid-template-columns: 1fr;
+  }
+  #appstore .as-app-card{
+    background-color: var(--theme_bg_primary);
+    border: 1px solid var(--divider_color);
+    border-radius: 0.8em;
+    padding: 1.2em;
+    display: flex;
+    flex-direction: column;
+  }
+  #appstore .as-grid.as-listview .as-app-card{
+    flex-direction: row;
+    align-items: center;
+    gap: 1em;
+  }
+  #appstore .as-grid.as-listview .as-app-card .as-app-body{
+    flex: 1;
+  }
+  #appstore .as-app-head{
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    margin-bottom: 0.6em;
+  }
+  #appstore .as-app-icon{
+    width: 42px;
+    height: 42px;
+    border-radius: 0.6em;
+    background-color: var(--theme_bg_active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  #appstore .as-app-icon img{
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+  #appstore .as-app-name{
+    font-weight: bold;
+    color: var(--text_color);
+    cursor: pointer;
+  }
+  #appstore .as-app-name:hover{
+    color: #5583ee;
+  }
+  #appstore .as-app-desc{
+    color: var(--text_color_secondary);
+    font-size: 0.9em;
+    margin-bottom: 0.8em;
+    flex: 1;
+    /* clamp to 2 lines so all cards line up */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #appstore .as-app-tags{
+    margin-bottom: 0.8em;
+  }
+  #appstore .as-tag{
+    display: inline-block;
+    background-color: var(--theme_bg_active);
+    color: var(--text_color_secondary);
+    border-radius: 0.4em;
+    font-size: 0.78em;
+    padding: 0.2em 0.6em;
+    margin: 0 0.3em 0.3em 0;
+  }
+  #appstore .as-app-footer{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+  }
+  #appstore .as-app-version{
+    color: var(--text_color_secondary);
+    font-size: 0.85em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #appstore .as-installed-label{
+    color: #21ba45;
+    font-size: 0.9em;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  #appstore .as-loadmore{
+    text-align: center;
+    margin-top: 1.5em;
+  }
+  #appstore .as-noresult{
+    text-align: center;
+    color: var(--text_color_secondary);
+    padding: 3em 1em;
+  }
+
+  /* Footer cards */
+  #appstore .as-footer-cards{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1em;
+    margin-top: 1.5em;
+  }
+  #appstore .as-footer-card{
+    background-color: var(--theme_bg_primary);
+    border: 1px solid var(--divider_color);
+    border-radius: 0.8em;
+    padding: 1.2em;
+  }
+  #appstore .as-footer-card .title{
+    font-weight: bold;
+    color: var(--text_color);
+    margin-bottom: 0.3em;
+  }
+  #appstore .as-footer-card p{
+    color: var(--text_color_secondary);
+    font-size: 0.9em;
+    margin-bottom: 0.5em;
+  }
+
+  @media screen and (max-width: 900px) {
+    #appstore .as-main{
+      flex-direction: column;
+    }
+    #appstore .as-sidebar{
+      width: 100%;
+    }
+    #appstore .as-featured-inner{
+      flex-direction: column;
+      text-align: center;
+    }
+    #appstore .as-featured-meta{
+      text-align: center;
+    }
+  }
+
+  /* Modal dark theme (modals are moved to body level by Semantic UI) */
+  body.darkTheme .ui.modal,
+  body.darkTheme .ui.modal > .header,
+  body.darkTheme .ui.modal > .content,
+  body.darkTheme .ui.modal > .actions{
+    background-color: #1b1c1d;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  body.darkTheme .ui.modal > .header{
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  body.darkTheme .ui.modal > .actions{
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  body.darkTheme .ui.modal .table{
+    background-color: #1b1c1d;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  body.darkTheme .ui.modal .table td{
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+</style>
+<div class="standardContainer">
+  <div class="ui basic segment">
+    <!-- Header -->
+    <div class="as-header">
+      <div>
+        <h2>Zoraxy App Store</h2>
+        <p>Extend Zoraxy with powerful plugins and integrations.</p>
+      </div>
+      <div class="as-header-actions">
+        <button class="ui basic button" onclick="asOpenSettings();"><i class="cog icon"></i> Settings</button>
+        <button id="asRefreshBtn" class="ui basic button" onclick="asResyncStore(this);"><i class="sync alternate icon"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="as-stats">
+      <div class="as-stat-card">
+        <div class="as-stat-icon blue"><i class="shopping bag icon"></i></div>
+        <div>
+          <div class="as-stat-title">Total Apps</div>
+          <div class="as-stat-value" id="asStatTotal">-</div>
+          <div class="as-stat-sub">Community &amp; Official</div>
+        </div>
+      </div>
+      <div class="as-stat-card">
+        <div class="as-stat-icon purple"><i class="download icon"></i></div>
+        <div>
+          <div class="as-stat-title">Installed</div>
+          <div class="as-stat-value" id="asStatInstalled">-</div>
+          <div class="as-stat-sub">Active on this server</div>
+        </div>
+      </div>
+      <div class="as-stat-card">
+        <div class="as-stat-icon green"><i class="sync icon"></i></div>
+        <div>
+          <div class="as-stat-title">Updates Available</div>
+          <div class="as-stat-value" id="asStatUpdates">-</div>
+          <div class="as-stat-sub">Keep your apps updated</div>
+        </div>
+      </div>
+      <div class="as-stat-card">
+        <div class="as-stat-icon yellow"><i class="th large icon"></i></div>
+        <div>
+          <div class="as-stat-title">Categories</div>
+          <div class="as-stat-value" id="asStatCategories">-</div>
+          <div class="as-stat-sub">Organized for you</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="as-toolbar">
+      <div class="as-search ui icon input">
+        <input id="asSearchInput" type="text" placeholder="Search apps...">
+        <i class="search icon"></i>
+      </div>
+      <div class="as-toolbar-right">
+        <div id="asCategoryDropdown" class="ui selection dropdown">
+          <input type="hidden" name="category" value="all">
+          <i class="dropdown icon"></i>
+          <div class="default text">All Categories</div>
+          <div class="menu" id="asCategoryDropdownMenu">
+            <div class="item" data-value="all">All Categories</div>
+          </div>
+        </div>
+        <div id="asSortDropdown" class="ui selection dropdown">
+          <input type="hidden" name="sort" value="name_asc">
+          <i class="dropdown icon"></i>
+          <div class="default text">Sort by: Name</div>
+          <div class="menu">
+            <div class="item" data-value="name_asc">Sort by: Name (A-Z)</div>
+            <div class="item" data-value="name_desc">Sort by: Name (Z-A)</div>
+            <div class="item" data-value="version_desc">Sort by: Version</div>
+            <div class="item" data-value="author_asc">Sort by: Author</div>
+          </div>
+        </div>
+        <div class="ui basic icon buttons">
+          <button id="asGridViewBtn" class="ui active button" title="Grid view" onclick="asSetViewMode('grid');"><i class="th icon"></i></button>
+          <button id="asListViewBtn" class="ui button" title="List view" onclick="asSetViewMode('list');"><i class="list icon"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="as-main">
+      <!-- Sidebar -->
+      <div class="as-sidebar">
+        <div class="as-panel">
+          <div class="as-panel-title">Categories</div>
+          <div id="asCategoryList"></div>
+        </div>
+        <div class="as-panel">
+          <div class="as-panel-title">Source</div>
+          <div id="asSourceList"></div>
+        </div>
+        <div class="as-panel">
+          <div class="as-panel-title">Compatibility</div>
+          <div id="asCompatList"></div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="as-content">
+        <!-- Featured app banner -->
+        <div class="as-featured" id="asFeaturedBanner">
+          <div class="as-featured-inner">
+            <div class="as-featured-icon"><img id="asFeaturedIcon" src="img/plugin_icon.png"></div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="as-featured-label">Featured App</span>
+              <div class="as-featured-title" id="asFeaturedTitle"></div>
+              <div class="as-featured-desc" id="asFeaturedDesc"></div>
+              <div class="as-app-tags" id="asFeaturedTags"></div>
+            </div>
+            <div class="as-featured-meta">
+              <div class="as-featured-version" id="asFeaturedVersion"></div>
+              <div id="asFeaturedAction"></div>
+            </div>
+          </div>
+          <div class="as-featured-dots" id="asFeaturedDots"></div>
+        </div>
+
+        <!-- Apps grid -->
+        <div class="as-grid" id="asAppGrid"></div>
+        <div class="as-noresult" id="asNoResult" style="display: none;">
+          <i class="huge search icon" style="opacity: 0.3;"></i>
+          <p>No apps match your filters.</p>
+        </div>
+        <div class="as-loadmore" id="asLoadMoreWrapper" style="display: none;">
+          <button class="ui basic button" onclick="asLoadMore();">Load More Apps <i class="chevron down icon"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer cards -->
+    <div class="as-footer-cards">
+      <div class="as-footer-card">
+        <div class="title"><i class="code icon"></i> Develop an App</div>
+        <p>Build custom plugins for Zoraxy using our SDK.</p>
+        <a href="https://zoraxy.aroz.org/plugins/html/" target="_blank">Developer Documentation <i class="external alternate icon"></i></a>
+      </div>
+      <div class="as-footer-card">
+        <div class="title"><i class="comment outline icon"></i> Request an App</div>
+        <p>Missing something? Let us know what you need.</p>
+        <a href="https://github.com/aroz-online/zoraxy-official-plugins/issues" target="_blank">Request an App <i class="external alternate icon"></i></a>
+      </div>
+      <div class="as-footer-card">
+        <div class="title"><i class="question circle outline icon"></i> App Store Help</div>
+        <p>Learn how to install and manage apps.</p>
+        <a href="https://zoraxy.aroz.org/plugins/html/" target="_blank">View Documentation <i class="external alternate icon"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App Store Settings Modal -->
+<div class="ui small modal" id="asSettingsModal">
+  <i class="close icon"></i>
+  <div class="header">App Store Settings</div>
+  <div class="content">
+    <h4 class="ui header">Plugin Store Sources</h4>
+    <p style="color: var(--text_color_secondary);">Apps are loaded from the sources below. You can add community plugin index URLs as additional sources.</p>
+    <table class="ui celled unstackable table">
+      <thead>
+        <tr>
+          <th>Source URL</th>
+          <th class="collapsing">Type</th>
+          <th class="collapsing">Action</th>
+        </tr>
+      </thead>
+      <tbody id="asSourceTable"></tbody>
+    </table>
+    <div class="ui fluid action input">
+      <input id="asNewSourceURL" type="text" placeholder="https://example.com/plugins/index.json">
+      <button class="ui basic button" onclick="asAddSource(this);"><i class="green add icon"></i> Add Source</button>
+    </div>
+    <small>The source URL must point to a plugin index JSON file following the Zoraxy plugin list format.</small>
+  </div>
+  <div class="actions">
+    <button class="ui button" onclick="$('#asSettingsModal').modal('hide');">Close</button>
+  </div>
+</div>
+
+<!-- App Details Modal -->
+<div class="ui modal" id="asAppDetailModal">
+  <i class="close icon"></i>
+  <div class="header" id="asAppDetailTitle">App Information</div>
+  <div class="content" style="max-height: 60vh; overflow-y: auto;">
+    <table class="ui celled unstackable table">
+      <tbody id="asAppDetailTable"></tbody>
+    </table>
+  </div>
+  <div class="actions">
+    <button class="ui button" onclick="$('#asAppDetailModal').modal('hide');">Close</button>
+  </div>
+</div>
+
+<script>
+  /*
+    Zoraxy App Store
+
+    Data sources:
+    - /api/plugins/store/list          list of downloadable apps (with Source URL)
+    - /api/plugins/list                installed plugins
+    - /api/plugins/store/checkUpdates  update state of installed apps
+    - /api/plugins/store/sources       registered plugin store sources
+  */
+  var asAvailableApps = [];   //DownloadablePlugin list from the store
+  var asInstalledApps = [];   //Installed plugin list
+  var asUpdateInfos = [];     //Update infos of installed apps
+  var asStoreSources = [];    //Registered store sources
+
+  //Filter / render states
+  var asActiveCategory = "all";
+  var asDisabledSources = {}; //Source URL => true if unchecked
+  var asViewMode = "grid";
+  var asShownCount = 0;
+  var AS_PAGE_SIZE = 8;
+
+  //Featured apps (apps released by aroz.org, cycled in the banner)
+  var asFeaturedApps = [];
+  var asFeaturedIndex = 0;
+  var asFeaturedTimer = null;
+
+  /*
+    Category handling
+
+    The plugin introspect only carries a type flag (Router / Utilities),
+    so categories are derived from keywords in the app name & description.
+  */
+  var AS_CATEGORY_KEYWORDS = [
+    { name: "Security",       keywords: ["block", "ban", "firewall", "shield", "blocklist", "fail2ban", "security", "waf"] },
+    { name: "Monitoring",     keywords: ["monitor", "uptime", "metrics", "prometheus", "exporter", "status", "resource", "stats"] },
+    { name: "Networking",     keywords: ["dns", "network", "tunnel", "ztnc", "zerotier", "wireguard", "vpn", "mdns"] },
+    { name: "Storage",        keywords: ["file", "webdav", "storage", "backup", "disk"] },
+    { name: "Authentication", keywords: ["auth", "sso", "login", "oauth", "otp"] },
+  ];
+
+  function asGetAppCategory(app) {
+    let spec = app.PluginIntroSpect;
+    let haystack = (spec.name + " " + spec.description + " " + spec.id).toLowerCase();
+    for (const cat of AS_CATEGORY_KEYWORDS) {
+      for (const kw of cat.keywords) {
+        if (haystack.includes(kw)) {
+          return cat.name;
+        }
+      }
+    }
+    //Fallback to plugin type
+    return spec.type == 0 ? "Traffic Management" : "Utilities";
+  }
+
+  function asGetVersionString(spec) {
+    return `${spec.version_major}.${spec.version_minor}.${spec.version_patch}`;
+  }
+
+  function asEscapeHtml(text) {
+    return $("<div>").text(text === undefined || text === null ? "" : String(text)).html();
+  }
+
+  function asGetIconSrc(app) {
+    let iconPath = (app.IconPath || "").trim();
+    if (iconPath == "") {
+      return "img/plugin_icon.png";
+    }
+    if (iconPath.startsWith("/")) {
+      //Relative path on the webmin server, e.g. the default plugin icon
+      return iconPath.substring(1);
+    }
+    return iconPath;
+  }
+
+  //Dedupe an app list by plugin ID, keeping the copy with the highest version
+  function asDedupeApps(apps) {
+    let byId = {};
+    apps.forEach(app => {
+      const spec = app.PluginIntroSpect;
+      const existing = byId[spec.id];
+      if (existing === undefined) {
+        byId[spec.id] = app;
+        return;
+      }
+      const es = existing.PluginIntroSpect;
+      const newer = (spec.version_major - es.version_major) ||
+                    (spec.version_minor - es.version_minor) ||
+                    (spec.version_patch - es.version_patch);
+      if (newer > 0) {
+        byId[spec.id] = app;
+      }
+    });
+    return Object.values(byId);
+  }
+
+  function asIsInstalled(pluginID) {
+    return asInstalledApps.some(p => p.Spec.id == pluginID);
+  }
+
+  function asGetUpdateInfo(pluginID) {
+    return asUpdateInfos.find(u => u.pluginID == pluginID);
+  }
+
+  /* ===== Data loading ===== */
+  function asLoadData(callback = undefined) {
+    $.get("/api/plugins/list", function (installed) {
+      if (installed.error === undefined) {
+        asInstalledApps = installed || [];
+      }
+      $.get("/api/plugins/store/list", function (available) {
+        if (available.error === undefined) {
+          asAvailableApps = available || [];
+        }
+        $.get("/api/plugins/store/checkUpdates", function (updates) {
+          if (updates.error === undefined) {
+            asUpdateInfos = updates || [];
+          }
+          $.get("/api/plugins/store/sources", function (sources) {
+            if (sources.error === undefined) {
+              asStoreSources = sources || [];
+            }
+            asRenderAll();
+            if (callback != undefined) {
+              callback();
+            }
+          });
+        });
+      });
+    });
+  }
+
+  /* ===== Filtering & sorting ===== */
+  function asGetFilteredApps() {
+    const query = $("#asSearchInput").val().toLowerCase().trim();
+    const sortMode = $("#asSortDropdown").dropdown("get value") || "name_asc";
+
+    let apps = asAvailableApps.filter(app => {
+      const spec = app.PluginIntroSpect;
+      //Source filter
+      if (asDisabledSources[app.Source]) {
+        return false;
+      }
+      //Category filter
+      if (asActiveCategory != "all" && asGetAppCategory(app) != asActiveCategory) {
+        return false;
+      }
+      //Search filter
+      if (query != "") {
+        const haystack = (spec.name + " " + spec.description + " " + spec.author + " " + spec.id).toLowerCase();
+        if (!haystack.includes(query)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    //If the same app is offered by multiple enabled sources,
+    //only show the copy with the highest version
+    apps = asDedupeApps(apps);
+
+    apps.sort((a, b) => {
+      const sa = a.PluginIntroSpect, sb = b.PluginIntroSpect;
+      switch (sortMode) {
+        case "name_desc":
+          return sb.name.localeCompare(sa.name);
+        case "version_desc":
+          return (sb.version_major - sa.version_major) ||
+                 (sb.version_minor - sa.version_minor) ||
+                 (sb.version_patch - sa.version_patch) ||
+                 sa.name.localeCompare(sb.name);
+        case "author_asc":
+          return sa.author.localeCompare(sb.author) || sa.name.localeCompare(sb.name);
+        case "name_asc":
+        default:
+          return sa.name.localeCompare(sb.name);
+      }
+    });
+
+    return apps;
+  }
+
+  /* ===== Rendering ===== */
+  function asRenderAll() {
+    asRenderStats();
+    asRenderCategorySidebar();
+    asRenderSourceSidebar();
+    asRenderCompatSidebar();
+    asRenderFeatured();
+    asShownCount = AS_PAGE_SIZE;
+    asRenderAppGrid();
+  }
+
+  function asRenderStats() {
+    $("#asStatTotal").text(asAvailableApps.length);
+    $("#asStatInstalled").text(asInstalledApps.length);
+    $("#asStatUpdates").text(asUpdateInfos.filter(u => u.updateAvailable).length);
+
+    const categories = new Set(asAvailableApps.map(a => asGetAppCategory(a)));
+    $("#asStatCategories").text(categories.size);
+  }
+
+  function asRenderCategorySidebar() {
+    //Count apps per category
+    let counts = {};
+    asAvailableApps.forEach(app => {
+      const cat = asGetAppCategory(app);
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+
+    const catNames = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    if (asActiveCategory != "all" && !catNames.includes(asActiveCategory)) {
+      asActiveCategory = "all";
+    }
+
+    //Sidebar list
+    const list = $("#asCategoryList");
+    list.empty();
+    list.append(`
+      <div class="as-cat-item ${asActiveCategory == "all" ? "active" : ""}" data-category="all">
+        <span>All</span><span class="as-count-chip">${asAvailableApps.length}</span>
+      </div>
+    `);
+    catNames.forEach(cat => {
+      list.append(`
+        <div class="as-cat-item ${asActiveCategory == cat ? "active" : ""}" data-category="${asEscapeHtml(cat)}">
+          <span>${asEscapeHtml(cat)}</span><span class="as-count-chip">${counts[cat]}</span>
+        </div>
+      `);
+    });
+    list.find(".as-cat-item").on("click", function () {
+      asSetActiveCategory($(this).attr("data-category"));
+    });
+
+    //Toolbar dropdown
+    const menu = $("#asCategoryDropdownMenu");
+    menu.html(`<div class="item" data-value="all">All Categories</div>`);
+    catNames.forEach(cat => {
+      menu.append(`<div class="item" data-value="${asEscapeHtml(cat)}">${asEscapeHtml(cat)}</div>`);
+    });
+    $("#asCategoryDropdown").dropdown("refresh");
+    $("#asCategoryDropdown").dropdown("set selected", asActiveCategory);
+  }
+
+  function asSetActiveCategory(category) {
+    asActiveCategory = category;
+    //Update sidebar highlight
+    $("#asCategoryList .as-cat-item").removeClass("active");
+    $(`#asCategoryList .as-cat-item[data-category="${category}"]`).addClass("active");
+    //Sync toolbar dropdown without retriggering the change handler
+    if ($("#asCategoryDropdown").dropdown("get value") != category) {
+      $("#asCategoryDropdown").dropdown("set selected", category);
+    }
+    asShownCount = AS_PAGE_SIZE;
+    asRenderAppGrid();
+  }
+
+  function asRenderSourceSidebar() {
+    const list = $("#asSourceList");
+    list.empty();
+    if (asStoreSources.length == 0) {
+      list.append(`<div style="color: var(--text_color_secondary); font-size: 0.9em;">No sources registered</div>`);
+      return;
+    }
+    asStoreSources.forEach(source => {
+      const count = asAvailableApps.filter(a => a.Source == source.url).length;
+      let label = source.official ? "Official" : "Community";
+      let hostname = "";
+      try { hostname = new URL(source.url).hostname; } catch (e) {}
+      if (!source.official && hostname != "") {
+        label = hostname;
+      }
+      const checked = asDisabledSources[source.url] ? "" : "checked";
+      const item = $(`
+        <div class="as-source-item">
+          <div class="ui checkbox">
+            <input type="checkbox" ${checked}>
+            <label title="${asEscapeHtml(source.url)}">${asEscapeHtml(label)}</label>
+          </div>
+          <span class="as-count-chip">${count}</span>
+        </div>
+      `);
+      item.find("input").on("change", function () {
+        if (this.checked) {
+          delete asDisabledSources[source.url];
+        } else {
+          asDisabledSources[source.url] = true;
+        }
+        asShownCount = AS_PAGE_SIZE;
+        asRenderAppGrid();
+      });
+      list.append(item);
+    });
+  }
+
+  function asRenderCompatSidebar() {
+    //Count apps per download platform
+    let counts = {};
+    asAvailableApps.forEach(app => {
+      Object.keys(app.DownloadURLs || {}).forEach(platform => {
+        counts[platform] = (counts[platform] || 0) + 1;
+      });
+    });
+    const list = $("#asCompatList");
+    list.empty();
+    const platforms = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    if (platforms.length == 0) {
+      list.append(`<div style="color: var(--text_color_secondary); font-size: 0.9em;">No platform info</div>`);
+      return;
+    }
+    platforms.forEach(platform => {
+      list.append(`<span class="as-compat-chip">${asEscapeHtml(platform)} <b>${counts[platform]}</b></span>`);
+    });
+  }
+
+  /* Featured apps banner (cycles through apps released by aroz.org) */
+  function asRenderFeatured() {
+    asFeaturedApps = asAvailableApps.filter(app => {
+      return (app.PluginIntroSpect.author || "").toLowerCase().includes("aroz");
+    });
+
+    if (asFeaturedTimer != null) {
+      clearInterval(asFeaturedTimer);
+      asFeaturedTimer = null;
+    }
+
+    if (asFeaturedApps.length == 0) {
+      $("#asFeaturedBanner").hide();
+      return;
+    }
+
+    $("#asFeaturedBanner").show();
+    if (asFeaturedIndex >= asFeaturedApps.length) {
+      asFeaturedIndex = 0;
+    }
+    asShowFeaturedApp(asFeaturedIndex);
+
+    if (asFeaturedApps.length > 1) {
+      asFeaturedTimer = setInterval(function () {
+        asFeaturedIndex = (asFeaturedIndex + 1) % asFeaturedApps.length;
+        asShowFeaturedApp(asFeaturedIndex);
+      }, 6000);
+    }
+  }
+
+  function asShowFeaturedApp(index) {
+    const app = asFeaturedApps[index];
+    if (app === undefined) {
+      return;
+    }
+    const spec = app.PluginIntroSpect;
+    $("#asFeaturedIcon").attr("src", asGetIconSrc(app));
+    $("#asFeaturedTitle").text(spec.name);
+    $("#asFeaturedDesc").text(spec.description);
+    $("#asFeaturedVersion").html(`v${asEscapeHtml(asGetVersionString(spec))} by ${asEscapeHtml(spec.author)}`);
+    $("#asFeaturedTags").html(`
+      <span class="as-tag">${asEscapeHtml(asGetAppCategory(app))}</span>
+      <span class="as-tag">${spec.type == 0 ? "Router" : "Utilities"}</span>
+    `);
+
+    //Action button
+    const action = $("#asFeaturedAction");
+    action.empty();
+    const updateInfo = asGetUpdateInfo(spec.id);
+    if (asIsInstalled(spec.id)) {
+      if (updateInfo != undefined && updateInfo.updateAvailable) {
+        action.html(`<button class="ui orange button" onclick="asUpdateApp('${asEscapeHtml(spec.id)}', this);"><i class="arrow alternate circle up icon"></i> Update</button>`);
+      } else {
+        action.html(`<span class="as-installed-label"><i class="check circle icon"></i> Installed</span>`);
+      }
+    } else {
+      action.html(`<button class="ui blue button" onclick="asInstallApp('${asEscapeHtml(spec.id)}', this);"><i class="download icon"></i> Install</button>`);
+    }
+
+    //Dots
+    const dots = $("#asFeaturedDots");
+    dots.empty();
+    if (asFeaturedApps.length > 1) {
+      asFeaturedApps.forEach((_, i) => {
+        const dot = $(`<span class="as-featured-dot ${i == index ? "active" : ""}"></span>`);
+        dot.on("click", function () {
+          asFeaturedIndex = i;
+          asShowFeaturedApp(i);
+        });
+        dots.append(dot);
+      });
+    }
+  }
+
+  /* App cards */
+  function asRenderAppGrid() {
+    const apps = asGetFilteredApps();
+    const grid = $("#asAppGrid");
+    grid.empty();
+
+    if (apps.length == 0) {
+      $("#asNoResult").show();
+      $("#asLoadMoreWrapper").hide();
+      return;
+    }
+    $("#asNoResult").hide();
+
+    const appsToShow = apps.slice(0, asShownCount);
+    appsToShow.forEach(app => {
+      const spec = app.PluginIntroSpect;
+      const escapedId = asEscapeHtml(spec.id);
+      const updateInfo = asGetUpdateInfo(spec.id);
+
+      let actionHtml = "";
+      if (asIsInstalled(spec.id)) {
+        if (updateInfo != undefined && updateInfo.updateAvailable) {
+          actionHtml = `<button class="ui mini orange button" title="Update to v${asEscapeHtml(updateInfo.latestVersion)}" onclick="asUpdateApp('${escapedId}', this);"><i class="arrow alternate circle up icon"></i> Update</button>`;
+        } else {
+          actionHtml = `<span class="as-installed-label"><i class="check circle icon"></i> Installed</span>`;
+        }
+      } else {
+        actionHtml = `<button class="ui mini blue button" onclick="asInstallApp('${escapedId}', this);">Install</button>`;
+      }
+
+      grid.append(`
+        <div class="as-app-card" data-appid="${escapedId}">
+          <div class="as-app-body">
+            <div class="as-app-head">
+              <div class="as-app-icon"><img src="${asEscapeHtml(asGetIconSrc(app))}" alt="${asEscapeHtml(spec.name)}"></div>
+              <div style="min-width: 0;">
+                <div class="as-app-name" onclick="asShowAppDetails('${escapedId}');">${asEscapeHtml(spec.name)}</div>
+              </div>
+            </div>
+            <div class="as-app-desc">${asEscapeHtml(spec.description)}</div>
+            <div class="as-app-tags">
+              <span class="as-tag">${asEscapeHtml(asGetAppCategory(app))}</span>
+              <span class="as-tag">${spec.type == 0 ? "Router" : "Utilities"}</span>
+            </div>
+          </div>
+          <div class="as-app-footer">
+            <span class="as-app-version" title="by ${asEscapeHtml(spec.author)}">v${asEscapeHtml(asGetVersionString(spec))} · ${asEscapeHtml(spec.author)}</span>
+            ${actionHtml}
+          </div>
+        </div>
+      `);
+    });
+
+    if (apps.length > asShownCount) {
+      $("#asLoadMoreWrapper").show();
+    } else {
+      $("#asLoadMoreWrapper").hide();
+    }
+  }
+
+  function asLoadMore() {
+    asShownCount += AS_PAGE_SIZE;
+    asRenderAppGrid();
+  }
+
+  function asSetViewMode(mode) {
+    asViewMode = mode;
+    if (mode == "list") {
+      $("#asAppGrid").addClass("as-listview");
+      $("#asListViewBtn").addClass("active");
+      $("#asGridViewBtn").removeClass("active");
+    } else {
+      $("#asAppGrid").removeClass("as-listview");
+      $("#asGridViewBtn").addClass("active");
+      $("#asListViewBtn").removeClass("active");
+    }
+  }
+
+  /* ===== App actions ===== */
+  function asInstallApp(pluginID, btn = undefined) {
+    if (btn !== undefined) {
+      $(btn).addClass("loading disabled");
+    }
+    $.cjax({
+      url: "/api/plugins/store/install",
+      type: "POST",
+      data: { "pluginID": pluginID },
+      success: function (data) {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        if (data.error != undefined) {
+          msgbox(data.error, false);
+        } else {
+          msgbox("App installed successfully", true);
+          asLoadData();
+          //Also refresh the plugin manager views if loaded
+          if (typeof (initiatePluginList) != "undefined") { initiatePluginList(); }
+          if (typeof (initPluginSideMenu) != "undefined") { initPluginSideMenu(); }
+        }
+      },
+      error: function () {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        msgbox("An error occurred while installing the app", false);
+      }
+    });
+  }
+
+  function asUpdateApp(pluginID, btn = undefined) {
+    const app = asAvailableApps.find(a => a.PluginIntroSpect.id == pluginID);
+    const updateInfo = asGetUpdateInfo(pluginID);
+    if (app === undefined || updateInfo === undefined) {
+      msgbox("App not found", false);
+      return;
+    }
+
+    //Ask the user to confirm before overwriting the installed app
+    confirmBox(`Update ${app.PluginIntroSpect.name} from v${updateInfo.installedVersion} to v${updateInfo.latestVersion}?`, function (choice) {
+      if (choice != true) {
+        return;
+      }
+      if (btn !== undefined) {
+        $(btn).addClass("loading disabled");
+      }
+      $.cjax({
+        url: "/api/plugins/store/update",
+        type: "POST",
+        data: { "pluginID": pluginID },
+        success: function (data) {
+          if (btn !== undefined) {
+            $(btn).removeClass("loading disabled");
+          }
+          if (data.error != undefined) {
+            msgbox(data.error, false);
+          } else {
+            msgbox(`${app.PluginIntroSpect.name} updated to v${updateInfo.latestVersion}`, true);
+            asLoadData();
+            //Also refresh the plugin manager views if loaded
+            if (typeof (initiatePluginList) != "undefined") { initiatePluginList(); }
+            if (typeof (initPluginSideMenu) != "undefined") { initPluginSideMenu(); }
+          }
+        },
+        error: function () {
+          if (btn !== undefined) {
+            $(btn).removeClass("loading disabled");
+          }
+          msgbox("An error occurred while updating the app", false);
+        }
+      });
+    });
+  }
+
+  function asResyncStore(btn = undefined) {
+    if (btn !== undefined) {
+      $(btn).addClass("loading disabled");
+    }
+    $.cjax({
+      url: "/api/plugins/store/resync",
+      type: "POST",
+      success: function (data) {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        if (data.error != undefined) {
+          msgbox(data.error, false);
+        } else {
+          msgbox("App list updated", true);
+          asLoadData();
+        }
+      },
+      error: function () {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        msgbox("Failed to update app list", false);
+      }
+    });
+  }
+
+  /* ===== App details modal ===== */
+  function asShowAppDetails(pluginID) {
+    const app = asAvailableApps.find(a => a.PluginIntroSpect.id == pluginID);
+    if (app === undefined) {
+      msgbox("App not found", false);
+      return;
+    }
+    const spec = app.PluginIntroSpect;
+    $("#asAppDetailTitle").text(spec.name);
+
+    const rows = [
+      { label: "App ID", value: asEscapeHtml(spec.id) },
+      { label: "Author", value: asEscapeHtml(spec.author) },
+      { label: "Description", value: asEscapeHtml(spec.description) },
+      { label: "Version", value: asEscapeHtml(asGetVersionString(spec)) },
+      { label: "Category", value: asEscapeHtml(asGetAppCategory(app)) },
+      { label: "Type", value: spec.type == 0 ? "Router" : "Utilities" },
+      { label: "URL", value: spec.url ? `<a href="${asEscapeHtml(spec.url)}" target="_blank">${asEscapeHtml(spec.url)}</a>` : "N/A" },
+      { label: "Source", value: asEscapeHtml(app.Source || "N/A") },
+    ];
+
+    if (app.DownloadURLs && Object.keys(app.DownloadURLs).length > 0) {
+      rows.push({ label: "Supported Platforms", value: Object.keys(app.DownloadURLs).map(p => asEscapeHtml(p)).join(", ") });
+    }
+
+    if (spec.permitted_api_endpoints && spec.permitted_api_endpoints.length > 0) {
+      const endpoints = spec.permitted_api_endpoints.map(ep =>
+        `<div><b>${asEscapeHtml(ep.method)}</b> ${asEscapeHtml(ep.endpoint)}${ep.reason ? " - " + asEscapeHtml(ep.reason) : ""}</div>`
+      ).join("");
+      rows.push({ label: "Permitted API Endpoints", value: endpoints });
+    }
+
+    const tbody = $("#asAppDetailTable");
+    tbody.empty();
+    rows.forEach(row => {
+      tbody.append(`<tr><td class="collapsing"><b>${row.label}</b></td><td style="word-break: break-all;">${row.value}</td></tr>`);
+    });
+
+    $("#asAppDetailModal").modal("show");
+  }
+
+  /* ===== Settings (source management) ===== */
+  function asOpenSettings() {
+    asRenderSourceTable();
+    $("#asSettingsModal").modal("show");
+  }
+
+  function asRenderSourceTable() {
+    const tbody = $("#asSourceTable");
+    tbody.empty();
+    if (asStoreSources.length == 0) {
+      tbody.append(`<tr><td colspan="3" style="text-align: center;">No sources registered</td></tr>`);
+      return;
+    }
+    asStoreSources.forEach(source => {
+      const row = $(`
+        <tr>
+          <td style="word-break: break-all;">${asEscapeHtml(source.url)}</td>
+          <td>${source.official ? `<span class="ui blue mini label">Official</span>` : `<span class="ui mini label">Community</span>`}</td>
+          <td></td>
+        </tr>
+      `);
+      if (!source.official) {
+        const removeBtn = $(`<button class="ui basic mini red icon button" title="Remove source"><i class="trash icon"></i></button>`);
+        removeBtn.on("click", function () {
+          asRemoveSource(source.url, this);
+        });
+        row.find("td").eq(2).append(removeBtn);
+      }
+      tbody.append(row);
+    });
+  }
+
+  function asAddSource(btn = undefined) {
+    const url = $("#asNewSourceURL").val().trim();
+    if (url == "") {
+      msgbox("Please enter a source URL", false);
+      return;
+    }
+    if (btn !== undefined) {
+      $(btn).addClass("loading disabled");
+    }
+    $.cjax({
+      url: "/api/plugins/store/sources/add",
+      type: "POST",
+      data: { "url": url },
+      success: function (data) {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        if (data.error != undefined) {
+          msgbox(data.error, false);
+        } else {
+          msgbox("Source added", true);
+          $("#asNewSourceURL").val("");
+          asLoadData(function () {
+            asRenderSourceTable();
+          });
+        }
+      },
+      error: function () {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        msgbox("Failed to add source", false);
+      }
+    });
+  }
+
+  function asRemoveSource(url, btn = undefined) {
+    if (btn !== undefined) {
+      $(btn).addClass("loading disabled");
+    }
+    $.cjax({
+      url: "/api/plugins/store/sources/remove",
+      type: "POST",
+      data: { "url": url },
+      success: function (data) {
+        if (data.error != undefined) {
+          if (btn !== undefined) {
+            $(btn).removeClass("loading disabled");
+          }
+          msgbox(data.error, false);
+        } else {
+          msgbox("Source removed", true);
+          delete asDisabledSources[url];
+          asLoadData(function () {
+            asRenderSourceTable();
+          });
+        }
+      },
+      error: function () {
+        if (btn !== undefined) {
+          $(btn).removeClass("loading disabled");
+        }
+        msgbox("Failed to remove source", false);
+      }
+    });
+  }
+
+  /* ===== Init ===== */
+  $("#asSearchInput").on("input", function () {
+    asShownCount = AS_PAGE_SIZE;
+    asRenderAppGrid();
+  });
+
+  $("#asCategoryDropdown").dropdown({
+    onChange: function (value) {
+      if (value != "" && value != asActiveCategory) {
+        asSetActiveCategory(value);
+      }
+    }
+  });
+
+  $("#asSortDropdown").dropdown({
+    onChange: function () {
+      asShownCount = AS_PAGE_SIZE;
+      asRenderAppGrid();
+    }
+  });
+
+  //Refresh the data whenever the App Store tab is opened
+  tabSwitchEventBind["appstore"] = function () {
+    asLoadData();
+  };
+
+  asLoadData();
+</script>

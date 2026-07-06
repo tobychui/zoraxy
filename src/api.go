@@ -306,6 +306,11 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
 	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
 	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)
+	authRouter.HandleFunc("/api/plugins/store/checkUpdates", pluginManager.HandleCheckPluginUpdates)
+	authRouter.HandleFunc("/api/plugins/store/update", pluginManager.HandleUpdatePlugin)
+	authRouter.HandleFunc("/api/plugins/store/sources", pluginManager.HandleListStoreSources)
+	authRouter.HandleFunc("/api/plugins/store/sources/add", pluginManager.HandleAddStoreSource)
+	authRouter.HandleFunc("/api/plugins/store/sources/remove", pluginManager.HandleRemoveStoreSource)
 
 	// Developer options
 	authRouter.HandleFunc("/api/plugins/developer/enableAutoReload", pluginManager.HandleEnableHotReload)
