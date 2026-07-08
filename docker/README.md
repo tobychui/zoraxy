@@ -108,6 +108,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 If you are running with ZeroTier, make sure to add the following flags to ensure ZeroTier functionality:
   
 `--cap_add NET_ADMIN` and `--device /dev/net/tun:/dev/net/tun`
+`--environment ZEROTIER="true"`
 
 Or for Docker Compose:
 ```
@@ -115,6 +116,8 @@ Or for Docker Compose:
     - NET_ADMIN
   devices:
     - /dev/net/tun:/dev/net/tun
+  environment:
+    ZEROTIER: "true"
 ```
 
 ### Plugins

@@ -1,6 +1,5 @@
 ## Build Zoraxy
 FROM docker.io/golang:alpine AS build-zoraxy
-
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /usr/local/bin/
 
@@ -16,13 +15,12 @@ RUN go mod tidy &&\
 
 ## Build ZeroTier
 FROM docker.io/rust:1.79-alpine AS build-zerotier
+RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano
 
 RUN mkdir -p /opt/zerotier/source/ &&\
     mkdir -p /usr/local/bin/
 
 WORKDIR /opt/zerotier/source/
-
-RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano
 
 # Version is pinned because newer versions don't work for whatever reason
 RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.10.6 &&\
@@ -37,9 +35,8 @@ RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne
 
 ## Main
 FROM docker.io/alpine:latest
-
 RUN apk add --update --no-cache tzdata python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
-    rm -rf /var/cache/apk/* /tmp/* # Simple cleanup
+    rm -rf /sbin/apk /var/cache/apk/* /tmp/* # Simple cleanup
 
 COPY --chmod=700 ./entrypoint.py /opt/zoraxy/
 
@@ -77,5 +74,5 @@ LABEL com.imuslab.zoraxy.container-identifier="Zoraxy"
 
 ENTRYPOINT [ "python3", "-u", "/opt/zoraxy/entrypoint.py" ]
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
+HEALTHCHECK --start-period=5s --interval=15s --timeout=5s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
 
