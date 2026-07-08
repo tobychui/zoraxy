@@ -57,6 +57,13 @@ type ReverseProxy struct {
 
 	Verbal bool
 
+	// useRequestHostAsSNI tells ProxyHTTP to derive the upstream TLS SNI from the
+	// request host on a per-request basis instead of relying on the shared
+	// transport's fixed ServerName. It is enabled when the upstream is addressed
+	// by IP, where a fixed ServerName would be an IP literal that Go omits from
+	// the TLS ClientHello (crypto/tls, per RFC 6066). See NewDynamicProxyCore.
+	useRequestHostAsSNI bool
+
 	//Appended by Zoraxy project
 
 }
@@ -110,21 +117,35 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 	// Set the correct SNI for HTTPS backends at creation time.
 	// Each ReverseProxy instance targets one backend, so this is safe and avoids
 	// per-request transport cloning that defeats connection pooling.
+	useRequestHostAsSNI := false
 	if strings.EqualFold(target.Scheme, "https") {
 		serverName := target.Hostname()
 		cfg := &tls.Config{ServerName: serverName}
 		if dpcOptions.IgnoreTLSVerification {
 			cfg.InsecureSkipVerify = true
 		}
+		// A ServerName that is an IP literal is dropped from the TLS ClientHello
+		// by Go (crypto/tls hostnameInSNI, per RFC 6066), leaving the handshake
+		// with no SNI. That breaks SNI-routed HTTPS upstreams addressed by IP
+		// (e.g. a backend reachable only by IP but serving a cert for the proxied
+		// domain). In that case, leave the shared ServerName empty and derive the
+		// SNI from the request host per-request. This restores the pre-#1088
+		// behavior for IP upstreams only, so hostname upstreams keep the shared
+		// ServerName and their connection pooling.
+		if net.ParseIP(serverName) != nil {
+			cfg.ServerName = ""
+			useRequestHostAsSNI = true
+		}
 		thisTransporter.TLSClientConfig = cfg
 	}
 
 	return &ReverseProxy{
-		Director:      director,
-		Prepender:     prepender,
-		FlushInterval: dpcOptions.FlushInterval,
-		Verbal:        dpcOptions.DevelopmentMode,
-		Transport:     thisTransporter,
+		Director:            director,
+		Prepender:           prepender,
+		FlushInterval:       dpcOptions.FlushInterval,
+		Verbal:              dpcOptions.DevelopmentMode,
+		Transport:           thisTransporter,
+		useRequestHostAsSNI: useRequestHostAsSNI,
 	}
 }
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
@@ -339,6 +360,29 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
 			trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
 			trc.ForceAttemptHTTP2 = false
+		}
+
+		// For IP-addressed HTTPS upstreams the shared transport carries no SNI
+		// (see NewDynamicProxyCore). Derive it from the request host so the
+		// backend still receives a valid SNI and can present the right cert.
+		if p.useRequestHostAsSNI {
+			serverName := outreq.Host
+			if h, _, err := net.SplitHostPort(serverName); err == nil {
+				serverName = h
+			}
+			// Skip if empty or itself an IP (Go would omit an IP from the ClientHello).
+			if serverName != "" && net.ParseIP(serverName) == nil {
+				if !needClone {
+					trc = tr.Clone()
+					needClone = true
+				}
+				cfg := &tls.Config{}
+				if trc.TLSClientConfig != nil {
+					cfg = trc.TLSClientConfig.Clone()
+				}
+				cfg.ServerName = serverName
+				trc.TLSClientConfig = cfg
+			}
 		}
 
 		if needClone {
