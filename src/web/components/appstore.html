@@ -412,7 +412,7 @@
     <!-- Header -->
     <div class="as-header">
       <div>
-        <h2>Zoraxy App Store</h2>
+        <h2>App Store</h2>
         <p>Extend Zoraxy with powerful plugins and integrations.</p>
       </div>
       <div class="as-header-actions">
@@ -1319,19 +1319,20 @@
     asRenderAppGrid();
   });
 
-  $("#asCategoryDropdown").dropdown({
-    onChange: function (value) {
-      if (value != "" && value != asActiveCategory) {
-        asSetActiveCategory(value);
-      }
+  //Note: index.html re-initializes every .ui.dropdown
+  // So we need to re-initialize the dropdowns after the App Store tab is loaded
+  $("#asCategoryDropdown").dropdown();
+  $("#asCategoryDropdown").on("change", function () {
+    const value = $(this).dropdown("get value");
+    if (value != "" && value != asActiveCategory) {
+      asSetActiveCategory(value);
     }
   });
 
-  $("#asSortDropdown").dropdown({
-    onChange: function () {
-      asShownCount = AS_PAGE_SIZE;
-      asRenderAppGrid();
-    }
+  $("#asSortDropdown").dropdown();
+  $("#asSortDropdown").on("change", function () {
+    asShownCount = AS_PAGE_SIZE;
+    asRenderAppGrid();
   });
 
   //Refresh the data whenever the App Store tab is opened
