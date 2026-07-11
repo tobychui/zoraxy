@@ -354,8 +354,9 @@
 
     /* Layout orientation: "horizontal" (Internet on the left) or
        "vertical" (Internet on top, upstreams at the bottom).
+       Defaults to vertical to fit the status page's tall left column.
        Persisted in localStorage so the user's preference sticks. */
-    let orientation = localStorage.getItem("zoraxy_trafficflow_orientation") || "horizontal";
+    let orientation = localStorage.getItem("zoraxy_trafficflow_orientation") || "vertical";
     let _lastData = null; // cache of the most recent API payload for re-render on rotate
 
     /* SVG namespace helper */

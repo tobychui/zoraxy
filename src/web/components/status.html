@@ -105,6 +105,114 @@
         color: var(--text_color);
     }
 
+    /* Top row: flow diagram (left) + stacked network in/out (right) */
+    #status .statusTopRow{
+        display: flex;
+        gap: 1em;
+        align-items: stretch;
+    }
+
+    #status .statusFlowCol{
+        flex: 1 1 62%;
+        min-width: 0;
+    }
+
+    #status .statusFlowCol #trafficFlowDiagramWrapper{
+        height: 100%;
+        min-height: 480px;
+    }
+
+    #status .statusFlowCol #trafficFlowDiagram{
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 1em;
+    }
+
+    #status .statusNetCol{
+        flex: 1 1 38%;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    #status .statusNetCol .dashboard-card{
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    #status .statusNetCol .realtimeChartWrapper{
+        flex: 1;
+        height: auto;
+        min-height: 150px;
+    }
+
+    /* Realtime network card header (icon badge + title + value) */
+    #status .netCardHeader{
+        display: flex;
+        align-items: center;
+        gap: 0.7em;
+        margin-bottom: 0.2em;
+    }
+
+    #status .netIconBadge{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.4em;
+        height: 2.4em;
+        border-radius: 0.7em;
+        flex-shrink: 0;
+    }
+
+    #status .netIconBadge i{
+        margin: 0;
+        font-size: 1.1em;
+    }
+
+    #status .netIconBadge.netIn{
+        background: rgba(59, 130, 246, 0.12);
+        color: #3b82f6;
+    }
+
+    #status .netIconBadge.netOut{
+        background: rgba(139, 92, 246, 0.12);
+        color: #8b5cf6;
+    }
+
+    #status .netCardTitle{
+        font-weight: 700;
+        font-size: 1.05em;
+        line-height: 1.2;
+        color: var(--text_color);
+    }
+
+    @media screen and (max-width: 768px){
+        #status .statusTopRow{
+            flex-direction: column;
+        }
+
+        #status .statusFlowCol{
+            flex: none;
+        }
+
+        #status .statusFlowCol #trafficFlowDiagramWrapper{
+            height: 420px;
+        }
+
+        #status .statusNetCol{
+            flex: none;
+        }
+
+        #status .statusNetCol .realtimeChartWrapper{
+            height: 180px;
+        }
+    }
+
     /* Visitor location & ranking bars */
     #status .rankingBarRow{
         margin-bottom: 0.7em;
@@ -307,37 +415,37 @@
     </div>
 </div>
 
-<!-- Traffic Flow Diagram -->
-<div id="trafficFlowDiagramWrapper" class="standardContainer nobottom">
-    <iframe id="trafficFlowDiagram" src="snippet/trafficFlowDiagram.html" style="width: 100%; height: 480px; border: none; border-radius: 1em;" allowfullscreen></iframe>
-</div>
-
-<!-- Realtime Network In / Out -->
+<!-- Traffic Flow Diagram (left) + Realtime Network In / Out (right) -->
 <div class="standardContainer nobottom">
-    <div class="ui two column stackable grid" style="margin: 0;">
-        <div class="column" style="padding-left: 0;">
+    <div class="statusTopRow">
+        <!-- Left: Architectural flow diagram -->
+        <div class="statusFlowCol">
+            <div id="trafficFlowDiagramWrapper">
+                <iframe id="trafficFlowDiagram" src="snippet/trafficFlowDiagram.html" allowfullscreen></iframe>
+            </div>
+        </div>
+        <!-- Right: Realtime network input (top) / output (bottom) -->
+        <div class="statusNetCol">
             <div class="dashboard-card">
-                <h4 class="ui header" style="margin-bottom: 0;">
-                    <i class="blue download icon"></i>
-                    <div class="content">
-                        Realtime Network Input
-                        <div class="sub header realtimeNetValue" id="netInValue">0 bps</div>
+                <div class="netCardHeader">
+                    <span class="netIconBadge netIn"><i class="download icon"></i></span>
+                    <div>
+                        <div class="netCardTitle">Realtime Network Input</div>
+                        <div class="realtimeNetValue" id="netInValue">0 bps</div>
                     </div>
-                </h4>
+                </div>
                 <div class="realtimeChartWrapper">
                     <canvas id="networkInChart"></canvas>
                 </div>
             </div>
-        </div>
-        <div class="column" style="padding-right: 0;">
             <div class="dashboard-card">
-                <h4 class="ui header" style="margin-bottom: 0;">
-                    <i class="violet upload icon"></i>
-                    <div class="content">
-                        Realtime Network Output
-                        <div class="sub header realtimeNetValue" id="netOutValue">0 bps</div>
+                <div class="netCardHeader">
+                    <span class="netIconBadge netOut"><i class="upload icon"></i></span>
+                    <div>
+                        <div class="netCardTitle">Realtime Network Output</div>
+                        <div class="realtimeNetValue" id="netOutValue">0 bps</div>
                     </div>
-                </h4>
+                </div>
                 <div class="realtimeChartWrapper">
                     <canvas id="networkOutChart"></canvas>
                 </div>
@@ -1007,19 +1115,39 @@
     let netTimestamps = [];
     const netDataCount = 300;
 
-    function createRealtimeChart(canvasId, borderColor, backgroundColor){
+    //Format a Date as a HH:MM:SS clock label for the x-axis
+    function fmtClock(d){
+        return d.toLocaleTimeString([], { hour12: false });
+    }
+
+    function createRealtimeChart(canvasId, lineColor, fillRgb){
         return new Chart(document.getElementById(canvasId), {
             type: 'line',
             data: {
                 labels: netTimestamps,
                 datasets: [{
                     data: [],
-                    borderColor: borderColor,
-                    borderWidth: 1,
-                    backgroundColor: backgroundColor,
+                    borderColor: lineColor,
+                    borderWidth: 2,
+                    //Vertical gradient area fill: tinted at the line, fading to
+                    //transparent at the baseline. Rebuilt on every layout so it
+                    //tracks the (flexible) chart height.
+                    backgroundColor: function(context){
+                        const chart = context.chart;
+                        const { ctx, chartArea } = chart;
+                        if (!chartArea){
+                            return "rgba(" + fillRgb + ", 0.15)";
+                        }
+                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                        gradient.addColorStop(0, "rgba(" + fillRgb + ", 0.35)");
+                        gradient.addColorStop(1, "rgba(" + fillRgb + ", 0)");
+                        return gradient;
+                    },
                     fill: true,
                     pointStyle: false,
-                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    tension: 0.4,
                 }]
             },
             options: {
@@ -1031,12 +1159,31 @@
                     tooltip: { enabled: false },
                 },
                 scales: {
-                    x: { display: false },
+                    x: {
+                        display: true,
+                        grid: { display: false, drawBorder: false },
+                        border: { display: false },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: { size: 10 },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 6,
+                        }
+                    },
                     y: {
                         display: true,
                         beginAtZero: true,
+                        border: { display: false },
+                        grid: {
+                            color: 'rgba(128, 128, 128, 0.12)',
+                            drawBorder: false,
+                        },
                         ticks: {
+                            color: '#9ca3af',
+                            font: { size: 10 },
                             maxTicksLimit: 5,
+                            padding: 6,
                             callback: function(label){
                                 return formatBandwidth(parseInt(label));
                             }
@@ -1048,11 +1195,12 @@
     }
 
     function initNetIOCharts(){
-        for (var i = 0; i < netDataCount; i++){
-            netTimestamps.push("");
+        let now = Date.now();
+        for (var i = netDataCount - 1; i >= 0; i--){
+            netTimestamps.push(fmtClock(new Date(now - i * 1000)));
         }
-        networkInChart = createRealtimeChart('networkInChart', "#484bb8", 'rgba(72, 75, 184, 0.2)');
-        networkOutChart = createRealtimeChart('networkOutChart', '#8b5cf6', 'rgba(139, 92, 246, 0.2)');
+        networkInChart = createRealtimeChart('networkInChart', '#3b82f6', '59, 130, 246');
+        networkOutChart = createRealtimeChart('networkOutChart', '#8b5cf6', '139, 92, 246');
         netIOChartInitialized = true;
         fetchNetIOData();
     }
@@ -1079,6 +1227,9 @@
                     rxValues.shift();
                     txValues.push(data.Tx[netDataCount - 1]);
                     txValues.shift();
+                    //Keep the x-axis clock labels in sync with the rolling buffer
+                    netTimestamps.push(fmtClock(new Date()));
+                    netTimestamps.shift();
                 }
 
                 $("#netInValue").text(formatBandwidth(rxValues[rxValues.length - 1]));
