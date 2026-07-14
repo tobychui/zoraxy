@@ -316,6 +316,11 @@
     padding: 0.2em 0.6em;
     margin: 0 0.3em 0.3em 0;
   }
+  #appstore .as-tag-preview{
+    background-color: rgba(250,172,38,0.15);
+    color: #f2a20c;
+    font-weight: bold;
+  }
   #appstore .as-app-footer{
     display: flex;
     align-items: center;
@@ -678,6 +683,13 @@
     return iconPath;
   }
 
+  //True when the app has no icon.png in its app folder, so the store index
+  //fell back to the generic placeholder icon (see IconPath handling in
+  //mod/plugins/store.go). Used to flag not-yet-polished apps as "Preview".
+  function asIsPreviewApp(app) {
+    return asGetIconSrc(app) == "img/plugin_icon.png";
+  }
+
   //Dedupe an app list by plugin ID, keeping the copy with the highest version
   function asDedupeApps(apps) {
     let byId = {};
@@ -959,6 +971,7 @@
     $("#asFeaturedDesc").text(spec.description);
     $("#asFeaturedVersion").html(`v${asEscapeHtml(asGetVersionString(spec))} by ${asEscapeHtml(spec.author)}`);
     $("#asFeaturedTags").html(`
+      ${asIsPreviewApp(app) ? `<span class="as-tag as-tag-preview">Preview</span>` : ""}
       <span class="as-tag">${asEscapeHtml(asGetAppCategory(app))}</span>
       <span class="as-tag">${spec.type == 0 ? "Router" : "Utilities"}</span>
     `);
@@ -1033,6 +1046,7 @@
             </div>
             <div class="as-app-desc">${asEscapeHtml(spec.description)}</div>
             <div class="as-app-tags">
+              ${asIsPreviewApp(app) ? `<span class="as-tag as-tag-preview">Preview</span>` : ""}
               <span class="as-tag">${asEscapeHtml(asGetAppCategory(app))}</span>
               <span class="as-tag">${spec.type == 0 ? "Router" : "Utilities"}</span>
             </div>
