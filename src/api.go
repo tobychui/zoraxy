@@ -266,15 +266,6 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/webdav/setCustomCredentials", staticWebServer.HandleSetCustomCredentials)
 }
 
-// Register the APIs for Route Debugger management functions
-func RegisterRouteDebuggerAPIs(authRouter *auth.RouterDef) {
-	authRouter.HandleFunc("/api/routedebugger/status", routeDebugger.HandleGetStatus)
-	authRouter.HandleFunc("/api/routedebugger/start", routeDebugger.HandleStart)
-	authRouter.HandleFunc("/api/routedebugger/stop", routeDebugger.HandleStop)
-	authRouter.HandleFunc("/api/routedebugger/setPort", routeDebugger.HandlePortChange)
-	authRouter.HandleFunc("/api/routedebugger/setPrettyPrint", routeDebugger.HandleSetPrettyPrint)
-}
-
 // Register the APIs for Network Utilities functions
 func RegisterNetworkUtilsAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/tools/ipscan", ipscan.HandleIpScan)
@@ -434,7 +425,6 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterNetworkUtilsAPIs(authRouter)
 	RegisterACMEAndAutoRenewerAPIs(authRouter)
 	RegisterStaticWebServerAPIs(authRouter)
-	RegisterRouteDebuggerAPIs(authRouter)
 	RegisterPluginAPIs(authRouter)
 
 	//Docker UX Optimizations

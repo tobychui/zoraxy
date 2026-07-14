@@ -41,7 +41,6 @@ import (
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
-	"imuslab.com/zoraxy/mod/routedebug"
 	"imuslab.com/zoraxy/mod/webserv"
 )
 
@@ -219,15 +218,6 @@ func startupSequence() {
 	})
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()
-
-	//Start the route debugger
-	routeDebugger = routedebug.NewRouteDebugger(&routedebug.RouteDebuggerOptions{
-		Port:        strconv.Itoa(ROUTEDEBUGGER_DEFAULT_PORT),
-		PrettyPrint: false,
-		Logger:      SystemWideLogger,
-		Sysdb:       sysdb,
-	})
-	routeDebugger.RestorePreviousState()
 
 	//Create a netstat buffer
 	netstatBuffers, err = netstat.NewNetStatBuffer(300, SystemWideLogger)

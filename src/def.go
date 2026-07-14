@@ -32,7 +32,6 @@ import (
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
 	"imuslab.com/zoraxy/mod/plugins"
-	"imuslab.com/zoraxy/mod/routedebug"
 	"imuslab.com/zoraxy/mod/sshprox"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
@@ -49,7 +48,6 @@ const (
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487
-	ROUTEDEBUGGER_DEFAULT_PORT   = 5490
 	MDNS_HOSTNAME_PREFIX         = "zoraxy_" /* Follow by node UUID */
 	MDNS_IDENTIFY_DEVICE_TYPE    = "Network Gateway"
 	MDNS_IDENTIFY_DOMAIN         = "zoraxy.aroz.org"
@@ -167,7 +165,6 @@ var (
 	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew
 	acmeAutoRenewer    *acme.AutoRenewer         //Handler for ACME auto renew ticking
 	staticWebServer    *webserv.WebServer        //Static web server for hosting simple stuffs
-	routeDebugger      *routedebug.RouteDebugger //Route debugger for inspecting proxied requests
 	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins
