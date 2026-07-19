@@ -66,6 +66,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/del", ReverseProxyDeleteVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/edit", ReverseProxyEditVdir)
+	authRouter.HandleFunc("/api/proxy/vdir/bulkForwardAuth", ReverseProxyBulkApplyVdirByForwardAuth)
 	/* Reverse proxy user-defined header */
 	authRouter.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
 	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
