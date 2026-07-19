@@ -165,6 +165,11 @@ func ReverseProxyInit() {
 	sysdb.Read("settings", "idleTimeout", &idleTimeout)
 	SystemWideLogger.Println("Proxy timeout settings loaded. Read header: " + strconv.Itoa(readHeaderTimeout) + "s, Write: " + strconv.Itoa(writeTimeout) + "s, Idle: " + strconv.Itoa(idleTimeout) + "s")
 
+	//The tuning knobs stay flag only, they exist for diagnosing HTTP/2 issues.
+	//The off switch is persisted as it doubles as a user facing workaround.
+	disableHttp2 := *proxyDisableHttp2
+	sysdb.Read("settings", "disableHttp2", &disableHttp2)
+
 	listenOnPort80 := true
 	forceHttpsRedirect := true
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
@@ -215,6 +220,11 @@ func ReverseProxyInit() {
 		ReadHeaderTimeout: int64(readHeaderTimeout),
 		WriteTimeout:      int64(writeTimeout),
 		IdleTimeout:       int64(idleTimeout),
+		/* HTTP/2 */
+		DisableHttp2:                   disableHttp2,
+		H2MaxConcurrentStreams:         uint32(*proxyH2MaxStreams),
+		H2MaxUploadBufferPerConnection: int32(*proxyH2ConnBufferSize),
+		H2MaxUploadBufferPerStream:     int32(*proxyH2StreamBufferSize),
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,

@@ -96,6 +96,12 @@ var (
 	proxyWriteTimeout      = flag.Int("writetimeout", 0, "Proxy server write timeout in seconds (0 = disabled, recommended for long-running requests)")
 	proxyIdleTimeout       = flag.Int("idletimeout", 300, "Proxy server idle keep-alive connection timeout in seconds (0 = disabled)")
 
+	/* HTTP/2 Configuration Flags */
+	proxyDisableHttp2       = flag.Bool("disablehttp2", false, "Disable HTTP/2 on the TLS listener and serve HTTP/1.1 only")
+	proxyH2MaxStreams       = flag.Uint("h2_max_concurrent_streams", 0, "HTTP/2 max concurrent streams per connection (0 = Go default)")
+	proxyH2ConnBufferSize   = flag.Int("h2_conn_buffer", 0, "HTTP/2 max upload buffer per connection in bytes, min 65536 (0 = Go default)")
+	proxyH2StreamBufferSize = flag.Int("h2_stream_buffer", 0, "HTTP/2 max upload buffer per stream in bytes, min 65536 (0 = Go default)")
+
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
 	path_conf      = flag.String("conf", "./conf", "Configuration folder path")
