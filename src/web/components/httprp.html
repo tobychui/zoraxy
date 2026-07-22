@@ -581,7 +581,7 @@
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
+                                <input type="checkbox" class="RequireRateLimit">
                                 <label>Require Rate Limit<br>
                                 <small>Check this to enable rate limit on this inbound hostname</small></label>
                             </div><br>
@@ -1024,17 +1024,6 @@
         //Show the HTTP Proxy Rule Editor Modal
         initHttpProxyRuleEditorModal(payload);
         return;
-    }
-
-    //handleToggleRateLimitInput will get trigger if the "require rate limit" checkbox
-    // is changed and toggle the disable state of the rate limit input field
-    function handleToggleRateLimitInput(){
-        let isRateLimitEnabled = $("#httpProxyList input.RequireRateLimit")[0].checked;
-        if (isRateLimitEnabled){
-            $("#httpProxyList input.RateLimit").parent().removeClass("disabled");
-        }else{
-            $("#httpProxyList input.RateLimit").parent().addClass("disabled");
-        }
     }
 
     function exitProxyInlineEdit(){
@@ -1955,7 +1944,7 @@
             editZorxAuthExceptions(uuid);
         });
 
-        //Rate limit
+        // Rate limit: load with .val() so the shared modal shows each proxy's saved value (#1107)
         if (subd.RequireRateLimit) {
             editor.find(".RequireRateLimit").prop("checked", true);
             editor.find(".RateLimit").parent().removeClass("disabled");
@@ -1971,6 +1960,7 @@
                 $(this).val(subd.RateLimit); // Reset to previous valid value
                 return;
             }
+            subd.RateLimit = parseInt(rateLimitValue, 10) || 0;
             saveProxyInlineEdit(uuid);
         }
 
@@ -1983,14 +1973,13 @@
 
             if (subd.RateLimit === 0) {
                 subd.RateLimit = 100; // Set default rate limit to 100 if uninitialized
-                $(this).val(subd.RateLimit);
                 editor.find(".RateLimit").off("change"); // Temporarily disable the change event handler
                 editor.find(".RateLimit").val(100); // Set the value to 100
                 editor.find(".RateLimit").on("change", rateLimitChangeEvent); // Re-enable the change event handler
             }
             saveProxyInlineEdit(uuid);
         });
-        editor.find(".RateLimit").attr("value", subd.RateLimit);
+        editor.find(".RateLimit").val(subd.RateLimit);
         editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
 
         // CAPTCHA Gating
