@@ -27,21 +27,36 @@ type DownloadablePlugin struct {
 	IconPath         string                   `json:"IconPath"`         //Icon path or URL for the plugin
 	PluginIntroSpect zoraxy_plugin.IntroSpect `json:"PluginIntroSpect"` //Plugin introspect information
 	DownloadURLs     map[string]string        `json:"DownloadURLs"`     //Download URLs for different platforms
+	Source           string                   `json:"Source"`           //The plugin store index URL this plugin was fetched from
 }
 
 /* Plugin Store Index List Sync */
 //Update the plugin list from the plugin store URLs
 func (m *Manager) UpdateDownloadablePluginList() error {
 	//Get downloadable plugins from each of the plugin store URLS
-	m.Options.DownloadablePluginCache = []*DownloadablePlugin{}
-	for _, url := range m.Options.PluginStoreURLs {
+	newCache := []*DownloadablePlugin{}
+	var lastErr error
+	succCount := 0
+	for _, url := range m.GetAllStoreURLs() {
 		pluginList, err := m.getPluginListFromURL(url)
 		if err != nil {
-			return fmt.Errorf("failed to get plugin list from %s: %w", url, err)
+			//One broken source should not prevent the other sources from syncing
+			lastErr = fmt.Errorf("failed to get plugin list from %s: %w", url, err)
+			m.Log("Failed to sync plugin list from "+url, err)
+			continue
 		}
-		m.Options.DownloadablePluginCache = append(m.Options.DownloadablePluginCache, pluginList...)
+		for _, plugin := range pluginList {
+			plugin.Source = url
+		}
+		newCache = append(newCache, pluginList...)
+		succCount++
 	}
 
+	if succCount == 0 && lastErr != nil {
+		return lastErr
+	}
+
+	m.Options.DownloadablePluginCache = newCache
 	m.Options.LastSuccPluginSyncTime = time.Now().Unix()
 
 	return nil
@@ -146,24 +161,13 @@ func (m *Manager) InstallPlugin(plugin *DownloadablePlugin) error {
 	}
 
 	//Ok, also download the icon if exists
-	if plugin.IconPath != "" {
-		iconURL := strings.TrimSpace(plugin.IconPath)
-		if iconURL != "" {
-			resp, err := http.Get(iconURL)
-			if err != nil {
-				return fmt.Errorf("failed to download plugin icon: %w", err)
-			}
-			defer resp.Body.Close()
-
-			//Save the icon to the plugin directory
-			iconPath := filepath.Join(pluginDir, "icon.png")
-			out, err := os.Create(iconPath)
-			if err != nil {
-				return fmt.Errorf("failed to create plugin icon file: %w", err)
-			}
-			defer out.Close()
-
-			io.Copy(out, resp.Body)
+	//Note the IconPath might be a relative path pointing to the default
+	//icon on the webmin server, only download it if it is a full URL
+	iconURL := strings.TrimSpace(plugin.IconPath)
+	if strings.HasPrefix(iconURL, "http://") || strings.HasPrefix(iconURL, "https://") {
+		err = downloadFileTo(iconURL, filepath.Join(pluginDir, "icon.png"))
+		if err != nil {
+			return fmt.Errorf("failed to download plugin icon: %w", err)
 		}
 	}
 	//Close the plugin exeutable
@@ -247,15 +251,9 @@ func (m *Manager) HandleInstallPlugin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find the plugin info from cache
-	var plugin *DownloadablePlugin
-	for _, p := range m.Options.DownloadablePluginCache {
-		if p.PluginIntroSpect.ID == pluginID {
-			plugin = p
-			break
-		}
-	}
-
+	// Find the plugin info from cache, picking the newest version
+	// if multiple sources offer the same plugin
+	plugin := m.getDownloadablePluginByID(pluginID)
 	if plugin == nil {
 		utils.SendErrorResponse(w, "Plugin not found")
 		return

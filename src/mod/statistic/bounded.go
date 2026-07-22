@@ -41,6 +41,7 @@ type boundedCounters struct {
 	Referer             *boundedCounter
 	UserAgent           *boundedCounter
 	RequestURL          *boundedCounter
+	RequestMethods      *boundedCounter
 	DownstreamHostnames *boundedCounter
 	UpstreamHostnames   *boundedCounter
 }
@@ -53,6 +54,7 @@ func newBoundedCounters() boundedCounters {
 		Referer:             newBoundedCounter(0),
 		UserAgent:           newBoundedCounter(0),
 		RequestURL:          newBoundedCounter(0),
+		RequestMethods:      newBoundedCounter(0),
 		DownstreamHostnames: newBoundedCounter(0),
 		UpstreamHostnames:   newBoundedCounter(0),
 	}

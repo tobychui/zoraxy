@@ -15,6 +15,9 @@
         <script src="script/countryCode.js"></script>
         <script src="script/chart.js"></script>
         <script src="script/utils.js"></script>
+        <link rel="stylesheet" href="script/jsvectormap/jsvectormap.min.css">
+        <script src="script/jsvectormap/jsvectormap.min.js"></script>
+        <script src="script/jsvectormap/world.js"></script>
         <link rel="stylesheet" href="main.css">
         <link rel="stylesheet" href="darktheme.css">
     </head>
@@ -55,6 +58,9 @@
                     </a>
                     <a class="item active" tag="status">
                         <i class="simplistic info circle icon"></i>Status
+                    </a>
+                    <a class="item" tag="globalsettings">
+                        <i class="arrow alternate circle right icon"></i>Ingress
                     </a>
                     <a class="item" tag="setroot">
                         <i class="simplistic home icon"></i> Default Site
@@ -141,9 +147,6 @@
                             <a class="item" tag="utm" tab_group="services">
                                 <i class="simplistic time icon"></i> Uptime Monitor
                             </a>
-                            <a class="item" tag="routedebugger" tab_group="services">
-                                <i class="simplistic bug icon"></i> Route Debugger
-                            </a>
                         </div>
                     </div>
 
@@ -183,6 +186,10 @@
                         </div>
                     </div>
                     <div class="ui divider"></div>
+                    <!-- App Store -->
+                    <a class="item" tag="appstore">
+                        <i class="simplistic shopping bag icon"></i> App Store
+                    </a>
                     <!-- Plugin Manager -->
                     <a class="item" tag="plugins">
                         <i class="simplistic puzzle piece icon"></i> Plugin Manager
@@ -204,6 +211,9 @@
                 <div id="status" class="functiontab" target="status.html" style="display: block ;">
                     <br><br><div class="ui active centered inline loader"></div>
                 </div>
+
+                <!-- Ingress Settings Tab -->
+                <div id="globalsettings" class="functiontab" target="globalsettings.html"></div>
 
                 <!-- Virtual Directory Tab -->
                 <div id="vdir" class="functiontab" target="vdir.html"></div>
@@ -241,14 +251,14 @@
                 <!-- Web Server -->
                 <div id="webserv" class="functiontab" target="webserv.html"></div>
 
+                <!-- App Store -->
+                <div id="appstore" class="functiontab" target="appstore.html"></div>
+
                 <!-- Plugins -->
                 <div id="plugins" class="functiontab" target="plugins.html"></div>
 
                 <!-- Up Time Monitor -->
                 <div id="utm" class="functiontab" target="uptime.html"></div>
-
-                <!-- Route Debugger -->
-                <div id="routedebugger" class="functiontab" target="routedebugger.html"></div>
 
                 <!-- Network Tools -->
                 <div id="networktool" class="functiontab" target="networktools.html"></div>
@@ -277,7 +287,7 @@
                 <iframe src="snippet/placeholder.html"></iframe>
             </div>
         </div>
-        <br><br>
+        <br>
         <div class="ui divider"></div>
         <div class="ui container" style="color: grey; font-size: 90%; padding-bottom: 1em;">
             <p><a href="https://zoraxy.aroz.org" target="_blank">Zoraxy</a> <span class="zrversion"></span> © 2021 - <span class="year"></span> tobychui. Licensed under AGPL</p>

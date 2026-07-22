@@ -27,8 +27,10 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
+	"imuslab.com/zoraxy/mod/info/usageinfo"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -39,7 +41,6 @@ import (
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
-	"imuslab.com/zoraxy/mod/routedebug"
 	"imuslab.com/zoraxy/mod/webserv"
 )
 
@@ -218,21 +219,20 @@ func startupSequence() {
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()
 
-	//Start the route debugger
-	routeDebugger = routedebug.NewRouteDebugger(&routedebug.RouteDebuggerOptions{
-		Port:        strconv.Itoa(ROUTEDEBUGGER_DEFAULT_PORT),
-		PrettyPrint: false,
-		Logger:      SystemWideLogger,
-		Sysdb:       sysdb,
-	})
-	routeDebugger.RestorePreviousState()
-
 	//Create a netstat buffer
 	netstatBuffers, err = netstat.NewNetStatBuffer(300, SystemWideLogger)
 	if err != nil {
 		SystemWideLogger.PrintAndLog("Network", "Failed to load network statistic info", err)
 		panic(err)
 	}
+
+	//Start the status page host resource monitors
+	//CPU / RAM usage is sampled once per second in the background so the
+	//dashboard API can return cached values without blocking
+	usageinfo.StartBackgroundMonitor()
+	hardwareinfo.SetLogger(SystemWideLogger)
+	hardwareinfo.StartHostInfoCache()
+	initDashboardBandwidthTracker()
 
 	/*
 		Path Rules

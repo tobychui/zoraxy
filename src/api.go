@@ -11,6 +11,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
+	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -53,6 +54,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
 	authRouter.HandleFunc("/api/proxy/proxyProtocol", HandleProxyProtocolChange)
+	authRouter.HandleFunc("/api/proxy/timeouts", HandleGlobalProxyTimeoutSettings)
 	/* Reverse proxy upstream (load balance) */
 	authRouter.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
 	authRouter.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
@@ -64,6 +66,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/del", ReverseProxyDeleteVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/edit", ReverseProxyEditVdir)
+	authRouter.HandleFunc("/api/proxy/vdir/bulkForwardAuth", ReverseProxyBulkApplyVdirByForwardAuth)
 	/* Reverse proxy user-defined header */
 	authRouter.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
 	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
@@ -185,11 +188,19 @@ func RegisterPathRuleAPIs(authRouter *auth.RouterDef) {
 func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	/* Traffic Summary */
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
+	authRouter.HandleFunc("/api/stats/overview", HandleDashboardOverview)
 	authRouter.HandleFunc("/api/stats/trafficmap", HandleTrafficMapData)
 	authRouter.HandleFunc("/api/stats/countries", HandleCountryDistrSummary)
 	authRouter.HandleFunc("/api/stats/netstat", netstatBuffers.HandleGetNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/netstatgraph", netstatBuffers.HandleGetBufferedNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/listnic", netstat.HandleListNetworkInterfaces)
+	/* Host System Information */
+	authRouter.HandleFunc("/api/stats/system", HandleSystemResourceUsage)
+	authRouter.HandleFunc("/api/sysinfo/cpu", hardwareinfo.CachedGetCPUInfo)
+	authRouter.HandleFunc("/api/sysinfo/ram", hardwareinfo.CachedGetRamInfo)
+	authRouter.HandleFunc("/api/sysinfo/drives", hardwareinfo.CachedGetDriveStat)
+	authRouter.HandleFunc("/api/sysinfo/nic", hardwareinfo.CachedIfconfig)
+	authRouter.HandleFunc("/api/sysinfo/usb", hardwareinfo.CachedGetUSB)
 	/* Zoraxy Analytic */
 	authRouter.HandleFunc("/api/analytic/list", AnalyticLoader.HandleSummaryList)
 	authRouter.HandleFunc("/api/analytic/load", AnalyticLoader.HandleLoadTargetDaySummary)
@@ -256,15 +267,6 @@ func RegisterStaticWebServerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/webserv/webdav/setCustomCredentials", staticWebServer.HandleSetCustomCredentials)
 }
 
-// Register the APIs for Route Debugger management functions
-func RegisterRouteDebuggerAPIs(authRouter *auth.RouterDef) {
-	authRouter.HandleFunc("/api/routedebugger/status", routeDebugger.HandleGetStatus)
-	authRouter.HandleFunc("/api/routedebugger/start", routeDebugger.HandleStart)
-	authRouter.HandleFunc("/api/routedebugger/stop", routeDebugger.HandleStop)
-	authRouter.HandleFunc("/api/routedebugger/setPort", routeDebugger.HandlePortChange)
-	authRouter.HandleFunc("/api/routedebugger/setPrettyPrint", routeDebugger.HandleSetPrettyPrint)
-}
-
 // Register the APIs for Network Utilities functions
 func RegisterNetworkUtilsAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/tools/ipscan", ipscan.HandleIpScan)
@@ -296,6 +298,11 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
 	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
 	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)
+	authRouter.HandleFunc("/api/plugins/store/checkUpdates", pluginManager.HandleCheckPluginUpdates)
+	authRouter.HandleFunc("/api/plugins/store/update", pluginManager.HandleUpdatePlugin)
+	authRouter.HandleFunc("/api/plugins/store/sources", pluginManager.HandleListStoreSources)
+	authRouter.HandleFunc("/api/plugins/store/sources/add", pluginManager.HandleAddStoreSource)
+	authRouter.HandleFunc("/api/plugins/store/sources/remove", pluginManager.HandleRemoveStoreSource)
 
 	// Developer options
 	authRouter.HandleFunc("/api/plugins/developer/enableAutoReload", pluginManager.HandleEnableHotReload)
@@ -419,7 +426,6 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterNetworkUtilsAPIs(authRouter)
 	RegisterACMEAndAutoRenewerAPIs(authRouter)
 	RegisterStaticWebServerAPIs(authRouter)
-	RegisterRouteDebuggerAPIs(authRouter)
 	RegisterPluginAPIs(authRouter)
 
 	//Docker UX Optimizations

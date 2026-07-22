@@ -74,6 +74,12 @@ type RouterOption struct {
 	WriteTimeout      int64 //HTTP server write timeout in seconds
 	IdleTimeout       int64 //HTTP server idle timeout in seconds
 
+	/* HTTP/2 */
+	DisableHttp2                   bool   //Disable HTTP/2 on the TLS listener and serve HTTP/1.1 only
+	H2MaxConcurrentStreams         uint32 //HTTP/2 max concurrent streams per connection (0 = Go default)
+	H2MaxUploadBufferPerConnection int32  //HTTP/2 max upload buffer per connection in bytes (0 = Go default)
+	H2MaxUploadBufferPerStream     int32  //HTTP/2 max upload buffer per stream in bytes (0 = Go default)
+
 	/* Authentication Providers */
 	ForwardAuthRouter   *forward.AuthRouter
 	OAuth2Router        *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication

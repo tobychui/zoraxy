@@ -13,6 +13,7 @@ type DailySummaryExport struct {
 	Referer         map[string]int
 	UserAgent       map[string]int
 	RequestURL      map[string]int
+	RequestMethods  map[string]int
 	Downstreams     map[string]int
 	Upstreams       map[string]int
 }
@@ -41,6 +42,7 @@ func DailySummaryToExport(summary DailySummary) DailySummaryExport {
 		Referer:         make(map[string]int),
 		UserAgent:       make(map[string]int),
 		RequestURL:      make(map[string]int),
+		RequestMethods:  make(map[string]int),
 		Downstreams:     make(map[string]int),
 		Upstreams:       make(map[string]int),
 	}
@@ -51,6 +53,7 @@ func DailySummaryToExport(summary DailySummary) DailySummaryExport {
 	export.Referer = SyncMapToMapStringInt(summary.Referer)
 	export.UserAgent = SyncMapToMapStringInt(summary.UserAgent)
 	export.RequestURL = SyncMapToMapStringInt(summary.RequestURL)
+	export.RequestMethods = SyncMapToMapStringInt(summary.RequestMethods)
 	export.Downstreams = SyncMapToMapStringInt(summary.DownstreamHostnames)
 	export.Upstreams = SyncMapToMapStringInt(summary.UpstreamHostnames)
 
@@ -76,6 +79,7 @@ func DailySummaryExportToSummary(export DailySummaryExport) DailySummary {
 		Referer:             MapStringIntToSyncMap(export.Referer),
 		UserAgent:           MapStringIntToSyncMap(export.UserAgent),
 		RequestURL:          MapStringIntToSyncMap(export.RequestURL),
+		RequestMethods:      MapStringIntToSyncMap(export.RequestMethods),
 		DownstreamHostnames: MapStringIntToSyncMap(export.Downstreams),
 		UpstreamHostnames:   MapStringIntToSyncMap(export.Upstreams),
 		bounded: boundedCounters{
@@ -85,6 +89,7 @@ func DailySummaryExportToSummary(export DailySummaryExport) DailySummary {
 			Referer:             newBoundedCounter(len(export.Referer)),
 			UserAgent:           newBoundedCounter(len(export.UserAgent)),
 			RequestURL:          newBoundedCounter(len(export.RequestURL)),
+			RequestMethods:      newBoundedCounter(len(export.RequestMethods)),
 			DownstreamHostnames: newBoundedCounter(len(export.Downstreams)),
 			UpstreamHostnames:   newBoundedCounter(len(export.Upstreams)),
 		},

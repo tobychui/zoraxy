@@ -33,6 +33,12 @@ var (
 	dynamicProxyRouterReady = make(chan bool, 1)
 )
 
+type globalProxyTimeoutSettings struct {
+	ReadHeaderTimeout int `json:"readHeaderTimeout"`
+	WriteTimeout      int `json:"writeTimeout"`
+	IdleTimeout       int `json:"idleTimeout"`
+}
+
 // parseCaptchaConfigFromRequest extracts and parses CAPTCHA configuration from POST request parameters
 func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig, error) {
 	requireCaptcha, _ := utils.PostBool(r, "captcha")
@@ -101,7 +107,7 @@ func parseCaptchaConfigFromRequest(r *http.Request) (*dynamicproxy.CaptchaConfig
 // Add user customizable reverse proxy
 func ReverseProxyInit() {
 	/*
-		Load Reverse Proxy Global Settings
+		Load Reverse Proxy Ingress Settings
 	*/
 	inboundPort := *defaultInboundPort
 	autoStartReverseProxy := *defaultEnableInboundTraffic
@@ -151,6 +157,19 @@ func ReverseProxyInit() {
 		SystemWideLogger.Println("PROXY protocol support disabled")
 	}
 
+	readHeaderTimeout := *proxyReadHeaderTimeout
+	writeTimeout := *proxyWriteTimeout
+	idleTimeout := *proxyIdleTimeout
+	sysdb.Read("settings", "readHeaderTimeout", &readHeaderTimeout)
+	sysdb.Read("settings", "writeTimeout", &writeTimeout)
+	sysdb.Read("settings", "idleTimeout", &idleTimeout)
+	SystemWideLogger.Println("Proxy timeout settings loaded. Read header: " + strconv.Itoa(readHeaderTimeout) + "s, Write: " + strconv.Itoa(writeTimeout) + "s, Idle: " + strconv.Itoa(idleTimeout) + "s")
+
+	//The tuning knobs stay flag only, they exist for diagnosing HTTP/2 issues.
+	//The off switch is persisted as it doubles as a user facing workaround.
+	disableHttp2 := *proxyDisableHttp2
+	sysdb.Read("settings", "disableHttp2", &disableHttp2)
+
 	listenOnPort80 := true
 	forceHttpsRedirect := true
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
@@ -198,9 +217,14 @@ func ReverseProxyInit() {
 		LoadBalancer:        loadBalancer,
 		PluginManager:       pluginManager,
 		/* Timeouts */
-		ReadHeaderTimeout: int64(*proxyReadHeaderTimeout),
-		WriteTimeout:      int64(*proxyWriteTimeout),
-		IdleTimeout:       int64(*proxyIdleTimeout),
+		ReadHeaderTimeout: int64(readHeaderTimeout),
+		WriteTimeout:      int64(writeTimeout),
+		IdleTimeout:       int64(idleTimeout),
+		/* HTTP/2 */
+		DisableHttp2:                   disableHttp2,
+		H2MaxConcurrentStreams:         uint32(*proxyH2MaxStreams),
+		H2MaxUploadBufferPerConnection: int32(*proxyH2ConnBufferSize),
+		H2MaxUploadBufferPerStream:     int32(*proxyH2StreamBufferSize),
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -1963,6 +1987,67 @@ func HandleProxyProtocolChange(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.SendOK(w)
 	}
+}
+
+func HandleGlobalProxyTimeoutSettings(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		js, _ := json.Marshal(globalProxyTimeoutSettings{
+			ReadHeaderTimeout: int(dynamicProxyRouter.Option.ReadHeaderTimeout),
+			WriteTimeout:      int(dynamicProxyRouter.Option.WriteTimeout),
+			IdleTimeout:       int(dynamicProxyRouter.Option.IdleTimeout),
+		})
+		utils.SendJSONResponse(w, string(js))
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	readHeaderTimeout, err := utils.PostInt(r, "readHeaderTimeout")
+	if err != nil || readHeaderTimeout < 0 {
+		utils.SendErrorResponse(w, "Invalid read header timeout given")
+		return
+	}
+
+	writeTimeout, err := utils.PostInt(r, "writeTimeout")
+	if err != nil || writeTimeout < 0 {
+		utils.SendErrorResponse(w, "Invalid write timeout given")
+		return
+	}
+
+	idleTimeout, err := utils.PostInt(r, "idleTimeout")
+	if err != nil || idleTimeout < 0 {
+		utils.SendErrorResponse(w, "Invalid idle timeout given")
+		return
+	}
+
+	previousSettings := globalProxyTimeoutSettings{
+		ReadHeaderTimeout: int(dynamicProxyRouter.Option.ReadHeaderTimeout),
+		WriteTimeout:      int(dynamicProxyRouter.Option.WriteTimeout),
+		IdleTimeout:       int(dynamicProxyRouter.Option.IdleTimeout),
+	}
+
+	dynamicProxyRouter.Option.ReadHeaderTimeout = int64(readHeaderTimeout)
+	dynamicProxyRouter.Option.WriteTimeout = int64(writeTimeout)
+	dynamicProxyRouter.Option.IdleTimeout = int64(idleTimeout)
+
+	if dynamicProxyRouter.Running {
+		if err := dynamicProxyRouter.Restart(); err != nil {
+			dynamicProxyRouter.Option.ReadHeaderTimeout = int64(previousSettings.ReadHeaderTimeout)
+			dynamicProxyRouter.Option.WriteTimeout = int64(previousSettings.WriteTimeout)
+			dynamicProxyRouter.Option.IdleTimeout = int64(previousSettings.IdleTimeout)
+			utils.SendErrorResponse(w, "Failed to restart proxy: "+err.Error())
+			return
+		}
+	}
+
+	sysdb.Write("settings", "readHeaderTimeout", readHeaderTimeout)
+	sysdb.Write("settings", "writeTimeout", writeTimeout)
+	sysdb.Write("settings", "idleTimeout", idleTimeout)
+
+	utils.SendOK(w)
 }
 
 // Handle incoming port set. Change the current proxy incoming port

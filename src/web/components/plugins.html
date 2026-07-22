@@ -28,6 +28,33 @@
     background-color: var(--theme_bg_active);
   }
 
+  /* Force the avatar icon to stay inline with the name/description instead of
+     stacking above it. Semantic UI's own CSS gives a plain <img class="image">
+     (as opposed to a <div class="image">) a more specific "img.image+.content"
+     rule that sets the following .content to display:inline-block;width:auto,
+     which wraps the whole content block onto its own line whenever the
+     description text is too long to fit next to the icon on one line. */
+  #selectablePluginList .item,
+  #selectedTagPluginList .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8em;
+  }
+
+  #selectablePluginList .item > img.image,
+  #selectedTagPluginList .item > img.image {
+    flex-shrink: 0;
+    margin: 0.15em 0 0 0;
+  }
+
+  #selectablePluginList .item > .content,
+  #selectedTagPluginList .item > .content {
+    flex: 1;
+    min-width: 0;
+    display: block !important;
+    width: auto !important;
+  }
+
   .selectablePluginItem{
     position: relative;
   }
@@ -62,6 +89,25 @@
   }
   .selectedPluginItem.active .selectedIcon{
     display: block;
+  }
+
+  /* Plugin List table — keep the icon on the left and the name/version block on
+     the right, even when the plugin name is long enough to wrap onto two lines.
+     Without this, Semantic UI's "img.image + .content" rule makes .content an
+     inline-block that drops below the icon once the name gets too wide. */
+  #pluginTable td[data-label="PluginName"] .ui.header {
+    display: flex;
+    align-items: flex-start;
+  }
+  #pluginTable td[data-label="PluginName"] .ui.header > img.image {
+    flex-shrink: 0;
+    margin-top: 0.15em;
+  }
+  #pluginTable td[data-label="PluginName"] .ui.header > .content {
+    flex: 1;
+    min-width: 0;
+    display: block !important;
+    width: auto !important;
   }
 
   .pluginAddRemoveButtons{
@@ -214,7 +260,7 @@
       </div>
 
       <br>
-      <button class="ui basic violet button" onclick="openPluginStore();"><i class="download icon"></i>Plugin Store (Experimental)</button>
+      <button class="ui basic violet button" onclick="openPluginStore();"><i class="shopping bag icon"></i>Open App Store</button>
 </div>
 
 <script>
@@ -652,8 +698,8 @@ function getPluginInfo(pluginId, btn){
 }
 
 function openPluginStore(){
-  //Open plugin store in extended mode
-  showSideWrapper("snippet/pluginstore.html?t=" + Date.now(), true);
+  //The Plugin Store side wrapper is replaced by the App Store tab
+  openTabById("appstore");
 }
 
 function uninstallPlugin(pluginId, pluginName, btn=undefined) {

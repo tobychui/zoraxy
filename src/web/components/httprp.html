@@ -754,7 +754,8 @@
     }
 
     /* List all proxy endpoints */
-    function listProxyEndpoints(){
+    function listProxyEndpoints(preserveFilters = true){
+        let selectedTag = preserveFilters ? ($("#tagFilterDropdown").dropdown('get value') || "") : "";
         $.get("/api/proxy/list?type=host", function(data){
             $("#httpProxyList").html(``);
             if (data.error !== undefined){
@@ -912,10 +913,12 @@
                     </tr>`);
                 });
                 populateTagFilterDropdown(data);
+                $("#tagFilterDropdown").dropdown('set selected', selectedTag);
             }
 
             resolveAccessRuleNameOnHostRPlist();
             initDetailView();
+            filterProxyList();
         });
     }
 
@@ -2218,7 +2221,7 @@
 
     // Initialize the proxy list on page load
     $(document).ready(function() {
-        listProxyEndpoints();
+        listProxyEndpoints(false);
 
         // Event listener for clicking on tags
         $(document).on('click', '.tag-select', function() {
@@ -2240,9 +2243,7 @@
             window.scrollTo(0, 0);
             $("body").css("overflow", "hidden");
         } else {
-            listProxyEndpoints();
-            //Reset the tag filter
-            $("#tagFilterDropdown").dropdown('set selected', "");
+            listProxyEndpoints(false);
         }
     }
         

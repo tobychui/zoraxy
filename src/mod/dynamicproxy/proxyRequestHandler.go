@@ -402,6 +402,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 				Succ:                          succ,
 				StatusCode:                    statusCode,
 				ForwardType:                   forwardType,
+				RequestMethod:                 r.Method,
 				Referer:                       r.Referer(),
 				UserAgent:                     r.UserAgent(),
 				RequestURL:                    r.Host + r.RequestURI,

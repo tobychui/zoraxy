@@ -38,7 +38,6 @@ import (
 	"imuslab.com/zoraxy/mod/streamproxy"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/uptime"
-	"imuslab.com/zoraxy/mod/routedebug"
 	"imuslab.com/zoraxy/mod/webserv"
 )
 
@@ -49,7 +48,6 @@ const (
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487
-	ROUTEDEBUGGER_DEFAULT_PORT   = 5490
 	MDNS_HOSTNAME_PREFIX         = "zoraxy_" /* Follow by node UUID */
 	MDNS_IDENTIFY_DEVICE_TYPE    = "Network Gateway"
 	MDNS_IDENTIFY_DOMAIN         = "zoraxy.aroz.org"
@@ -73,7 +71,7 @@ var (
 	allowMdnsScanning          = flag.Bool("mdns", true, "Enable mDNS scanner and transponder")
 	mdnsName                   = flag.String("mdnsname", "", "mDNS name, leave empty to use default (zoraxy_{node-uuid}.local)")
 	runningInDocker            = flag.Bool("docker", false, "Run Zoraxy in docker compatibility mode")
-	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", false, "Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices)")
+	enableHighSpeedGeoIPLookup = flag.Bool("fastgeoip", true, "Enable high speed geoip lookup, disable this if you are using a very small memory footprint device")
 	enableAutoUpdate           = flag.Bool("cfgupgrade", true, "Enable auto config upgrade if breaking change is detected")
 
 	/* Acme Configuration Flags */
@@ -97,6 +95,12 @@ var (
 	proxyReadHeaderTimeout = flag.Int("readheadertimeout", 30, "Proxy server read header timeout in seconds (0 = disabled)")
 	proxyWriteTimeout      = flag.Int("writetimeout", 0, "Proxy server write timeout in seconds (0 = disabled, recommended for long-running requests)")
 	proxyIdleTimeout       = flag.Int("idletimeout", 300, "Proxy server idle keep-alive connection timeout in seconds (0 = disabled)")
+
+	/* HTTP/2 Configuration Flags */
+	proxyDisableHttp2       = flag.Bool("disablehttp2", false, "Disable HTTP/2 on the TLS listener and serve HTTP/1.1 only")
+	proxyH2MaxStreams       = flag.Uint("h2_max_concurrent_streams", 0, "HTTP/2 max concurrent streams per connection (0 = Go default)")
+	proxyH2ConnBufferSize   = flag.Int("h2_conn_buffer", 0, "HTTP/2 max upload buffer per connection in bytes, min 65536 (0 = Go default)")
+	proxyH2StreamBufferSize = flag.Int("h2_stream_buffer", 0, "HTTP/2 max upload buffer per stream in bytes, min 65536 (0 = Go default)")
 
 	/* Path Configuration Flags */
 	path_database  = flag.String("dbpath", "./sys.db", "Database path")
@@ -167,7 +171,6 @@ var (
 	acmeHandler        *acme.ACMEHandler         //Handler for ACME Certificate renew
 	acmeAutoRenewer    *acme.AutoRenewer         //Handler for ACME auto renew ticking
 	staticWebServer    *webserv.WebServer        //Static web server for hosting simple stuffs
-	routeDebugger      *routedebug.RouteDebugger //Route debugger for inspecting proxied requests
 	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins

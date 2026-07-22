@@ -14,6 +14,7 @@ import (
 	"time"
 
 	proxyproto "github.com/c0va23/go-proxyprotocol"
+	"golang.org/x/net/http2"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
@@ -23,6 +24,35 @@ import (
 /*
 	Zoraxy Dynamic Proxy
 */
+
+// configureHTTP2 applies the HTTP/2 options to the TLS listener.
+//
+// ServeTLS silently enables HTTP/2 whenever TLSNextProto is nil, which leaves none
+// of the HTTP/2 parameters reachable. This makes them tunable, and lets HTTP/2 be
+// turned off entirely as a workaround for clients that stall on it. See issue #1231.
+func (router *Router) configureHTTP2(srv *http.Server) error {
+	if router.Option.DisableHttp2 {
+		//A non-nil TLSNextProto stops ServeTLS from setting up HTTP/2
+		srv.TLSNextProto = make(map[string]func(*http.Server, *tls.Conn, http.Handler))
+		router.Option.Logger.PrintAndLog("dprouter", "HTTP/2 disabled on TLS listener, serving HTTP/1.1 only", nil)
+		return nil
+	}
+
+	h2s := &http2.Server{
+		MaxConcurrentStreams:         router.Option.H2MaxConcurrentStreams,
+		MaxUploadBufferPerConnection: router.Option.H2MaxUploadBufferPerConnection,
+		MaxUploadBufferPerStream:     router.Option.H2MaxUploadBufferPerStream,
+	}
+
+	if h2s.MaxConcurrentStreams == 0 && h2s.MaxUploadBufferPerConnection == 0 && h2s.MaxUploadBufferPerStream == 0 {
+		//Nothing to override. Leave ServeTLS to install Go's bundled HTTP/2, which
+		//is a different implementation to x/net/http2 that ConfigureServer would set
+		//up, so skipping this keeps the default build byte-for-byte as it was.
+		return nil
+	}
+
+	return http2.ConfigureServer(srv, h2s)
+}
 
 func NewDynamicProxy(option RouterOption) (*Router, error) {
 	proxyMap := sync.Map{}
@@ -121,6 +151,11 @@ func (router *Router) StartProxyService() error {
 			WriteTimeout:      time.Duration(router.Option.WriteTimeout) * time.Second,
 			IdleTimeout:       time.Duration(router.Option.IdleTimeout) * time.Second,
 		}
+
+		if err := router.configureHTTP2(router.server); err != nil {
+			return err
+		}
+
 		router.Running = true
 		if router.Option.Port != 80 && router.Option.ListenOnPort80 && !netutils.CheckIfPortOccupied(80) {
 			//Add a 80 to 443 redirector
