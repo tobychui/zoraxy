@@ -25,63 +25,230 @@ import (
 
 /* Bandwidth (Today) tracker */
 
-// dashboardBandwidthTracker keeps the NIC accumulated counter values sampled
-// at startup / midnight so that "bandwidth today" can be derived from the
-// current accumulated counters without a dedicated background routine.
-type dashboardBandwidthTracker struct {
-	sync.Mutex
-	date       string //Date of the baseline in yyyy-mm-dd
-	baselineRx int64  //Accumulated rx (bits) when the baseline was taken
-	baselineTx int64  //Accumulated tx (bits) when the baseline was taken
+const (
+	//Traffic accumulation sample interval
+	DASHBOARD_BANDWIDTH_SAMPLE_INTERVAL = 5 * time.Second
+	//Auto save interval
+	DASHBOARD_BANDWIDTH_SAVE_INTERVAL = 60 * time.Second
+	//Database table and key used to persist the running totals
+	DASHBOARD_DB_TABLE      = "dashboard"
+	DASHBOARD_BANDWIDTH_KEY = "bandwidth_today"
+	//Local calendar day layout used to detect the midnight rollover
+	DASHBOARD_DAY_LAYOUT = "2006-01-02"
+)
+
+// nicCounter is the raw cumulative byte counter of a single interface
+type nicCounter struct {
+	rx uint64
+	tx uint64
 }
 
-var dashboardBandwidth = &dashboardBandwidthTracker{}
+// dashboardBandwidthRecord is the on-disk form of the running totals
+type dashboardBandwidthRecord struct {
+	Date string //Local calendar day the totals below belong to
+	Rx   int64
+	Tx   int64
+}
 
-// Initiate the bandwidth baseline. Call once on startup after netstatBuffers
-// is created. Note that on mid-day startups the counter only reflects the
-// traffic since Zoraxy started.
+/*
+dashboardBandwidthTracker accumulates the host-wide network traffic of the
+current local day for the status page.
+
+Note that the daily total is deliberately NOT derived by subtracting a stored
+baseline from the aggregated "all interfaces" counter. That aggregate is the
+sum over whichever interfaces happen to exist at sample time, so it is not
+monotonic: whenever an interface goes away (container teardown, VPN or
+ZeroTier reconnect, adapter reset) the aggregate drops and the subtraction
+underflows, which previously wiped the whole day's total back to zero.
+
+Instead every interface is tracked individually and only forward movement is
+accumulated, so a disappearing interface simply contributes nothing and the
+running total is preserved. The totals are reset only when the local calendar
+day changes.
+*/
+type dashboardBandwidthTracker struct {
+	mu       sync.Mutex
+	day      string                //Local calendar day that rxToday / txToday belong to
+	rxToday  int64                 //Bytes received since local midnight
+	txToday  int64                 //Bytes sent since local midnight
+	lastSeen map[string]nicCounter //Last raw cumulative counter of each interface
+	dirty    bool                  //True if the totals changed since the last save
+	stopChan chan bool
+}
+
+var dashboardBandwidth = &dashboardBandwidthTracker{
+	lastSeen: map[string]nicCounter{},
+}
+
+// Initiate the bandwidth tracker and start its background sampler.
+// Call once on startup, after the system database is ready.
 func initDashboardBandwidthTracker() {
-	rx, tx, err := netstatBuffers.GetNetworkInterfaceStats()
-	if err != nil {
-		rx, tx = 0, 0
+	sysdb.NewTable(DASHBOARD_DB_TABLE)
+
+	today := time.Now().Format(DASHBOARD_DAY_LAYOUT)
+
+	dashboardBandwidth.mu.Lock()
+	dashboardBandwidth.day = today
+	dashboardBandwidth.lastSeen = map[string]nicCounter{}
+
+	//Restore the running total if the stored record belongs to today. A record
+	//from an earlier day is ignored so the new day starts from zero.
+	record := dashboardBandwidthRecord{}
+	if err := sysdb.Read(DASHBOARD_DB_TABLE, DASHBOARD_BANDWIDTH_KEY, &record); err == nil && record.Date == today {
+		dashboardBandwidth.rxToday = record.Rx
+		dashboardBandwidth.txToday = record.Tx
 	}
-	dashboardBandwidth.Lock()
-	defer dashboardBandwidth.Unlock()
-	dashboardBandwidth.date = time.Now().Format("2006-01-02")
-	dashboardBandwidth.baselineRx = rx
-	dashboardBandwidth.baselineTx = tx
+	dashboardBandwidth.mu.Unlock()
+
+	//Prime the per-interface snapshot. Every interface is unknown at this
+	//point so this first sample only records the baselines and adds nothing.
+	dashboardBandwidth.sample()
+
+	dashboardBandwidth.start()
+}
+
+// start launches the background sampling and autosave routine
+func (t *dashboardBandwidthTracker) start() {
+	t.stopChan = make(chan bool)
+	go func(stopChan chan bool) {
+		sampleTicker := time.NewTicker(DASHBOARD_BANDWIDTH_SAMPLE_INTERVAL)
+		saveTicker := time.NewTicker(DASHBOARD_BANDWIDTH_SAVE_INTERVAL)
+		defer sampleTicker.Stop()
+		defer saveTicker.Stop()
+
+		for {
+			select {
+			case <-stopChan:
+				return
+			case <-sampleTicker.C:
+				t.sample()
+			case <-saveTicker.C:
+				t.save()
+			}
+		}
+	}(t.stopChan)
+}
+
+// Close stops the background sampler and flushes the totals to the database
+func (t *dashboardBandwidthTracker) Close() {
+	t.mu.Lock()
+	stopChan := t.stopChan
+	t.stopChan = nil
+	t.mu.Unlock()
+
+	if stopChan != nil {
+		close(stopChan)
+	}
+	t.save()
+}
+
+// sample reads the current per-interface counters and folds them into the
+// running totals
+func (t *dashboardBandwidthTracker) sample() {
+	counters, err := gonet.IOCounters(true)
+	if err != nil {
+		//Skip this window. The counters are cumulative, so the next successful
+		//sample still accounts for the traffic that happened in between.
+		return
+	}
+	t.accumulate(counters, time.Now())
+}
+
+// accumulate folds one set of per-interface counter readings into the running
+// totals. Split out from sample() so the logic can be tested with synthetic
+// counter readings.
+func (t *dashboardBandwidthTracker) accumulate(counters []gonet.IOCountersStat, now time.Time) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.rolloverIfNeeded(now)
+
+	current := make(map[string]nicCounter, len(counters))
+	var deltaRx, deltaTx int64
+	for _, counter := range counters {
+		reading := nicCounter{rx: counter.BytesRecv, tx: counter.BytesSent}
+		current[counter.Name] = reading
+
+		previous, seenBefore := t.lastSeen[counter.Name]
+		if !seenBefore {
+			//Newly appeared interface. Only record the baseline, as counting
+			//its whole history would show up as a one-off spike.
+			continue
+		}
+
+		//Only count forward movement. A counter going backwards means that
+		//interface's counter was reset, so that window is skipped instead of
+		//being subtracted from the daily total.
+		if reading.rx > previous.rx {
+			deltaRx += int64(reading.rx - previous.rx)
+		}
+		if reading.tx > previous.tx {
+			deltaTx += int64(reading.tx - previous.tx)
+		}
+	}
+
+	//Interfaces that disappeared are simply absent from current, so they
+	//contribute nothing instead of underflowing the total.
+	t.lastSeen = current
+
+	if deltaRx > 0 || deltaTx > 0 {
+		t.rxToday += deltaRx
+		t.txToday += deltaTx
+		t.dirty = true
+	}
+}
+
+// rolloverIfNeeded zeroes the running totals when the local calendar day has
+// changed. The caller must hold t.mu.
+func (t *dashboardBandwidthTracker) rolloverIfNeeded(now time.Time) {
+	today := now.Format(DASHBOARD_DAY_LAYOUT)
+	if t.day == today {
+		return
+	}
+
+	t.day = today
+	t.rxToday = 0
+	t.txToday = 0
+	t.dirty = true
+}
+
+// save flushes the running totals to the database if they have changed
+func (t *dashboardBandwidthTracker) save() {
+	if sysdb == nil {
+		return
+	}
+
+	t.mu.Lock()
+	if !t.dirty {
+		t.mu.Unlock()
+		return
+	}
+	record := dashboardBandwidthRecord{
+		Date: t.day,
+		Rx:   t.rxToday,
+		Tx:   t.txToday,
+	}
+	t.dirty = false
+	t.mu.Unlock()
+
+	if err := sysdb.Write(DASHBOARD_DB_TABLE, DASHBOARD_BANDWIDTH_KEY, record); err != nil {
+		//Keep the dirty flag so the next tick retries the write
+		t.mu.Lock()
+		t.dirty = true
+		t.mu.Unlock()
+	}
 }
 
 // getBandwidthToday returns the total rx / tx of this host in bytes since
-// midnight (or since startup if Zoraxy was started today)
+// local midnight
 func getBandwidthToday() (int64, int64) {
-	rx, tx, err := netstatBuffers.GetNetworkInterfaceStats()
-	if err != nil {
-		return 0, 0
-	}
+	dashboardBandwidth.mu.Lock()
+	defer dashboardBandwidth.mu.Unlock()
 
-	dashboardBandwidth.Lock()
-	defer dashboardBandwidth.Unlock()
+	//Defensive rollover, in case the sampler has not ticked across midnight yet
+	dashboardBandwidth.rolloverIfNeeded(time.Now())
 
-	today := time.Now().Format("2006-01-02")
-	if dashboardBandwidth.date != today {
-		//Day rollover, reset the baseline
-		dashboardBandwidth.date = today
-		dashboardBandwidth.baselineRx = rx
-		dashboardBandwidth.baselineTx = tx
-	}
-
-	drx := rx - dashboardBandwidth.baselineRx
-	dtx := tx - dashboardBandwidth.baselineTx
-	if drx < 0 || dtx < 0 {
-		//NIC counter reset (e.g. interface restarted), rebase
-		dashboardBandwidth.baselineRx = rx
-		dashboardBandwidth.baselineTx = tx
-		drx, dtx = 0, 0
-	}
-
-	//Netstat buffers count in bits, convert to bytes
-	return drx / 8, dtx / 8
+	return dashboardBandwidth.rxToday, dashboardBandwidth.txToday
 }
 
 // countActiveProxyConnections counts the number of established TCP
