@@ -73,6 +73,15 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			//Use default rule
 			ruleID = "default"
 		}
+
+		// Check for path-based access rules
+		for _, pathRule := range sep.PathBasedAccessRules {
+			if match, _ := filepath.Match(pathRule.Path, r.URL.Path); match {
+				ruleID = pathRule.RuleID
+				break
+			}
+		}
+
 		if h.handleAccessRouting(ruleID, w, r, sep) {
 			//Request handled by subroute
 			return

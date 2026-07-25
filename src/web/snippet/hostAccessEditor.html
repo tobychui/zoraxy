@@ -77,6 +77,46 @@
                     </div>
                 </div>
             </div>
+            <h3 class="ui dividing header">Path-Based Access Rules</h3>
+            <div class="scrolling content ui form">
+                <table class="ui basic very compact unstackable celled table">
+                    <thead>
+                        <tr>
+                            <th>Path</th>
+                            <th>Access Rule</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pathBasedAccessRulesTable">
+                    <!-- Rows will be dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui form">
+                <div class="three small fields">
+                    <div class="field">
+                        <label for="newPath">Path</label>
+                        <input type="text" id="newPath" placeholder="/admin/*">
+                    </div>
+                    <div class="field">
+                        <label for="newPathRuleAccessDropdown">Access Rule</label>
+                        <div class="ui selection dropdown">
+                            <input type="hidden" id="newPathRuleAccessDropdown" value="default">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Default</div>
+                            <div class="menu" id="newPathRuleAccessList">
+                                <div class="item" data-value="default"><i class="ui yellow star icon"></i> Default</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <button class="ui basic button" onclick="addPathBasedAccessRule()">
+                            <i class="green add icon"></i> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
             <br>
             <!-- <button class="ui basic button" onclick="applyChange()"><i class="ui green check icon"></i> Apply Change</button> -->
             <br><br><br>
@@ -84,6 +124,9 @@
         </div>
         <script>
             let editingEndpoint = {};
+            let pathBasedRules = [];
+            let accessRuleList = [];
+
             if (window.location.hash.length > 1){
                 let payloadHash = window.location.hash.substr(1);
                 try{
@@ -100,6 +143,7 @@
                 $.get("/api/access/list", function(data){
                     if (data.error == undefined){
                         $("#accessRuleList").html("");
+                        $("#newPathRuleAccessList").html("");
                         data.forEach(function(rule){
                             let icon = `<i class="ui grey filter icon"></i>`;
                             if (rule.ID == "default"){
@@ -128,7 +172,9 @@
                                 ${rule.WhitelistEnabled?`<small><i class="ui green filter icon"></i> Whitelist Enabled</small>`:""}
                                 <div class="selected"><i class="ui large green check icon"></i></div>
                             </div>`);
+                            $("#newPathRuleAccessList").append(`<div class="item" data-value="${rule.ID}">${icon} ${rule.Name}</div>`);
                         });
+                        $("#newPathRuleAccessDropdown").parent().dropdown();
                         accessRuleList = data;
                         $(".dropdown").dropdown();
                         if (callback != undefined){
@@ -155,6 +201,11 @@
                             }
 
                             $(`.accessRule[ruleid=${currentAccessFilter}]`).addClass("active");
+
+                            if(data.PathBasedAccessRules){
+                                pathBasedRules = data.PathBasedAccessRules;
+                                renderPathBasedAccessRules();
+                            }
                         }
                     }
                 })
@@ -167,11 +218,11 @@
                 $(accessRuleObject).addClass('active');
 
                 //Updates 2025-06-10: Added auto save on change feature
-                applyChange();
+                applyChange("Access Rule Updated");
             }
 
-            
-            function applyChange(){
+
+            function applyChange(message){
                 let newAccessRuleID = $(".accessRule.active").attr("ruleid");
                 let targetEndpoint = editingEndpoint.ep;
                 $.cjax({
@@ -179,13 +230,14 @@
                     method: "POST",
                     data: {
                         id: newAccessRuleID,
-                        host: targetEndpoint
+                        host: targetEndpoint,
+                        pathBasedRules: JSON.stringify(pathBasedRules)
                     },
                     success: function(data){
                         if (data.error != undefined){
                             parent.msgbox(data.error, false);
                         }else{
-                            parent.msgbox("Access Rule Updated");
+                            parent.msgbox(message);
 
                             //Modify the parent list if exists
                             if (parent != undefined && parent.updateAccessRuleNameUnderHost){
@@ -204,7 +256,8 @@
                     method: "POST",
                     data: {
                         id: newAccessRuleID,
-                        host: targetEndpoint
+                        host: targetEndpoint,
+                        pathBasedRules: JSON.stringify(pathBasedRules)
                     },
                     success: function(data){
                         if (data.error != undefined){
@@ -220,6 +273,49 @@
                         }
                     }
                 })
+            }
+
+            function addPathBasedAccessRule() {
+                let path = $('#newPath').val().trim();
+                let accessRuleId = $('#newPathRuleAccessDropdown').val().trim();
+                if (path && accessRuleId) {
+                    pathBasedRules.push({ Path: path, RuleID: accessRuleId });
+                    renderPathBasedAccessRules();
+                    applyChange("Added path access");
+                    $('#newPath').val('');
+                    $('#newPathRuleAccessDropdown').dropdown('clear');
+
+                    $('#newPath').parent().removeClass("error")
+                } else {
+                    $('#newPath').parent().addClass("error")
+                }
+            }
+
+            function removePathBasedAccessRule(index) {
+                pathBasedRules.splice(index, 1);
+                renderPathBasedAccessRules();
+                applyChange("Path access removed");
+            }
+
+            function renderPathBasedAccessRules() {
+                let tableBody = $('#pathBasedAccessRulesTable');
+                tableBody.empty();
+                pathBasedRules.forEach((rule, index) => {
+                    const domain = editingEndpoint.ep
+                    let domainLink = `<a href="//${domain}${rule.Path}" target="_blank">${rule.Path}</a>`
+                    if (domain.includes("*")){
+                        domainLink = rule.Path;
+                    }
+
+                    let accessRule = accessRuleList.find(r => r.ID === rule.RuleID);
+                    let accessRuleName = accessRule ? accessRule.Name : 'N/A';
+                    let row = `<tr>
+                        <td>${domainLink}</td>
+                        <td>${accessRuleName}</td>
+                        <td><button class="ui basic mini circular icon button" onclick="removePathBasedAccessRule('${index}');"><i class="red trash icon"></i></button></td>
+                    </tr>`;
+                    tableBody.append(row);
+                });
             }
           
         </script>
