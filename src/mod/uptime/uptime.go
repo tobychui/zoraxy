@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -390,7 +391,12 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 		return 0, err
 	}
 
-	transport := &http.Transport{}
+	// Need to explicitly disable keep-alives and set a short idle connection timeout to avoid hanging connections
+	// See #1241 for details
+	transport := &http.Transport{
+		DisableKeepAlives: true,
+		IdleConnTimeout:   15 * time.Second,
+	}
 	if skipTLSVerification {
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		transport.DialTLS = func(network, addr string) (net.Conn, error) {
@@ -411,7 +417,6 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 
 	resp, err := client.Do(req)
 	if err != nil {
-
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
 		if strings.Contains(url, "https://") {
@@ -424,12 +429,12 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
 		}
 
-		req, _ := http.NewRequest("GET", rewriteURL, nil)
+		req, _ = http.NewRequest("GET", rewriteURL, nil)
 		req.Header = http.Header{
 			"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 		}
 
-		resp, err := client.Do(req)
+		resp, err = client.Do(req)
 		if err != nil {
 			if strings.Contains(err.Error(), "http: server gave HTTP response to HTTPS client") {
 				//Invalid downstream reverse proxy settings, but it is online
@@ -438,11 +443,10 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 			}
 			return 0, err
 		}
-		defer resp.Body.Close()
-		status_code := resp.StatusCode
-		return status_code, nil
 	}
 	defer resp.Body.Close()
+	// Drain the response body so OS close the connection with FIN instead of RST
+	io.Copy(io.Discard, resp.Body)
 	status_code := resp.StatusCode
 	return status_code, nil
 }
