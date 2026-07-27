@@ -35,6 +35,12 @@ func TestEnsureAbsoluteHTTPURL(t *testing.T) {
 			want:   "https://auth.example.com",
 		},
 		{
+			name:   "uppercase HTTPS scheme preserved",
+			raw:    "HTTPS://auth.example.com",
+			scheme: "http",
+			want:   "https://auth.example.com",
+		},
+		{
 			name:   "path on SSO host preserved",
 			raw:    "https://auth.example.com/login",
 			scheme: "https",
@@ -176,5 +182,51 @@ func TestSSORedirectWouldLoop(t *testing.T) {
 	}
 	if ssoRedirectWouldLoop("https://za.lan", req) {
 		t.Fatal("did not expect loop")
+	}
+}
+
+func TestRequestSchemeHonorsForwardedProto(t *testing.T) {
+	tests := []struct {
+		name  string
+		proto string
+		want  string
+	}{
+		{name: "plain http", want: "http"},
+		{name: "exact https", proto: "https", want: "https"},
+		{name: "uppercase HTTPS", proto: "HTTPS", want: "https"},
+		{name: "comma list takes first", proto: "https, http", want: "https"},
+		{name: "comma list http first", proto: "http, https", want: "http"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://docs.local/", nil)
+			req.Host = "docs.local"
+			if tt.proto != "" {
+				req.Header.Set("X-Forwarded-Proto", tt.proto)
+			}
+			got := requestScheme(req)
+			if got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildLoginRedirectURL_HostOnlyUsesRequestHTTP(t *testing.T) {
+	ar := &AuthRouter{
+		Options: &AuthRouterOptions{
+			SSORedirectURL: "za.lan",
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "http://docs.local/readme", nil)
+	req.Host = "docs.local"
+	// No X-Forwarded-Proto and no TLS -> http fallback must not force https.
+
+	got, err := ar.buildLoginRedirectURL(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(got, "http://za.lan?") {
+		t.Fatalf("expected http SSO host from request scheme, got %q", got)
 	}
 }

@@ -8,12 +8,28 @@ import (
 	"strings"
 )
 
-// requestScheme returns http or https for the incoming request, honoring X-Forwarded-Proto.
+// requestScheme returns http or https for the incoming request, honoring
+// X-Forwarded-Proto. The header is matched case-insensitively and only the
+// first value is used when proxies send a comma-separated list (e.g. "https, http").
 func requestScheme(r *http.Request) string {
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+	if r.TLS != nil {
 		return "https"
 	}
+	proto := r.Header.Get("X-Forwarded-Proto")
+	if proto != "" {
+		first := strings.TrimSpace(strings.Split(proto, ",")[0])
+		if strings.EqualFold(first, "https") {
+			return "https"
+		}
+	}
 	return "http"
+}
+
+// hasAbsoluteHTTPScheme reports whether raw already starts with http:// or
+// https://, ignoring scheme letter case (e.g. HTTPS://).
+func hasAbsoluteHTTPScheme(raw string) bool {
+	lower := strings.ToLower(raw)
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
 }
 
 // ensureAbsoluteHTTPURL makes sure raw is an absolute http(s) URL.
@@ -32,7 +48,7 @@ func ensureAbsoluteHTTPURL(raw, fallbackScheme string) (string, error) {
 		fallbackScheme = "https"
 	}
 
-	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+	if !hasAbsoluteHTTPScheme(raw) {
 		raw = fallbackScheme + "://" + strings.TrimLeft(raw, "/")
 	}
 
@@ -40,7 +56,7 @@ func ensureAbsoluteHTTPURL(raw, fallbackScheme string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if u.Scheme != "http" && u.Scheme != "https" {
+	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
 		return "", errors.New("URL scheme must be http or https")
 	}
 	if u.Host == "" {
