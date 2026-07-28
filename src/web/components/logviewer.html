@@ -155,35 +155,44 @@
     let logFilesMap = {}; // category -> [{Title, Filename, Filesize}]
 
     // --- Initialization ---
-    $(document).ready(function() {
-        initDropdowns();
-        populateLogFileDropdown();
+    // Use immediate invocation for SPA-loaded components (document.ready may have already fired)
+    $(function() {
+        setTimeout(function() {
+            initDropdowns();
+            populateLogFileDropdown();
+        }, 100); // Small delay ensures Semantic UI is fully initialized in the parent page
     });
 
     function initDropdowns() {
-        $('#logCategory').dropdown({
-            onChange: function(val) {
-                updateLogFileOptions(val);
-            }
-        });
-        $('#logFile').dropdown({
-            onChange: function(val) {
-                if (val) {
-                    currentFile = val;
-                    currentPage = 1;
-                    loadLogEntries();
+        try {
+            $('#logCategory').dropdown({
+                onChange: function(val) {
+                    updateLogFileOptions(val);
                 }
-            }
-        });
-        $('#filterMethod').dropdown();
-        $('#pageSizeSelect').dropdown();
+            });
+            $('#logFile').dropdown({
+                onChange: function(val) {
+                    if (val) {
+                        currentFile = val;
+                        currentPage = 1;
+                        loadLogEntries();
+                    }
+                }
+            });
+            $('#filterMethod').dropdown();
+            $('#pageSizeSelect').dropdown();
+        } catch(e) {
+            console.error('Failed to initialize dropdowns:', e);
+        }
     }
 
     // --- Log File Loading ---
     function populateLogFileDropdown() {
         $.get('/api/log/list', function(data) {
+            console.log('Log list API response:', data);
             if (data && data.error) {
                 console.error('Failed to load log list:', data.error);
+                showEmptyState(true);
                 return;
             }
             logFilesMap = data;
@@ -193,10 +202,10 @@
             }
             $('#logCategory').html('<option value="">-- Select Site --</option>' + categoryOptions);
             $('#logCategory').dropdown('refresh');
-            // Also populate flat file list for direct access
             updateLogFileOptions('');
         }).fail(function(err) {
             console.error('Failed to load log list:', err);
+            showEmptyState(true);
         });
     }
 
@@ -258,18 +267,25 @@
         if (currentFilters.timeStart) params.time_start = currentFilters.timeStart;
         if (currentFilters.timeEnd) params.time_end = currentFilters.timeEnd;
 
+        console.log('Loading log entries with params:', params);
         $.get('/api/log/entries', params, function(data) {
             showLoading(false);
+            console.log('Log entries API response:', data);
             if (data && data.error) {
                 console.error('Failed to load entries:', data.error);
                 showEmptyState(true);
                 return;
             }
+            if (!data || !data.entries) {
+                console.error('Invalid response format:', data);
+                showEmptyState(true);
+                return;
+            }
             renderTable(data);
             renderPagination(data);
-        }).fail(function(err) {
+        }).fail(function(jqXHR, textStatus, errThrown) {
             showLoading(false);
-            console.error('Failed to load entries:', err);
+            console.error('Failed to load entries:', textStatus, errThrown, jqXHR.responseText);
             showEmptyState(true);
         });
     }
