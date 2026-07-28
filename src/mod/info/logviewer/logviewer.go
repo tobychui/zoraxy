@@ -365,6 +365,55 @@ func (v *Viewer) isMethodKeyword(part string) bool {
 	return false
 }
 
+// parseLogLine parses a single access log line into a LogEntry struct.
+// Expected format: [timestamp] [router:type] [origin:host] [client: IP] [useragent: UA] METHOD PATH STATUS
+func (v *Viewer) parseLogLine(line string) (*LogEntry, error) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return nil, errors.New("empty line")
+	}
+
+	parts := strings.Split(line, "]")
+
+	entry := &LogEntry{}
+
+	// Extract timestamp from the first part (strip leading '[')
+	timestamp := strings.TrimSpace(parts[0])
+	timestamp = strings.TrimPrefix(timestamp, "[")
+	entry.Timestamp = timestamp
+
+	// Iterate over all parts to extract bracketed metadata and the trailing request fields
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		switch {
+		case strings.HasPrefix(part, "[router:"):
+			entry.RouterType = strings.TrimPrefix(part, "[router:")
+		case strings.HasPrefix(part, "[origin:"):
+			entry.Origin = strings.TrimPrefix(part, "[origin:")
+		case strings.HasPrefix(part, "[client:"):
+			entry.ClientIP = strings.TrimPrefix(part, "[client:")
+		case strings.HasPrefix(part, "[useragent:"):
+			entry.UserAgent = strings.TrimPrefix(part, "[useragent:")
+		case v.isMethodKeyword(part):
+			// This is the trailing part containing method, path and status code
+			fields := strings.Fields(part)
+			if len(fields) >= 1 {
+				entry.Method = fields[0]
+			}
+			if len(fields) >= 2 {
+				entry.Path = fields[1]
+			}
+			if len(fields) >= 3 {
+				if sc, err := strconv.Atoi(fields[2]); err == nil {
+					entry.StatusCode = sc
+				}
+			}
+		}
+	}
+
+	return entry, nil
+}
+
 func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 	logFilepath := v.senatizeLogFilenameInput(filename)
 	if utils.FileExists(logFilepath) {
