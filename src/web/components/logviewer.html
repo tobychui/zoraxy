@@ -179,6 +179,15 @@
                     }
                 }
             });
+            // Fallback: native change event in case Semantic UI onChange does not fire
+            $('#logFile').off('change.logviewer').on('change.logviewer', function() {
+                var val = $(this).val();
+                if (val && val !== currentFile) {
+                    currentFile = val;
+                    currentPage = 1;
+                    loadLogEntries();
+                }
+            });
             $('#filterMethod').dropdown();
             $('#pageSizeSelect').dropdown();
         } catch(e) {
