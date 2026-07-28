@@ -47,6 +47,33 @@ type LogFile struct {
 	Filesize int64
 }
 
+// LogEntry represents a single parsed log line from an access log file
+type LogEntry struct {
+	Timestamp  string `json:"timestamp"`
+	RouterType string `json:"router_type"`
+	Origin     string `json:"origin"`
+	ClientIP   string `json:"client_ip"`
+	UserAgent  string `json:"user_agent"`
+	Method     string `json:"method"`
+	Path       string `json:"path"`
+	StatusCode int    `json:"status_code"`
+}
+
+// FilterParams holds all filtering, sorting and pagination parameters for log queries
+type FilterParams struct {
+	FilterIP     string
+	FilterPath   string
+	FilterStatus string
+	FilterMethod string
+	FilterOrigin string
+	TimeStart    string
+	TimeEnd      string
+	SortField    string
+	SortOrder    string
+	Page         int
+	PageSize     int
+}
+
 func NewLogViewer(option *ViewerOption) *Viewer {
 	return &Viewer{option: option}
 }
