@@ -414,6 +414,82 @@ func (v *Viewer) parseLogLine(line string) (*LogEntry, error) {
 	return entry, nil
 }
 
+// filterAndSortEntries applies filtering, sorting and pagination to a slice of LogEntry.
+// It returns the paginated slice and the total count before pagination.
+func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry, int) {
+	// Step 1: Filter
+	filtered := make([]*LogEntry, 0, len(entries))
+	for _, entry := range entries {
+		if params.FilterIP != "" && !strings.Contains(entry.ClientIP, params.FilterIP) {
+			continue
+		}
+		if params.FilterPath != "" && !strings.Contains(entry.Path, params.FilterPath) {
+			continue
+		}
+		if params.FilterStatus != "" {
+			statusStr := strconv.Itoa(entry.StatusCode)
+			if statusStr != params.FilterStatus {
+				continue
+			}
+		}
+		if params.FilterMethod != "" && !strings.EqualFold(entry.Method, params.FilterMethod) {
+			continue
+		}
+		if params.FilterOrigin != "" && !strings.Contains(entry.Origin, params.FilterOrigin) {
+			continue
+		}
+		if params.TimeStart != "" && entry.Timestamp < params.TimeStart {
+			continue
+		}
+		if params.TimeEnd != "" && entry.Timestamp > params.TimeEnd {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+
+	// Step 2: Sort
+	sort.Slice(filtered, func(i, j int) bool {
+		var less bool
+		switch params.SortField {
+		case "origin":
+			less = filtered[i].Origin < filtered[j].Origin
+		case "client_ip":
+			less = filtered[i].ClientIP < filtered[j].ClientIP
+		case "method":
+			less = filtered[i].Method < filtered[j].Method
+		case "path":
+			less = filtered[i].Path < filtered[j].Path
+		case "status_code":
+			less = filtered[i].StatusCode < filtered[j].StatusCode
+		case "user_agent":
+			less = filtered[i].UserAgent < filtered[j].UserAgent
+		default:
+			less = filtered[i].Timestamp < filtered[j].Timestamp
+		}
+		if params.SortOrder == "desc" {
+			return !less
+		}
+		return less
+	})
+
+	total := len(filtered)
+
+	// Step 3: Paginate
+	if params.Page < 1 {
+		params.Page = 1
+	}
+	start := (params.Page - 1) * params.PageSize
+	if start >= len(filtered) {
+		return []*LogEntry{}, total
+	}
+	end := start + params.PageSize
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
+	return filtered[start:end], total
+}
+
 func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 	logFilepath := v.senatizeLogFilenameInput(filename)
 	if utils.FileExists(logFilepath) {
