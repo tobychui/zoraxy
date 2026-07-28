@@ -475,13 +475,13 @@ func (v *Viewer) parseLogLine(line string) (*LogEntry, error) {
 		part = strings.TrimSpace(part)
 		switch {
 		case strings.HasPrefix(part, "[router:"):
-			entry.RouterType = strings.TrimPrefix(part, "[router:")
+			entry.RouterType = strings.TrimSpace(strings.TrimPrefix(part, "[router:"))
 		case strings.HasPrefix(part, "[origin:"):
-			entry.Origin = strings.TrimPrefix(part, "[origin:")
+			entry.Origin = strings.TrimSpace(strings.TrimPrefix(part, "[origin:"))
 		case strings.HasPrefix(part, "[client:"):
-			entry.ClientIP = strings.TrimPrefix(part, "[client:")
+			entry.ClientIP = strings.TrimSpace(strings.TrimPrefix(part, "[client:"))
 		case strings.HasPrefix(part, "[useragent:"):
-			entry.UserAgent = strings.TrimPrefix(part, "[useragent:")
+			entry.UserAgent = strings.TrimSpace(strings.TrimPrefix(part, "[useragent:"))
 		case v.isMethodKeyword(part):
 			// This is the trailing part containing method, path and status code
 			fields := strings.Fields(part)
