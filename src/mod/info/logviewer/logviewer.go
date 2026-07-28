@@ -226,6 +226,94 @@ func (v *Viewer) HandleLogErrorSummary(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+// HandleReadLogEntries returns parsed log entries as structured JSON with filtering, sorting and pagination.
+// Query parameters: file (required), page, pageSize, sortField, sortOrder,
+// filter_ip, filter_path, filter_status, filter_method, filter_origin, time_start, time_end
+func (v *Viewer) HandleReadLogEntries(w http.ResponseWriter, r *http.Request) {
+	filename, err := utils.GetPara(r, "file")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid filename given")
+		return
+	}
+
+	// Parse pagination params with defaults
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+		page = p
+	}
+	pageSize := 50
+	if ps, err := strconv.Atoi(r.URL.Query().Get("pageSize")); err == nil && ps > 0 && ps <= 500 {
+		pageSize = ps
+	}
+
+	// Parse sort params with defaults
+	sortField := r.URL.Query().Get("sortField")
+	if sortField == "" {
+		sortField = "timestamp"
+	}
+	sortOrder := r.URL.Query().Get("sortOrder")
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	// Build FilterParams
+	params := FilterParams{
+		FilterIP:     r.URL.Query().Get("filter_ip"),
+		FilterPath:   r.URL.Query().Get("filter_path"),
+		FilterStatus: r.URL.Query().Get("filter_status"),
+		FilterMethod: r.URL.Query().Get("filter_method"),
+		FilterOrigin: r.URL.Query().Get("filter_origin"),
+		TimeStart:    r.URL.Query().Get("time_start"),
+		TimeEnd:      r.URL.Query().Get("time_end"),
+		SortField:    sortField,
+		SortOrder:    sortOrder,
+		Page:         page,
+		PageSize:     pageSize,
+	}
+
+	// Load log file content
+	content, err := v.LoadLogFile(strings.TrimSpace(filepath.Base(filename)))
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	// Parse all router log lines into structured entries
+	lines := strings.Split(content, "\n")
+	entries := make([]*LogEntry, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.Contains(line, "[router:") {
+			continue
+		}
+		entry, err := v.parseLogLine(line)
+		if err != nil {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+
+	// Apply filtering, sorting and pagination
+	pageEntries, total := filterAndSortEntries(entries, params)
+
+	// Calculate total pages
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + pageSize - 1) / pageSize
+	}
+
+	resp := map[string]interface{}{
+		"entries":    pageEntries,
+		"total":      total,
+		"page":       page,
+		"pageSize":   pageSize,
+		"totalPages": totalPages,
+	}
+
+	js, _ := json.Marshal(resp)
+	utils.SendJSONResponse(w, string(js))
+}
+
 /*
 	Log Access Functions
 */
