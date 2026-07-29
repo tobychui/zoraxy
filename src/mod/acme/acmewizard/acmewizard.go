@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -64,19 +64,19 @@ func HandleGuidedStepCheck(w http.ResponseWriter, r *http.Request) {
 
 		domain = strings.TrimSpace(domain)
 
-		//Check if the domain is reachable
+		// Check if the domain is reachable
 		reachable := isDomainReachable(domain)
 		if !reachable {
 			utils.SendErrorResponse(w, "domain is not reachable")
 			return
 		}
 
-		//Check http is setup correctly
+		// Check http is setup correctly
 		httpServerReachable := isHTTPServerAvailable(domain)
 		js, _ := json.Marshal(httpServerReachable)
 		utils.SendJSONResponse(w, string(js))
 	} else if stepNo == 10 {
-		//Resolve public Ip address for tour
+		// Resolve public Ip address for tour
 		publicIp, err := getPublicIPAddress()
 		if err != nil {
 			utils.SendErrorResponse(w, err.Error())
@@ -122,7 +122,7 @@ func getPublicIPAddress() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	ip, err := ioutil.ReadAll(resp.Body)
+	ip, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
