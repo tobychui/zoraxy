@@ -370,6 +370,13 @@ func ReverseProxyBulkApplyVdirByForwardAuth(w http.ResponseWriter, r *http.Reque
 			SaveReverseProxyConfig(activatedProxyEndpoint)
 			created = append(created, ep.RootOrMatchingDomain)
 		case dynamicproxy.BulkVdirRemove:
+			// Re-fetch right before deletion: if the vdir was edited concurrently and
+			// no longer points at the SSO endpoint, treat it as a conflict instead.
+			current := ep.GetVirtualDirectoryRuleByMatchingPath(matchingPath)
+			if current == nil || !current.HasSameTarget(domain, reqTLS, skipValid) {
+				conflicts = append(conflicts, ep.RootOrMatchingDomain)
+				continue
+			}
 			if removeErr := ep.RemoveVirtualDirectoryRuleByMatchingPath(matchingPath); removeErr != nil {
 				failed = append(failed, ep.RootOrMatchingDomain)
 				continue
