@@ -244,7 +244,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 		dns01.SetDefaultClient(dns01.NewClient(opts))
 
-		err = client.Challenge.SetDNS01Provider(provider, dns01.DisableAuthoritativeNssPropagationRequirement())
+		err = client.Challenge.SetDNS01Provider(provider, dns01.DisableRecursiveNSsPropagationRequirement())
 		if err != nil {
 			a.Logf("Failed to resolve DNS01 Provider", err)
 			return false, err
