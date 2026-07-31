@@ -12,16 +12,15 @@ func TestACMEDNSConfigStructureReflector(t *testing.T) {
 	providers := []string{
 		"gandi",
 		"cloudflare",
-		"azure",
+		"azuredns",
 	}
 
 	for _, provider := range providers {
-		strcture, err := acmedns.GetProviderConfigStructure(provider)
+		structure, err := acmedns.GetProviderConfigStructure(provider)
 		if err != nil {
-			panic(err)
+			t.Fatalf("%s: %v", provider, err)
 		}
 
-		fmt.Println(strcture)
+		fmt.Println(structure)
 	}
-
 }
