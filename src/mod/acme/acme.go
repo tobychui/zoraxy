@@ -2,7 +2,6 @@
 package acme
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -20,13 +19,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-acme/lego/v5/acme"
-	"github.com/go-acme/lego/v5/certcrypto"
-	"github.com/go-acme/lego/v5/certificate"
-	"github.com/go-acme/lego/v5/challenge/dns01"
-	"github.com/go-acme/lego/v5/challenge/http01"
-	"github.com/go-acme/lego/v5/lego"
-	"github.com/go-acme/lego/v5/registration"
+	"github.com/go-acme/lego/v4/certcrypto"
+	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v4/challenge/dns01"
+	"github.com/go-acme/lego/v4/challenge/http01"
+	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/registration"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -101,8 +99,6 @@ func (a *ACMEHandler) writeFileWithMode(filename string, data []byte, mode os.Fi
 
 // ObtainCert obtains a certificate for the specified domains.
 func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string) (bool, error) {
-	ctx := context.TODO()
-
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
 
 	// Resolve the CA directory URL before creating an account or config,
@@ -179,6 +175,8 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		}
 	}
 
+	config.Certificate.KeyType = certcrypto.RSA2048
+
 	client, err := lego.NewClient(config)
 	if err != nil {
 		a.Logf("Failed to spawn new ACME client from current config", err)
@@ -232,19 +230,13 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			return false, err
 		}
 
-		opts := &dns01.Options{}
-
 		if len(dnsNameservers) > 0 && dnsNameservers[0] != "" {
 			a.Logf("Using DNS servers: "+strings.Join(dnsNameservers, ", "), nil)
-			opts.RecursiveNameservers = dnsNameservers
+			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(dnsNameservers))
 		} else {
 			// Use default DNS-01 nameservers if dnsServers is empty
-			opts.RecursiveNameservers = defaultNameservers
+			err = client.Challenge.SetDNS01Provider(provider, dns01.AddRecursiveNameservers(defaultNameservers))
 		}
-
-		dns01.SetDefaultClient(dns01.NewClient(opts))
-
-		err = client.Challenge.SetDNS01Provider(provider, dns01.DisableAuthoritativeNssPropagationRequirement())
 		if err != nil {
 			a.Logf("Failed to resolve DNS01 Provider", err)
 			return false, err
@@ -265,13 +257,13 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			return false, err
 		}
 	*/
-	var reg *acme.ExtendedAccount
+	var reg *registration.Resource
 	// New users will need to register. If we reused an account loaded from
 	// disk, it is already registered - registering again would count against
 	// the CA's "new registrations per IP" rate limit, so skip it entirely.
 	if accountLoaded {
 		reg = adminUser.Registration
-	} else if client.GetServerMetadata().ExternalAccountRequired {
+	} else if client.GetExternalAccountRequired() {
 		a.Logf("External Account Required for this ACME Provider", nil)
 		// IF KID and HmacEncoded is overidden
 
@@ -300,7 +292,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 		a.Logf("EAB Credential retrieved: "+kid+" / "+hmacEncoded, nil)
 		if kid != "" && hmacEncoded != "" {
-			reg, err = client.Registration.RegisterWithExternalAccountBinding(ctx, registration.RegisterEABOptions{
+			reg, err = client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
 				TermsOfServiceAgreed: true,
 				Kid:                  kid,
 				HmacEncoded:          hmacEncoded,
@@ -310,9 +302,9 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			a.Logf("Register with external account binder failed", err)
 			return false, err
 		}
-		// return false, errors.New("External Account Required for this ACME Provider.")
+		//return false, errors.New("External Account Required for this ACME Provider.")
 	} else {
-		reg, err = client.Registration.Register(ctx, registration.RegisterOptions{TermsOfServiceAgreed: true})
+		reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
 		if err != nil {
 			a.Logf("Unable to register client", err)
 			return false, err
@@ -334,10 +326,8 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	request := certificate.ObtainRequest{
 		Domains: domains,
 		Bundle:  true,
-		KeyType: certcrypto.RSA2048,
 	}
-
-	certificates, err := client.Certificate.Obtain(ctx, request)
+	certificates, err := client.Certificate.Obtain(request)
 	if err != nil {
 		a.Logf("Obtain certificate failed", err)
 		return false, err
@@ -607,7 +597,7 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 func jsonEscape(i string) string {
 	b, err := json.Marshal(i)
 	if err != nil {
-		// log.Println("Unable to escape json data: " + err.Error())
+		//log.Println("Unable to escape json data: " + err.Error())
 		return i
 	}
 	s := string(b)
