@@ -247,6 +247,21 @@
         }
         $('#logFile').html(fileOptions);
         $('#logFile').dropdown('refresh');
+        // Keep UI and state in sync after rebuilding options.
+        let hasCurrent = false;
+        $('#logFile option').each(function() {
+            if (this.value === currentFile) {
+                hasCurrent = true;
+                return false;
+            }
+        });
+        if (currentFile && hasCurrent) {
+            $('#logFile').dropdown('set selected', currentFile);
+        } else {
+            currentFile = '';
+            $('#logFile').dropdown('clear');
+            showEmptyState(true);
+        }
     }
 
     // --- Data Loading ---
