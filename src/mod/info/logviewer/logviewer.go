@@ -554,22 +554,33 @@ func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry
 
 	// Step 2: Sort
 	sort.Slice(filtered, func(i, j int) bool {
-		var less bool
+		var less, equal bool
 		switch params.SortField {
 		case "origin":
 			less = filtered[i].Origin < filtered[j].Origin
+			equal = filtered[i].Origin == filtered[j].Origin
 		case "client_ip":
 			less = filtered[i].ClientIP < filtered[j].ClientIP
+			equal = filtered[i].ClientIP == filtered[j].ClientIP
 		case "method":
 			less = filtered[i].Method < filtered[j].Method
+			equal = filtered[i].Method == filtered[j].Method
 		case "path":
 			less = filtered[i].Path < filtered[j].Path
+			equal = filtered[i].Path == filtered[j].Path
 		case "status_code":
 			less = filtered[i].StatusCode < filtered[j].StatusCode
+			equal = filtered[i].StatusCode == filtered[j].StatusCode
 		case "user_agent":
 			less = filtered[i].UserAgent < filtered[j].UserAgent
+			equal = filtered[i].UserAgent == filtered[j].UserAgent
 		default:
 			less = filtered[i].Timestamp < filtered[j].Timestamp
+			equal = filtered[i].Timestamp == filtered[j].Timestamp
+		}
+
+		if equal {
+			return false
 		}
 		if params.SortOrder == "desc" {
 			return !less
