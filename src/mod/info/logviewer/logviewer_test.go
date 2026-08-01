@@ -11,9 +11,8 @@ const logLineError = "[2026-07-28 14:30:01.654321] [router:proxy] [origin:exampl
 const logLineEmpty = ""
 const logLineNoRouter = "[2026-07-28 12:00:00.000000] [system:startup] [origin:localhost] Service started"
 
-// parseLogLine is a method on *Viewer, tested indirectly via filterAndSortEntries.
-// The tests below validate filterAndSortEntries directly.
-
+// parseLogLine is a method on *Viewer.
+// The tests below validate both filterAndSortEntries and parseLogLine behavior.
 // --- filterAndSortEntries tests ---
 
 func makeEntries() []*LogEntry {
