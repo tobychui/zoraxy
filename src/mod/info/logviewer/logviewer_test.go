@@ -1,6 +1,10 @@
 package logviewer
 
 import (
+	"compress/gzip"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -463,5 +467,138 @@ func TestParseLogLine_MinimalValidLine(t *testing.T) {
 	}
 	if entry.Method != "GET" || entry.Path != "/" || entry.StatusCode != 200 {
 		t.Fatalf("Minimal line parsed incorrectly: method=%s path=%s status=%d", entry.Method, entry.Path, entry.StatusCode)
+	}
+}
+
+// --- matchesFilter tests ---
+
+func TestMatchesFilter_NoFilters(t *testing.T) {
+	entry := &LogEntry{Timestamp: "2026-07-28 14:30:00.123456", ClientIP: "192.168.1.100", Method: "GET", Path: "/api", Origin: "example.com", StatusCode: 200}
+	if !matchesFilter(entry, FilterParams{}) {
+		t.Fatalf("Expected no-filter match, got false")
+	}
+}
+
+func TestMatchesFilter_ByIP(t *testing.T) {
+	entry := &LogEntry{ClientIP: "192.168.1.100"}
+	if !matchesFilter(entry, FilterParams{FilterIP: "192.168"}) {
+		t.Fatalf("Expected IP match, got false")
+	}
+	if matchesFilter(entry, FilterParams{FilterIP: "10.0.0"}) {
+		t.Fatalf("Expected IP mismatch, got true")
+	}
+}
+
+func TestMatchesFilter_ByStatus(t *testing.T) {
+	entry := &LogEntry{StatusCode: 403}
+	if !matchesFilter(entry, FilterParams{FilterStatus: "403"}) {
+		t.Fatalf("Expected status match, got false")
+	}
+	if matchesFilter(entry, FilterParams{FilterStatus: "200"}) {
+		t.Fatalf("Expected status mismatch, got true")
+	}
+}
+
+func TestMatchesFilter_ByMethodCaseInsensitive(t *testing.T) {
+	entry := &LogEntry{Method: "get"}
+	if !matchesFilter(entry, FilterParams{FilterMethod: "GET"}) {
+		t.Fatalf("Expected method match (case-insensitive), got false")
+	}
+}
+
+func TestMatchesFilter_TimeEndInclusive(t *testing.T) {
+	entry := &LogEntry{Timestamp: "2026-07-28 14:30:04.000000"}
+	if !matchesFilter(entry, FilterParams{TimeEnd: "2026-07-28 14:30:04"}) {
+		t.Fatalf("Expected entry at the end second to be included, got false")
+	}
+	entryAfter := &LogEntry{Timestamp: "2026-07-28 14:30:05.000000"}
+	if matchesFilter(entryAfter, FilterParams{TimeEnd: "2026-07-28 14:30:04"}) {
+		t.Fatalf("Expected entry after the end second to be excluded, got true")
+	}
+}
+
+// --- forEachLogLine streaming tests ---
+
+func TestForEachLogLine_ReadsAllLines(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "access.log")
+	lines := []string{"line one", "line two", "line three"}
+	if err := os.WriteFile(logPath, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("Failed to write temp log: %v", err)
+	}
+
+	v := newTestViewer()
+	got := []string{}
+	err := v.forEachLogLine(logPath, func(line string) bool {
+		got = append(got, line)
+		return true
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(got) != len(lines) {
+		t.Fatalf("Expected %d lines, got %d", len(lines), len(got))
+	}
+	for i := range lines {
+		if got[i] != lines[i] {
+			t.Fatalf("Line %d mismatch: got %q, want %q", i, got[i], lines[i])
+		}
+	}
+}
+
+func TestForEachLogLine_EarlyStop(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "access.log")
+	if err := os.WriteFile(logPath, []byte("a\nb\nc\nd\n"), 0644); err != nil {
+		t.Fatalf("Failed to write temp log: %v", err)
+	}
+
+	v := newTestViewer()
+	count := 0
+	err := v.forEachLogLine(logPath, func(line string) bool {
+		count++
+		return count < 2 // stop after the second line
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("Expected early stop after 2 lines, got %d", count)
+	}
+}
+
+func TestForEachLogLine_Gzip(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "access.log.gz")
+	f, err := os.Create(logPath)
+	if err != nil {
+		t.Fatalf("Failed to create temp log: %v", err)
+	}
+	gz := gzip.NewWriter(f)
+	if _, err := gz.Write([]byte("compressed line 1\ncompressed line 2\n")); err != nil {
+		t.Fatalf("Failed to write gzip content: %v", err)
+	}
+	gz.Close()
+	f.Close()
+
+	v := newTestViewer()
+	got := []string{}
+	err = v.forEachLogLine(logPath, func(line string) bool {
+		got = append(got, line)
+		return true
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(got) != 2 || got[0] != "compressed line 1" || got[1] != "compressed line 2" {
+		t.Fatalf("Unexpected gzip lines: %v", got)
+	}
+}
+
+func TestForEachLogLine_MissingFile(t *testing.T) {
+	v := newTestViewer()
+	err := v.forEachLogLine("/nonexistent/path/access.log", func(line string) bool { return true })
+	if err == nil {
+		t.Fatalf("Expected error for missing file, got nil")
 	}
 }
