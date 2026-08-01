@@ -272,7 +272,12 @@ func (v *Viewer) HandleReadLogEntries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load log file content
-	content, err := v.LoadLogFile(strings.TrimSpace(filepath.Base(filename)))
+ 	safeFilename := strings.TrimSpace(filepath.Base(filename))
+ 	if safeFilename == "" || safeFilename == "." || filepath.IsAbs(safeFilename) || strings.ContainsAny(safeFilename, `/\\`) {
+ 		utils.SendErrorResponse(w, "invalid filename given")
+ 		return
+ 	}
+ 	content, err := v.LoadLogFile(safeFilename)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
