@@ -2,6 +2,7 @@ package logviewer
 
 import (
 	"archive/zip"
+	"bufio"
 	"compress/gzip"
 	"encoding/json"
 	"errors"
@@ -73,6 +74,20 @@ type FilterParams struct {
 	Page         int
 	PageSize     int
 }
+
+// Resource limits applied when serving log entries. These bound memory and CPU
+// usage for very large log files, especially when the UI polls this endpoint on
+// an Auto Refresh timer.
+const (
+	// maxLogFileBytes caps the number of bytes read from an uncompressed log
+	// file per request. Files larger than this are tail-truncated so only the
+	// most recent entries are processed, preventing OOM on multi-GB logs.
+	maxLogFileBytes = 64 * 1024 * 1024 // 64 MB
+
+	// maxLogLinesPerRequest caps the number of log lines parsed per request.
+	// This bounds the CPU cost of repeated Auto Refresh polling.
+	maxLogLinesPerRequest = 1000000
+)
 
 func NewLogViewer(option *ViewerOption) *Viewer {
 	return &Viewer{option: option}
@@ -271,40 +286,59 @@ func (v *Viewer) HandleReadLogEntries(w http.ResponseWriter, r *http.Request) {
 		PageSize:     pageSize,
 	}
 
-	// Load log file content
+	// Stream the log file line by line, parsing router entries and applying
+	// filters on the fly. Only entries that pass the filters are retained for
+	// sorting, so memory stays bounded even for very large logs. Files larger
+	// than maxLogFileBytes are tail-truncated and parsing stops after
+	// maxLogLinesPerRequest lines, protecting against OOM / CPU hotspots when
+	// Auto Refresh polls this endpoint repeatedly.
 	safeFilename := strings.TrimSpace(filepath.Base(filename))
 	if safeFilename == "" || safeFilename == "." || filepath.IsAbs(safeFilename) || strings.ContainsAny(safeFilename, `/\\`) {
 		utils.SendErrorResponse(w, "invalid filename given")
 		return
 	}
-	content, err := v.LoadLogFile(safeFilename)
+	logFilepath := v.senatizeLogFilenameInput(safeFilename)
+	if !utils.FileExists(logFilepath) {
+		utils.SendErrorResponse(w, "log file not found")
+		return
+	}
+
+	entries := make([]*LogEntry, 0, 1024)
+	err = v.forEachLogLine(logFilepath, func(line string) bool {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.Contains(line, "[router:") {
+			return true
+		}
+		entry, perr := v.parseLogLine(line)
+		if perr != nil {
+			return true
+		}
+		if matchesFilter(entry, params) {
+			entries = append(entries, entry)
+		}
+		return true
+	})
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
 
-	// Parse all router log lines into structured entries
-	lines := strings.Split(content, "\n")
-	entries := make([]*LogEntry, 0, len(lines))
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || !strings.Contains(line, "[router:") {
-			continue
-		}
-		entry, err := v.parseLogLine(line)
-		if err != nil {
-			continue
-		}
-		entries = append(entries, entry)
-	}
+	// Sort the filtered entries, then paginate
+	sortEntries(entries, params)
+	total := len(entries)
 
-	// Apply filtering, sorting and pagination
-	pageEntries, total := filterAndSortEntries(entries, params)
-
-	// Calculate total pages
 	totalPages := 0
 	if total > 0 {
 		totalPages = (total + pageSize - 1) / pageSize
+	}
+
+	pageEntries := []*LogEntry{}
+	if start := (page - 1) * pageSize; start < total {
+		end := start + pageSize
+		if end > total {
+			end = total
+		}
+		pageEntries = entries[start:end]
 	}
 
 	resp := map[string]interface{}{
@@ -445,6 +479,72 @@ func (v *Viewer) LoadLogFile(filename string) (string, error) {
 	} else {
 		return "", errors.New("log file not found")
 	}
+}
+
+// forEachLogLine streams the lines of a log file (transparently decompressing
+// .gz and legacy zip files) without loading the whole file into memory. It
+// invokes fn for each line and stops early when fn returns false. Very large
+// uncompressed files are tail-truncated to maxLogFileBytes and processing stops
+// after maxLogLinesPerRequest lines to bound memory and CPU usage.
+func (v *Viewer) forEachLogLine(logFilepath string, fn func(line string) bool) error {
+	file, err := os.Open(logFilepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var reader io.Reader = file
+
+	if strings.HasSuffix(logFilepath, ".gz") {
+		// Compressed logs are streamed in full (gzip cannot be tail-seeked); the
+		// line budget below still bounds the work performed per request.
+		gzipReader, err := gzip.NewReader(file)
+		if err != nil {
+			// Older logs may use zip compression despite the .gz extension.
+			zipReader, zerr := zip.OpenReader(logFilepath)
+			if zerr != nil {
+				return err
+			}
+			defer zipReader.Close()
+			if len(zipReader.File) == 0 {
+				return errors.New("zip file is empty")
+			}
+			rc, oerr := zipReader.File[0].Open()
+			if oerr != nil {
+				return oerr
+			}
+			defer rc.Close()
+			reader = rc
+		} else {
+			defer gzipReader.Close()
+			reader = gzipReader
+		}
+	} else if st, err := file.Stat(); err == nil && st.Size() > maxLogFileBytes {
+		// Tail-truncate very large uncompressed files: only read the last
+		// maxLogFileBytes (the most recent entries).
+		if _, err := file.Seek(-maxLogFileBytes, io.SeekEnd); err != nil {
+			return err
+		}
+	}
+
+	// Allow long lines (long URLs / user agents) without blowing up memory.
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+
+	linesProcessed := 0
+	for scanner.Scan() {
+		linesProcessed++
+		if linesProcessed > maxLogLinesPerRequest {
+			return nil
+		}
+		if !fn(scanner.Text()) {
+			return nil
+		}
+	}
+	if err := scanner.Err(); err != nil && err != bufio.ErrTooLong {
+		return err
+	}
+	return nil
 }
 
 func (v *Viewer) isMethodKeyword(part string) bool {
