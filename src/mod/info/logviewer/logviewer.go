@@ -526,10 +526,22 @@ func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry
 		if params.FilterOrigin != "" && !strings.Contains(entry.Origin, params.FilterOrigin) {
 			continue
 		}
-		if params.TimeStart != "" && entry.Timestamp < params.TimeStart {
+ 		ts := entry.Timestamp
+ 		if len(ts) == 19 {
+ 			ts += ".000000"
+ 		}
+ 		timeStart := params.TimeStart
+ 		if len(timeStart) == 19 {
+ 			timeStart += ".000000"
+ 		}
+ 		timeEnd := params.TimeEnd
+ 		if len(timeEnd) == 19 {
+ 			timeEnd += ".999999"
+ 		}
+ 		if timeStart != "" && ts < timeStart {
 			continue
 		}
-		if params.TimeEnd != "" && entry.Timestamp > params.TimeEnd {
+ 		if timeEnd != "" && ts > timeEnd {
 			continue
 		}
 		filtered = append(filtered, entry)
