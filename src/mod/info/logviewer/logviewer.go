@@ -272,12 +272,12 @@ func (v *Viewer) HandleReadLogEntries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load log file content
- 	safeFilename := strings.TrimSpace(filepath.Base(filename))
- 	if safeFilename == "" || safeFilename == "." || filepath.IsAbs(safeFilename) || strings.ContainsAny(safeFilename, `/\\`) {
- 		utils.SendErrorResponse(w, "invalid filename given")
- 		return
- 	}
- 	content, err := v.LoadLogFile(safeFilename)
+	safeFilename := strings.TrimSpace(filepath.Base(filename))
+	if safeFilename == "" || safeFilename == "." || filepath.IsAbs(safeFilename) || strings.ContainsAny(safeFilename, `/\\`) {
+		utils.SendErrorResponse(w, "invalid filename given")
+		return
+	}
+	content, err := v.LoadLogFile(safeFilename)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -507,76 +507,73 @@ func (v *Viewer) parseLogLine(line string) (*LogEntry, error) {
 	return entry, nil
 }
 
-// filterAndSortEntries applies filtering, sorting and pagination to a slice of LogEntry.
-// It returns the paginated slice and the total count before pagination.
-func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry, int) {
-	// Step 1: Filter
-	filtered := make([]*LogEntry, 0, len(entries))
-	for _, entry := range entries {
-		if params.FilterIP != "" && !strings.Contains(entry.ClientIP, params.FilterIP) {
-			continue
-		}
-		if params.FilterPath != "" && !strings.Contains(entry.Path, params.FilterPath) {
-			continue
-		}
-		if params.FilterStatus != "" {
-			statusStr := strconv.Itoa(entry.StatusCode)
-			if statusStr != params.FilterStatus {
-				continue
-			}
-		}
-		if params.FilterMethod != "" && !strings.EqualFold(entry.Method, params.FilterMethod) {
-			continue
-		}
-		if params.FilterOrigin != "" && !strings.Contains(entry.Origin, params.FilterOrigin) {
-			continue
-		}
- 		ts := entry.Timestamp
- 		if len(ts) == 19 {
- 			ts += ".000000"
- 		}
- 		timeStart := params.TimeStart
- 		if len(timeStart) == 19 {
- 			timeStart += ".000000"
- 		}
- 		timeEnd := params.TimeEnd
- 		if len(timeEnd) == 19 {
- 			timeEnd += ".999999"
- 		}
- 		if timeStart != "" && ts < timeStart {
-			continue
-		}
- 		if timeEnd != "" && ts > timeEnd {
-			continue
-		}
-		filtered = append(filtered, entry)
+// matchesFilter reports whether an entry passes all active filters in params.
+func matchesFilter(entry *LogEntry, params FilterParams) bool {
+	if params.FilterIP != "" && !strings.Contains(entry.ClientIP, params.FilterIP) {
+		return false
 	}
+	if params.FilterPath != "" && !strings.Contains(entry.Path, params.FilterPath) {
+		return false
+	}
+	if params.FilterStatus != "" {
+		statusStr := strconv.Itoa(entry.StatusCode)
+		if statusStr != params.FilterStatus {
+			return false
+		}
+	}
+	if params.FilterMethod != "" && !strings.EqualFold(entry.Method, params.FilterMethod) {
+		return false
+	}
+	if params.FilterOrigin != "" && !strings.Contains(entry.Origin, params.FilterOrigin) {
+		return false
+	}
+	ts := entry.Timestamp
+	if len(ts) == 19 {
+		ts += ".000000"
+	}
+	timeStart := params.TimeStart
+	if len(timeStart) == 19 {
+		timeStart += ".000000"
+	}
+	timeEnd := params.TimeEnd
+	if len(timeEnd) == 19 {
+		timeEnd += ".999999"
+	}
+	if timeStart != "" && ts < timeStart {
+		return false
+	}
+	if timeEnd != "" && ts > timeEnd {
+		return false
+	}
+	return true
+}
 
-	// Step 2: Sort
-	sort.Slice(filtered, func(i, j int) bool {
+// sortEntries sorts entries in place by params.SortField in params.SortOrder.
+func sortEntries(entries []*LogEntry, params FilterParams) {
+	sort.Slice(entries, func(i, j int) bool {
 		var less, equal bool
 		switch params.SortField {
 		case "origin":
-			less = filtered[i].Origin < filtered[j].Origin
-			equal = filtered[i].Origin == filtered[j].Origin
+			less = entries[i].Origin < entries[j].Origin
+			equal = entries[i].Origin == entries[j].Origin
 		case "client_ip":
-			less = filtered[i].ClientIP < filtered[j].ClientIP
-			equal = filtered[i].ClientIP == filtered[j].ClientIP
+			less = entries[i].ClientIP < entries[j].ClientIP
+			equal = entries[i].ClientIP == entries[j].ClientIP
 		case "method":
-			less = filtered[i].Method < filtered[j].Method
-			equal = filtered[i].Method == filtered[j].Method
+			less = entries[i].Method < entries[j].Method
+			equal = entries[i].Method == entries[j].Method
 		case "path":
-			less = filtered[i].Path < filtered[j].Path
-			equal = filtered[i].Path == filtered[j].Path
+			less = entries[i].Path < entries[j].Path
+			equal = entries[i].Path == entries[j].Path
 		case "status_code":
-			less = filtered[i].StatusCode < filtered[j].StatusCode
-			equal = filtered[i].StatusCode == filtered[j].StatusCode
+			less = entries[i].StatusCode < entries[j].StatusCode
+			equal = entries[i].StatusCode == entries[j].StatusCode
 		case "user_agent":
-			less = filtered[i].UserAgent < filtered[j].UserAgent
-			equal = filtered[i].UserAgent == filtered[j].UserAgent
+			less = entries[i].UserAgent < entries[j].UserAgent
+			equal = entries[i].UserAgent == entries[j].UserAgent
 		default:
-			less = filtered[i].Timestamp < filtered[j].Timestamp
-			equal = filtered[i].Timestamp == filtered[j].Timestamp
+			less = entries[i].Timestamp < entries[j].Timestamp
+			equal = entries[i].Timestamp == entries[j].Timestamp
 		}
 
 		if equal {
@@ -587,6 +584,21 @@ func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry
 		}
 		return less
 	})
+}
+
+// filterAndSortEntries applies filtering, sorting and pagination to a slice of LogEntry.
+// It returns the paginated slice and the total count before pagination.
+func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry, int) {
+	// Step 1: Filter
+	filtered := make([]*LogEntry, 0, len(entries))
+	for _, entry := range entries {
+		if matchesFilter(entry, params) {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	// Step 2: Sort
+	sortEntries(filtered, params)
 
 	total := len(filtered)
 
