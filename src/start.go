@@ -459,6 +459,11 @@ func ShutdownSeq() {
 		statisticCollector.Close()
 	}
 
+	SystemWideLogger.Println("Saving dashboard bandwidth counters")
+	if dashboardBandwidth != nil {
+		dashboardBandwidth.Close()
+	}
+
 	if mdnsTickerStop != nil {
 		SystemWideLogger.Println("Stopping mDNS Discoverer (might take a few minutes)")
 		// Stop the mdns service
