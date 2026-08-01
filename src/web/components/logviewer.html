@@ -172,7 +172,7 @@
             });
             $('#logFile').dropdown({
                 onChange: function(val) {
-                    if (val) {
+                    if (val && val !== currentFile) {
                         currentFile = val;
                         currentPage = 1;
                         loadLogEntries();
