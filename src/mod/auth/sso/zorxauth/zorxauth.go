@@ -20,13 +20,13 @@ import (
 	that only works in Zoraxy environment. It is ideal for lazy homelab sysadmins who don't want to setup a dedicated authentication
 	server just for a few services running in their homelab.
 
- 	SSORedirectURL is the URL of the SSO authentication endpoint, e.g. auth.example.com.
-	SSOSessionSetURL is the URL of the SSO session set endpoint, e.g. mysite.example.com/.wellknown/zorxauth/session/set,
+ 	SSORedirectURL is the URL of the SSO authentication endpoint, e.g. https://auth.example.com.
+	SSOSessionSetURL is the URL of the SSO session set endpoint, e.g. /.wellknown/zorxauth/session/set,
 	which will be called by the SSO endpoint after successful authentication to set the session ID in the AuthAgent.
 
 	The AuthAgent will redirect unauthenticated requests to this URL with a "redirect" query parameter
 	containing the original requested URL.
-	e.g. auth.example.com?redirect=http://mysite.example.com/protected/resource
+	e.g. https://auth.example.com?redirect=http://mysite.example.com/protected/resource
 
 	After successful authentication, the user will be redirected back to the original domain (mysite.example.com) to
 	the SSOSessionSetURL with the session ID and original redirect URL as query parameters, e.g.
