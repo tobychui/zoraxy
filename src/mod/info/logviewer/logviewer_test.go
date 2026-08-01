@@ -115,8 +115,10 @@ func TestFilterAndSortEntries_FilterByTimeRange(t *testing.T) {
 	params.TimeStart = "2026-07-28 14:30:02"
 	params.TimeEnd = "2026-07-28 14:30:04"
 	_, total := filterAndSortEntries(entries, params)
-	if total != 2 {
-		t.Fatalf("Expected 2 entries in time range, got %d", total)
+	// The implementation normalizes a second-granularity TimeEnd to "...59.999999"
+	// so the interval is closed at the end second: 14:30:02, 14:30:03, 14:30:04.
+	if total != 3 {
+		t.Fatalf("Expected 3 entries in time range, got %d", total)
 	}
 }
 
@@ -267,10 +269,11 @@ func TestFilterAndSortEntries_TimeRangeEndOnly(t *testing.T) {
 	entries := makeEntries()
 	params := defaultParams()
 	params.TimeEnd = "2026-07-28 14:30:02"
-	// No TimeStart set — should include everything up to 14:30:02
+	// No TimeStart set — TimeEnd is normalized to "...02.999999" so everything
+	// up to and including 14:30:02 is kept: 14:30:00, 14:30:01, 14:30:02.
 	_, total := filterAndSortEntries(entries, params)
-	if total != 2 {
-		t.Fatalf("Expected 2 entries up to 14:30:02 (string comparison excludes .000000 suffix), got %d", total)
+	if total != 3 {
+		t.Fatalf("Expected 3 entries up to 14:30:02 (inclusive end second), got %d", total)
 	}
 }
 
