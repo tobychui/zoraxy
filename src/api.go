@@ -376,7 +376,17 @@ func RegisterAuthAPIs(requireAuth bool, targetMux *http.ServeMux) {
 		//Change the password of the root user
 		authAgent.UnregisterUser(username)
 		authAgent.CreateUserAccount(username, newPassword, "")
+
+		// I'm not sure if this is a good idea yet.
+		// authAgent.ClearTOTP(username)
 	})
+
+	// TOTP 2FA Endpoints
+	targetMux.HandleFunc("/api/auth/totp/status", authAgent.HandleTOTPStatus)
+	targetMux.HandleFunc("/api/auth/totp/generate", authAgent.HandleTOTPGenerate)
+	targetMux.HandleFunc("/api/auth/totp/verify", authAgent.HandleTOTPVerify)
+	targetMux.HandleFunc("/api/auth/totp/disable", authAgent.HandleTOTPDisable)
+	targetMux.HandleFunc("/api/auth/totp/verify-code", authAgent.HandleTOTPVerifyCode)
 }
 
 /* Register all the APIs */

@@ -6,16 +6,20 @@ package auth
 */
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"image/png"
 	"net/http"
 	"net/mail"
 	"strings"
 
-	"encoding/hex"
-
 	"github.com/gorilla/sessions"
+	"github.com/pquerna/otp/totp"
 	db "imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
@@ -122,10 +126,23 @@ func (a *AuthAgent) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	//The database contain this user information. Check its password if it is correct
 	if passwordCorrect {
 		//Password correct
-		// Set user as authenticated
-		a.LoginUserByRequest(w, r, username, rememberme)
+		if a.IsTOTPEnabled(username) {
+			// Set session data but keep authenticated=false while waiting for TOTP
+			session := a.PrepareUserSession(w, r, username, rememberme)
+			session.Values["totp_partial"] = true
+			session.Values["authenticated"] = false
+			session.Save(r, w)
 
-		//Print the login message to console
+			utils.SendJSONResponse(w, `{"totp_required":true,"username":"`+username+`"}`)
+			a.Logger.PrintAndLog("auth", username+" password verified, waiting for TOTP code.", nil)
+			return
+		}
+
+		// No TOTP - fully authenticate
+		session := a.PrepareUserSession(w, r, username, rememberme)
+		session.Values["authenticated"] = true
+		session.Save(r, w)
+
 		a.Logger.PrintAndLog("auth", username+" logged in.", nil)
 		utils.SendOK(w)
 	} else {
@@ -160,11 +177,10 @@ func (a *AuthAgent) ValidateUsernameAndPasswordWithReason(username string, passw
 	}
 }
 
-// Login the user by creating a valid session for this user
-func (a *AuthAgent) LoginUserByRequest(w http.ResponseWriter, r *http.Request, username string, rememberme bool) {
+// Prepare valid session with user parameters. Caller is expected to commit the data with session.Save() call.
+func (a *AuthAgent) PrepareUserSession(w http.ResponseWriter, r *http.Request, username string, rememberme bool) *sessions.Session {
 	session, _ := a.SessionStore.Get(r, a.SessionName)
 
-	session.Values["authenticated"] = true
 	session.Values["username"] = username
 	session.Values["rememberMe"] = rememberme
 
@@ -180,7 +196,7 @@ func (a *AuthAgent) LoginUserByRequest(w http.ResponseWriter, r *http.Request, u
 			Path:   "/",
 		}
 	}
-	session.Save(r, w)
+	return session
 }
 
 // Handle logout, reply OK after logged out. WILL NOT DO REDIRECTION
@@ -210,6 +226,7 @@ func (a *AuthAgent) Logout(w http.ResponseWriter, r *http.Request) error {
 	}
 	session.Values["authenticated"] = false
 	session.Values["username"] = nil
+	session.Values["totp_partial"] = false
 	session.Options.MaxAge = -1
 	return session.Save(r, w)
 }
@@ -344,7 +361,293 @@ func (a *AuthAgent) CheckAuth(r *http.Request) bool {
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		return false
 	}
+
 	return true
+}
+
+// CheckAuthOrPartial checks if user has at least partial authentication.
+// As in "password verified but may still need to give valid TOTP"
+func (a *AuthAgent) CheckAuthOrPartial(r *http.Request) bool {
+	session, err := a.SessionStore.Get(r, a.SessionName)
+	if err != nil {
+		a.Logger.PrintAndLog("auth", "error during session reading.", err)
+		return false
+	}
+
+	if auth, ok := session.Values["authenticated"].(bool); ok && auth {
+		return true
+	}
+	if partial, ok := session.Values["totp_partial"].(bool); ok && partial {
+		return true
+	}
+
+	return false
+}
+
+func (a *AuthAgent) IsTOTPEnabled(username string) bool {
+	var enabled string
+	err := a.Database.Read("auth", fmt.Sprintf("totp/enabled/%s", username), &enabled)
+	if err != nil {
+		a.Logger.PrintAndLog("auth", "error during database read.", err)
+		return false
+	}
+	return enabled == "true"
+}
+
+func (a *AuthAgent) GenerateTOTP(username string) (secret string, qrCodeDataURL string, err error) {
+	if a.IsTOTPEnabled(username) {
+		return "", "", errors.New("TOTP is already enabled for this user")
+	}
+
+	// Generate a new TOTP key (includes secret + QR URL)
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "Zoraxy Cluster Gateway",
+		AccountName: username,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate TOTP key: %w", err)
+	}
+
+	secret = key.Secret()
+	err = a.Database.Write("auth", fmt.Sprintf("totp/secret/%s", username), secret)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to save TOTP secret: %w", err)
+	}
+
+	qr, err := key.Image(200, 200)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate QR image: %w", err)
+	}
+
+	// Encode as base64 data URL
+	var buf bytes.Buffer
+	pngEncoder := png.Encoder{
+		CompressionLevel: png.BestCompression,
+	}
+	err = pngEncoder.Encode(&buf, qr)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to encode QR image: %w", err)
+	}
+
+	qrCodeDataURL = "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	return secret, qrCodeDataURL, nil
+}
+
+func (a *AuthAgent) VerifyTOTPCode(username, code string) bool {
+	var secret string
+	err := a.Database.Read("auth", fmt.Sprintf("totp/secret/%s", username), &secret)
+	if err != nil {
+		a.Logger.PrintAndLog("auth", "error during database read.", err)
+		return false
+	}
+
+	valid := totp.Validate(code, secret)
+	return valid
+}
+
+// VerifyTOTPCodeAndEnable verifies a TOTP code and enables 2FA for the user
+func (a *AuthAgent) VerifyTOTPCodeAndEnable(username, code string) (bool, error) {
+	var secret string
+	err := a.Database.Read("auth", fmt.Sprintf("totp/secret/%s", username), &secret)
+	if err != nil {
+		a.Logger.PrintAndLog("auth", "error during database read.", err)
+		return false, errors.New("TOTP secret not found")
+	}
+
+	if !totp.Validate(code, secret) {
+		return false, errors.New("invalid TOTP code")
+	}
+
+	err = a.Database.Write("auth", fmt.Sprintf("totp/enabled/%s", username), "true")
+	if err != nil {
+		a.Logger.PrintAndLog("auth", "error during database write.", err)
+		return false, fmt.Errorf("failed to enable TOTP: %w", err)
+	}
+
+	return true, nil
+}
+
+func (a *AuthAgent) DisableTOTP(username string) error {
+	if !a.IsTOTPEnabled(username) {
+		return errors.New("TOTP is not enabled for this user")
+	}
+
+	err := a.Database.Write("auth", fmt.Sprintf("totp/enabled/%s", username), "false")
+	if err != nil {
+		return fmt.Errorf("failed to disable TOTP: %w", err)
+	}
+
+	// Also clear the secret if it exists
+	err = a.Database.Delete("auth", fmt.Sprintf("totp/secret/%s", username))
+	if err != nil {
+		// TOTP is technically disabled at this point.
+		// Leftover secret should not cause any trouble, so removing in on a best-effort basis.
+		a.Logger.PrintAndLog("auth", "error during database write.", err)
+	}
+
+	return nil
+}
+
+// UpdateTOTPSession marks the session as fully authenticated after TOTP verification
+func (a *AuthAgent) UpdateTOTPSession(w http.ResponseWriter, r *http.Request, username string) error {
+	session, err := a.SessionStore.Get(r, a.SessionName)
+	if err != nil {
+		return err
+	}
+
+	session.Values["authenticated"] = true
+	session.Values["username"] = username
+
+	// Preserve remember me setting
+	rememberme := session.Values["rememberMe"].(bool)
+	if rememberme {
+		session.Options = &sessions.Options{
+			MaxAge: 3600 * 24 * 7,
+			Path:   "/",
+		}
+	} else {
+		session.Options = &sessions.Options{
+			MaxAge: 3600 * 1,
+			Path:   "/",
+		}
+	}
+
+	return session.Save(r, w)
+}
+
+// HandleTOTPStatus returns the current TOTP status for the logged-in user
+func (a *AuthAgent) HandleTOTPStatus(w http.ResponseWriter, r *http.Request) {
+	username, err := a.GetUserName(w, r)
+	if err != nil {
+		utils.SendErrorResponse(w, "Login required")
+		return
+	}
+
+	enabled := a.IsTOTPEnabled(username)
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+	utils.SendJSONResponse(w, `{"status":"`+status+`"}`)
+}
+
+// HandleTOTPGenerate generates a new TOTP secret and QR code for the logged-in user
+func (a *AuthAgent) HandleTOTPGenerate(w http.ResponseWriter, r *http.Request) {
+	username, err := a.GetUserName(w, r)
+	if err != nil {
+		utils.SendErrorResponse(w, "Login required")
+		return
+	}
+
+	secret, qrCode, err := a.GenerateTOTP(username)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendJSONResponse(w, `{"secret":"`+secret+`","qrCode":"`+qrCode+`","message":"Scan the QR code with your authenticator app, then enter the code to enable 2FA"}`)
+}
+
+// HandleTOTPVerify verifies the TOTP code during setup and enables 2FA
+func (a *AuthAgent) HandleTOTPVerify(w http.ResponseWriter, r *http.Request) {
+	username, err := a.GetUserName(w, r)
+	if err != nil {
+		utils.SendErrorResponse(w, "Login required")
+		return
+	}
+
+	code, err := utils.PostPara(r, "code")
+	if err != nil {
+		utils.SendErrorResponse(w, "Verification code required")
+		return
+	}
+
+	success, err := a.VerifyTOTPCodeAndEnable(username, code)
+	if err != nil || !success {
+		utils.SendErrorResponse(w, "Invalid verification code")
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// HandleTOTPDisable disables TOTP for the logged-in user. Requires password + current TOTP code.
+func (a *AuthAgent) HandleTOTPDisable(w http.ResponseWriter, r *http.Request) {
+	username, err := a.GetUserName(w, r)
+	if err != nil {
+		utils.SendErrorResponse(w, "Login required")
+		return
+	}
+
+	if !a.IsTOTPEnabled(username) {
+		utils.SendErrorResponse(w, "TOTP is not enabled")
+		return
+	}
+
+	password, err := utils.PostPara(r, "password")
+	if err != nil {
+		utils.SendErrorResponse(w, "Password confirmation required")
+		return
+	}
+
+	code, err := utils.PostPara(r, "totpCode")
+	if err != nil {
+		utils.SendErrorResponse(w, "TOTP code required")
+		return
+	}
+
+	passwordCorrect, _ := a.ValidateUsernameAndPasswordWithReason(username, password)
+	if !passwordCorrect {
+		utils.SendErrorResponse(w, "Invalid password")
+		return
+	}
+
+	if !a.VerifyTOTPCode(username, code) {
+		utils.SendErrorResponse(w, "Invalid TOTP code")
+		return
+	}
+
+	err = a.DisableTOTP(username)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
+}
+
+// HandleTOTPVerifyCode handles TOTP verification during login step 2.
+func (a *AuthAgent) HandleTOTPVerifyCode(w http.ResponseWriter, r *http.Request) {
+	// Check partial auth
+	if !a.CheckAuthOrPartial(r) {
+		utils.SendErrorResponse(w, "Authentication required")
+		return
+	}
+
+	session, _ := a.SessionStore.Get(r, a.SessionName)
+	username := session.Values["username"].(string)
+
+	code, err := utils.PostPara(r, "code")
+	if err != nil {
+		utils.SendErrorResponse(w, "Verification code required")
+		return
+	}
+
+	if !a.VerifyTOTPCode(username, code) {
+		a.Logger.PrintAndLog("auth", username+" gave invalid TOTP verification code", err)
+		utils.SendErrorResponse(w, "Invalid verification code")
+		return
+	}
+
+	err = a.UpdateTOTPSession(w, r, username)
+	if err != nil {
+		utils.SendErrorResponse(w, "Failed to complete authentication")
+		return
+	}
+
+	a.Logger.PrintAndLog("auth", username+" completed 2FA verification.", nil)
+	utils.SendOK(w)
 }
 
 // Handle de-register of users. Require POST username.
@@ -385,6 +688,8 @@ func (a *AuthAgent) UnregisterUser(username string) error {
 	//OK! Remove the user from the database
 	a.Database.Delete("auth", "passhash/"+username)
 	a.Database.Delete("auth", "email/"+username)
+	a.Database.Delete("auth", "totp/secret/"+username)
+	a.Database.Delete("auth", "totp/enabled/"+username)
 	return nil
 }
 
@@ -472,6 +777,11 @@ func (a *AuthAgent) CreateUserAccount(newusername string, password string, email
 		if err != nil {
 			return err
 		}
+	}
+
+	err = a.Database.Write("auth", "totp/enabled/"+key, "false")
+	if err != nil {
+		return err
 	}
 
 	return nil
