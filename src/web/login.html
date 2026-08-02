@@ -247,7 +247,11 @@
               </div>
             </div>
             <!-- TOTP 2FA Section (initially hidden) -->
-            <div id="totpSection" style="display: none" class="loginOnly">
+            <div
+              id="totpSection"
+              style="display: none; margin-bottom: 0.5em"
+              class="loginOnly"
+            >
               <div class="field">
                 <div class="ui left icon input">
                   <i class="shield icon"></i>
@@ -260,13 +264,20 @@
                   />
                 </div>
               </div>
-              <div id="loginbtn" class="ui fluid basic button">
-                <i class="ui blue sign-in icon"></i> Verify &amp; Login
-              </div>
             </div>
-            <!-- Original Login Button (shown when TOTP not required) -->
-            <div id="loginbtnOriginal" class="ui fluid basic button loginOnly">
+            <!-- Login Button -->
+            <div id="loginbtn" class="ui fluid basic button loginOnly">
               <i class="ui blue sign-in icon"></i> Login
+            </div>
+            <!-- WebAuthn Passkey Button -->
+            <div class="loginOnly" style="margin: 0.5em 0">
+              <button
+                class="ui fluid primary button"
+                id="passkeyLoginBtn"
+                type="button"
+              >
+                <i class="key icon"></i> Use Passkey
+              </button>
             </div>
             <div id="regsiterbtn" class="ui fluid basic button registerOnly">
               <i class="ui green checkmark icon"></i> Confirm
@@ -383,7 +394,11 @@
 
       //Event handlers for buttons
       $("#loginbtn").on("click", function () {
-        login();
+        if ($("#totpSection").is(":visible")) {
+          verifyTOTP();
+        } else {
+          login();
+        }
       });
 
       $("input").on("keydown", function (event) {
@@ -483,7 +498,6 @@
               window.location.href = data.redirect;
             } else if (data.totp_required === true) {
               //TOTP required - show the verification section
-              $("#loginbtnOriginal").hide();
               $("#totpSection").show();
               $("#errmsg").html(
                 `<i class="info circle icon"></i> 2FA enabled for this account. Enter your verification code.`,
@@ -510,6 +524,177 @@
             alert("Something went wrong.");
           },
         });
+      }
+
+      //WebAuthn Passkey Login
+      $("#passkeyLoginBtn").on("click", function () {
+        performPasskeyLogin();
+      });
+
+      function performPasskeyLogin() {
+        $("#errmsg").stop().finish().slideUp("fast");
+        $("#passkeyLoginBtn")
+          .prop("disabled", true)
+          .html('<i class="ui spinning loader icon"></i> Authenticating...');
+
+        // Step 1: Get registration options from server
+        $.cjax({
+          url: "/api/auth/webauthn/auth/begin",
+          type: "POST",
+          success: function (data) {
+            if (data.error !== undefined) {
+              $("#errmsg").html(
+                `<i class="red remove icon"></i> ${data.error}`,
+              );
+              $("#errmsg").stop().finish().slideDown("fast");
+              $("#passkeyLoginBtn")
+                .prop("disabled", false)
+                .html('<i class="key icon"></i> Use Passkey (WebAuthn)');
+              return;
+            }
+
+            const token = data.token;
+            const options = data.options.publicKey; // go-webauthn nests options under publicKey
+
+            // Convert options from JSON to the format required by the WebAuthn API
+            const publicKey = {
+              rpId: options.rpOrigins ? options.rpOrigins[0] : undefined,
+              challenge: base64UrlToBuffer(options.challenge),
+              allowCredentials: options.allowCredentials
+                ? options.allowCredentials.map(function (cred) {
+                    return {
+                      id: base64UrlToBuffer(cred.id),
+                      type: cred.type,
+                      transports: cred.transports,
+                    };
+                  })
+                : [],
+              timeout: options.timeout,
+              userVerification: options.userVerification,
+            };
+
+            // Call the WebAuthn API
+            navigator.credentials
+              .get({ publicKey })
+              .then(function (assertion) {
+                // Step 2: Send assertion to server for verification
+                $.cjax({
+                  url: "/api/auth/webauthn/auth/complete?token=" + token,
+                  type: "POST",
+                  contentType: "application/json",
+                  data: JSON.stringify(bufferToJSON(assertion)),
+                  success: function (result) {
+                    if (result.error !== undefined) {
+                      $("#errmsg").html(
+                        `<i class="red remove icon"></i> ${result.error}`,
+                      );
+                      $("#errmsg").stop().finish().slideDown("fast");
+                      $("#passkeyLoginBtn")
+                        .prop("disabled", false)
+                        .html(
+                          '<i class="key icon"></i> Use Passkey (WebAuthn)',
+                        );
+                    } else if (result.success === true) {
+                      // WebAuthn login succeeded — no TOTP needed
+                      $("#passkeyLoginBtn")
+                        .prop("disabled", false)
+                        .html(
+                          '<i class="key icon"></i> Use Passkey (WebAuthn)',
+                        );
+                      if (redirectionAddress == "") {
+                        window.location.href = "./";
+                      } else {
+                        window.location.href = redirectionAddress;
+                      }
+                    }
+                  },
+                  error: function () {
+                    $("#errmsg").html(
+                      '<i class="red remove icon"></i> Authentication failed. Please try again.',
+                    );
+                    $("#errmsg").stop().finish().slideDown("fast");
+                    $("#passkeyLoginBtn")
+                      .prop("disabled", false)
+                      .html('<i class="key icon"></i> Use Passkey (WebAuthn)');
+                  },
+                });
+              })
+              .catch(function (err) {
+                $("#passkeyLoginBtn")
+                  .prop("disabled", false)
+                  .html('<i class="key icon"></i> Use Passkey (WebAuthn)');
+                if (err.name === "NotAllowedError") {
+                  $("#errmsg").html(
+                    '<i class="red remove icon"></i> Authentication cancelled or not supported',
+                  );
+                } else {
+                  $("#errmsg").html(
+                    '<i class="red remove icon"></i> Authentication error: ' +
+                      (err.message || "Unknown error"),
+                  );
+                }
+                $("#errmsg").stop().finish().slideDown("fast");
+              });
+          },
+          error: function () {
+            $("#passkeyLoginBtn")
+              .prop("disabled", false)
+              .html('<i class="key icon"></i> Use Passkey (WebAuthn)');
+            $("#errmsg").html(
+              '<i class="red remove icon"></i> Failed to start authentication',
+            );
+            $("#errmsg").stop().finish().slideDown("fast");
+          },
+        });
+      }
+
+      // Helper: Decode base64url to Uint8Array
+      function base64UrlToBuffer(base64url) {
+        let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = base64.length % 4;
+        if (pad) {
+          base64 += "=".repeat(4 - pad);
+        }
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      // Helper: Convert WebAuthn assertion to JSON-serializable format
+      function bufferToJSON(assertion) {
+        return {
+          id: arrayBufferToBase64Url(assertion.id),
+          rawId: arrayBufferToBase64Url(assertion.rawId),
+          response: {
+            clientDataJSON: arrayBufferToBase64Url(
+              assertion.response.clientDataJSON,
+            ),
+            authenticatorData: arrayBufferToBase64Url(
+              assertion.response.authenticatorData,
+            ),
+            signature: arrayBufferToBase64Url(assertion.response.signature),
+            userHandle: assertion.response.userHandle
+              ? arrayBufferToBase64Url(assertion.response.userHandle)
+              : null,
+          },
+          clientExtensionResults: assertion.clientExtensionResults,
+        };
+      }
+
+      // Helper: Convert ArrayBuffer to base64url string
+      function arrayBufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let str = "";
+        for (let i = 0; i < bytes.length; i++) {
+          str += String.fromCharCode(bytes[i]);
+        }
+        return btoa(str)
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=/g, "");
       }
 
       //Verify TOTP code (2FA step 2)

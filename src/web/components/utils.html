@@ -101,6 +101,38 @@
                 </div>
             </div>
         </div>
+
+        <!-- WebAuthn Passkey Section -->
+        <div class="selfauthOnly" style="margin-top: 2em;">
+            <h3><i class="key icon"></i> Passkeys (WebAuthn)</h3>
+            <div class="ui basic segment">
+                <p>Manage your passkeys for passwordless authentication. Passkeys use your device's built-in biometrics or PIN for secure login.</p>
+
+                <!-- Register Passkey Button -->
+                <div style="margin-bottom: 1em;">
+                    <button class="ui basic blue button" onclick="registerPasskey()" id="registerPasskeyBtn">
+                        <i class="ui plus circle icon"></i> Register New Passkey
+                    </button>
+                    <div id="passkeyRegMsg" class="ui red message" style="display:none; margin-top: 1em;"></div>
+                    <div id="passkeyRegSuccess" class="ui green message" style="display:none; margin-top: 1em;">
+                        <i class="ui circle check icon"></i> Passkey registered successfully!
+                    </div>
+                </div>
+
+                <!-- Registered Passkeys List -->
+                <div id="passkeysListSection">
+                    <h5><i class="list icon"></i> Registered Passkeys</h5>
+                    <div id="passkeysList" class="ui relaxed list">
+                        <div class="item">
+                            <div class="content">
+                                <div id="passkeysLoading" class="ui active centered inline loader"></div>
+                                <span id="passkeysEmpty" style="display:none;"><i class="ui grey lock outline icon"></i> No passkeys registered yet.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab2">
         <!-- Log Settings -->
@@ -825,3 +857,219 @@
 
     // Initialize TOTP status on page load
     loadTOTPStatus();
+
+    // ─── WebAuthn Passkey Management ─────────────────────────────────────────
+
+    // Load registered passkeys on page load
+    loadPasskeys();
+
+    function loadPasskeys() {
+        $.cjax({
+            type: "GET",
+            url: "/api/auth/webauthn/list",
+            success: function(data) {
+                $("#passkeysLoading").hide();
+                if (data.length === 0) {
+                    $("#passkeysEmpty").show();
+                    $("#passkeysList").find(".item:not(:first)").remove();
+                } else {
+                    $("#passkeysEmpty").hide();
+                    // Clear existing items (keep first loading div which is now hidden)
+                    $("#passkeysList").find(".item:gt(0)").remove();
+
+                    data.forEach(function(cred, index) {
+                        const dateStr = new Date(cred.createdAt * 1000).toLocaleDateString();
+                        const lastUsedStr = cred.lastUsedAt > 0
+                            ? new Date(cred.lastUsedAt * 1000).toLocaleDateString()
+                            : "Never";
+
+                        const item = $(`
+                            <div class="item">
+                                <i class="large key gray icon"></i>
+                                <div class="content">
+                                    <div class="header">
+                                        ${escapeHtml(cred.name)}
+                                        ${cred.backedUp ? '<i class="cloud icon" title="Backed up to cloud"></i>' : ''}
+                                    </div>
+                                    <div class="meta">
+                                        Created: ${dateStr} | Last used: ${lastUsedStr}
+                                        <br>
+                                        <small>ID: ${escapeHtml(cred.id.substring(0, 20))}...</small>
+                                    </div>
+                                    <div class="extra">
+                                        <button class="ui basic red button" onclick="removePasskey('${cred.id}')">
+                                            <i class="ui trash icon"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                        $("#passkeysList").append(item);
+                    });
+                }
+            },
+            error: function() {
+                $("#passkeysLoading").hide();
+                $("#passkeysEmpty").text("Failed to load passkeys.").show();
+            }
+        });
+    }
+
+    function registerPasskey() {
+        $("#passkeyRegMsg").hide();
+        $("#passkeyRegSuccess").hide();
+        $("#registerPasskeyBtn").prop("disabled", true).html('<i class="ui spinning loader icon"></i> Registering...');
+
+        // Step 1: Get registration options
+        $.cjax({
+            type: "POST",
+            url: "/api/auth/webauthn/register/begin",
+            success: function(data) {
+                if (data.error) {
+                    $("#passkeyRegMsg").text(data.error).show();
+                    $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                    return;
+                }
+
+                const token = data.token;
+                const options = data.options.publicKey; // go-webauthn nests options under publicKey
+
+                // Convert options for WebAuthn API
+                const publicKey = {
+                    rp: {
+                        name: options.rp.name,
+                        id: options.rp.id,
+                    },
+                    user: {
+                        id: base64UrlToBufferWebauthn(options.user.id),
+                        name: options.user.name,
+                        displayName: options.user.displayName,
+                    },
+                    challenge: base64UrlToBufferWebauthn(options.challenge),
+                    pubKeyCredParams: options.pubKeyCredParams,
+                    timeout: options.timeout,
+                    attestation: options.attestation,
+                };
+
+                // Call WebAuthn registration API
+                navigator.credentials
+                    .create({ publicKey })
+                    .then(function(credential) {
+                        // Step 2: Send credential to server
+                        const credName = prompt("Enter a name for this passkey (e.g., 'iPhone 15', 'Windows Hello'):",
+                            "Passkey " + (data.credentialCount || 1));
+                        if (!credName) {
+                          $("#passkeyRegMsg").text("Registration declined.").show();
+                          $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                          return
+                        }
+
+                        $.cjax({
+                            type: "POST",
+                            url: "/api/auth/webauthn/register/complete?token=" + token + "&name=" + encodeURIComponent(credName || ""),
+                            contentType: "application/json",
+                            data: JSON.stringify(bufferToJSONCredential(credential)),
+                            success: function(result) {
+                                if (result.error) {
+                                    $("#passkeyRegMsg").text(result.error).show();
+                                } else {
+                                    $("#passkeyRegSuccess").show();
+                                    loadPasskeys();
+                                }
+                                $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                            },
+                            error: function() {
+                                $("#passkeyRegMsg").text("Failed to complete registration.").show();
+                                $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                            }
+                        });
+                    })
+                    .catch(function(err) {
+                        $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                        if (err.name === "NotAllowedError") {
+                            $("#passkeyRegMsg").text("Registration cancelled or not supported.").show();
+                        } else {
+                            $("#passkeyRegMsg").text("Registration error: " + (err.message || "Unknown error")).show();
+                        }
+                    });
+            },
+            error: function() {
+                $("#passkeyRegMsg").text("Failed to start registration.").show();
+                $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+            }
+        });
+    }
+
+    function removePasskey(id) {
+        if (!confirm("Are you sure you want to remove this passkey? You won't be able to use it for login anymore.")) {
+            return;
+        }
+
+        $.cjax({
+            type: "POST",
+            url: "/api/auth/webauthn/remove",
+            data: {
+                id: id
+            },
+            success: function(data) {
+                if (data.error) {
+                    alert("Failed to remove passkey: " + data.error);
+                } else {
+                    loadPasskeys();
+                }
+            },
+            error: function() {
+                alert("Failed to remove passkey.");
+            }
+        });
+    }
+
+    // Helper: Decode base64url to Uint8Array (for webauthn)
+    function base64UrlToBufferWebauthn(base64url) {
+        let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = base64.length % 4;
+        if (pad) {
+            base64 += "=".repeat(4 - pad);
+        }
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // Helper: Convert WebAuthn credential to JSON-serializable format
+    function bufferToJSONCredential(credential) {
+        return {
+            id: arrayBufferToBase64Url(credential.id),
+            rawId: arrayBufferToBase64Url(credential.rawId),
+            response: {
+                clientDataJSON: arrayBufferToBase64Url(credential.response.clientDataJSON),
+                attestationObject: arrayBufferToBase64Url(credential.response.attestationObject),
+                transports: credential.response.getTransports ? credential.response.getTransports() : [],
+            },
+            type: credential.type,
+            clientExtensionResults: credential.clientExtensionResults,
+        };
+    }
+
+    // Helper: Convert ArrayBuffer to base64url string
+    function arrayBufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let str = "";
+        for (let i = 0; i < bytes.length; i++) {
+            str += String.fromCharCode(bytes[i]);
+        }
+        return btoa(str)
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=/g, "");
+    }
+
+    // Helper: Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
