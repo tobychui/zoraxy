@@ -37,12 +37,102 @@
                     </div>
                     <button class="ui basic button" onclick="changePassword()"><i class="ui teal key icon"></i> Change Password</button>
                 </div>
-    
+
                 <div id="passwordChangeSuccMsg" class="ui green message" style="display:none;">
                     <i class="ui circle checkmark green icon "></i> Password Updated
                 </div>
             </div>
      </div>
+
+        <!-- TOTP 2FA Section -->
+        <div class="selfauthOnly" style="margin-top: 2em;">
+            <h3><i class="shield icon"></i> Two-Factor Authentication</h3>
+            <div class="ui basic segment">
+                <div id="totpStatusSection">
+                    <div class="ui active centered inline loader" id="totpLoader"></div>
+                </div>
+                <div id="totpDisabledSection" style="display:none;">
+                    <p><i class="ui yellow exclamation triangle icon"></i> 2FA is currently <b>disabled</b> for your account.</p>
+                    <div id="totpSetupArea" style="margin-top: 1em;">
+                        <div id="totpQRArea" style="display:none; text-align:center;">
+                            <h5><i class="qrcode icon"></i> Scan QR Code</h5>
+                            <p>Open your authenticator app (Google Authenticator, Authy, etc.) and scan this QR code:</p>
+                            <div id="totpQRCode" style="margin: 1em 0; padding: 1em; background: white; display: inline-block;"></div>
+                            <div class="ui yellow message">
+                                <i class="info circle icon"></i>
+                                Secret key: <b id="totpSecretKey"></b>
+                                <br><small>If you can't scan the QR code, manually enter this secret in your app.</small>
+                            </div>
+                            <div class="ui form" style="margin-top: 1em;">
+                                <div class="field">
+                                    <label>Verification Code</label>
+                                    <input type="text" id="totpSetupCode" placeholder="Enter Verification Code" maxlength="6" style="text-align: center;">
+                                </div>
+                                <button class="ui basic green button" onclick="enableTOTP()"><i class="ui check icon"></i> Enable 2FA</button>
+                                <button class="ui basic button" onclick="cancelTOTPSetup()"><i class="ui cancel icon"></i> Cancel</button>
+                            </div>
+                            <div id="totpSetupMsg" class="ui red message" style="display:none; margin-top: 1em;"></div>
+                            <div id="totpSetupSuccess" class="ui green message" style="display:none; margin-top: 1em;">
+                                <i class="ui circle checkmark green icon "></i> 2FA Enabled! Your account is now protected.
+                            </div>
+                        </div>
+                        <button class="ui basic button" onclick="startTOTPSetup()" id="enable2FABtn"><i class="ui lock icon"></i> Enable 2FA</button>
+                    </div>
+                </div>
+                <div id="totpEnabledSection" style="display:none;">
+                    <div class="ui green message">
+                        <i class="ui circle check icon"></i> 2FA is currently <b>enabled</b> for your account.
+                    </div>
+                    <p>You will be prompted for a verification code when logging in.</p>
+                    <div class="ui form" style="margin-top: 1em;">
+                        <div class="two fields">
+                            <div class="field">
+                                <label>Password</label>
+                                <input type="password" id="totpDisablePassword" placeholder="Enter your password">
+                            </div>
+                            <div class="field">
+                                <label>Current 2FA Code</label>
+                                <input type="text" id="totpDisableCode" placeholder="Verification code" maxlength="6">
+                            </div>
+                        </div>
+                        <button class="ui basic red button" onclick="disableTOTP()"><i class="ui unlock icon"></i> Disable 2FA</button>
+                    </div>
+                    <div id="totpDisableMsg" class="ui red message" style="display:none; margin-top: 1em;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WebAuthn Passkey Section -->
+        <div class="selfauthOnly" style="margin-top: 2em;">
+            <h3><i class="key icon"></i> Passkeys (WebAuthn)</h3>
+            <div class="ui basic segment">
+                <p>Manage your passkeys for passwordless authentication. Passkeys use your device's built-in biometrics or PIN for secure login.</p>
+
+                <!-- Register Passkey Button -->
+                <div style="margin-bottom: 1em;">
+                    <button class="ui basic blue button" onclick="registerPasskey()" id="registerPasskeyBtn">
+                        <i class="ui plus circle icon"></i> Register New Passkey
+                    </button>
+                    <div id="passkeyRegMsg" class="ui red message" style="display:none; margin-top: 1em;"></div>
+                    <div id="passkeyRegSuccess" class="ui green message" style="display:none; margin-top: 1em;">
+                        <i class="ui circle check icon"></i> Passkey registered successfully!
+                    </div>
+                </div>
+
+                <!-- Registered Passkeys List -->
+                <div id="passkeysListSection">
+                    <h5><i class="list icon"></i> Registered Passkeys</h5>
+                    <div id="passkeysList" class="ui relaxed list">
+                        <div class="item">
+                            <div class="content">
+                                <div id="passkeysLoading" class="ui active centered inline loader"></div>
+                                <span id="passkeysEmpty" style="display:none;"><i class="ui grey lock outline icon"></i> No passkeys registered yet.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab2">
         <!-- Log Settings -->
@@ -117,7 +207,7 @@
             <button style="margin-top: 0.6em;" class="ui basic button" onclick="convertToCIDR()">Convert</button>
             <p>Results: <div id="cidrOutput">N/A</div></p>
         </div>
-    
+
         <div class="ui basic segment">
             <h5><i class="chevron down icon"></i> CIDR to IP Range Conversion</h5>
             <div class="ui action input">
@@ -161,13 +251,13 @@
         <p>Options related to system backup, migrate and restore.</p>
         <button class="ui basic button" onclick="showSideWrapper('snippet/configTools.html');"><i class="ui green undo icon icon"></i> Open Config Tools</button>
         <div class="ui divider"></div>
-        
+
         <!-- Statistic Reset or Export -->
         <h3>Advanced Statistics Operations</h3>
         <p>Export or reset the statistics collected by Zoraxy within a selected time range</p>
         <button class="ui basic red button" onclick="handleResetAllStats();"><i class="trash icon"></i> RESET ALL STATISTICS</button>
         <div class="ui divider"></div>
-        
+
             <!-- System Information -->
         <div id="zoraxyinfo">
             <h3 class="ui header">
@@ -231,7 +321,7 @@
         var tab = $(this).attr('data-tab');
         $('.utilitiesTabs.tab.segment').removeClass('active');
         $('div[data-tab="' + tab + '"]').addClass('active');
-    }); 
+    });
 
     /*
         Account Password utilities
@@ -286,7 +376,7 @@
         const oldPassword = document.getElementsByName('oldPassword')[0].value;
         const newPassword = document.getElementsByName('newPassword')[0].value;
         const confirmNewPassword = document.getElementsByName('confirmNewPassword')[0].value;
-        
+
         $.cjax({
             type: "POST",
             url: "/api/auth/changePassword",
@@ -637,3 +727,349 @@
     }
 
     loadSupporters();
+
+    /*
+        TOTP 2FA Management
+    */
+    function loadTOTPStatus() {
+        $.get("/api/auth/totp/status", function(data) {
+            if (data.error) {
+                console.error("Failed to load TOTP status:", data.error);
+                return;
+            }
+
+            $("#totpLoader").hide();
+
+            if (data.status === "enabled") {
+                $("#totpEnabledSection").show();
+                $("#totpDisabledSection").hide();
+            } else {
+                $("#totpDisabledSection").show();
+                $("#totpEnabledSection").hide();
+            }
+        }).fail(function(xhr) {
+            $("#totpLoader").hide();
+            $("#totpStatusSection").html('<div class="ui red message"><i class="exclamation triangle icon"></i> Failed to load 2FA status.</div>');
+        });
+    }
+
+    function startTOTPSetup() {
+        $.get("/api/auth/totp/generate", function(data) {
+            if (data.error) {
+                alert("Failed to generate TOTP setup: " + data.error);
+                return;
+            }
+
+            $("#totpQRArea").show();
+            $("#enable2FABtn").hide();
+            $("#totpQRCode").html('<img src="' + data.qrCode + '" style="max-width: 200px; height: auto;">');
+            $("#totpSecretKey").text(data.secret);
+            $("#totpSetupCode").val('').focus();
+            $("#totpSetupMsg").hide();
+            $("#totpSetupSuccess").hide();
+        }).fail(function(xhr) {
+            let msg = 'Failed to generate QR code.';
+            try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e) {}
+            alert(msg);
+        });
+    }
+
+    function cancelTOTPSetup() {
+        $("#totpQRArea").hide();
+        $("#enable2FABtn").show();
+        $("#totpSetupCode").val('');
+        $("#totpSetupMsg").hide();
+        $("#totpSetupSuccess").hide();
+    }
+
+    function enableTOTP() {
+        let code = $("#totpSetupCode").val().trim();
+        if (code.length !== 6) {
+            $("#totpSetupMsg").text('Please enter a valid 6-digit code.').show();
+            return;
+        }
+
+        $("#totpSetupMsg").hide();
+        $("#totpSetupSuccess").hide();
+
+        $.cjax({
+            type: "POST",
+            url: "/api/auth/totp/verify",
+            data: {
+                code: code,
+            },
+            success: function(data) {
+                if (data.error) {
+                    $("#totpSetupMsg").text(data.error).show();
+                } else {
+                    $("#totpSetupSuccess").show();
+                    // Reload status after a short delay
+                    setTimeout(function() {
+                        loadTOTPStatus();
+                    }, 2000);
+                }
+            },
+            error: function(xhr, status, error) {
+                $("#totpSetupMsg").text('Verification failed: ' + error).show();
+            },
+        });
+    }
+
+    function disableTOTP() {
+        let password = $("#totpDisablePassword").val();
+        let code = $("#totpDisableCode").val().trim();
+
+        if (!password) {
+            $("#totpDisableMsg").text('Password is required.').show();
+            return;
+        }
+        if (code.length !== 6) {
+            $("#totpDisableMsg").text('Please enter your current 2FA code.').show();
+            return;
+        }
+
+        $("#totpDisableMsg").hide();
+
+        $.cjax({
+            type: "POST",
+            url: "/api/auth/totp/disable",
+            data: {
+                password: password,
+                totpCode: code,
+            },
+            success: function(data) {
+                if (data.error) {
+                    $("#totpDisableMsg").text(data.error).show();
+                } else {
+                    $("#totpDisablePassword").val('');
+                    $("#totpDisableCode").val('');
+                    // Reload status after a short delay
+                    setTimeout(function() {
+                        loadTOTPStatus();
+                    }, 2000);
+                }
+            },
+            error: function(xhr, status, error) {
+                $("#totpDisableMsg").text('Failed to disable 2FA: ' + error).show();
+            },
+        });
+    }
+
+    // Initialize TOTP status on page load
+    loadTOTPStatus();
+
+    // ─── WebAuthn Passkey Management ─────────────────────────────────────────
+
+    // Load registered passkeys on page load
+    loadPasskeys();
+
+    function loadPasskeys() {
+        $.cjax({
+            type: "GET",
+            url: "/api/auth/webauthn/list",
+            success: function(data) {
+                $("#passkeysLoading").hide();
+                if (data.length === 0) {
+                    $("#passkeysEmpty").show();
+                    $("#passkeysList").find(".item:not(:first)").remove();
+                } else {
+                    $("#passkeysEmpty").hide();
+                    // Clear existing items (keep first loading div which is now hidden)
+                    $("#passkeysList").find(".item:gt(0)").remove();
+
+                    data.forEach(function(cred, index) {
+                        const dateStr = new Date(cred.createdAt * 1000).toLocaleDateString();
+                        const lastUsedStr = cred.lastUsedAt > 0
+                            ? new Date(cred.lastUsedAt * 1000).toLocaleDateString()
+                            : "Never";
+
+                        const item = $(`
+                            <div class="item">
+                                <i class="large key gray icon"></i>
+                                <div class="content">
+                                    <div class="header">
+                                        ${escapeHtml(cred.name)}
+                                        ${cred.backedUp ? '<i class="cloud icon" title="Backed up to cloud"></i>' : ''}
+                                    </div>
+                                    <div class="meta">
+                                        Created: ${dateStr} | Last used: ${lastUsedStr}
+                                        <br>
+                                        <small>ID: ${escapeHtml(cred.id.substring(0, 20))}...</small>
+                                    </div>
+                                    <div class="extra">
+                                        <button class="ui basic red button" onclick="removePasskey('${cred.id}')">
+                                            <i class="ui trash icon"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                        $("#passkeysList").append(item);
+                    });
+                }
+            },
+            error: function() {
+                $("#passkeysLoading").hide();
+                $("#passkeysEmpty").text("Failed to load passkeys.").show();
+            }
+        });
+    }
+
+    function registerPasskey() {
+        $("#passkeyRegMsg").hide();
+        $("#passkeyRegSuccess").hide();
+        $("#registerPasskeyBtn").prop("disabled", true).html('<i class="ui spinning loader icon"></i> Registering...');
+
+        // Step 1: Get registration options
+        $.cjax({
+            type: "POST",
+            url: "/api/auth/webauthn/register/begin",
+            success: function(data) {
+                if (data.error) {
+                    $("#passkeyRegMsg").text(data.error).show();
+                    $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                    return;
+                }
+
+                const token = data.token;
+                const options = data.options.publicKey; // go-webauthn nests options under publicKey
+
+                // Convert options for WebAuthn API
+                const publicKey = {
+                    rp: {
+                        name: options.rp.name,
+                        id: options.rp.id,
+                    },
+                    user: {
+                        id: base64UrlToBufferWebauthn(options.user.id),
+                        name: options.user.name,
+                        displayName: options.user.displayName,
+                    },
+                    challenge: base64UrlToBufferWebauthn(options.challenge),
+                    pubKeyCredParams: options.pubKeyCredParams,
+                    timeout: options.timeout,
+                    attestation: options.attestation,
+                };
+
+                // Call WebAuthn registration API
+                navigator.credentials
+                    .create({ publicKey })
+                    .then(function(credential) {
+                        // Step 2: Send credential to server
+                        const credName = prompt("Enter a name for this passkey (e.g., 'iPhone 15', 'Windows Hello'):",
+                            "Passkey " + (data.credentialCount || 1));
+                        if (!credName) {
+                          $("#passkeyRegMsg").text("Registration declined.").show();
+                          $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                          return
+                        }
+
+                        $.cjax({
+                            type: "POST",
+                            url: "/api/auth/webauthn/register/complete?token=" + token + "&name=" + encodeURIComponent(credName || ""),
+                            contentType: "application/json",
+                            data: JSON.stringify(bufferToJSONCredential(credential)),
+                            success: function(result) {
+                                if (result.error) {
+                                    $("#passkeyRegMsg").text(result.error).show();
+                                } else {
+                                    $("#passkeyRegSuccess").show();
+                                    loadPasskeys();
+                                }
+                                $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                            },
+                            error: function() {
+                                $("#passkeyRegMsg").text("Failed to complete registration.").show();
+                                $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                            }
+                        });
+                    })
+                    .catch(function(err) {
+                        $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+                        if (err.name === "NotAllowedError") {
+                            $("#passkeyRegMsg").text("Registration cancelled or not supported.").show();
+                        } else {
+                            $("#passkeyRegMsg").text("Registration error: " + (err.message || "Unknown error")).show();
+                        }
+                    });
+            },
+            error: function() {
+                $("#passkeyRegMsg").text("Failed to start registration.").show();
+                $("#registerPasskeyBtn").prop("disabled", false).html('<i class="ui plus circle icon"></i> Register New Passkey');
+            }
+        });
+    }
+
+    function removePasskey(id) {
+        if (!confirm("Are you sure you want to remove this passkey? You won't be able to use it for login anymore.")) {
+            return;
+        }
+
+        $.cjax({
+            type: "POST",
+            url: "/api/auth/webauthn/remove",
+            data: {
+                id: id
+            },
+            success: function(data) {
+                if (data.error) {
+                    alert("Failed to remove passkey: " + data.error);
+                } else {
+                    loadPasskeys();
+                }
+            },
+            error: function() {
+                alert("Failed to remove passkey.");
+            }
+        });
+    }
+
+    // Helper: Decode base64url to Uint8Array (for webauthn)
+    function base64UrlToBufferWebauthn(base64url) {
+        let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = base64.length % 4;
+        if (pad) {
+            base64 += "=".repeat(4 - pad);
+        }
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // Helper: Convert WebAuthn credential to JSON-serializable format
+    function bufferToJSONCredential(credential) {
+        return {
+            id: arrayBufferToBase64Url(credential.id),
+            rawId: arrayBufferToBase64Url(credential.rawId),
+            response: {
+                clientDataJSON: arrayBufferToBase64Url(credential.response.clientDataJSON),
+                attestationObject: arrayBufferToBase64Url(credential.response.attestationObject),
+                transports: credential.response.getTransports ? credential.response.getTransports() : [],
+            },
+            type: credential.type,
+            clientExtensionResults: credential.clientExtensionResults,
+        };
+    }
+
+    // Helper: Convert ArrayBuffer to base64url string
+    function arrayBufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let str = "";
+        for (let i = 0; i < bytes.length; i++) {
+            str += String.fromCharCode(bytes[i]);
+        }
+        return btoa(str)
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=/g, "");
+    }
+
+    // Helper: Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
