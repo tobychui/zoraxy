@@ -1945,6 +1945,8 @@
         });
 
         // Rate limit: load with .val() so the shared modal shows each proxy's saved value (#1107)
+        editor.find(".RateLimit").off("change.ratelimit");
+        editor.find(".RequireRateLimit").off("change.ratelimit");
         if (subd.RequireRateLimit) {
             editor.find(".RequireRateLimit").prop("checked", true);
             editor.find(".RateLimit").parent().removeClass("disabled");
@@ -1954,17 +1956,22 @@
         }
 
         function rateLimitChangeEvent(){
-            let rateLimitValue = $(this).val();
-            if (rateLimitValue < 0 || isNaN(rateLimitValue)) {
-                msgbox("Rate limit must be >= 0", false);
-                $(this).val(subd.RateLimit); // Reset to previous valid value
+            let rateLimitValue = String($(this).val()).trim();
+            if (rateLimitValue === "") {
+                $(this).val(subd.RateLimit);
                 return;
             }
-            subd.RateLimit = parseInt(rateLimitValue, 10) || 0;
+            let parsed = parseInt(rateLimitValue, 10);
+            if (isNaN(parsed) || parsed < 0) {
+                msgbox("Rate limit must be >= 0", false);
+                $(this).val(subd.RateLimit);
+                return;
+            }
+            subd.RateLimit = parsed;
             saveProxyInlineEdit(uuid);
         }
 
-        editor.find(".RequireRateLimit").off("change").on("change", function() {
+        editor.find(".RequireRateLimit").on("change.ratelimit", function() {
             if ($(this).is(":checked")) {
                 editor.find(".RateLimit").parent().removeClass("disabled");
             } else {
@@ -1973,14 +1980,11 @@
 
             if (subd.RateLimit === 0) {
                 subd.RateLimit = 100; // Set default rate limit to 100 if uninitialized
-                editor.find(".RateLimit").off("change"); // Temporarily disable the change event handler
-                editor.find(".RateLimit").val(100); // Set the value to 100
-                editor.find(".RateLimit").on("change", rateLimitChangeEvent); // Re-enable the change event handler
+                editor.find(".RateLimit").val(100);
             }
             saveProxyInlineEdit(uuid);
         });
-        editor.find(".RateLimit").val(subd.RateLimit);
-        editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
+        editor.find(".RateLimit").val(subd.RateLimit).on("change.ratelimit", rateLimitChangeEvent);
 
         // CAPTCHA Gating
         if (subd.RequireCaptcha) {
