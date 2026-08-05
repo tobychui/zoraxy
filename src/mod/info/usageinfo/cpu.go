@@ -2,7 +2,7 @@ package usageinfo
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +20,7 @@ type CPUStats struct {
 
 // getCPUStats reads and parses the CPU stats from /proc/stat
 func getCPUStats() (CPUStats, error) {
-	data, err := ioutil.ReadFile("/proc/stat")
+	data, err := os.ReadFile("/proc/stat")
 	if err != nil {
 		return CPUStats{}, err
 	}
