@@ -697,7 +697,15 @@
     $("#zorxAuthSettings").on("submit", function(event) {
         event.preventDefault();
 
-        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val();
+        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val().trim();
+        if (!ssoRedirectURL) {
+            msgbox('SSO Redirect URL is required', false);
+            return;
+        }
+        if (!/^https?:\/\//i.test(ssoRedirectURL)) {
+            msgbox('SSO Redirect URL must include the protocol (e.g. https://auth.example.com)', false);
+            return;
+        }
         const ssoSessionSetURL = $('#zorxAuthSSOSessionSetURL').val();
         const cookieName = $('#zorxAuthCookieName').val() || 'zr_xauth_session';
         const cookieDuration = parseInt($('#zorxAuthCookieDuration').val()) || 3600;

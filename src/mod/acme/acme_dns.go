@@ -5,20 +5,20 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/go-acme/lego/v4/challenge"
+	"github.com/go-acme/lego/v5/challenge"
 	"imuslab.com/zoraxy/mod/acme/acmedns"
 )
 
 // Preprocessor function to get DNS challenge provider by name
 func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, ppgTimeout int) (challenge.Provider, error) {
-	//Unpack the dnsCredentials (json string) to map
-	var dnsCredentialsMap map[string]interface{}
+	// Unpack the dnsCredentials (json string) to map
+	var dnsCredentialsMap map[string]any
 	err := json.Unmarshal([]byte(dnsCredentials), &dnsCredentialsMap)
 	if err != nil {
 		return nil, err
 	}
 
-	//Clear the PollingInterval and PropagationTimeout field and conert to int
+	// Clear the PollingInterval and PropagationTimeout field and conert to int
 	userDefinedPollingInterval := 2
 	if dnsCredentialsMap["PollingInterval"] != nil {
 		userDefinedPollingIntervalRaw := dnsCredentialsMap["PollingInterval"].(string)
@@ -35,7 +35,7 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 		delete(dnsCredentialsMap, "PropagationTimeout")
 		convertedPropagationTimeout, err := strconv.Atoi(userDefinedPropagationTimeoutRaw)
 		if err == nil {
-			//Overwrite the default propagation timeout if it is requeted from UI
+			// Overwrite the default propagation timeout if it is requeted from UI
 			userDefinedPropagationTimeout = convertedPropagationTimeout
 		}
 	}
@@ -48,11 +48,11 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 	var hostURL *url.URL = nil
 	for configTitle, configDataType := range providerConfigStructure {
 		if configDataType == "*url.URL" {
-			//Extract the hostURL from dnsCredentialsMap and delete it from the map
-			//Prevent Unmarshal error when try to unmarshal the json to provider config struct on *url.URL type (ex. powerdns Host field)
+			// Extract the hostURL from dnsCredentialsMap and delete it from the map
+			// Prevent Unmarshal error when try to unmarshal the json to provider config struct on *url.URL type (ex. powerdns Host field)
 			urlStrRaw := dnsCredentialsMap[configTitle]
 			if urlStrRaw == nil {
-				//If the url field is not provided, check next *url.URL field
+				// If the url field is not provided, check next *url.URL field
 				continue
 			}
 			urlStr := urlStrRaw.(string)
@@ -61,19 +61,19 @@ func GetDnsChallengeProviderByName(dnsProvider string, dnsCredentials string, pp
 			if err != nil {
 				return nil, err
 			}
-			//Select first field
+			// Select first field
 			break
 		}
 	}
 
-	//Restructure dnsCredentials string from map
+	// Restructure dnsCredentials string from map
 	dnsCredentialsBytes, err := json.Marshal(dnsCredentialsMap)
 	if err != nil {
 		return nil, err
 	}
 	dnsCredentials = string(dnsCredentialsBytes)
 
-	//Using acmedns CICD pipeline generated datatype to optain the DNS provider
+	// Using acmedns CICD pipeline generated datatype to optain the DNS provider
 	return acmedns.GetDNSProviderByJsonConfig(
 		dnsProvider,
 		dnsCredentials,

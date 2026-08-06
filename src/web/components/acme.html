@@ -48,12 +48,31 @@
                     <div class="item" data-value="Let's Encrypt">Let's Encrypt</div>
                     <!-- <div class="item" data-value="Buypass">Buypass</div> -->
                     <div class="item" data-value="ZeroSSL">ZeroSSL</div>
+                    <div class="item" data-value="custom">Custom ACME Server</div>
                 </div>
             </div>
         </div>
         <div class="field">
             <label>ACME Email</label>
             <input id="prefACMEEmail" type="text" placeholder="ACME Email">
+        </div>
+        <div class="field" id="prefcaInput" style="display:none;">
+            <label>ACME Server URL</label>
+            <input id="prefcaURL" type="text" placeholder="https://example.com/acme/directory">
+        </div>
+        <div class="field" id="prefkidInput" style="display:none;">
+            <label>EAB Credentials (KID) for current provider</label>
+            <input id="prefeab_kid" type="text" placeholder="Leave this field blank to keep the current configuration">
+        </div>
+        <div class="field" id="prefhmacInput" style="display:none;">
+            <label>EAB HMAC Key for current provider</label>
+            <input id="prefeab_hmac" type="text" placeholder="Leave this field blank to keep the current configuration">
+        </div>
+        <div class="field" id="skipTLS" style="display:none;">
+            <div class="ui checkbox">
+                <input type="checkbox" id="skipTLSCheckbox">
+                <label>Ignore TLS/SSL Verification Error<br><small>E.g. self-signed, expired certificate (Not Recommended)</small></label>
+            </div>
         </div>
         <button class="ui basic button" onclick="saveDefaultCA();"><i class="ui green save icon"></i> Save</button>
     </div>
@@ -320,13 +339,35 @@
         });
 
         $.get("/api/acme/autoRenew/ca", function(data){
-            $("#defaultCA").dropdown("set value", data);
+            $("#defaultCA").dropdown("set value", data.name);
+            $("#prefcaURL").val(data.url || "");
+            updatePrefCaFields(data.name);
         });
 
         initToggleState();
         initDomainFileList();
+
     }
     initAcmeStatus();
+
+    function updatePrefCaFields(value){
+        if (value === "custom"){
+            $("#prefcaInput").show();
+            $("#prefkidInput").show();
+            $("#prefhmacInput").show();
+            $("#skipTLS").show();
+        } else if (value === "ZeroSSL"){
+            $("#prefcaInput").hide();
+            $("#prefkidInput").show();
+            $("#prefhmacInput").show();
+            $("#skipTLS").hide();
+        } else {
+            $("#prefcaInput").hide();
+            $("#prefkidInput").hide();
+            $("#prefhmacInput").hide();
+            $("#skipTLS").hide();
+        }
+    }
 
     // Global exports
     // setACMEEnableStates is also called from snippet/acme.html via parent.setACMEEnableStates
@@ -340,12 +381,30 @@
         $("#acmeAutoRenewer").find("i").attr("class", enabled ? "white circle check icon" : "white circle times icon");
     };
 
+    $("input[name=defaultCA]").on("change", function(){
+        updatePrefCaFields($(this).val());
+    });
+
     window.saveDefaultCA = function(){
         var newDefaultEmail = $("#prefACMEEmail").val().trim();
         var newDefaultCA = $("#defaultCA").dropdown("get value");
+        var newCustomCAURL = $("#prefcaURL").val().trim();
+        var newEABKID = $("#prefeab_kid").val().trim();
+        var newEABHMAC = $("#prefeab_hmac").val().trim();
+        var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
+        var eabDirectoryURL = ""
+
 
         if (newDefaultEmail == ""){
             msgbox("Invalid acme email given", false);
+            return;
+        }
+        if ((newDefaultCA === "ZeroSSL" || newDefaultCA === "custom") && (newEABKID == "" && newEABHMAC != "") || (newEABKID != "" && newEABHMAC == "")){
+            msgbox("EAB KID and HMAC key must be both provided or empty for ZeroSSL", false);
+            return;
+        } 
+        if (newDefaultCA == "custom" && newCustomCAURL == ""){
+            msgbox("Invalid custom acme server url given", false);
             return;
         }
 
@@ -365,7 +424,11 @@
 
         $.cjax({
             url: "/api/acme/autoRenew/ca",
-            data: {"set": newDefaultCA},
+            data: {
+                set: newDefaultCA, 
+                customURL: newCustomCAURL, 
+                skipTLS: skipTLSValue
+            },
             method: "POST",
             success: function(data){
                 if (data.error != undefined){
@@ -373,6 +436,30 @@
                 }
             }
         });
+
+
+        if (newDefaultCA == "ZeroSSL"){
+            eabDirectoryURL = "https://acme.zerossl.com/v2/DV90";
+        } else if (newDefaultCA == "custom"){
+            eabDirectoryURL = newCustomCAURL;
+        }
+
+        if (eabDirectoryURL != "" && newEABKID != "" && newEABHMAC != ""){
+            $.ajax({
+                url: "/api/acme/autoRenew/setEAB",
+                method: "GET",
+                data: {
+                acmeDirectoryURL: eabDirectoryURL,
+                kid: newEABKID,
+                hmacEncoded: newEABHMAC,
+                },
+                success: function(data) {
+                    if (data.error != undefined) {
+                        msgbox("EAB update failed: " + data.error, false);
+                    }
+                }
+            });
+        }
 
         msgbox("Settings updated");
     };

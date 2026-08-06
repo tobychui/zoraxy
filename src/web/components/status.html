@@ -745,7 +745,10 @@
         return mins + "m";
     }
 
-    //Render a "△x% vs yesterday" style delta into the given element
+    //Render a "△x% vs yesterday" style delta into the given element.
+    //Once the increase passes 300% (i.e. today is more than 4x yesterday),
+    //percentages become an unreadable wall of digits (e.g. "1824600.0%"), so
+    //those are shown as a multiplier instead (e.g. "18246x") to stay human-friendly.
     function renderTrendDelta(elementId, today, yesterday, invertColor=false){
         let element = $("#" + elementId);
         if (yesterday <= 0){
@@ -760,7 +763,15 @@
             trendClass = change >= 0 ? "trendDown" : "trendUp";
         }
         element.attr("class", "dbstatDelta " + trendClass);
-        element.text(arrow + " " + Math.abs(change).toFixed(1) + "% vs yesterday");
+
+        let changeText;
+        if (change > 300){
+            let ratio = today / yesterday;
+            changeText = (ratio < 10 ? ratio.toFixed(1) : Math.round(ratio)) + "x vs yesterday";
+        }else{
+            changeText = Math.abs(change).toFixed(1) + "% vs yesterday";
+        }
+        element.text(arrow + " " + changeText);
     }
 
     /*

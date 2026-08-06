@@ -10,7 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 
-	"github.com/go-acme/lego/v4/registration"
+	"github.com/go-acme/lego/v5/acme"
 )
 
 /*
@@ -43,8 +43,8 @@ const acmeAccountTable = "acmepref"
 // ACMEUser represents a user in the ACME system.
 type ACMEUser struct {
 	Email        string
-	Registration *registration.Resource
-	key          crypto.PrivateKey
+	Registration *acme.ExtendedAccount
+	key          crypto.Signer
 }
 
 // GetEmail returns the email of the ACMEUser.
@@ -53,12 +53,12 @@ func (u *ACMEUser) GetEmail() string {
 }
 
 // GetRegistration returns the registration resource of the ACMEUser.
-func (u ACMEUser) GetRegistration() *registration.Resource {
+func (u *ACMEUser) GetRegistration() *acme.ExtendedAccount {
 	return u.Registration
 }
 
 // GetPrivateKey returns the private key of the ACMEUser.
-func (u *ACMEUser) GetPrivateKey() crypto.PrivateKey {
+func (u *ACMEUser) GetPrivateKey() crypto.Signer {
 	return u.key
 }
 
@@ -81,9 +81,9 @@ func (u *ACMEUser) MarshalJSON() ([]byte, error) {
 	}))
 
 	return json.Marshal(struct {
-		Email        string                 `json:"email"`
-		Registration *registration.Resource `json:"registration"`
-		KeyPEM       string                 `json:"key"`
+		Email        string                `json:"email"`
+		Registration *acme.ExtendedAccount `json:"registration"`
+		KeyPEM       string                `json:"key"`
 	}{
 		Email:        u.Email,
 		Registration: u.Registration,
@@ -96,9 +96,9 @@ func (u *ACMEUser) MarshalJSON() ([]byte, error) {
 // back into a crypto.PrivateKey.
 func (u *ACMEUser) UnmarshalJSON(data []byte) error {
 	aux := struct {
-		Email        string                 `json:"email"`
-		Registration *registration.Resource `json:"registration"`
-		KeyPEM       string                 `json:"key"`
+		Email        string                `json:"email"`
+		Registration *acme.ExtendedAccount `json:"registration"`
+		KeyPEM       string                `json:"key"`
 	}{}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
@@ -136,7 +136,7 @@ func accountDBKey(caDirURL string, email string) string {
 // CA directory URL and email. It returns (key, registration, true) only when
 // a complete, reusable account is found; otherwise ok is false and the caller
 // should register a new account.
-func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string) (*ecdsa.PrivateKey, *registration.Resource, bool) {
+func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string) (*ecdsa.PrivateKey, *acme.ExtendedAccount, bool) {
 	if !a.Database.TableExists(acmeAccountTable) {
 		// No ACME table yet (first run) - not an error.
 		return nil, nil, false
@@ -154,7 +154,7 @@ func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string) (*ecdsa.Pri
 		return nil, nil, false
 	}
 
-	if user.Registration == nil || user.Registration.URI == "" {
+	if user.Registration == nil || user.Registration.Location == "" {
 		// A key without a usable registration URI cannot be reused on its own.
 		return nil, nil, false
 	}

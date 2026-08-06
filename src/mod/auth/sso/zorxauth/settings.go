@@ -51,6 +51,17 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Normalize host-only values (e.g. "auth.example.com") to absolute URLs so
+	// runtime redirects never treat them as relative paths on the protected host.
+	// Use the current request scheme (not a hardcoded https) so http-only
+	// deployments keep matching runtime redirect behavior.
+	normalizedSSORedirectURL, normErr := ensureAbsoluteHTTPURL(ssoRedirectURL, requestScheme(r))
+	if normErr != nil {
+		utils.SendErrorResponse(w, "SSO Redirect URL must be an absolute http(s) URL")
+		return
+	}
+	ssoRedirectURL = normalizedSSORedirectURL
+
 	ssoSessionSetURL, err := utils.PostPara(r, "ssoSessionSetURL")
 	if err != nil {
 		//Use the default value if not provided
