@@ -1,0 +1,503 @@
+<div class="standardContainer">
+    <!-- Top Toolbar -->
+    <div class="ui secondary menu" style="margin-bottom: 10px;">
+        <div class="item">
+            <label style="margin-right: 6px; font-weight: bold;">Site:</label>
+            <select id="logCategory" class="ui compact dropdown" style="min-width: 150px;">
+                <option value="">-- Select Site --</option>
+            </select>
+        </div>
+        <div class="item">
+            <label style="margin-right: 6px; font-weight: bold;">Log:</label>
+            <select id="logFile" class="ui compact dropdown" style="min-width: 200px;">
+                <option value="">-- Select Log File --</option>
+            </select>
+        </div>
+        <div class="right menu">
+            <div class="item">
+                <div class="ui toggle checkbox" id="autoRefreshToggle">
+                    <input type="checkbox" name="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
+                    <label>Auto Refresh</label>
+                </div>
+            </div>
+            <div class="item">
+                <button class="ui basic button" onclick="refreshLogEntries()">
+                    <i class="sync icon"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="ui segment" id="filterBar" style="padding: 10px 14px; margin-bottom: 10px;">
+        <div class="ui small form">
+            <div class="fields" style="flex-wrap: wrap; gap: 8px;">
+                <div class="field" style="min-width: 120px;">
+                    <label>Client IP</label>
+                    <input type="text" id="filterIP" placeholder="e.g. 192.168" style="width: 130px;">
+                </div>
+                <div class="field" style="min-width: 120px;">
+                    <label>Path</label>
+                    <input type="text" id="filterPath" placeholder="e.g. /api" style="width: 130px;">
+                </div>
+                <div class="field" style="min-width: 90px;">
+                    <label>Status</label>
+                    <input type="text" id="filterStatus" placeholder="e.g. 404" style="width: 80px;">
+                </div>
+                <div class="field" style="min-width: 100px;">
+                    <label>Method</label>
+                    <select id="filterMethod" class="ui compact dropdown" style="width: 90px;">
+                        <option value="">All</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="HEAD">HEAD</option>
+                        <option value="OPTIONS">OPTIONS</option>
+                    </select>
+                </div>
+                <div class="field" style="min-width: 120px;">
+                    <label>Origin</label>
+                    <input type="text" id="filterOrigin" placeholder="e.g. example.com" style="width: 140px;">
+                </div>
+                <div class="field" style="min-width: 160px;">
+                    <label>Time Start</label>
+                    <input type="datetime-local" id="timeStart" style="width: 170px;">
+                </div>
+                <div class="field" style="min-width: 160px;">
+                    <label>Time End</label>
+                    <input type="datetime-local" id="timeEnd" style="width: 170px;">
+                </div>
+                <div class="field" style="display: flex; align-items: flex-end; gap: 6px;">
+                    <button class="ui small primary button" onclick="applyFilters()">
+                        <i class="filter icon"></i> Apply
+                    </button>
+                    <button class="ui small basic button" onclick="clearFilters()">
+                        <i class="erase icon"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="logLoadingIndicator" class="ui active inverted dimmer" style="display: none; position: relative; height: 60px; border-radius: 6px;">
+        <div class="ui text loader">Loading log entries...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="logEmptyState" class="ui placeholder segment" style="display: none;">
+        <div class="ui icon header">
+            <i class="file alternate outline icon"></i>
+            No log entries found.
+        </div>
+        <div class="inline" style="margin-top: 8px;">Select a log file to view entries, or adjust your filters.</div>
+    </div>
+
+    <!-- Data Table -->
+    <div style="overflow-x: auto;">
+        <table class="ui sortable unstackable celled compact table" id="logEntriesTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Origin</th>
+                    <th>Client IP</th>
+                    <th>Method</th>
+                    <th>Path</th>
+                    <th>Status</th>
+                    <th class="no-sort">User Agent</th>
+                </tr>
+            </thead>
+            <tbody id="logEntriesBody">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" style="display: none; margin-top: 10px;">
+        <div class="ui secondary menu" style="justify-content: center; flex-wrap: wrap; align-items: center;">
+            <div class="item">
+                <button class="ui small basic button" onclick="changePage(-1)" id="prevPageBtn">
+                    <i class="chevron left icon"></i> Previous
+                </button>
+            </div>
+            <div class="item" style="font-weight: bold;">
+                Page <span id="currentPage">1</span> / <span id="totalPages">1</span>
+            </div>
+            <div class="item">
+                <button class="ui small basic button" onclick="changePage(1)" id="nextPageBtn">
+                    Next <i class="chevron right icon"></i>
+                </button>
+            </div>
+            <div class="item">
+                <label style="margin-right: 4px;">Per page:</label>
+                <select id="pageSizeSelect" class="ui compact dropdown" onchange="onPageSizeChange()">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+            </div>
+            <div class="item" style="color: #888;">
+                Total: <span id="totalEntries">0</span> entries
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- State ---
+    let currentPage = 1;
+    let currentFile = '';
+    let currentFilters = {};
+    let autoRefreshTimer = null;
+    let logFilesMap = {}; // category -> [{Title, Filename, Filesize}]
+
+    // --- Initialization ---
+    // Use immediate invocation for SPA-loaded components (document.ready may have already fired)
+    $(function() {
+        setTimeout(function() {
+            initDropdowns();
+            populateLogFileDropdown();
+        }, 100); // Small delay ensures Semantic UI is fully initialized in the parent page
+    });
+
+    function initDropdowns() {
+        try {
+            $('#logCategory').dropdown({
+                onChange: function(val) {
+                    updateLogFileOptions(val);
+                }
+            });
+            $('#logFile').dropdown({
+                onChange: function(val) {
+                    if (val && val !== currentFile) {
+                        currentFile = val;
+                        currentPage = 1;
+                        loadLogEntries();
+                    }
+                }
+            });
+            // Fallback: native change event in case Semantic UI onChange does not fire
+            $('#logFile').off('change.logviewer').on('change.logviewer', function() {
+                var val = $(this).val();
+                if (val && val !== currentFile) {
+                    currentFile = val;
+                    currentPage = 1;
+                    loadLogEntries();
+                }
+            });
+            $('#filterMethod').dropdown();
+            $('#pageSizeSelect').dropdown();
+        } catch(e) {
+            console.error('Failed to initialize dropdowns:', e);
+        }
+    }
+
+    // --- Log File Loading ---
+    function populateLogFileDropdown() {
+        $.get('/api/log/list', function(data) {
+            console.log('Log list API response:', data);
+            if (data && data.error) {
+                console.error('Failed to load log list:', data.error);
+                showEmptyState(true);
+                return;
+            }
+            logFilesMap = data;
+            let categoryOptions = '';
+            for (let cat in logFilesMap) {
+                categoryOptions += '<option value="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</option>';
+            }
+            $('#logCategory').html('<option value="">-- Select Site --</option>' + categoryOptions);
+            $('#logCategory').dropdown('refresh');
+            updateLogFileOptions('');
+        }).fail(function(err) {
+            console.error('Failed to load log list:', err);
+            showEmptyState(true);
+        });
+    }
+
+    function updateLogFileOptions(category) {
+        let fileOptions = '<option value="">-- Select Log File --</option>';
+        if (category && logFilesMap[category]) {
+            let files = logFilesMap[category];
+            files.sort(function(a, b) { return b.Title.localeCompare(a.Title); }); // newest first
+            for (let i = 0; i < files.length; i++) {
+                let f = files[i];
+                let label = f.Title + ' (' + formatBytes(f.Filesize) + ')';
+                fileOptions += '<option value="' + escapeHtml(f.Filename) + '">' + escapeHtml(label) + '</option>';
+            }
+        } else if (!category) {
+            // Show all files from all categories
+            let allFiles = [];
+            for (let cat in logFilesMap) {
+                for (let i = 0; i < logFilesMap[cat].length; i++) {
+                    let f = logFilesMap[cat][i];
+                    f._category = cat;
+                    allFiles.push(f);
+                }
+            }
+            allFiles.sort(function(a, b) { return b.Title.localeCompare(a.Title); });
+            for (let i = 0; i < allFiles.length; i++) {
+                let f = allFiles[i];
+                let label = '[' + escapeHtml(f._category) + '] ' + f.Title + ' (' + formatBytes(f.Filesize) + ')';
+                fileOptions += '<option value="' + escapeHtml(f.Filename) + '">' + escapeHtml(label) + '</option>';
+            }
+        }
+        $('#logFile').html(fileOptions);
+        $('#logFile').dropdown('refresh');
+        // Keep UI and state in sync after rebuilding options.
+        let hasCurrent = false;
+        $('#logFile option').each(function() {
+            if (this.value === currentFile) {
+                hasCurrent = true;
+                return false;
+            }
+        });
+        if (currentFile && hasCurrent) {
+            $('#logFile').dropdown('set selected', currentFile);
+        } else {
+            currentFile = '';
+            $('#logFile').dropdown('clear');
+            showEmptyState(true);
+        }
+    }
+
+    // --- Data Loading ---
+    function loadLogEntries() {
+        if (!currentFile) {
+            showEmptyState(true);
+            return;
+        }
+
+        showLoading(true);
+        $('#logEntriesTable').hide();
+        $('#pagination').hide();
+        $('#logEmptyState').hide();
+
+        let params = {
+            file: currentFile,
+            page: currentPage,
+            pageSize: $('#pageSizeSelect').val() || 50
+        };
+
+        // Add filter params
+        if (currentFilters.ip) params.filter_ip = currentFilters.ip;
+        if (currentFilters.path) params.filter_path = currentFilters.path;
+        if (currentFilters.status) params.filter_status = currentFilters.status;
+        if (currentFilters.method) params.filter_method = currentFilters.method;
+        if (currentFilters.origin) params.filter_origin = currentFilters.origin;
+        if (currentFilters.timeStart) params.time_start = currentFilters.timeStart;
+        if (currentFilters.timeEnd) params.time_end = currentFilters.timeEnd;
+
+        console.log('Loading log entries with params:', params);
+        $.get('/api/log/entries', params, function(data) {
+            showLoading(false);
+            console.log('Log entries API response:', data);
+            if (data && data.error) {
+                console.error('Failed to load entries:', data.error);
+                showEmptyState(true);
+                return;
+            }
+            if (!data || !data.entries) {
+                console.error('Invalid response format:', data);
+                showEmptyState(true);
+                return;
+            }
+            renderTable(data);
+            renderPagination(data);
+        }).fail(function(jqXHR, textStatus, errThrown) {
+            showLoading(false);
+            console.error('Failed to load entries:', textStatus, errThrown, jqXHR.responseText);
+            showEmptyState(true);
+        });
+    }
+
+    function renderTable(data) {
+        let entries = data.entries || [];
+        let tbody = $('#logEntriesBody');
+        tbody.empty();
+
+        if (entries.length === 0) {
+            showEmptyState(true);
+            return;
+        }
+
+        showEmptyState(false);
+        $('#logEntriesTable').show();
+
+        for (let i = 0; i < entries.length; i++) {
+            let e = entries[i];
+            let statusClass = getStatusClass(e.status_code);
+            let row = '<tr>';
+            row += '<td style="white-space: nowrap; font-family: monospace; font-size: 0.85em;">' + escapeHtml(e.timestamp) + '</td>';
+            row += '<td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + escapeHtml(e.origin) + '">' + escapeHtml(e.origin) + '</td>';
+            row += '<td style="font-family: monospace; white-space: nowrap;">' + escapeHtml(e.client_ip) + '</td>';
+            row += '<td>' + escapeHtml(e.method) + '</td>';
+            row += '<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + escapeHtml(e.path) + '">' + escapeHtml(e.path) + '</td>';
+            row += '<td class="' + statusClass + '" style="font-weight: bold; text-align: center;">' + e.status_code + '</td>';
+            row += '<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8em;" title="' + escapeHtml(e.user_agent) + '">' + escapeHtml(e.user_agent) + '</td>';
+            row += '</tr>';
+            tbody.append(row);
+        }
+
+        // Re-apply tablesort
+        if (typeof $('table').tablesort === 'function') {
+            $('#logEntriesTable').tablesort();
+        }
+    }
+
+    function renderPagination(data) {
+        if (!data.total || data.total === 0) {
+            $('#pagination').hide();
+            return;
+        }
+        $('#pagination').show();
+        $('#currentPage').text(data.page);
+        $('#totalPages').text(data.totalPages);
+        $('#totalEntries').text(data.total);
+        $('#prevPageBtn').prop('disabled', data.page <= 1);
+        $('#nextPageBtn').prop('disabled', data.page >= data.totalPages);
+    }
+
+    // --- Filtering ---
+    function applyFilters() {
+        currentFilters = {
+            ip: $('#filterIP').val().trim(),
+            path: $('#filterPath').val().trim(),
+            status: $('#filterStatus').val().trim(),
+            method: $('#filterMethod').val(),
+            origin: $('#filterOrigin').val().trim(),
+            timeStart: $('#timeStart').val() ? $('#timeStart').val().replace('T', ' ') + ':00' : '',
+            timeEnd: $('#timeEnd').val() ? $('#timeEnd').val().replace('T', ' ') + ':00' : ''
+        };
+        currentPage = 1;
+        loadLogEntries();
+    }
+
+    function clearFilters() {
+        $('#filterIP').val('');
+        $('#filterPath').val('');
+        $('#filterStatus').val('');
+        $('#filterMethod').dropdown('clear');
+        $('#filterOrigin').val('');
+        $('#timeStart').val('');
+        $('#timeEnd').val('');
+        currentFilters = {};
+        currentPage = 1;
+        if (currentFile) {
+            loadLogEntries();
+        }
+    }
+
+    // --- Pagination ---
+    function changePage(delta) {
+        currentPage += delta;
+        if (currentPage < 1) currentPage = 1;
+        loadLogEntries();
+    }
+
+    function onPageSizeChange() {
+        currentPage = 1;
+        loadLogEntries();
+    }
+
+    // --- Auto Refresh ---
+    function toggleAutoRefresh(enabled) {
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+        }
+        if (enabled) {
+            autoRefreshTimer = setInterval(function() {
+                if (currentFile) {
+                    loadLogEntries();
+                }
+            }, 5000); // refresh every 5 seconds
+        }
+    }
+
+    // --- Refresh ---
+    function refreshLogEntries() {
+        populateLogFileDropdown();
+        if (currentFile) {
+            loadLogEntries();
+        }
+    }
+
+    // --- UI Helpers ---
+    function showLoading(show) {
+        $('#logLoadingIndicator').toggle(show);
+    }
+
+    function showEmptyState(show) {
+        $('#logEmptyState').toggle(show);
+        if (show) {
+            $('#logEntriesTable').hide();
+            $('#pagination').hide();
+        }
+    }
+
+    function getStatusClass(code) {
+        if (code >= 200 && code < 300) return 'status-2xx';
+        if (code >= 300 && code < 400) return 'status-3xx';
+        if (code >= 400 && code < 500) return 'status-4xx';
+        if (code >= 500) return 'status-5xx';
+        return '';
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        let k = 1024;
+        let sizes = ['B', 'KB', 'MB', 'GB'];
+        let i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // --- Read hash params for drill-down links ---
+    function readHashParams() {
+        let hash = window.location.hash;
+        if (hash.indexOf('?') > 0) {
+            let qs = hash.substring(hash.indexOf('?') + 1);
+            let params = new URLSearchParams(qs);
+            if (params.get('filter_ip')) $('#filterIP').val(params.get('filter_ip'));
+            if (params.get('filter_path')) $('#filterPath').val(params.get('filter_path'));
+            if (params.get('filter_status')) $('#filterStatus').val(params.get('filter_status'));
+            if (params.get('filter_method')) $('#filterMethod').dropdown('set selected', params.get('filter_method'));
+            if (params.get('filter_origin')) $('#filterOrigin').val(params.get('filter_origin'));
+        }
+    }
+
+    // Check hash params on load (for drill-down from stats page)
+    setTimeout(readHashParams, 500);
+</script>
+
+<style>
+    /* Status code colors */
+    .status-2xx { color: #21ba45 !important; } /* green */
+    .status-3xx { color: #2185d0 !important; } /* blue */
+    .status-4xx { color: #f2711c !important; } /* orange */
+    .status-5xx { color: #db2828 !important; } /* red */
+
+    /* Dark theme overrides handled by CSS variables */
+    body.darkTheme .status-2xx { color: #2ecc71 !important; }
+    body.darkTheme .status-3xx { color: #54a0ff !important; }
+    body.darkTheme .status-4xx { color: #f39c12 !important; }
+    body.darkTheme .status-5xx { color: #e74c3c !important; }
+
+    /* Table cell truncation */
+    #logEntriesTable td {
+        vertical-align: middle;
+    }
+</style>

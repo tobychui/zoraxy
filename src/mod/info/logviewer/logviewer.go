@@ -2,6 +2,7 @@ package logviewer
 
 import (
 	"archive/zip"
+	"bufio"
 	"compress/gzip"
 	"encoding/json"
 	"errors"
@@ -46,6 +47,47 @@ type LogFile struct {
 	Fullpath string
 	Filesize int64
 }
+
+// LogEntry represents a single parsed log line from an access log file
+type LogEntry struct {
+	Timestamp  string `json:"timestamp"`
+	RouterType string `json:"router_type"`
+	Origin     string `json:"origin"`
+	ClientIP   string `json:"client_ip"`
+	UserAgent  string `json:"user_agent"`
+	Method     string `json:"method"`
+	Path       string `json:"path"`
+	StatusCode int    `json:"status_code"`
+}
+
+// FilterParams holds all filtering, sorting and pagination parameters for log queries
+type FilterParams struct {
+	FilterIP     string
+	FilterPath   string
+	FilterStatus string
+	FilterMethod string
+	FilterOrigin string
+	TimeStart    string
+	TimeEnd      string
+	SortField    string
+	SortOrder    string
+	Page         int
+	PageSize     int
+}
+
+// Resource limits applied when serving log entries. These bound memory and CPU
+// usage for very large log files, especially when the UI polls this endpoint on
+// an Auto Refresh timer.
+const (
+	// maxLogFileBytes caps the number of bytes read from an uncompressed log
+	// file per request. Files larger than this are tail-truncated so only the
+	// most recent entries are processed, preventing OOM on multi-GB logs.
+	maxLogFileBytes = 64 * 1024 * 1024 // 64 MB
+
+	// maxLogLinesPerRequest caps the number of log lines parsed per request.
+	// This bounds the CPU cost of repeated Auto Refresh polling.
+	maxLogLinesPerRequest = 1000000
+)
 
 func NewLogViewer(option *ViewerOption) *Viewer {
 	return &Viewer{option: option}
@@ -199,6 +241,118 @@ func (v *Viewer) HandleLogErrorSummary(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, string(js))
 }
 
+// HandleReadLogEntries returns parsed log entries as structured JSON with filtering, sorting and pagination.
+// Query parameters: file (required), page, pageSize, sortField, sortOrder,
+// filter_ip, filter_path, filter_status, filter_method, filter_origin, time_start, time_end
+func (v *Viewer) HandleReadLogEntries(w http.ResponseWriter, r *http.Request) {
+	filename, err := utils.GetPara(r, "file")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid filename given")
+		return
+	}
+
+	// Parse pagination params with defaults
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+		page = p
+	}
+	pageSize := 50
+	if ps, err := strconv.Atoi(r.URL.Query().Get("pageSize")); err == nil && ps > 0 && ps <= 500 {
+		pageSize = ps
+	}
+
+	// Parse sort params with defaults
+	sortField := r.URL.Query().Get("sortField")
+	if sortField == "" {
+		sortField = "timestamp"
+	}
+	sortOrder := r.URL.Query().Get("sortOrder")
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	// Build FilterParams
+	params := FilterParams{
+		FilterIP:     r.URL.Query().Get("filter_ip"),
+		FilterPath:   r.URL.Query().Get("filter_path"),
+		FilterStatus: r.URL.Query().Get("filter_status"),
+		FilterMethod: r.URL.Query().Get("filter_method"),
+		FilterOrigin: r.URL.Query().Get("filter_origin"),
+		TimeStart:    r.URL.Query().Get("time_start"),
+		TimeEnd:      r.URL.Query().Get("time_end"),
+		SortField:    sortField,
+		SortOrder:    sortOrder,
+		Page:         page,
+		PageSize:     pageSize,
+	}
+
+	// Stream the log file line by line, parsing router entries and applying
+	// filters on the fly. Only entries that pass the filters are retained for
+	// sorting, so memory stays bounded even for very large logs. Files larger
+	// than maxLogFileBytes are tail-truncated and parsing stops after
+	// maxLogLinesPerRequest lines, protecting against OOM / CPU hotspots when
+	// Auto Refresh polls this endpoint repeatedly.
+	safeFilename := strings.TrimSpace(filepath.Base(filename))
+	if safeFilename == "" || safeFilename == "." || filepath.IsAbs(safeFilename) || strings.ContainsAny(safeFilename, `/\\`) {
+		utils.SendErrorResponse(w, "invalid filename given")
+		return
+	}
+	logFilepath := v.senatizeLogFilenameInput(safeFilename)
+	if !utils.FileExists(logFilepath) {
+		utils.SendErrorResponse(w, "log file not found")
+		return
+	}
+
+	entries := make([]*LogEntry, 0, 1024)
+	err = v.forEachLogLine(logFilepath, func(line string) bool {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.Contains(line, "[router:") {
+			return true
+		}
+		entry, perr := v.parseLogLine(line)
+		if perr != nil {
+			return true
+		}
+		if matchesFilter(entry, params) {
+			entries = append(entries, entry)
+		}
+		return true
+	})
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	// Sort the filtered entries, then paginate
+	sortEntries(entries, params)
+	total := len(entries)
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + pageSize - 1) / pageSize
+	}
+
+	pageEntries := []*LogEntry{}
+	if start := (page - 1) * pageSize; start < total {
+		end := start + pageSize
+		if end > total {
+			end = total
+		}
+		pageEntries = entries[start:end]
+	}
+
+	resp := map[string]interface{}{
+		"entries":    pageEntries,
+		"total":      total,
+		"page":       page,
+		"pageSize":   pageSize,
+		"totalPages": totalPages,
+	}
+
+	js, _ := json.Marshal(resp)
+	utils.SendJSONResponse(w, string(js))
+}
+
 /*
 	Log Access Functions
 */
@@ -327,6 +481,72 @@ func (v *Viewer) LoadLogFile(filename string) (string, error) {
 	}
 }
 
+// forEachLogLine streams the lines of a log file (transparently decompressing
+// .gz and legacy zip files) without loading the whole file into memory. It
+// invokes fn for each line and stops early when fn returns false. Very large
+// uncompressed files are tail-truncated to maxLogFileBytes and processing stops
+// after maxLogLinesPerRequest lines to bound memory and CPU usage.
+func (v *Viewer) forEachLogLine(logFilepath string, fn func(line string) bool) error {
+	file, err := os.Open(logFilepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var reader io.Reader = file
+
+	if strings.HasSuffix(logFilepath, ".gz") {
+		// Compressed logs are streamed in full (gzip cannot be tail-seeked); the
+		// line budget below still bounds the work performed per request.
+		gzipReader, err := gzip.NewReader(file)
+		if err != nil {
+			// Older logs may use zip compression despite the .gz extension.
+			zipReader, zerr := zip.OpenReader(logFilepath)
+			if zerr != nil {
+				return err
+			}
+			defer zipReader.Close()
+			if len(zipReader.File) == 0 {
+				return errors.New("zip file is empty")
+			}
+			rc, oerr := zipReader.File[0].Open()
+			if oerr != nil {
+				return oerr
+			}
+			defer rc.Close()
+			reader = rc
+		} else {
+			defer gzipReader.Close()
+			reader = gzipReader
+		}
+	} else if st, err := file.Stat(); err == nil && st.Size() > maxLogFileBytes {
+		// Tail-truncate very large uncompressed files: only read the last
+		// maxLogFileBytes (the most recent entries).
+		if _, err := file.Seek(-maxLogFileBytes, io.SeekEnd); err != nil {
+			return err
+		}
+	}
+
+	// Allow long lines (long URLs / user agents) without blowing up memory.
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+
+	linesProcessed := 0
+	for scanner.Scan() {
+		linesProcessed++
+		if linesProcessed > maxLogLinesPerRequest {
+			return nil
+		}
+		if !fn(scanner.Text()) {
+			return nil
+		}
+	}
+	if err := scanner.Err(); err != nil && err != bufio.ErrTooLong {
+		return err
+	}
+	return nil
+}
+
 func (v *Viewer) isMethodKeyword(part string) bool {
 	part = strings.TrimSpace(part)
 	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
@@ -336,6 +556,166 @@ func (v *Viewer) isMethodKeyword(part string) bool {
 		}
 	}
 	return false
+}
+
+// parseLogLine parses a single access log line into a LogEntry struct.
+// Expected format: [timestamp] [router:type] [origin:host] [client: IP] [useragent: UA] METHOD PATH STATUS
+func (v *Viewer) parseLogLine(line string) (*LogEntry, error) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return nil, errors.New("empty line")
+	}
+
+	parts := strings.Split(line, "]")
+
+	entry := &LogEntry{}
+
+	// Extract timestamp from the first part (strip leading '[')
+	timestamp := strings.TrimSpace(parts[0])
+	timestamp = strings.TrimPrefix(timestamp, "[")
+	entry.Timestamp = timestamp
+
+	// Iterate over all parts to extract bracketed metadata and the trailing request fields
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		switch {
+		case strings.HasPrefix(part, "[router:"):
+			entry.RouterType = strings.TrimSpace(strings.TrimPrefix(part, "[router:"))
+		case strings.HasPrefix(part, "[origin:"):
+			entry.Origin = strings.TrimSpace(strings.TrimPrefix(part, "[origin:"))
+		case strings.HasPrefix(part, "[client:"):
+			entry.ClientIP = strings.TrimSpace(strings.TrimPrefix(part, "[client:"))
+		case strings.HasPrefix(part, "[useragent:"):
+			entry.UserAgent = strings.TrimSpace(strings.TrimPrefix(part, "[useragent:"))
+		case v.isMethodKeyword(part):
+			// This is the trailing part containing method, path and status code
+			fields := strings.Fields(part)
+			if len(fields) >= 1 {
+				entry.Method = fields[0]
+			}
+			if len(fields) >= 2 {
+				entry.Path = fields[1]
+			}
+			if len(fields) >= 3 {
+				if sc, err := strconv.Atoi(fields[2]); err == nil {
+					entry.StatusCode = sc
+				}
+			}
+		}
+	}
+
+	return entry, nil
+}
+
+// matchesFilter reports whether an entry passes all active filters in params.
+func matchesFilter(entry *LogEntry, params FilterParams) bool {
+	if params.FilterIP != "" && !strings.Contains(entry.ClientIP, params.FilterIP) {
+		return false
+	}
+	if params.FilterPath != "" && !strings.Contains(entry.Path, params.FilterPath) {
+		return false
+	}
+	if params.FilterStatus != "" {
+		statusStr := strconv.Itoa(entry.StatusCode)
+		if statusStr != params.FilterStatus {
+			return false
+		}
+	}
+	if params.FilterMethod != "" && !strings.EqualFold(entry.Method, params.FilterMethod) {
+		return false
+	}
+	if params.FilterOrigin != "" && !strings.Contains(entry.Origin, params.FilterOrigin) {
+		return false
+	}
+	ts := entry.Timestamp
+	if len(ts) == 19 {
+		ts += ".000000"
+	}
+	timeStart := params.TimeStart
+	if len(timeStart) == 19 {
+		timeStart += ".000000"
+	}
+	timeEnd := params.TimeEnd
+	if len(timeEnd) == 19 {
+		timeEnd += ".999999"
+	}
+	if timeStart != "" && ts < timeStart {
+		return false
+	}
+	if timeEnd != "" && ts > timeEnd {
+		return false
+	}
+	return true
+}
+
+// sortEntries sorts entries in place by params.SortField in params.SortOrder.
+func sortEntries(entries []*LogEntry, params FilterParams) {
+	sort.Slice(entries, func(i, j int) bool {
+		var less, equal bool
+		switch params.SortField {
+		case "origin":
+			less = entries[i].Origin < entries[j].Origin
+			equal = entries[i].Origin == entries[j].Origin
+		case "client_ip":
+			less = entries[i].ClientIP < entries[j].ClientIP
+			equal = entries[i].ClientIP == entries[j].ClientIP
+		case "method":
+			less = entries[i].Method < entries[j].Method
+			equal = entries[i].Method == entries[j].Method
+		case "path":
+			less = entries[i].Path < entries[j].Path
+			equal = entries[i].Path == entries[j].Path
+		case "status_code":
+			less = entries[i].StatusCode < entries[j].StatusCode
+			equal = entries[i].StatusCode == entries[j].StatusCode
+		case "user_agent":
+			less = entries[i].UserAgent < entries[j].UserAgent
+			equal = entries[i].UserAgent == entries[j].UserAgent
+		default:
+			less = entries[i].Timestamp < entries[j].Timestamp
+			equal = entries[i].Timestamp == entries[j].Timestamp
+		}
+
+		if equal {
+			return false
+		}
+		if params.SortOrder == "desc" {
+			return !less
+		}
+		return less
+	})
+}
+
+// filterAndSortEntries applies filtering, sorting and pagination to a slice of LogEntry.
+// It returns the paginated slice and the total count before pagination.
+func filterAndSortEntries(entries []*LogEntry, params FilterParams) ([]*LogEntry, int) {
+	// Step 1: Filter
+	filtered := make([]*LogEntry, 0, len(entries))
+	for _, entry := range entries {
+		if matchesFilter(entry, params) {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	// Step 2: Sort
+	sortEntries(filtered, params)
+
+	total := len(filtered)
+
+	// Step 3: Paginate
+	if params.Page < 1 {
+		params.Page = 1
+	}
+	start := (params.Page - 1) * params.PageSize
+	if start >= len(filtered) {
+		return []*LogEntry{}, total
+	}
+	end := start + params.PageSize
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
+	return filtered[start:end], total
 }
 
 func (v *Viewer) LoadLogSummary(filename string) (string, error) {
