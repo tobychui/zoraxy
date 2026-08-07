@@ -10,6 +10,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
 	"imuslab.com/zoraxy/mod/utils"
@@ -46,6 +47,8 @@ func handleAttachRuleToHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pathBasedRules, _ := utils.PostPara(r, "pathBasedRules")
+
 	//Check if access rule and proxy rule exists
 	targetProxyEndpoint, err := dynamicProxyRouter.LoadProxy(host)
 	if err != nil {
@@ -59,6 +62,20 @@ func handleAttachRuleToHost(w http.ResponseWriter, r *http.Request) {
 
 	//Update the proxy host acess rule id
 	targetProxyEndpoint.AccessFilterUUID = ruleid
+
+	// Update path-based access rules
+	if pathBasedRules != "" {
+		var rules []*dynamicproxy.PathBasedAccessRule
+		err = json.Unmarshal([]byte(pathBasedRules), &rules)
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid pathBasedRules format")
+			return
+		}
+		targetProxyEndpoint.PathBasedAccessRules = rules
+	} else {
+		targetProxyEndpoint.PathBasedAccessRules = []*dynamicproxy.PathBasedAccessRule{}
+	}
+
 	targetProxyEndpoint.UpdateToRuntime()
 	err = SaveReverseProxyConfig(targetProxyEndpoint)
 	if err != nil {
