@@ -2,6 +2,8 @@ package oauth2
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,6 +37,7 @@ type OAuth2RouterOptions struct {
 	Logger                       *logger.Logger
 	Database                     *database.Database
 	OAuth2ConfigCache            *ttlcache.Cache[string, *oauth2.Config]
+	OAuth2SessionStore           *ttlcache.Cache[string, *oauth2.Token]
 }
 
 type OIDCDiscoveryDocument struct {
@@ -86,6 +89,11 @@ func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 		ttlcache.WithTTL[string, *oauth2.Config](*options.OAuth2ConfigurationCacheTime),
 	)
 	go options.OAuth2ConfigCache.Start()
+
+	options.OAuth2SessionStore = ttlcache.New[string, *oauth2.Token](
+		ttlcache.WithDisableTouchOnHit[string, *oauth2.Token](),
+	)
+	go options.OAuth2SessionStore.Start()
 
 	return ar
 }
@@ -203,6 +211,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 
 	// Flush caches
 	ar.options.OAuth2ConfigCache.DeleteAll()
+	ar.options.OAuth2SessionStore.DeleteAll()
 
 	utils.SendOK(w)
 }
@@ -349,7 +358,18 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		if cookieExpiry.IsZero() || cookieExpiry.Before(time.Now()) {
 			cookieExpiry = time.Now().Add(time.Hour)
 		}
-		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry, HttpOnly: true}
+		//Store the token server side and only hand out an opaque session id, so the
+		//cookie value cannot be swapped for a token issued to another OAuth2 client
+		sessionIdBytes := make([]byte, 32)
+		if _, err := rand.Read(sessionIdBytes); err != nil {
+			ar.options.Logger.PrintAndLog("OAuth2", "Failed to generate session id", err)
+			w.WriteHeader(500)
+			return errors.New("internal server error")
+		}
+		sessionId := base64.RawURLEncoding.EncodeToString(sessionIdBytes)
+		ar.options.OAuth2SessionStore.Set(sessionId, token, time.Until(cookieExpiry))
+
+		cookie := http.Cookie{Name: tokenCookie, Value: sessionId, Path: "/", Expires: cookieExpiry, HttpOnly: true}
 		if scheme == "https" {
 			cookie.Secure = true
 			cookie.SameSite = http.SameSiteLaxMode
@@ -382,11 +402,12 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 	unauthorized := false
 	cookie, err := r.Cookie(tokenCookie)
 	if err == nil {
-		if cookie.Value == "" {
+		session := ar.options.OAuth2SessionStore.Get(cookie.Value)
+		if cookie.Value == "" || session == nil {
 			unauthorized = true
 		} else {
 			ctx := context.Background()
-			client := oauthConfig.Client(ctx, &oauth2.Token{AccessToken: cookie.Value})
+			client := oauthConfig.Client(ctx, session.Value())
 			req, err := client.Get(ar.options.OAuth2UserInfoUrl)
 			if err != nil {
 				ar.options.Logger.PrintAndLog("OAuth2", "Failed to get user info", err)
