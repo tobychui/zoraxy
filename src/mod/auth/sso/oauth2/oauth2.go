@@ -349,7 +349,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		if cookieExpiry.IsZero() || cookieExpiry.Before(time.Now()) {
 			cookieExpiry = time.Now().Add(time.Hour)
 		}
-		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry}
+		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry, HttpOnly: true}
 		if scheme == "https" {
 			cookie.Secure = true
 			cookie.SameSite = http.SameSiteLaxMode
@@ -357,7 +357,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		w.Header().Add("Set-Cookie", cookie.String())
 
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
-			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1)}
+			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1), HttpOnly: true}
 			if scheme == "https" {
 				cookie.Secure = true
 				cookie.SameSite = http.SameSiteLaxMode
@@ -405,7 +405,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		state := url.QueryEscape(reqUrl)
 		var url string
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
-			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1)}
+			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1), HttpOnly: true}
 			if scheme == "https" {
 				cookie.Secure = true
 				cookie.SameSite = http.SameSiteLaxMode
