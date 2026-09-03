@@ -405,7 +405,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 				RequestMethod:                 r.Method,
 				Referer:                       r.Referer(),
 				UserAgent:                     r.UserAgent(),
-				RequestURL:                    r.Host + r.RequestURI,
+				RequestURL:                    r.Host + r.URL.EscapedPath(),
 				Target:                        originalHostname,
 				Upstream:                      upstreamHostname,
 			}

@@ -3,9 +3,29 @@ package dbbolt
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	bolt "go.etcd.io/bbolt"
 )
+
+/*
+	MaxValueSize is the largest serialized value this backend will accept for a
+	single key.
+
+	bbolt itself allows values up to 2GiB, but that limit alone is not enough to
+	keep a database readable. A leaf page addresses all of its key/value data
+	through a single 2GiB (MaxAllocSize) unsafe slice window, the offset of an
+	element inside that window accumulates over every element before it, and
+	bbolt refuses to split a node holding 4 or fewer keys. A handful of very
+	large values sharing one page can therefore push the cumulative offset past
+	the window even when every individual value is legal. Once that happens,
+	every read and every write that seeks over the element panics, permanently,
+	and the only way out is restoring the database file from a backup.
+
+	64MB per value keeps roughly 8x headroom under that ceiling in the
+	4-values-per-page worst case.
+*/
+const MaxValueSize = 64 * 1024 * 1024
 
 type Database struct {
 	Db interface{} //This is the bolt database object
@@ -63,6 +83,11 @@ func (d *Database) Write(tableName string, key string, value interface{}) error 
 	jsonString, err := json.Marshal(value)
 	if err != nil {
 		return err
+	}
+	if len(jsonString) > MaxValueSize {
+		//Refuse the write instead of storing a value that might make the
+		//containing page unreadable. See MaxValueSize for the details.
+		return fmt.Errorf("value too large for key %s in table %s: %d bytes exceeds the limit of %d bytes", key, tableName, len(jsonString), MaxValueSize)
 	}
 	err = d.Db.(*bolt.DB).Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(tableName))
