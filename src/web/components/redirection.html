@@ -262,6 +262,12 @@
       let deviceType = payload.DeviceType || "all";
 
       row.html(`
+        <td class="collapsing">
+          <div class="ui toggle tiny fitted checkbox" style="margin-bottom: -0.5em; margin-right: 0.4em;" title="Save or cancel the edit to change the enable state">
+              <input type="checkbox" class="enableToggle" name="active" disabled ${payload.Enabled ? "checked" : ""}>
+              <label></label>
+          </div>
+        </td>
         <td>
           <div class="ui small input">
             <input type="text" value="${redirectUrl}" id="editRedirectUrl">
