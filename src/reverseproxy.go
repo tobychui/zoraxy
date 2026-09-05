@@ -1320,9 +1320,13 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "This matching path already exists")
 			return
 		}
+		// Match the prefix without regard to letter case. Defaults to false (case sensitive).
+		caseInsensitive, _ := utils.PostBool(r, "caseinsensitive")
+
 		targetProxy.AuthenticationProvider.BasicAuthExceptionRules = append(targetProxy.AuthenticationProvider.BasicAuthExceptionRules, &dynamicproxy.BasicAuthExceptionRule{
-			RuleType:   dynamicproxy.AuthExceptionType_Paths,
-			PathPrefix: strings.TrimSpace(matchingPrefix),
+			RuleType:        dynamicproxy.AuthExceptionType_Paths,
+			PathPrefix:      strings.TrimSpace(matchingPrefix),
+			CaseInsensitive: caseInsensitive,
 		})
 
 	case EXCEPTION_TYPE_IP:

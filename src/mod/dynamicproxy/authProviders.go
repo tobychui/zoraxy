@@ -80,10 +80,18 @@ func basicAuthExceptionMatched(pe *ProxyEndpoint, r *http.Request) bool {
 	}
 	requestTarget := pathmatch.RequestTarget(r)
 	for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
+		if exceptionRule == nil {
+			continue
+		}
 		exceptionType := exceptionRule.RuleType
 		switch exceptionType {
 		case AuthExceptionType_Paths:
-			if pathmatch.RequestPathWithinPrefix(requestTarget, exceptionRule.PathPrefix) {
+			//Path matching is case sensitive unless the rule opts out of it
+			matched := pathmatch.RequestPathWithinPrefix(requestTarget, exceptionRule.PathPrefix)
+			if exceptionRule.CaseInsensitive {
+				matched = pathmatch.RequestPathWithinPrefixFold(requestTarget, exceptionRule.PathPrefix)
+			}
+			if matched {
 				return true
 			}
 		case AuthExceptionType_CIDR:

@@ -144,6 +144,7 @@ const (
 type BasicAuthExceptionRule struct {
 	RuleType        AuthExceptionType //The type of the exception rule
 	PathPrefix      string            //Path prefix to match, e.g. /api/v1/
+	CaseInsensitive bool              //If true, the path prefix is matched without regard to letter case
 	CIDR            string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
 	UseTrustedProxy bool              //If true, trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) for CIDR matching. WARNING: enabling this allows header spoofing if the upstream proxy is not trusted.
 }

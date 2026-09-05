@@ -35,15 +35,27 @@ func cleanPrefix(prefix string) string {
 	return CleanRequestPath(prefix)
 }
 
-// RequestPathWithinPrefix reports whether requestURI falls within prefix,
-// comparing resolved paths on segment boundaries. An empty or whitespace-only
-// prefix never matches.
+// RequestPathWithinPrefix reports whether requestURI falls within prefix, comparing resolved paths on segment boundaries. An empty or whitespace-only prefix never matches.
 func RequestPathWithinPrefix(requestURI string, prefix string) bool {
+	return requestPathWithinPrefix(requestURI, prefix, false)
+}
+
+// RequestPathWithinPrefixFold is RequestPathWithinPrefix with case-insensitive comparison.
+func RequestPathWithinPrefixFold(requestURI string, prefix string) bool {
+	return requestPathWithinPrefix(requestURI, prefix, true)
+}
+
+func requestPathWithinPrefix(requestURI string, prefix string, ignoreCase bool) bool {
 	cleanedPrefix := cleanPrefix(prefix)
 	if cleanedPrefix == "" {
 		return false
 	}
 	requestPath := CleanRequestPath(requestURI)
+	if ignoreCase {
+		//Fold both sides so the segment boundary check below stays case-insensitive
+		requestPath = strings.ToLower(requestPath)
+		cleanedPrefix = strings.ToLower(cleanedPrefix)
+	}
 	return requestPath == cleanedPrefix || strings.HasPrefix(requestPath, cleanedPrefix+"/")
 }
 
