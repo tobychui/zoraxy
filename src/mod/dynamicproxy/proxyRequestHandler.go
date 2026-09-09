@@ -254,6 +254,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		AllowConnect:                   target.EnableConnectSupport,
+		AllowUpgrade:                   target.EnableUpgradeForwarding,
 		Version:                        target.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.Option.DevelopmentMode,
 	})
@@ -358,6 +359,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
+		AllowUpgrade:                   target.parent.EnableUpgradeForwarding,
 		Version:                        target.parent.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
 	})

@@ -349,14 +349,15 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	useTLS := (tls == "true")
 
 	//Bypass global TLS value / allow direct access from port 80?
-	bypassGlobalTLS, _ := utils.PostPara(r, "bypassGlobalTLS")
-	if bypassGlobalTLS == "" {
-		bypassGlobalTLS = "false"
+	useBypassGlobalTLS, _ := utils.PostBool(r, "bypassGlobalTLS")
+	if err != nil {
+		useBypassGlobalTLS = false
 	}
 
 	// Allow HTTP CONNECT tunneling to the configured upstream (disabled by default)
-	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
-	enableConnectSupport := enableConnectSupportStr == "true"
+	enableConnectSupport, _ := utils.PostBool(r, "enableConnectSupport")
+
+	enableUpgradeForwarding, _ := utils.PostBool(r, "enableUpgradeForwarding")
 
 	// Enable uptime monitor?
 	enableUtm, err := utils.PostBool(r, "enableUtm")
@@ -370,8 +371,6 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Disable logging?
 	disableLog, _ := utils.PostBool(r, "disableLog")
-
-	useBypassGlobalTLS := bypassGlobalTLS == "true"
 
 	//Enable TLS validation?
 	skipTlsValidation, _ := utils.PostBool(r, "tlsval")
@@ -548,8 +547,12 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			//TLS
 			BypassGlobalTLS:      useBypassGlobalTLS,
 			EnableConnectSupport: enableConnectSupport,
-			AccessFilterUUID:     accessRuleID,
-			TlsOptions:           tlscert.GetDefaultHostSpecificTlsBehavior(),
+
+			//Generic HTTP protocol upgrade
+			EnableUpgradeForwarding: enableUpgradeForwarding,
+
+			AccessFilterUUID: accessRuleID,
+			TlsOptions:       tlscert.GetDefaultHostSpecificTlsBehavior(),
 
 			//VDir
 			VirtualDirectories: []*dynamicproxy.VirtualDirectoryEndpoint{},
@@ -705,6 +708,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
 	enableConnectSupport := enableConnectSupportStr == "true"
 
+	enableUpgradeForwardingStr, _ := utils.PostPara(r, "enableUpgradeForwarding")
+	enableUpgradeForwarding := enableUpgradeForwardingStr == "true"
+
 	//Disable uptime monitor
 	disbleUtm, err := utils.PostBool(r, "dutm")
 	if err != nil {
@@ -808,6 +814,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint := dynamicproxy.CopyEndpoint(targetProxyEntry)
 	newProxyEndpoint.BypassGlobalTLS = bypassGlobalTLS
 	newProxyEndpoint.EnableConnectSupport = enableConnectSupport
+	newProxyEndpoint.EnableUpgradeForwarding = enableUpgradeForwarding
 	if newProxyEndpoint.AuthenticationProvider == nil {
 		newProxyEndpoint.AuthenticationProvider = &dynamicproxy.AuthenticationProvider{
 			AuthMethod:              dynamicproxy.AuthMethodNone,

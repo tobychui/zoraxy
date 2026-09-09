@@ -17,6 +17,12 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 )
 
+// Tunnel settings for generic HTTP protocol upgrades, see upgrade.go
+const (
+	upgradeTunnelTimeout           = 300 * time.Second //Deadline of an upgraded connection tunnel
+	upgradeTunnelRefreshOnActivity = true              //Treat the deadline as an idle timeout instead of a hard limit
+)
+
 // ReverseProxy is an HTTP Handler that takes an incoming request and
 // sends it to another server, proxying the response back to the
 // client, support http, also support https tunnel using http.hijacker
@@ -85,6 +91,7 @@ type ResponseRewriteRuleSet struct {
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 	ForceHTTP11                    bool   //Force use HTTP/1.1 for upstream connection
 	AllowConnect                   bool   //Allow HTTP CONNECT tunneling; when true the target is validated against ProxyDomain
+	AllowUpgrade                   bool   //Allow generic HTTP protocol upgrades (e.g. TS2021) to be forwarded to the upstream
 
 	/* System Information Payload */
 	DevelopmentMode bool   //Inject dev mode information to requests
@@ -333,9 +340,26 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	outreq.Header = make(http.Header)
 	copyHeader(outreq.Header, req.Header)
 
+	// Capture the requested upgrade before the hop-by-hop removal strips it, see issue #1290
+	reqUpType := upgradeType(outreq.Header)
+	if reqUpType != "" {
+		if !isPrintableASCII(reqUpType) {
+			return http.StatusBadRequest, errors.New("client requested an invalid upgrade protocol")
+		}
+		if !rrr.AllowUpgrade {
+			http.Error(rw, "Protocol upgrades are not enabled for this endpoint", http.StatusForbidden)
+			return http.StatusForbidden, nil
+		}
+	}
+
 	// Remove hop-by-hop headers.
 	if !rrr.NoRemoveHopByHop {
 		removeHeaders(outreq.Header, rrr.NoCache)
+	}
+
+	// Restore the upgrade headers so the upstream still sees the upgrade request
+	if reqUpType != "" {
+		restoreUpgradeHeaders(outreq.Header, reqUpType)
 	}
 
 	// Add X-Forwarded-For Header.
@@ -377,7 +401,8 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	var trc *http.Transport
 
 	if tr, ok := transport.(*http.Transport); ok {
-		if rrr.ForceHTTP11 {
+		// HTTP/2 has no upgrade mechanism, so an upgrade request must use HTTP/1.1 upstream
+		if rrr.ForceHTTP11 || reqUpType != "" {
 			trc = tr.Clone()
 			needClone = true
 			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
@@ -416,6 +441,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			p.logf("http: proxy error: %v", err)
 		}
 		return http.StatusBadGateway, err
+	}
+
+	// An upgraded connection is a raw byte tunnel, not a response body to be rewritten
+	if res.StatusCode == http.StatusSwitchingProtocols {
+		return p.handleUpgradeResponse(rw, reqUpType, res)
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response

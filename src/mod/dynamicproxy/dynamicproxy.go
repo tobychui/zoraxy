@@ -383,6 +383,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		NoRemoveHopByHop:        endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
 		NoRemoveUserAgentHeader: endpointProxyRewriteRules.DisableUserAgentHeaderRemoval,
 		AllowConnect:            sep.EnableConnectSupport,
+		AllowUpgrade:            sep.EnableUpgradeForwarding,
 		PathPrefix:              "",
 		Version:                 sep.parent.Option.HostVersion,
 		DevelopmentMode:         sep.parent.Option.DevelopmentMode,

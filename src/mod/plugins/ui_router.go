@@ -49,6 +49,7 @@ func (m *Manager) HandlePluginUI(pluginID string, w http.ResponseWriter, r *http
 		OriginalHost: r.Host,
 		ProxyDomain:  upstreamOrigin,
 		PathPrefix:   matchingPath,
+		AllowUpgrade: true,
 		Version:      m.Options.SystemConst.ZoraxyVersion,
 		UpstreamHeaders: [][]string{
 			{"X-Zoraxy-Csrf", m.Options.CSRFTokenGen(r)},

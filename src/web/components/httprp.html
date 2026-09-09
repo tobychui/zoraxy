@@ -330,6 +330,12 @@
                                                 <label>Enable HTTP CONNECT tunneling<br>
                                                     <small>Allow CONNECT method only to this route's configured upstream. Leave disabled unless you specifically need forward-proxy tunneling.</small></label>
                                             </div>
+                                            <br>
+                                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                <input type="checkbox" class="EnableUpgradeForwarding">
+                                                <label>Enable protocol upgrade forwarding<br>
+                                                    <small>Forward non-WebSocket Upgrade requests (e.g. Tailscale / Headscale TS2021) to the upstream as a raw tunnel. WebSocket is handled separately in the WebSocket tab.</small></label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -417,7 +423,7 @@
                                 <label>Enable WebSocket<br>
                                     <small>Allow WebSocket upgrade requests to be proxied to this endpoint</small></label>
                             </div>
-                            <br>
+                            <br><br>
                             <b>Connection Timeout</b>
                             <div class="ui small right labeled fluid input" style="margin-top: 0.8em;">
                                 <input type="number" class="WebsocketTimeout" value="0" min="0">
@@ -1150,6 +1156,7 @@
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
         let enableConnectSupport = $(editor).find(".EnableConnectSupport")[0].checked;
+        let enableUpgradeForwarding = $(editor).find(".EnableUpgradeForwarding")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
         let disableWebSocket = !$(editor).find(".EnableWebSocket")[0].checked;
@@ -1188,6 +1195,7 @@
                 "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "enableConnectSupport": enableConnectSupport,
+                "enableUpgradeForwarding": enableUpgradeForwarding,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
@@ -1666,6 +1674,12 @@
         editor.find(".EnableConnectSupport").off('change');
         editor.find(".EnableConnectSupport").prop("checked", subd.EnableConnectSupport || false);
         editor.find(".EnableConnectSupport").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".EnableUpgradeForwarding").off('change');
+        editor.find(".EnableUpgradeForwarding").prop("checked", subd.EnableUpgradeForwarding || false);
+        editor.find(".EnableUpgradeForwarding").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

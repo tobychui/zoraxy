@@ -254,6 +254,9 @@ type ProxyEndpoint struct {
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint
 
+	//Generic HTTP protocol upgrade (non-WebSocket, e.g. Tailscale TS2021)
+	EnableUpgradeForwarding bool //Forward non-WebSocket Upgrade requests to the upstream (disabled by default)
+
 	//Websocket auto proxy
 	DisableWebSocket               bool  //Block all WebSocket upgrade requests with an HTTP error response
 	WebsocketTimeout               int64 //Websocket connection timeout in seconds, set to 0 for using default 300 seconds
