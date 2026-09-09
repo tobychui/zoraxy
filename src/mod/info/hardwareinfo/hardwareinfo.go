@@ -98,8 +98,8 @@ func (s *Server) GetArOZInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loadImage, _ := utils.GetPara(r, "icon")
-	if loadImage != "true" {
+	loadImage, _ := utils.GetBool(r, "icon")
+	if !loadImage {
 		t := ArOZInfo{}
 		json.Unmarshal(jsonData, &t)
 		t.VendorIcon = ""

@@ -176,7 +176,17 @@
             $.cjax({
                 type: 'POST',
                 url: '/api/streamprox/config/add',
-                data: form.serialize(),
+                data: {
+                    name: $("#streamProxyForm input[name=name]").val().trim(),
+                    listenAddr: $("#streamProxyForm input[name=listenAddr]").val().trim(),
+                    proxyAddr: $("#streamProxyForm input[name=proxyAddr]").val().trim(),
+                    useTCP: $("#streamProxyForm input[name=useTCP]")[0].checked,
+                    useUDP: $("#streamProxyForm input[name=useUDP]")[0].checked,
+                    proxyProtocolVersion: parseInt($("#streamProxyForm select[name=proxyProtocolVersion]").val(), 10),
+                    enableLogging: $("#streamProxyForm input[name=enableLogging]")[0].checked,
+                    timeout: parseInt($("#streamProxyForm input[name=timeout]").val().trim()),
+                    accessRuleUUID: $("#streamProxyForm input[name=accessRuleUUID]").val().trim(),
+                },
                 success: function(response) {
                     if (response.error) {
                         msgbox(response.error, false, 6000);

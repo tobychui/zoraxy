@@ -341,12 +341,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	endpoint = strings.TrimSpace(endpoint)
 
-	tls, _ := utils.PostPara(r, "tls")
-	if tls == "" {
-		tls = "false"
-	}
-
-	useTLS := (tls == "true")
+	useTLS, _ := utils.PostBool(r, "tls")
 
 	//Bypass global TLS value / allow direct access from port 80?
 	useBypassGlobalTLS, _ := utils.PostBool(r, "bypassGlobalTLS")
@@ -423,11 +418,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	requireCaptcha := captchaConfig != nil
 
 	// Bypass WebSocket Origin Check
-	strbpwsorg, _ := utils.PostPara(r, "bpwsorg")
-	if strbpwsorg == "" {
-		strbpwsorg = "false"
-	}
-	bypassWebsocketOriginCheck := (strbpwsorg == "true")
+	bypassWebsocketOriginCheck, _ := utils.PostBool(r, "bpwsorg")
 
 	//Prase the basic auth to correct structure
 	cred, _ := utils.PostPara(r, "cred")
@@ -690,26 +681,15 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tls, _ := utils.PostPara(r, "tls")
-	if tls == "" {
-		tls = "false"
-	}
-
 	useStickySession, _ := utils.PostBool(r, "ss")
 
 	//Load bypass TLS option
-	bpgtls, _ := utils.PostPara(r, "bpgtls")
-	if bpgtls == "" {
-		bpgtls = "false"
-	}
-	bypassGlobalTLS := (bpgtls == "true")
+	bypassGlobalTLS, _ := utils.PostBool(r, "bpgtls")
 
 	// Allow HTTP CONNECT tunneling to the configured upstream (disabled by default)
-	enableConnectSupportStr, _ := utils.PostPara(r, "enableConnectSupport")
-	enableConnectSupport := enableConnectSupportStr == "true"
+	enableConnectSupport, _ := utils.PostBool(r, "enableConnectSupport")
 
-	enableUpgradeForwardingStr, _ := utils.PostPara(r, "enableUpgradeForwarding")
-	enableUpgradeForwarding := enableUpgradeForwardingStr == "true"
+	enableUpgradeForwarding, _ := utils.PostBool(r, "enableUpgradeForwarding")
 
 	//Disable uptime monitor
 	disbleUtm, err := utils.PostBool(r, "dutm")
@@ -734,11 +714,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rate Limiting?
-	rl, _ := utils.PostPara(r, "rate")
-	if rl == "" {
-		rl = "false"
-	}
-	requireRateLimit := (rl == "true")
+	requireRateLimit, _ := utils.PostBool(r, "rate")
 	rlnum, _ := utils.PostPara(r, "ratenum")
 	if rlnum == "" {
 		rlnum = "0"
@@ -1558,8 +1534,7 @@ func AddProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
 		}
 		pattern = strings.TrimSpace(pattern)
 
-		isRegexStr, _ := utils.PostPara(r, "isRegex")
-		isRegex := strings.EqualFold(isRegexStr, "true")
+		isRegex, _ := utils.PostBool(r, "isRegex")
 
 		if isRegex {
 			if _, err := regexp.Compile(pattern); err != nil {
@@ -1675,8 +1650,7 @@ func RemoveProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
 			utils.SendErrorResponse(w, "Invalid path pattern given")
 			return
 		}
-		isRegexStr, _ := utils.PostPara(r, "isRegex")
-		isRegex := strings.EqualFold(isRegexStr, "true")
+		isRegex, _ := utils.PostBool(r, "isRegex")
 		for _, rule := range targetProxy.AuthenticationProvider.ZorxAuthExceptionRules {
 			if rule.RuleType == dynamicproxy.AuthExceptionType_Paths && rule.PathPattern == pattern && rule.IsRegex == isRegex {
 				matchingExists = true
@@ -1866,13 +1840,12 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(result)
 		utils.SendJSONResponse(w, string(js))
 	case http.MethodPost:
-		enabled, err := utils.PostPara(r, "enable")
+		enabled, err := utils.PostBool(r, "enable")
 		if err != nil {
-			utils.SendErrorResponse(w, "enable state not set")
+			utils.SendErrorResponse(w, "enable state not set or invalid")
 			return
 		}
-		switch enabled {
-		case "true":
+		if enabled {
 			//Check if port 80 is already used by other services
 			if netutils.CheckIfPortOccupied(80) && !dynamicProxyRouter.GetPort80ListenerState() {
 				utils.SendErrorResponse(w, "Port 80 is already used by other services")
@@ -1881,12 +1854,10 @@ func HandleUpdatePort80Listener(w http.ResponseWriter, r *http.Request) {
 			sysdb.Write("settings", "listenP80", true)
 			SystemWideLogger.Println("Enabling port 80 listener")
 			dynamicProxyRouter.UpdatePort80ListenerState(true)
-		case "false":
+		} else {
 			sysdb.Write("settings", "listenP80", false)
 			SystemWideLogger.Println("Disabling port 80 listener")
 			dynamicProxyRouter.UpdatePort80ListenerState(false)
-		default:
-			utils.SendErrorResponse(w, "invalid mode given: "+enabled)
 		}
 		utils.SendOK(w)
 	default:
@@ -1943,18 +1914,12 @@ func HandleManagementProxyCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleDevelopmentModeChange(w http.ResponseWriter, r *http.Request) {
-	enableDevelopmentModeStr, err := utils.GetPara(r, "enable")
+	enableDevelopmentMode, err := utils.GetBool(r, "enable")
 	if err != nil {
 		//Load the current development mode toggle state
 		js, _ := json.Marshal(dynamicProxyRouter.Option.NoCache)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		//Write changes to runtime
-		enableDevelopmentMode := false
-		if enableDevelopmentModeStr == "true" {
-			enableDevelopmentMode = true
-		}
-
 		//Write changes to runtime
 		dynamicProxyRouter.Option.NoCache = enableDevelopmentMode
 
@@ -1969,18 +1934,12 @@ func HandleDevelopmentModeChange(w http.ResponseWriter, r *http.Request) {
 // HandleProxyProtocolChange handles the PROXY protocol v1/v2 toggle
 // This requires a listener restart to take effect
 func HandleProxyProtocolChange(w http.ResponseWriter, r *http.Request) {
-	enableProxyProtocolStr, err := utils.GetPara(r, "enable")
+	enableProxyProtocol, err := utils.GetBool(r, "enable")
 	if err != nil {
 		//Load the current proxy protocol toggle state
 		js, _ := json.Marshal(dynamicProxyRouter.Option.UseProxyProtocol)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		//Write changes to runtime
-		enableProxyProtocol := false
-		if enableProxyProtocolStr == "true" {
-			enableProxyProtocol = true
-		}
-
 		//Update the option value
 		dynamicProxyRouter.Option.UseProxyProtocol = enableProxyProtocol
 

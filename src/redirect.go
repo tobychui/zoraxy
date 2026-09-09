@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -35,16 +34,16 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "destination url cannot be empty")
 	}
 
-	forwardChildpath, err := utils.PostPara(r, "forwardChildpath")
+	forwardChildpath, err := utils.PostBool(r, "forwardChildpath")
 	if err != nil {
 		//Assume true
-		forwardChildpath = "true"
+		forwardChildpath = true
 	}
 
-	requireExactMatch, err := utils.PostPara(r, "requireExactMatch")
+	requireExactMatch, err := utils.PostBool(r, "requireExactMatch")
 	if err != nil {
 		//Assume false
-		requireExactMatch = "false"
+		requireExactMatch = false
 	}
 
 	redirectTypeString, err := utils.PostPara(r, "redirectType")
@@ -64,7 +63,7 @@ func handleAddRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType)
+	err = redirectTable.AddRedirectRule(redirectUrl, destUrl, forwardChildpath, redirectionStatusCode, requireExactMatch, deviceType)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -107,16 +106,16 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "destination url cannot be empty")
 	}
 
-	forwardChildpath, err := utils.PostPara(r, "forwardChildpath")
+	forwardChildpath, err := utils.PostBool(r, "forwardChildpath")
 	if err != nil {
 		//Assume true
-		forwardChildpath = "true"
+		forwardChildpath = true
 	}
 
-	requireExactMatch, err := utils.PostPara(r, "requireExactMatch")
+	requireExactMatch, err := utils.PostBool(r, "requireExactMatch")
 	if err != nil {
 		//Assume false
-		requireExactMatch = "false"
+		requireExactMatch = false
 	}
 
 	redirectTypeString, err := utils.PostPara(r, "redirectType")
@@ -136,7 +135,7 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath == "true", redirectionStatusCode, requireExactMatch == "true", deviceType)
+	err = redirectTable.EditRedirectRule(originalRedirectUrl, newRedirectUrl, destUrl, forwardChildpath, redirectionStatusCode, requireExactMatch, deviceType)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -147,16 +146,14 @@ func handleEditRedirectionRule(w http.ResponseWriter, r *http.Request) {
 
 // Toggle redirection regex support. Note that this cost another O(n) time complexity to each page load
 func handleToggleRedirectRegexpSupport(w http.ResponseWriter, r *http.Request) {
-	enabled, err := utils.PostPara(r, "enable")
+	//Update the current regex support rule enable state
+	enableRegexSupport, err := utils.PostBool(r, "enable")
 	if err != nil {
 		//Return the current state of the regex support
 		js, _ := json.Marshal(redirectTable.AllowRegex)
 		utils.SendJSONResponse(w, string(js))
 		return
 	}
-
-	//Update the current regex support rule enable state
-	enableRegexSupport := strings.EqualFold(strings.TrimSpace(enabled), "true")
 	redirectTable.AllowRegex = enableRegexSupport
 	err = sysdb.Write("redirect", "regex", enableRegexSupport)
 
@@ -180,13 +177,13 @@ func handleToggleRedirectionRuleEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enabled, err := utils.PostPara(r, "enabled")
+	enabled, err := utils.PostBool(r, "enabled")
 	if err != nil {
 		utils.SendErrorResponse(w, "enabled state cannot be empty")
 		return
 	}
 
-	err = redirectTable.ToggleEnableRedirectRule(redirectUrl, strings.EqualFold(strings.TrimSpace(enabled), "true"))
+	err = redirectTable.ToggleEnableRedirectRule(redirectUrl, enabled)
 	if err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
@@ -197,16 +194,14 @@ func handleToggleRedirectionRuleEnable(w http.ResponseWriter, r *http.Request) {
 
 // Toggle redirection case sensitivity. Note that this affects all redirection rules
 func handleToggleRedirectCaseSensitivity(w http.ResponseWriter, r *http.Request) {
-	enabled, err := utils.PostPara(r, "enable")
+	//Update the current case sensitivity rule enable state
+	enableCaseSensitivity, err := utils.PostBool(r, "enable")
 	if err != nil {
 		//Return the current state of the case sensitivity
 		js, _ := json.Marshal(redirectTable.CaseSensitive)
 		utils.SendJSONResponse(w, string(js))
 		return
 	}
-
-	//Update the current case sensitivity rule enable state
-	enableCaseSensitivity := strings.EqualFold(strings.TrimSpace(enabled), "true")
 	redirectTable.CaseSensitive = enableCaseSensitivity
 	err = sysdb.Write("redirect", "case_sensitive", enableCaseSensitivity)
 

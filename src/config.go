@@ -171,13 +171,8 @@ func GetDefaultRootConfig() (*dynamicproxy.ProxyEndpoint, error) {
 */
 
 func ExportConfigAsZip(w http.ResponseWriter, r *http.Request) {
-	includeSysDBRaw, _ := utils.GetPara(r, "includeDB")
-	includeSysDB := false
-	if includeSysDBRaw == "true" {
-		//Include the system database in backup snapshot
-		//Temporary set it to read only
-		includeSysDB = true
-	}
+	//Include the system database in backup snapshot?
+	includeSysDB, _ := utils.GetBool(r, "includeDB")
 
 	// Specify the folder path to be zipped
 	if !utils.FileExists(CONF_FOLDER) {

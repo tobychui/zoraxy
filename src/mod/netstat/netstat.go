@@ -135,8 +135,8 @@ func NewNetStatBuffer(recordCount int, systemWideLogger *logger.Logger) (*NetSta
 }
 
 func (n *NetStatBuffers) HandleGetBufferedNetworkInterfaceStats(w http.ResponseWriter, r *http.Request) {
-	arr, _ := utils.GetPara(r, "array")
-	if arr == "true" {
+	arr, _ := utils.GetBool(r, "array")
+	if arr {
 		//Restructure it into array
 		rx := []int{}
 		tx := []int{}

@@ -370,14 +370,12 @@ func handleBlacklistEnable(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		if enable == "true" {
-			rule.ToggleBlacklist(true)
-		} else if enable == "false" {
-			rule.ToggleBlacklist(false)
-		} else {
+		enableBlacklist, err := utils.PostBool(r, "enable")
+		if err != nil {
 			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
 			return
 		}
+		rule.ToggleBlacklist(enableBlacklist)
 
 		eventsystem.Publisher.Emit(&events.BlacklistToggledEvent{
 			RuleID:  ruleID,
@@ -559,14 +557,12 @@ func handleWhitelistEnable(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		if enable == "true" {
-			rule.ToggleWhitelist(true)
-		} else if enable == "false" {
-			rule.ToggleWhitelist(false)
-		} else {
+		enableWhitelist, err := utils.PostBool(r, "enable")
+		if err != nil {
 			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
 			return
 		}
+		rule.ToggleWhitelist(enableWhitelist)
 
 		utils.SendOK(w)
 	}
@@ -591,15 +587,12 @@ func handleWhitelistAllowLoopback(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		switch enable {
-		case "true":
-			rule.ToggleAllowLoopback(true)
-		case "false":
-			rule.ToggleAllowLoopback(false)
-		default:
+		allowLoopback, err := utils.PostBool(r, "enable")
+		if err != nil {
 			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
 			return
 		}
+		rule.ToggleAllowLoopback(allowLoopback)
 
 		utils.SendOK(w)
 	}
@@ -625,15 +618,12 @@ func handleWhitelistTrustProxy(w http.ResponseWriter, r *http.Request) {
 		js, _ := json.Marshal(currentEnabled)
 		utils.SendJSONResponse(w, string(js))
 	} else {
-		switch enable {
-		case "true":
-			rule.ToggleTrustProxy(true)
-		case "false":
-			rule.ToggleTrustProxy(false)
-		default:
+		trustProxy, err := utils.PostBool(r, "enable")
+		if err != nil {
 			utils.SendErrorResponse(w, "invalid enable state: only true and false is accepted")
 			return
 		}
+		rule.ToggleTrustProxy(trustProxy)
 
 		utils.SendOK(w)
 	}
