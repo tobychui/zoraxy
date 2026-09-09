@@ -99,8 +99,15 @@ func (a *ACMEHandler) writeFileWithMode(filename string, data []byte, mode os.Fi
 	return os.Chmod(filename, mode)
 }
 
-// ObtainCert obtains a certificate for the specified domains.
+// ObtainCert obtains a certificate without a managed CA profile. It is kept for
+// callers that predate profile-specific ACME account and EAB state.
 func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string) (bool, error) {
+	return a.ObtainCertWithProfile(domains, certificateName, email, caName, caUrl, skipTLS, useDNS, propagationTimeout, dnsServers, "")
+}
+
+// ObtainCertWithProfile obtains a certificate using profile-specific ACME
+// account and EAB state.
+func (a *ACMEHandler) ObtainCertWithProfile(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string, caProfileID string) (bool, error) {
 	ctx := context.TODO()
 
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
@@ -135,7 +142,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	// is found.
 	var adminUser ACMEUser
 	accountLoaded := false
-	if loadedKey, loadedReg, ok := a.loadACMEAccount(caUrl, email); ok {
+	if loadedKey, loadedReg, ok := a.loadACMEAccount(caUrl, email, caProfileID); ok {
 		adminUser = ACMEUser{
 			Email:        email,
 			key:          loadedKey,
@@ -280,19 +287,24 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 			return false, errors.New("kid and HmacEncoded configuration required for ACME Provider (Error -1)")
 		}
 
-		if !a.Database.KeyExists("acme", config.CADirURL+"_kid") || !a.Database.KeyExists("acme", config.CADirURL+"_hmacEncoded") {
+		eabKeyPrefix := config.CADirURL
+		if caProfileID != "" {
+			eabKeyPrefix = eabProfileKeyPrefix(caProfileID)
+		}
+
+		if !a.Database.KeyExists("acme", eabKeyPrefix+"_kid") || !a.Database.KeyExists("acme", eabKeyPrefix+"_hmacEncoded") {
 			return false, errors.New("kid and HmacEncoded configuration required for ACME Provider (Error -2)")
 		}
 
 		var kid string
 		var hmacEncoded string
-		err := a.Database.Read("acme", config.CADirURL+"_kid", &kid)
+		err := a.Database.Read("acme", eabKeyPrefix+"_kid", &kid)
 		if err != nil {
 			a.Logf("Failed to read kid from database", err)
 			return false, err
 		}
 
-		err = a.Database.Read("acme", config.CADirURL+"_hmacEncoded", &hmacEncoded)
+		err = a.Database.Read("acme", eabKeyPrefix+"_hmacEncoded", &hmacEncoded)
 		if err != nil {
 			a.Logf("Failed to read HMAC from database", err)
 			return false, err
@@ -323,7 +335,7 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 	// Persist a freshly registered account so future certificate requests and
 	// renewals reuse it instead of registering a brand new account each time.
 	if !accountLoaded && reg != nil {
-		if serr := a.saveACMEAccount(config.CADirURL, &adminUser); serr != nil {
+		if serr := a.saveACMEAccount(config.CADirURL, &adminUser, caProfileID); serr != nil {
 			a.Logf("Failed to persist ACME account (may hit account create limits, try a different IP)", serr)
 		} else {
 			a.Logf("Persisted ACME account for reuse on "+config.CADirURL, nil)
@@ -595,7 +607,8 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	// Convert DNS servers slice to a single string
 	dnsServersString := strings.Join(dnsServers, ",")
 
-	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString)
+	caProfileID, _ := utils.PostPara(r, "caProfile")
+	result, err := a.ObtainCertWithProfile(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, caProfileID)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return

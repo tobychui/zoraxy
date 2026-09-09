@@ -242,7 +242,7 @@ func RegisterACMEAndAutoRenewerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/acme/obtainCert", AcmeCheckAndHandleRenewCertificate)
 	/* Auto Renewer */
 	authRouter.HandleFunc("/api/acme/autoRenew/enable", acmeAutoRenewer.HandleAutoRenewEnable)
-	authRouter.HandleFunc("/api/acme/autoRenew/ca", HandleACMEPreferredCA)
+	authRouter.HandleFunc("/api/acme/autoRenew/ca", acmeAutoRenewer.HandleCertificateAuthorities)
 	authRouter.HandleFunc("/api/acme/autoRenew/email", acmeAutoRenewer.HandleACMEEmail)
 	authRouter.HandleFunc("/api/acme/autoRenew/setDomains", acmeAutoRenewer.HandleSetAutoRenewDomains)
 	authRouter.HandleFunc("/api/acme/autoRenew/setEAB", acmeAutoRenewer.HanldeSetEAB)

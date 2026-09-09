@@ -1,16 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"imuslab.com/zoraxy/mod/acme"
@@ -173,62 +170,6 @@ func AcmeCheckAndHandleRenewCertificate(w http.ResponseWriter, r *http.Request) 
 		//Restore HTTP to HTTPS redirect setting that was temporarily enabled
 		SystemWideLogger.PrintAndLog("ACME", "Restoring HTTP to HTTPS redirect settings", nil)
 		dynamicProxyRouter.UpdateHttpToHttpsRedirectSetting(false)
-	}
-
-}
-
-// HandleACMEPreferredCA return the user preferred / default CA for new subdomain auto creation
-func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
-
-	type PreferredCA struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-		SkipTLS bool `json:"skipTLS"`
-	}
-
-	ca, err := utils.PostPara(r, "set")
-	if err != nil {
-		//Return the current ca to user
-		prefCA := "Let's Encrypt"
-		prefCAURL := ""
-		skipTLS := false
-		sysdb.Read("acmepref", "prefca", &prefCA)
-		sysdb.Read("acmepref", "prefcaurl", &prefCAURL)
-		sysdb.Read("acmepref", "skipTLS", &skipTLS)
-		js, _ := json.Marshal(PreferredCA{
-			Name: prefCA,
-			URL:  prefCAURL,
-			SkipTLS: skipTLS,
-		})
-		utils.SendJSONResponse(w, string(js))
-	} else {
-		//Check if the CA is supported
-		isSupported := acme.IsSupportedCA(ca, *acmeTestMode)
-		
-		if !isSupported && ca != "custom" {
-			utils.SendErrorResponse(w, "The specified ACME CA is not supported")
-			return
-		}
-
-		if ca == "custom" {
-			customCAURL, err := utils.PostPara(r, "customURL")
-			customCAURL = strings.TrimSpace(customCAURL)
-			parsedURL, err2 := url.Parse(customCAURL)
-			skipTLS, _ := utils.PostBool(r, "SkipTLS")
-
-			if err != nil || err2 != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" {
-				utils.SendErrorResponse(w, "Invalid custom CA URL provided")
-				return
-			}
-			sysdb.Write("acmepref", "prefcaurl", customCAURL)
-			SystemWideLogger.Println("Updating prefered ACME CA URL to " + customCAURL)
-			sysdb.Write("acmepref", "skipTLS", skipTLS)
-			SystemWideLogger.Println("Updating prefered skipTLS to " + fmt.Sprintf("%t", skipTLS))
-		} 
-		//Set the new config
-		sysdb.Write("acmepref", "prefca", ca)
-		SystemWideLogger.Println("Updating prefered ACME CA to " + ca)
-		utils.SendOK(w)
 	}
 
 }

@@ -1321,15 +1321,6 @@
     function requestCertificateForExistingHost(hostUUID, RootAndAliasDomains, btn=undefined){
         RootAndAliasDomains = JSON.parse(decodeURIComponent(RootAndAliasDomains))
         let renewDomainKey = RootAndAliasDomains.join(",");
-        let preferedACMEEmail = $("#prefACMEEmail").val();
-        if (preferedACMEEmail == ""){
-            msgbox("Preferred email for ACME registration not set", false);
-            return;
-        }
-        let defaultCA = $("#defaultCA").dropdown("get value");
-        if (defaultCA == ""){
-            defaultCA = "Let's Encrypt";
-        }
 
         //Check if the root or the alias domain contain wildcard character, if yes, return error
         for (var i = 0; i < RootAndAliasDomains.length; i++){

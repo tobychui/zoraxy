@@ -171,11 +171,8 @@
     function renewCertificate(domain, dns, btn=undefined){
         let defaultCA = $("#defaultCA").dropdown("get value");
         if (defaultCA.trim() == ""){
-            defaultCA = "Let's Encrypt";
+            defaultCA = window.defaultCertificateAuthority || "Let's Encrypt";
         }
-        //Get a new cert using ACME
-        msgbox("Requesting certificate via " + defaultCA  +"...");
-
         //Request ACME for certificate
         let buttonOriginalHTML = "";
         if (btn != undefined){
@@ -221,22 +218,33 @@
 
    // Obtain certificate from API, only support one domain
    function obtainCertificate(domains, dns, usingCa = "Let's Encrypt", callback=undefined) {
-        //Load the ACME email from server side
-        let acmeEmail = "";
-        $.get("/api/acme/autoRenew/email", function(data){
-            if (data != "" && data != undefined && data != null){
-                acmeEmail = data;
+        // Resolve the selected profile, including its own registration email.
+        $.get("/api/acme/autoRenew/ca", function(data){
+            var authorities = data.authorities || [];
+            var assignmentKey = domains.includes(",") ? "" : domains.replace("*", "_");
+            var selectedAuthorityID = (data.assignments || {})[assignmentKey] || usingCa;
+            var authority = authorities.find(function(item){
+                return item.id === selectedAuthorityID || item.type === selectedAuthorityID || item.name === selectedAuthorityID;
+            });
+            if (!authority){
+                authority = authorities.find(function(item){ return item.id === data.defaultAuthority; });
+            }
+            if (!authority){
+                msgbox("Unable to obtain certificate: no certificate authority configured", false, 8000);
+                if (callback != undefined){ callback(false); }
+                return;
             }
 
             let filename = "";
-            let email = acmeEmail;
-            if (acmeEmail == ""){
-                msgbox("Unable to obtain certificate: ACME email not set", false, 8000);
+            let email = authority.email || "";
+            if (email == ""){
+                msgbox("Unable to obtain certificate: ACME email not set for " + authority.name, false, 8000);
                 if (callback != undefined){
                     callback(false);
                 }
                 return;
             }
+            msgbox("Requesting certificate via " + authority.name + "...");
             if (filename.trim() == "" && !domains.includes(",")){
                 //Zoraxy filename are the matching name for domains.
                 //Use the same as domains
@@ -255,7 +263,7 @@
             //Filename cannot contain wildcards, and wildcards are possible with DNS challenges
             filename = filename.replace("*", "_");
 
-            let requestCert = function(caURL="", skipTLSValue=false){
+            let requestCert = function(caName, caURL="", skipTLSValue=false){
                 $.ajax({
                     url: "/api/acme/obtainCert",
                     method: "GET",
@@ -263,7 +271,8 @@
                         domains: domains,
                         filename: filename,
                         email: email,
-                        ca: usingCa,
+                        ca: caName,
+                        caProfile: authority.id,
                         caURL: caURL,
                         skipTLS: skipTLSValue,
                         dns: dns,
@@ -292,20 +301,7 @@
                 });
             }
 
-            if (usingCa == "custom"){
-                $.get("/api/acme/autoRenew/ca", function(data){
-                    if (data.url == undefined || data.url.trim() == ""){
-                        msgbox("Custom ACME URL not set.", false);
-                        if (callback != undefined){
-                            callback(false);
-                        }
-                        return;
-                    }
-                    requestCert(data.url.trim(), data.skipTLS);
-                })
-            } else {
-                requestCert();
-            }
+            requestCert(authority.type, authority.url || "", authority.skipTLS === true);
 
             
         });

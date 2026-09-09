@@ -431,10 +431,8 @@
                                 //Load the prefer CA from TLS page
                                 let defaultCA = $("#defaultCA").dropdown("get value");
                                 if (defaultCA.trim() == ""){
-                                    defaultCA = "Let's Encrypt";
+                                    defaultCA = window.defaultCertificateAuthority || "Let's Encrypt";
                                 }
-                                //Get a new cert using ACME
-                                msgbox("Requesting certificate via " + defaultCA  +"...");
                                 console.log("Trying to get a new certificate via ACME");
 
                                 //Request ACME for certificate, see cert.html component

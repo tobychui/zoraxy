@@ -26,18 +26,13 @@ import (
 
 		urn:ietf:params:acme:error:rateLimited :: too many new registrations
 
-	The account is stored in the system database, in the same "acme" table and
-	keyed by the same CA directory URL already used for this provider's EAB
-	credentials (see ObtainCert). It is keyed by the CA directory URL only (NOT
-	the email): an ACME account is identified by its key pair, the email is just
-	a contact address. Keying by CA URL alone means a renewal still reuses the
-	account even if the renewer email differs from the email used at first
-	issuance.
+	The account is stored in the system database and keyed by CA directory URL,
+	contact email and, for managed CA profiles, the profile ID. Legacy keys from
+	before profile support remain readable during upgrades.
 */
 
-// acmeAccountTable is the database table reusable ACME accounts are stored in.
-// It is intentionally the same table used for this module's DNS and EAB
-// credentials so all per-CA ACME state lives together.
+// acmeAccountTable is the legacy database table in which reusable ACME
+// accounts are stored.
 const acmeAccountTable = "acmepref"
 
 // ACMEUser represents a user in the ACME system.
@@ -124,10 +119,18 @@ func (u *ACMEUser) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// accountDBKey returns the database key for the account of a given CA
-// directory URL and email. Using both ensures unique keys per account
-// even when the same CA is used with different emails.
-func accountDBKey(caDirURL string, email string) string {
+// accountDBKey returns the database key for an ACME account. Profiles are
+// included when available so two independently configured profiles can use
+// the same directory URL and contact email without sharing account state.
+func accountDBKey(caDirURL string, email string, caProfileID string) string {
+	if caProfileID == "" {
+		return legacyAccountDBKey(caDirURL, email)
+	}
+	h := sha256.Sum256([]byte(caDirURL + "|" + email + "|" + caProfileID))
+	return "acme_account_" + hex.EncodeToString(h[:8])
+}
+
+func legacyAccountDBKey(caDirURL string, email string) string {
 	h := sha256.Sum256([]byte(caDirURL + "|" + email))
 	return "acme_account_" + hex.EncodeToString(h[:8])
 }
@@ -136,13 +139,13 @@ func accountDBKey(caDirURL string, email string) string {
 // CA directory URL and email. It returns (key, registration, true) only when
 // a complete, reusable account is found; otherwise ok is false and the caller
 // should register a new account.
-func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string) (*ecdsa.PrivateKey, *acme.ExtendedAccount, bool) {
+func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string, caProfileID string) (*ecdsa.PrivateKey, *acme.ExtendedAccount, bool) {
 	if !a.Database.TableExists(acmeAccountTable) {
 		// No ACME table yet (first run) - not an error.
 		return nil, nil, false
 	}
 
-	dbKey := accountDBKey(caDirURL, email)
+	dbKey := accountDBKey(caDirURL, email, caProfileID)
 	if !a.Database.KeyExists(acmeAccountTable, dbKey) {
 		// No stored account for this CA yet - not an error.
 		return nil, nil, false
@@ -171,7 +174,7 @@ func (a *ACMEHandler) loadACMEAccount(caDirURL string, email string) (*ecdsa.Pri
 // saveACMEAccount persists the account (key + registration) so that subsequent
 // certificate requests and renewals reuse it instead of registering a new
 // ACME account every time.
-func (a *ACMEHandler) saveACMEAccount(caDirURL string, user *ACMEUser) error {
+func (a *ACMEHandler) saveACMEAccount(caDirURL string, user *ACMEUser, caProfileID string) error {
 	if user == nil || user.GetRegistration() == nil {
 		return errors.New("no ACME registration to persist")
 	}
@@ -182,5 +185,5 @@ func (a *ACMEHandler) saveACMEAccount(caDirURL string, user *ACMEUser) error {
 		}
 	}
 
-	return a.Database.Write(acmeAccountTable, accountDBKey(caDirURL, user.Email), user)
+	return a.Database.Write(acmeAccountTable, accountDBKey(caDirURL, user.Email, caProfileID), user)
 }
