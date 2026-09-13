@@ -192,7 +192,9 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		if dnsServers == "" && certInfo.DNSServers != nil && len(certInfo.DNSServers) > 0 {
 			dnsServers = strings.Join(certInfo.DNSServers, ",")
 		}
-		propagationTimeout = certInfo.PropTimeout
+		if certInfo.PropTimeout > 0 {
+			propagationTimeout = certInfo.PropTimeout
+		}
 	}
 
 	// Clean DNS servers
