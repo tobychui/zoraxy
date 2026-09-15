@@ -342,6 +342,7 @@
             $("#defaultCA").dropdown("set value", data.name);
             $("#prefcaURL").val(data.url || "");
             updatePrefCaFields(data.name);
+            $("#skipTLSCheckbox").prop("checked", data.skipTLS || false);
         });
 
         initToggleState();
