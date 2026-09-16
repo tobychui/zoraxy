@@ -161,12 +161,6 @@
       <div id="dnsProviderAPIFields">
         <p><i class="ui loading circle notch icon"></i> Generating WebForm</p>
       </div>
-      <h4><i class="yellow exclamation triangle icon"></i> Notes & FAQ</h4>
-      <div class="ui bulleted list">
-        <div class="item">Domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</div>
-        <div class="item">For some DNS providers like CloudFlare, you do not need to fill in all fields.</div>
-        <div class="item">If you are not sure what to fill in, check out the documentation from <a href="https://go-acme.github.io/lego/dns/" target="_blank">lego (DNS challenge library)</a></div>
-      </div>
       
       <!-- 
         <label>Credentials File Content</label>
@@ -181,12 +175,21 @@
     <div class="field dnsChallengeOnly" style="display:none;">
       <label>Domain Name Server (optional)</label>
       <input id="dnsInput" type="text" placeholder="ns.example.com">
-      <small>If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com)</small>
     </div>
     <div class="field dnsChallengeOnly" style="display:none;">
       <div class="ui checkbox">
         <input type="checkbox" id="recursiveNSCheckbox">
-        <label>Enable Recursive NS Propagation Check<br><small>Verify the TXT record has propagated to all specified DNS servers before proceeding. If no DNS servers are configured above, falls back to 8.8.8.8, 8.8.4.4, 1.1.1.1, 1.0.0.1. Required for CAs using MPIC (Multi-Perspective Issuance Corroboration). May take longer than the default 600s timeout — increase propagation timeout if needed. Leave disabled unless required.</small></label>
+        <label>Enable Recursive NS Propagation Check</label>
+      </div>
+    </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <h4><i class="yellow exclamation triangle icon"></i> Notes & FAQ</h4>
+      <div class="ui bulleted list">
+        <div class="item">Domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</div>
+        <div class="item">For some DNS providers like CloudFlare, you do not need to fill in all fields.</div>
+        <div class="item">If you are not sure what to fill in, check out the documentation from <a href="https://go-acme.github.io/lego/dns/" target="_blank">lego (DNS challenge library)</a></div>
+        <div class="item">Domain Name Server: If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com). Used for DNS-01 challenge propagation verification.</div>
+        <div class="item">Recursive NS Propagation Check: Verify the TXT record has propagated to all specified DNS servers before proceeding. If no DNS servers are configured above, falls back to 8.8.8.8, 8.8.4.4, 1.1.1.1, 1.0.0.1. Required for CAs using MPIC (Multi-Perspective Issuance Corroboration). May take longer than the default 600s timeout — increase propagation timeout if needed. Leave disabled unless required.</div>
       </div>
     </div>
     <div class="field" id="caInput" style="display:none;">
