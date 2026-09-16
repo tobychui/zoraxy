@@ -606,8 +606,9 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	// Convert DNS servers slice to a single string
 	dnsServersString := strings.Join(dnsServers, ",")
 
-	// TODO: parse "recursive_ns" from request and pass to ObtainCert
-	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, false)
+	// PostBool returns false if the key is missing or not a valid bool
+	useRecursiveNS, _ := utils.PostBool(r, "recursive_ns")
+	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, useRecursiveNS)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return

@@ -183,7 +183,12 @@
       <input id="dnsInput" type="text" placeholder="ns.example.com">
       <small>If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com)</small>
     </div>
-    <!-- TODO: Add checkbox for recursive NS propagation check (recursive_ns), pass to /api/acme/obtainCert -->
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <div class="ui checkbox">
+        <input type="checkbox" id="recursiveNSCheckbox">
+        <label>Enable Recursive NS Propagation Check<br><small>Verify the TXT record has propagated to all specified DNS servers before proceeding. If no DNS servers are configured above, falls back to 8.8.8.8, 8.8.4.4, 1.1.1.1, 1.0.0.1. Required for CAs using MPIC (Multi-Perspective Issuance Corroboration). May take longer than the default 600s timeout — increase propagation timeout if needed. Leave disabled unless required.</small></label>
+      </div>
+    </div>
     <div class="field" id="caInput" style="display:none;">
       <label>ACME Server URL</label>
       <input id="caURL" type="text" placeholder="https://example.com/acme/dictionary">
@@ -762,7 +767,8 @@
 
       var dns = $("#useDnsChallenge")[0].checked;
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
-      var dnsServers = $("#dnsInput").val(); // Erfassen der DNS-Server
+      var dnsServers = $("#dnsInput").val();
+      var recursiveNS = $("#recursiveNSCheckbox")[0].checked;
 
       $.ajax({
         url: "/api/acme/obtainCert",
@@ -775,7 +781,8 @@
           caURL: caURL,
           skipTLS: skipTLSValue,
           dns: dns,
-          dnsServers: dnsServers // DNS-Server in die Anfrage einfügen
+          dnsServers: dnsServers,
+          recursive_ns: recursiveNS
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");
