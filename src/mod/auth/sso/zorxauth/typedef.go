@@ -113,6 +113,10 @@ type AuthRouter struct {
 	/* Group Policies */
 	groupPolicies sync.Map // id (string) -> *GroupPolicy
 
+	/* Login page customization */
+	branding      *BrandingConfig //Login page branding config, nil means defaults
+	brandingMutex sync.RWMutex    //Guards branding and its on-disk resources
+
 	/* Login rate limiting */
 	loginAttemptCounter sync.Map  // IP -> *int64, total attempts in current minute window
 	loginFailureCounter sync.Map  // IP -> *int64, consecutive failures used for exponential backoff

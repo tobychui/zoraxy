@@ -100,7 +100,8 @@
                             <br>
                             <div class="ui container">
                                 <h4>Overwrite Host Header</h4>
-                                <p>Manual override the automatic "Host" header rewrite logic. Leave empty for automatic.</p>
+                                <p>Manual override the automatic "Host" header rewrite logic. Leave empty for automatic.<br>
+                                For HTTPS upstreams, this hostname is also used as the TLS SNI and the name the upstream certificate is verified against. Set this if your upstream is addressed by a name its certificate does not cover, such as a Docker service name.</p>
                                 <div class="ui fluid action input">
                                     <input type="text" id="manualHostOverwrite" placeholder="Overwrite Host name">
                                     <button onclick="updateManualHostOverwrite();" class="ui basic icon button" title="Update"><i class="ui green save icon"></i></button>

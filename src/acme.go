@@ -214,7 +214,7 @@ func HandleACMEPreferredCA(w http.ResponseWriter, r *http.Request) {
 			customCAURL, err := utils.PostPara(r, "customURL")
 			customCAURL = strings.TrimSpace(customCAURL)
 			parsedURL, err2 := url.Parse(customCAURL)
-			skipTLS, _ := utils.PostBool(r, "SkipTLS")
+			skipTLS, _ := utils.PostBool(r, "skipTLS")
 
 			if err != nil || err2 != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" {
 				utils.SendErrorResponse(w, "Invalid custom CA URL provided")

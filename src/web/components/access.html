@@ -1677,4 +1677,13 @@
     // Scope to this page's accordion only; .advanceSettings is reused by
     // other webmin components loaded dynamically via ajax.
     $("#accessAdvanceSettings").accordion();
+
+    //Bind on tab switch events
+    tabSwitchEventBind["access"] = function(){
+        //The lists are only loaded when this component is first rendered or
+        //when another access rule is picked. Anything that changed them in
+        //between - another session, or a plugin syncing IPs into a whitelist -
+        //stays invisible until a full page reload, so reload them here.
+        initBlackWhitelistTables();
+    };
 </script>

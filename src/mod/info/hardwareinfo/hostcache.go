@@ -1,6 +1,7 @@
 package hardwareinfo
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -44,7 +45,18 @@ func StartHostInfoCache() {
 // refresh collects data by invoking the existing HTTP handlers through an
 // in-process httptest recorder. When withStatic is true, CPU and RAM are
 // re-sampled; otherwise only drives, NICs and USB are refreshed.
+//
+// This parses free-form output from external commands (df, lsusb, ip) whose
+// format varies across platforms (e.g. QNAP/NAS builds), so a recover() guards
+// against an unanticipated parsing panic taking down the whole process - this
+// info is best-effort and must never be allowed to crash the server.
 func (c *hostInfoCache) refresh(withStatic bool) {
+	defer func() {
+		if err := recover(); err != nil {
+			printAndLog(fmt.Sprintf("recovered from panic while refreshing host info cache: %v", err), nil)
+		}
+	}()
+
 	req, _ := http.NewRequest("GET", "/", nil)
 
 	if withStatic {

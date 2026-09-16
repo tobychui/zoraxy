@@ -54,12 +54,13 @@
                     <tr>
                         <th>Exception Type</th>
                         <th>Path Prefix / CIDR</th>
+                        <th>Case Matching</th>
                         <th>Trust Proxy</th>
                         <th>Remove</th>
                     </tr></thead>
                     <tbody id="exclusionPaths">
                     <tr>
-                        <td colspan="4"><i class="ui green circle check icon"></i> No Exclusion Rule</td>
+                        <td colspan="5"><i class="ui green circle check icon"></i> No Exclusion Rule</td>
                     </tr>
                     </tbody>
                 </table>
@@ -77,6 +78,16 @@
                     <div class="field" id="exclusionIPField" style="display: none;">
                         <input id="newExclusionIP" type="text" placeholder="192.168.1.0/24" autocomplete="off">
                         <small>Enter a valid IP address or CIDR block.</small>
+                    </div>
+                </div>
+                <div class="field" id="caseSensitiveField">
+                    <div class="ui checkbox">
+                        <input type="checkbox" id="newExclusionCaseSensitive" checked>
+                        <label for="newExclusionCaseSensitive">Case sensitive</label>
+                    </div>
+                    <div class="ui basic message" style="margin-top: 0.6em;">
+                        <i class="ui info circle icon"></i>
+                        Request paths are case sensitive by default, so a rule for <code>/public/</code> will not exclude <code>/Public/</code>. Uncheck this if your upstream service treats those as the same resource.
                     </div>
                 </div>
                 <div class="field" id="trustedProxyField" style="display: none;">
@@ -131,10 +142,13 @@
                         $('#exclusionPathField').hide();
                         $('#exclusionIPField').show();
                         $('#trustedProxyField').show();
+                        $('#caseSensitiveField').hide();
+                        $('#newExclusionCaseSensitive').prop('checked', true);
                     } else {
                         $('#exclusionPathField').show();
                         $('#exclusionIPField').hide();
                         $('#trustedProxyField').hide();
+                        $('#caseSensitiveField').show();
                         $('#newExclusionTrustProxy').prop('checked', false);
                     }
                 }
@@ -207,6 +221,8 @@
                 let newExclusionPathMatchingPrefix = $('#newExclusionPath').val().trim();
                 let newExclusionIP = $('#newExclusionIP').val().trim();
                 let trustProxy = exceptionType == 0x1 && $('#newExclusionTrustProxy').is(':checked');
+                //The checkbox states the wanted behavior, the API takes the opposite flag
+                let caseInsensitive = exceptionType == 0x0 && !$('#newExclusionCaseSensitive').is(':checked');
                 if (exceptionType == 0x0){
                     //Check if the path is empty
                     
@@ -228,7 +244,8 @@
                         ep: editingEndpoint.ep,
                         prefix: newExclusionPathMatchingPrefix,
                         cidr: newExclusionIP,
-                        trustproxy: trustProxy
+                        trustproxy: trustProxy,
+                        caseinsensitive: caseInsensitive
                     },
                     method: "POST",
                     success: function(data){
@@ -240,6 +257,7 @@
                             $('#newExclusionPath').val("");
                             $('#newExclusionIP').val("");
                             $('#newExclusionTrustProxy').prop('checked', false);
+                            $('#newExclusionCaseSensitive').prop('checked', true);
                         }
                     }
                 });
@@ -293,6 +311,19 @@
                 }
             }
 
+            //Render an on or off state as a circular check or cross icon
+            function stateIcon(enabled, tooltip){
+                if (enabled){
+                    return `<i class="green check circle icon" title="${tooltip}"></i>`;
+                }
+                return `<i class="red times circle icon" title="${tooltip}"></i>`;
+            }
+
+            //Render a placeholder for a state that does not apply to this rule type
+            function notApplicableIcon(){
+                return `<i class="grey minus circle icon" title="Not applicable to this exception type"></i>`;
+            }
+
             //Load exception paths from server
             function initExceptionPaths(){
                 $.get(`/api/proxy/auth/exceptions/list?ptype=${editingEndpoint.ept}&ep=${editingEndpoint.ep}`, function(data){
@@ -301,24 +332,35 @@
                     }else{
                         if (data.length == 0){
                             $("#exclusionPaths").html(` <tr>
-                                <td colspan="4"><i class="ui green circle check icon"></i> No Path Excluded</td>
+                                <td colspan="5"><i class="ui green circle check icon"></i> No Path Excluded</td>
                             </tr>`);
                         }else{
                             $("#exclusionPaths").html("");
                             data.forEach(function(rule){
+                                let caseBadge = '';
+                                if (rule.RuleType == 0x0) {
+                                    if (rule.CaseInsensitive) {
+                                        caseBadge = stateIcon(false, "Case insensitive. /Public/ and /public/ are both excluded by this rule.");
+                                    } else {
+                                        caseBadge = stateIcon(true, "Case sensitive. Only the exact letter case shown is excluded.");
+                                    }
+                                } else {
+                                    caseBadge = notApplicableIcon();
+                                }
                                 let trustProxyBadge = '';
                                 if (rule.RuleType == 0x1) {
                                     if (rule.UseTrustedProxy) {
-                                        trustProxyBadge = `<span class="ui yellow label" title="Client IP is read from proxy headers. Only safe behind a trusted upstream proxy.">Enabled</span>`;
+                                        trustProxyBadge = stateIcon(true, "Enabled. Client IP is read from proxy headers, only safe behind a trusted upstream proxy.");
                                     } else {
-                                        trustProxyBadge = `<span class="ui green label">Disabled</span>`;
+                                        trustProxyBadge = stateIcon(false, "Disabled. Client IP is read from the connection only.");
                                     }
                                 } else {
-                                    trustProxyBadge = `<span style="color:#aaa;">N/A</span>`;
+                                    trustProxyBadge = notApplicableIcon();
                                 }
                                 $("#exclusionPaths").append(` <tr>
                                     <td>${exceptionTypeToString(rule.RuleType)}</td>
                                     <td>${rule.PathPrefix || rule.CIDR }</td>
+                                    <td>${caseBadge}</td>
                                     <td>${trustProxyBadge}</td>
                                     <td><button class="ui red basic mini circular icon button" onclick="removeExceptionPath(this);" etype="${rule.RuleType}" prefix="${rule.PathPrefix || rule.CIDR}"><i class="ui red times icon"></i></button></td>
                                 </tr>`);

@@ -158,6 +158,7 @@ func startupSequence() {
 		AllowSlowIpv6Lookup:          !*enableHighSpeedGeoIPLookup,
 		Logger:                       SystemWideLogger,
 		SlowLookupCacheClearInterval: GEODB_CACHE_CLEAR_INTERVAL * time.Minute,
+		ExternalGeoDBFolder:          CONF_GEODB_PATH,
 	})
 	if err != nil {
 		panic(err)
@@ -486,6 +487,11 @@ func ShutdownSeq() {
 	if accessController != nil {
 		SystemWideLogger.Println("Closing Access Controller")
 		accessController.Close()
+	}
+
+	if geodbStore != nil {
+		SystemWideLogger.Println("Closing Geo-IP Database")
+		geodbStore.Close()
 	}
 
 	//Close the zorxauth router to save browser sessions

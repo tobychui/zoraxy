@@ -50,12 +50,24 @@ func GetDriveStat(w http.ResponseWriter, r *http.Request) {
 	var FileSystem []string = wmicGetinfo("logicaldisk", "FileSystem")
 	var FreeSpace []string = wmicGetinfo("logicaldisk", "FreeSpace")
 
+	//These are three independent wmic queries and they do not always return the
+	//same number of rows: a drive with no media (e.g. an empty optical drive or
+	//card reader) reports a DeviceID but omits FileSystem and FreeSpace. Index
+	//each slice defensively so a mismatch degrades to "unknown" instead of
+	//panicking with an index out of range.
+	valueAt := func(values []string, i int) string {
+		if i < len(values) {
+			return values[i]
+		}
+		return "unknown"
+	}
+
 	var arr []LogicalDisk
 	for i, info := range DeviceID {
 		LogicalDisk := LogicalDisk{
 			DriveLetter: info,
-			FileSystem:  FileSystem[i],
-			FreeSpace:   FreeSpace[i],
+			FileSystem:  valueAt(FileSystem, i),
+			FreeSpace:   valueAt(FreeSpace, i),
 		}
 		arr = append(arr, LogicalDisk)
 	}

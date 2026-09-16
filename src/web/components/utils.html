@@ -156,6 +156,48 @@
         </div>
     </div>
     <div class="ui bottom attached tab segment utilitiesTabs" data-tab="utiltab4">
+        <!-- Geo-IP Database Update -->
+        <h3>Geo-IP Database Update</h3>
+        <p>The Geo-IP database resolves visitor IP addresses into country codes for access control rules and statistics. Updating it keeps the country lookup results accurate.</p>
+        <div class="ui basic segment">
+            <table class="ui very basic collapsing celled table">
+                <tbody>
+                    <tr>
+                        <td>Database Source</td>
+                        <td id="geodbSource">-</td>
+                    </tr>
+                    <tr>
+                        <td>Database Date</td>
+                        <td id="geodbDate">-</td>
+                    </tr>
+                    <tr>
+                        <td>Loaded Entries</td>
+                        <td id="geodbEntries">-</td>
+                    </tr>
+                    <tr>
+                        <td>Last Updated</td>
+                        <td id="geodbLastUpdate">-</td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="ui basic button" id="geodbUpdateNowBtn" onclick="updateGeoDBNow();"><i class="ui blue download icon"></i> Update Now</button>
+            <div class="ui form" style="margin-top: 1.4em;">
+                <div class="field">
+                    <div class="ui toggle checkbox">
+                        <input type="checkbox" id="geodbAutoUpdateEnabled">
+                        <label>Enable Scheduled Update</label>
+                    </div>
+                    <br>
+                    <small>When enabled, the database is refreshed once a week counting from the time Zoraxy was started, plus a random offset of up to 30 minutes. The randomized schedule prevents all Zoraxy instances (including those started by a cron job at a fixed time) from requesting the update server at the same moment.</small>
+                </div>
+            </div>
+            <div id="geodbNextUpdate" class="ui green message" style="display:none;">
+                <i class="clock outline icon"></i> Next update in <span id="geodbCountdown">-</span>
+            </div>
+            <div id="geodbUpdateMsg" class="ui message" style="display:none;"></div>
+        </div>
+        <div class="ui divider"></div>
+
         <!-- Config Tools -->
         <h3>System Backup & Restore</h3>
         <p>Options related to system backup, migrate and restore.</p>
@@ -312,6 +354,164 @@
     }
 
     loadLogSettings();
+
+    /*
+        Geo-IP Database Update
+    */
+    let geodbNextUpdateTime = 0;    //Unix timestamp of the next scheduled update, 0 if not scheduled
+    let geodbCountdownTimer = null; //Interval handler for the countdown ticker
+
+    //Convert a unix timestamp into a human readable time string
+    function geodbUnixToString(unixTimestamp){
+        if (unixTimestamp == undefined || unixTimestamp <= 0){
+            return "N/A";
+        }
+        return new Date(unixTimestamp * 1000).toLocaleString();
+    }
+
+    //Format the remaining seconds into "x days x hours x minutes x seconds"
+    function geodbFormatCountdown(remainingSeconds){
+        if (remainingSeconds < 0){
+            remainingSeconds = 0;
+        }
+        let d = Math.floor(remainingSeconds / 86400);
+        let h = Math.floor(remainingSeconds % 86400 / 3600);
+        let m = Math.floor(remainingSeconds % 3600 / 60);
+        let s = Math.floor(remainingSeconds % 60);
+
+        let counterText = "";
+        if (d > 0){ counterText += d + (d == 1 ? " day " : " days "); }
+        if (d > 0 || h > 0){ counterText += h + (h == 1 ? " hour " : " hours "); }
+        if (d > 0 || h > 0 || m > 0){ counterText += m + (m == 1 ? " minute " : " minutes "); }
+        counterText += s + (s == 1 ? " second" : " seconds");
+        return counterText;
+    }
+
+    function loadGeoDBUpdateStatus(){
+        $.get("/api/geodb/updateStatus", function(data){
+            if (data.error != undefined){
+                showGeoDBMessage(data.error, false);
+                return;
+            }
+
+            $("#geodbSource").html(data.usingExternalDB ?
+                `<i class="green check circle icon"></i> Downloaded database` :
+                `<i class="grey box icon"></i> Bundled database (never updated)`);
+            $("#geodbDate").text(data.usingExternalDB ? geodbUnixToString(data.databaseTime) : "Same as Zoraxy build date");
+            $("#geodbEntries").text(data.ipv4EntryCount.toLocaleString() + " IPv4 / " + data.ipv6EntryCount.toLocaleString() + " IPv6 ranges");
+            $("#geodbLastUpdate").text(geodbUnixToString(data.lastUpdateTime));
+            $("#geodbAutoUpdateEnabled").prop("checked", data.autoUpdateEnabled);
+
+            if (data.lastUpdateError != ""){
+                showGeoDBMessage("Last update failed: " + data.lastUpdateError, false);
+            }
+
+            //Start or stop the countdown depending on the scheduler state
+            geodbNextUpdateTime = data.nextUpdateTime;
+            if (data.autoUpdateEnabled && geodbNextUpdateTime > 0){
+                $("#geodbNextUpdate").show();
+                startGeoDBCountdown();
+            }else{
+                $("#geodbNextUpdate").hide();
+                stopGeoDBCountdown();
+            }
+        }).fail(function(){
+            showGeoDBMessage("Unable to load Geo-IP database status", false);
+        });
+    }
+
+    function startGeoDBCountdown(){
+        stopGeoDBCountdown();
+        renderGeoDBCountdown();
+        geodbCountdownTimer = setInterval(renderGeoDBCountdown, 1000);
+    }
+
+    function stopGeoDBCountdown(){
+        if (geodbCountdownTimer != null){
+            clearInterval(geodbCountdownTimer);
+            geodbCountdownTimer = null;
+        }
+    }
+
+    function renderGeoDBCountdown(){
+        if (geodbNextUpdateTime <= 0){
+            return;
+        }
+
+        let currentTime = Math.floor(Date.now() / 1000);
+        let remainingSeconds = geodbNextUpdateTime - currentTime;
+        if (remainingSeconds <= 0){
+            //Timer is up. Poll the backend until the next update is scheduled
+            $("#geodbCountdown").text("any moment now");
+            if (currentTime % 10 == 0){
+                loadGeoDBUpdateStatus();
+            }
+            return;
+        }
+
+        $("#geodbCountdown").text(geodbFormatCountdown(remainingSeconds));
+    }
+
+    function updateGeoDBNow(){
+        let updateBtn = $("#geodbUpdateNowBtn");
+        let originalBtnText = updateBtn.html();
+        updateBtn.html('<i class="spinner loading icon"></i> Updating...').addClass("loading disabled");
+
+        $.cjax({
+            type: "POST",
+            url: "/api/geodb/updateNow",
+            success: function(data){
+                if (data.error != undefined){
+                    showGeoDBMessage("Update failed: " + data.error, false);
+                }else{
+                    showGeoDBMessage("Geo-IP database updated and reloaded", true);
+                }
+                loadGeoDBUpdateStatus();
+            },
+            error: function(xhr, status, error){
+                showGeoDBMessage("Update failed: " + error, false);
+            },
+            complete: function(){
+                updateBtn.html(originalBtnText).removeClass("loading disabled");
+            }
+        });
+    }
+
+    function setGeoDBAutoUpdate(enabled){
+        $.cjax({
+            type: "POST",
+            url: "/api/geodb/autoUpdate",
+            data: {enable: enabled},
+            success: function(data){
+                if (data.error != undefined){
+                    showGeoDBMessage(data.error, false);
+                    //Revert the toggle to the actual state
+                }else{
+                    showGeoDBMessage(enabled ? "Scheduled update enabled" : "Scheduled update disabled", true);
+                }
+                loadGeoDBUpdateStatus();
+            },
+            error: function(xhr, status, error){
+                showGeoDBMessage("Unable to update setting: " + error, false);
+                loadGeoDBUpdateStatus();
+            }
+        });
+    }
+
+    function showGeoDBMessage(message, isSuccess){
+        $("#geodbUpdateMsg").removeClass("green red")
+            .addClass(isSuccess ? "green" : "red")
+            .html(`<i class="${isSuccess ? "check circle" : "exclamation triangle"} icon"></i> ` + $("<span>").text(message).html())
+            .stop().finish().slideDown("fast").delay(isSuccess ? 3000 : 8000).slideUp("fast");
+    }
+
+    //Bind the change event on the input element instead of using the checkbox
+    //module onChange, as the checkbox modules are re-initialized further below
+    $("#geodbAutoUpdateEnabled").on("change", function(){
+        setGeoDBAutoUpdate($(this).is(":checked"));
+    });
+
+    loadGeoDBUpdateStatus();
 
     /*
         Geo-IP Lookup & Access Rule Check

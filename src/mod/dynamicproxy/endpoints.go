@@ -228,6 +228,15 @@ func (ep *ProxyEndpoint) GetUpstreamOriginByMatchingIP(originIpOrDomain string) 
 	return nil, errors.New("target upstream origin not found")
 }
 
+// upstreamTLSServerName returns the hostname to use as the upstream TLS SNI /
+// certificate verification name, or "" to derive it from the upstream address.
+func (ep *ProxyEndpoint) upstreamTLSServerName() string {
+	if ep.HeaderRewriteRules == nil {
+		return ""
+	}
+	return ep.HeaderRewriteRules.RequestHostOverwrite
+}
+
 // Add upstream to endpoint and update it to runtime
 func (ep *ProxyEndpoint) AddUpstreamOrigin(newOrigin *loadbalance.Upstream, activate bool) error {
 	//Check if the upstream already exists
@@ -237,7 +246,7 @@ func (ep *ProxyEndpoint) AddUpstreamOrigin(newOrigin *loadbalance.Upstream, acti
 
 	if activate {
 		//Add it to the active origin list
-		err := newOrigin.StartProxy()
+		err := newOrigin.StartProxy(ep.upstreamTLSServerName())
 		if err != nil {
 			return err
 		}

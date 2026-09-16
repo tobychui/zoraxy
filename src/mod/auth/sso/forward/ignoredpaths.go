@@ -1,9 +1,9 @@
 package forward
 
 import (
-	"net/url"
-	"path"
 	"strings"
+
+	"imuslab.com/zoraxy/mod/pathmatch"
 )
 
 /*
@@ -28,14 +28,7 @@ import (
 // This matters because a false positive would skip authentication for a path the operator
 // did not intend to expose.
 func requestPathWithinPrefix(requestURI string, prefix string) bool {
-	requestPath := requestURI
-	if u, err := url.ParseRequestURI(requestURI); err == nil {
-		//Use the decoded path only, dropping any query string / fragment
-		requestPath = u.Path
-	}
-	requestPath = path.Clean("/" + requestPath)
-	cleanedPrefix := path.Clean("/" + prefix)
-	return requestPath == cleanedPrefix || strings.HasPrefix(requestPath, cleanedPrefix+"/")
+	return pathmatch.RequestPathWithinPrefix(requestURI, prefix)
 }
 
 // IsIgnoredPath reports whether the given request URI should bypass forward auth because it

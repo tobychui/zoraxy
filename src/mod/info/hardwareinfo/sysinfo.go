@@ -38,50 +38,7 @@ func Ifconfig(w http.ResponseWriter, r *http.Request) {
 	utils.SendTextResponse(w, string(jsonData))
 }
 
-func GetDriveStat(w http.ResponseWriter, r *http.Request) {
-	//Get drive status using df command
-	cmdin := `df -k | sed -e /Filesystem/d`
-	cmd := exec.Command("bash", "-c", cmdin)
-	dev, err := cmd.Output()
-	if err != nil {
-		dev = []byte{}
-	}
-
-	drives := strings.Split(string(dev), "\n")
-
-	if len(drives) == 0 {
-		utils.SendErrorResponse(w, "Invalid disk information")
-		return
-	}
-
-	var arr []LogicalDisk
-	for _, driveInfo := range drives {
-		if driveInfo == "" {
-			continue
-		}
-		for strings.Contains(driveInfo, "  ") {
-			driveInfo = strings.Replace(driveInfo, "  ", " ", -1)
-		}
-		driveInfoChunk := strings.Split(driveInfo, " ")
-		tmp, _ := strconv.Atoi(driveInfoChunk[3])
-		freespaceInByte := int64(tmp)
-
-		LogicalDisk := LogicalDisk{
-			DriveLetter: driveInfoChunk[5],
-			FileSystem:  driveInfoChunk[0],
-			FreeSpace:   strconv.FormatInt(freespaceInByte*1024, 10), //df show disk space in 1KB blocks
-		}
-		arr = append(arr, LogicalDisk)
-	}
-
-	var jsonData []byte
-	jsonData, err = json.Marshal(arr)
-	if err != nil {
-		printAndLog(fmt.Sprint(err), nil)
-	}
-	utils.SendTextResponse(w, string(jsonData))
-
-}
+//GetDriveStat is shared by all unix platforms, see drivestat_unix.go
 
 func GetUSB(w http.ResponseWriter, r *http.Request) {
 	cmdin := `lsusb`

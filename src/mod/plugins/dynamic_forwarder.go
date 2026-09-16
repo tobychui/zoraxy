@@ -103,6 +103,7 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request) bool
 		ProxyDomain:  "127.0.0.1:" + strconv.Itoa(p.AssignedPort),
 		NoCache:      true,
 		PathPrefix:   p.Spec.DynamicCaptureIngress,
+		AllowUpgrade: true,
 		UpstreamHeaders: [][]string{
 			{"X-Zoraxy-RequestID", uniqueRequestID},
 		},

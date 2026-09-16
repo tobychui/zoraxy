@@ -322,6 +322,7 @@ func (p *Plugin) HandleStaticRoute(w http.ResponseWriter, r *http.Request, longe
 		ProxyDomain:  "127.0.0.1:" + strconv.Itoa(p.AssignedPort),
 		NoCache:      true,
 		PathPrefix:   longestPrefix,
+		AllowUpgrade: true,
 		UpstreamHeaders: [][]string{
 			{"X-Zoraxy-Capture", longestPrefix},
 			{"X-Zoraxy-URI", originalRequestURI},

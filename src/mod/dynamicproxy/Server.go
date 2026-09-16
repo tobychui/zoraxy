@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 )
 
 /*
@@ -102,28 +100,11 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// CAPTCHA Gating
-		if sep.RequireCaptcha && sep.CaptchaConfig.IsConfigured() {
-			// Check if CAPTCHA verification endpoint
-			if r.URL.Path == captcha.VerifyPath {
-				captcha.HandleVerification(w, r, sep.CaptchaConfig, h.Parent.captchaSessionStore)
-				return
-			}
-
-			// If specific path prefixes are configured, only enforce on matched paths.
-			if !captcha.ShouldEnforcePath(r.URL.Path, sep.CaptchaConfig) {
-				// Allow passthrough
-			} else if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
-				// Allow passthrough
-			} else if !captcha.CheckSession(r, h.Parent.captchaSessionStore) {
-				// No valid session, serve CAPTCHA challenge
-				domain := r.Host
-				if domain == "" {
-					domain = sep.RootOrMatchingDomain
-				}
-				captcha.RenderChallenge(w, r, sep.CaptchaConfig, domain, h.Parent.Option.WebDirectory)
+		if handled, challenged := h.Parent.handleCaptchaGating(w, r, sep); handled {
+			if challenged {
 				h.Parent.logRequest(r, false, 403, "captcha-required", domainOnly, "captcha", sep)
-				return
 			}
+			return
 		}
 
 		//Validate auth (basic auth or SSO auth)

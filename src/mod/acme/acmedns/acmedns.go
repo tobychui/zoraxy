@@ -141,6 +141,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/netcup"
 	"github.com/go-acme/lego/v5/providers/dns/netlify"
 	"github.com/go-acme/lego/v5/providers/dns/netnod"
+	"github.com/go-acme/lego/v5/providers/dns/nexdns"
 	"github.com/go-acme/lego/v5/providers/dns/ngenix"
 	"github.com/go-acme/lego/v5/providers/dns/nicmanager"
 	"github.com/go-acme/lego/v5/providers/dns/nicru"
@@ -1406,6 +1407,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return netnod.NewDNSProviderConfig(cfg)
+	case "nexdns":
+		cfg := nexdns.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return nexdns.NewDNSProviderConfig(cfg)
 	case "ngenix":
 		cfg := ngenix.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)

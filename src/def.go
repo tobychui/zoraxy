@@ -44,7 +44,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME    = "Zoraxy"
-	SYSTEM_VERSION = "3.3.4"
+	SYSTEM_VERSION = "3.3.5"
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487
@@ -85,7 +85,7 @@ var (
 	enableLog = flag.Bool("enablelog", true, "Enable system wide logging, set to false for writing log to STDOUT only")
 
 	/* Statistics Configuration Flags */
-	statsMaxEntriesPerMap = flag.Int("stats_max_entries", 0, "Soft-cap per-dimension statistics maps at N entries; when exceeded the entries with the lowest request counts are dropped first (0 = unbounded; recommended value when enabled: 20000)")
+	statsMaxEntriesPerMap = flag.Int("stats_max_entries", 20000, "Soft-cap per-dimension statistics maps at N entries; when exceeded the entries with the lowest request counts are dropped first (0 = unbounded)")
 
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")

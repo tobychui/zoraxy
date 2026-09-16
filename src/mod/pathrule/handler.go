@@ -27,7 +27,7 @@ func (h *Handler) HandleAddBlockingPath(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	exactMatch, err := utils.PostPara(r, "exactMatch")
+	exactMatch, err := utils.PostBool(r, "exactMatch")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid exact match value given")
 		return
@@ -45,13 +45,13 @@ func (h *Handler) HandleAddBlockingPath(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	enabled, err := utils.PostPara(r, "enabled")
+	enabled, err := utils.PostBool(r, "enabled")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid enabled value given")
 		return
 	}
 
-	caseSensitive, err := utils.PostPara(r, "caseSensitive")
+	caseSensitive, err := utils.PostBool(r, "caseSensitive")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid case sensitive value given")
 		return
@@ -60,12 +60,12 @@ func (h *Handler) HandleAddBlockingPath(w http.ResponseWriter, r *http.Request) 
 	targetBlockingPath := BlockingPath{
 		UUID:          uuid.New().String(),
 		MatchingPath:  matchingPath,
-		ExactMatch:    exactMatch == "true",
+		ExactMatch:    exactMatch,
 		StatusCode:    statusCode,
 		CustomHeaders: http.Header{},
 		CustomHTML:    []byte(""),
-		Enabled:       enabled == "true",
-		CaseSenitive:  caseSensitive == "true",
+		Enabled:       enabled,
+		CaseSenitive:  caseSensitive,
 	}
 
 	err = h.AddBlockingPath(&targetBlockingPath)

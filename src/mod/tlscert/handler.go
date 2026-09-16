@@ -228,8 +228,8 @@ func (m *Manager) HandleListDomains(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	requireCompact, _ := utils.GetPara(r, "compact")
-	if requireCompact == "true" {
+	requireCompact, _ := utils.GetBool(r, "compact")
+	if requireCompact {
 		result := make(map[string][]string)
 
 		for key, value := range certnameToDomainMap {

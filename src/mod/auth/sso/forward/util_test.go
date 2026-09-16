@@ -215,3 +215,37 @@ func TestHeaderCopyIncluded(t *testing.T) {
 		})
 	}
 }
+
+func TestRSetIPHeader(t *testing.T) {
+	testCases := []struct {
+		name       string
+		remoteAddr string
+		supplied   string
+		expected   string
+	}{
+		{"ShouldHandleIPv4", "10.0.0.1:54321", "", "10.0.0.1"},
+		{"ShouldHandleIPv6", "[2a01:4f8::1]:54321", "", "2a01:4f8::1"},
+		{"ShouldHandleIPv6WithoutPort", "2a01:4f8::1", "", "2a01:4f8::1"},
+		{"ShouldOverwriteClientSuppliedIPv4", "10.0.0.1:54321", "10.2.45.5", "10.0.0.1"},
+		{"ShouldOverwriteClientSuppliedIPv6", "[2a01:4f8::1]:54321", "10.2.45.5", "2a01:4f8::1"},
+		{"ShouldDropClientSuppliedOnUnparsableAddress", "not-an-address", "10.2.45.5", ""},
+		{"ShouldDropClientSuppliedOnEmptyAddress", "", "10.2.45.5", ""},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &http.Request{RemoteAddr: tc.remoteAddr}
+			req := &http.Request{Header: http.Header{}}
+
+			if tc.supplied != "" {
+				req.Header.Set(HeaderXForwardedFor, tc.supplied)
+				req.Header.Set(HeaderXOriginalIP, tc.supplied)
+			}
+
+			rSetIPHeader(r, req, HeaderXForwardedFor, HeaderXOriginalIP)
+
+			assert.Equal(t, tc.expected, req.Header.Get(HeaderXForwardedFor))
+			assert.Equal(t, tc.expected, req.Header.Get(HeaderXOriginalIP))
+		})
+	}
+}

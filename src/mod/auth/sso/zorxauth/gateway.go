@@ -33,6 +33,16 @@ var logoutHTML []byte
 //go:embed favicon.png
 var faviconPNG []byte
 
+//go:embed wallpaper.svg
+var wallpaperSVG []byte
+
+//go:embed logo_white.svg
+var logoWhiteSVG []byte
+
+// BRANDING_ASSET_PATH is the URL prefix the login page uses to reference its
+// customizable resources, e.g. /assets/branding/wallpaper
+const BRANDING_ASSET_PATH = "/assets/branding/"
+
 // GatewayServer represents the authentication gateway HTTP server
 type GatewayServer struct {
 	server *http.Server
@@ -54,8 +64,19 @@ func NewGatewayServer(router *AuthRouter) *GatewayServer {
 	mux.HandleFunc("/noaccess", gs.handleNoAccessPage)
 	mux.HandleFunc("/favicon.png", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.WriteHeader(http.StatusOK)
 		w.Write(faviconPNG)
+	})
+	// Branding assets. Each serves the administrator's upload when one exists,
+	// otherwise the go:embed default. See customization.go.
+	mux.HandleFunc(BRANDING_ASSET_PATH, func(w http.ResponseWriter, r *http.Request) {
+		assetKey := strings.TrimPrefix(r.URL.Path, BRANDING_ASSET_PATH)
+		if _, ok := assetSpecs[assetKey]; !ok {
+			http.NotFound(w, r)
+			return
+		}
+		gs.router.ServeBrandingAsset(w, r, assetKey)
 	})
 	mux.HandleFunc("/login", gs.handleLogin)
 	mux.HandleFunc("/logout", gs.handleLogout)
@@ -243,10 +264,10 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	// Serve the authentication page
+	// Serve the authentication page with the administrator's branding applied
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write(authPageHTML)
+	w.Write(gs.router.RenderAuthPage())
 }
 
 // handleLogin processes login requests

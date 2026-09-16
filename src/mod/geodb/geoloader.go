@@ -17,19 +17,26 @@ func (s *Store) search(ip string) string {
 		ip = strings.TrimSpace(ip)
 	}
 
+	//Get the current dataset snapshot, it might be swapped out by a
+	//database update while this lookup is running
+	dataset := s.dataset.Load()
+	if dataset == nil {
+		return ""
+	}
+
 	//Search in geotrie tree
 	cc := ""
 	if netutils.IsIPv6(ip) {
-		if s.geotrieIpv6 == nil {
-			cc = s.slowSearchIpv6(ip)
+		if dataset.geotrieIpv6 == nil {
+			cc = s.slowSearchIpv6(dataset, ip)
 		} else {
-			cc = s.geotrieIpv6.search(ip)
+			cc = dataset.geotrieIpv6.search(ip)
 		}
 	} else {
-		if s.geotrie == nil {
-			cc = s.slowSearchIpv4(ip)
+		if dataset.geotrie == nil {
+			cc = s.slowSearchIpv4(dataset, ip)
 		} else {
-			cc = s.geotrie.search(ip)
+			cc = dataset.geotrie.search(ip)
 		}
 	}
 

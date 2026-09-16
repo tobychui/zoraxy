@@ -42,10 +42,10 @@ func TestTrieConstruct(t *testing.T) {
 func TestResolveCountryCodeFromIP(t *testing.T) {
 	// Create a new store
 	store, err := NewGeoDb(nil, &StoreOptions{
-		false, //false to use fast geodb mode for ipv4 lookup
-		false, //false to use fast geodb mode for ipv6 lookup
-		&logger.Logger{},
-		0,
+		AllowSlowIpv4LookUp:          false, //false to use fast geodb mode for ipv4 lookup
+		AllowSlowIpv6Lookup:          false, //false to use fast geodb mode for ipv6 lookup
+		Logger:                       &logger.Logger{},
+		SlowLookupCacheClearInterval: 0,
 	})
 	if err != nil {
 		t.Errorf("error creating store: %v", err)

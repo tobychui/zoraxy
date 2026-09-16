@@ -19,6 +19,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/pathmatch"
 )
 
 /*
@@ -332,27 +333,8 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 	}
 
 	// CAPTCHA Gating
-	if sep.RequireCaptcha && sep.CaptchaConfig.IsConfigured() {
-		// Check if CAPTCHA verification endpoint
-		if r.URL.Path == captcha.VerifyPath {
-			captcha.HandleVerification(w, r, sep.CaptchaConfig, router.captchaSessionStore)
-			return
-		}
-
-		// If specific path prefixes are configured, only enforce on matched paths.
-		if !captcha.ShouldEnforcePath(r.URL.Path, sep.CaptchaConfig) {
-			// Allow passthrough
-		} else if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) {
-			// Allow passthrough
-		} else if !captcha.CheckSession(r, router.captchaSessionStore) {
-			// No valid session, serve CAPTCHA challenge
-			domain := r.Host
-			if domain == "" {
-				domain = sep.RootOrMatchingDomain
-			}
-			captcha.RenderChallenge(w, r, sep.CaptchaConfig, domain, router.Option.WebDirectory)
-			return
-		}
+	if handled, _ := router.handleCaptchaGating(w, r, sep); handled {
+		return
 	}
 
 	//Validate authentication using all configured auth methods (Basic, ForwardAuth, OAuth2, ZorxAuth)
@@ -401,10 +383,38 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		NoRemoveHopByHop:        endpointProxyRewriteRules.DisableHopByHopHeaderRemoval,
 		NoRemoveUserAgentHeader: endpointProxyRewriteRules.DisableUserAgentHeaderRemoval,
 		AllowConnect:            sep.EnableConnectSupport,
+		AllowUpgrade:            sep.EnableUpgradeForwarding,
 		PathPrefix:              "",
 		Version:                 sep.parent.Option.HostVersion,
 		DevelopmentMode:         sep.parent.Option.DevelopmentMode,
 	})
+}
+
+func (router *Router) handleCaptchaGating(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) (handled bool, challenged bool) {
+	if !sep.RequireCaptcha || !sep.CaptchaConfig.IsConfigured() {
+		return false, false
+	}
+
+	if r.URL.Path == captcha.VerifyPath {
+		captcha.HandleVerification(w, r, sep.CaptchaConfig, router.captchaSessionStore)
+		return true, false
+	}
+
+	if !captcha.ShouldEnforcePath(pathmatch.RequestTarget(r), sep.CaptchaConfig) {
+		return false, false
+	}
+
+	if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) || captcha.CheckSession(r, router.captchaSessionStore) {
+		return false, false
+	}
+
+	domain := r.Host
+	if domain == "" {
+		domain = sep.RootOrMatchingDomain
+	}
+
+	captcha.RenderChallenge(w, r, sep.CaptchaConfig, domain, router.Option.WebDirectory)
+	return true, true
 }
 
 // startSecondaryListeners starts HTTP servers on secondary listening ports defined in proxy endpoints

@@ -325,6 +325,11 @@
                                 <input type="checkbox" id="zorxAuthUseExpotentialBackoff" name="useExpotentialBackoff">
                                 <label>Use Exponential Backoff<br><small>Increase delay between failed authentication attempts exponentially</small></label>
                             </div>
+                            <div class="ui divider"></div>
+                            <b>Login Page Appearance</b>
+                            <br><br>
+                            <p><small>Replace the logo, wording and panel artwork on the Zoraxy Auth login page with your own resources.</small></p>
+                            <button class="ui basic button" type="button" onclick="openZorxAuthCustomization();"><i class="ui purple paint brush icon"></i> Customization</button>
                         </div>
                     </div>
                 </div>
@@ -361,6 +366,10 @@
 
     function openZorxAuthUserEditor(){
         showSideWrapper('snippet/zorxauthUserEditor.html?t=' + Date.now());
+    }
+
+    function openZorxAuthCustomization(){
+        showSideWrapper('snippet/zorxauthCustomization.html?t=' + Date.now());
     }
 
     /*

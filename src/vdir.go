@@ -81,20 +81,9 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reqTLSStr, err := utils.PostPara(r, "reqTLS")
-	if err != nil {
-		//Assume false
-		reqTLSStr = "false"
-	}
-	reqTLS := (reqTLSStr == "true")
-
-	skipValidStr, err := utils.PostPara(r, "skipValid")
-	if err != nil {
-		//Assume false
-		skipValidStr = "false"
-	}
-
-	skipValid := (skipValidStr == "true")
+	//Assume false if not given
+	reqTLS, _ := utils.PostBool(r, "reqTLS")
+	skipValid, _ := utils.PostBool(r, "skipValid")
 
 	//Load the target proxy endpoint from runtime
 	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
@@ -222,20 +211,9 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reqTLSStr, err := utils.PostPara(r, "reqTLS")
-	if err != nil {
-		//Assume false
-		reqTLSStr = "false"
-	}
-	reqTLS := (reqTLSStr == "true")
-
-	skipValidStr, err := utils.PostPara(r, "skipValid")
-	if err != nil {
-		//Assume false
-		skipValidStr = "false"
-	}
-
-	skipValid := (skipValidStr == "true")
+	//Assume false if not given
+	reqTLS, _ := utils.PostBool(r, "reqTLS")
+	skipValid, _ := utils.PostBool(r, "skipValid")
 
 	var targetEndpoint *dynamicproxy.ProxyEndpoint
 	if eptype == "root" {
@@ -323,10 +301,8 @@ func ReverseProxyBulkApplyVdirByForwardAuth(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	reqTLSStr, _ := utils.PostPara(r, "reqTLS")
-	reqTLS := (reqTLSStr == "true")
-	skipValidStr, _ := utils.PostPara(r, "skipValid")
-	skipValid := (skipValidStr == "true")
+	reqTLS, _ := utils.PostBool(r, "reqTLS")
+	skipValid, _ := utils.PostBool(r, "skipValid")
 
 	ensurePresent := (action == "add")
 

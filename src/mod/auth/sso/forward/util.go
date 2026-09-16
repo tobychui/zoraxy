@@ -125,14 +125,22 @@ func stringInSliceFold(needle string, haystack []string) bool {
 }
 
 func rSetIPHeader(r, req *http.Request, headers ...string) {
-	if r.RemoteAddr == "" || len(headers) == 0 {
+	if len(headers) == 0 {
 		return
 	}
 
-	before, _, _ := strings.Cut(r.RemoteAddr, ":")
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
 
-	ip := net.ParseIP(before)
+	ip := net.ParseIP(host)
 	if ip == nil {
+		// We should never leave a client supplied value in these headers when the address cannot be determined.
+		for _, header := range headers {
+			req.Header.Del(header)
+		}
+
 		return
 	}
 

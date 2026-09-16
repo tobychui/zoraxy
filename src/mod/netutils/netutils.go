@@ -59,7 +59,7 @@ func HandleWhois(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	raw, _ := utils.GetPara(r, "raw")
+	raw, _ := utils.GetBool(r, "raw")
 
 	result, err := whois.Whois(targetIpOrDomain)
 	if err != nil {
@@ -67,7 +67,7 @@ func HandleWhois(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if raw == "true" {
+	if raw {
 		utils.SendTextResponse(w, result)
 	} else {
 		if isDomainName(targetIpOrDomain) {

@@ -31,7 +31,7 @@
             <div class="ui right floated buttons menutoggle" style="padding-top: 2px;">
                 <button id="sidemenuBtn" class="ui basic icon button" onclick="$('.toolbar').fadeToggle('fast');"><i class="content icon"></i></button>
             </div>
-            <div class="ui right floated buttons" style="padding-top: 2px; padding-right: 0.4em;">
+            <div id="logoutButtonWrapper" class="ui right floated buttons" style="padding-top: 2px; padding-right: 0.4em;">
                 <button class="ui basic white icon button" onclick="logout();"><i class="sign-out icon"></i></button>
             </div>
             <div class="ui right floated buttons" style="padding-top: 2px; margin-right: 0.4em;">
@@ -445,6 +445,17 @@
                 loadPluginUIContextIfAvailable();
                 return true;
             }
+
+            //Hide the logout button if the management interface is started in noauth mode
+            function initLogoutButtonState() {
+                $.get("/api/auth/authEnabled", function(authEnabled) {
+                    if (authEnabled === false) {
+                        //noauth mode, logout is a no-op. Hide the button to avoid confusion
+                        $("#logoutButtonWrapper").hide();
+                    }
+                });
+            }
+            initLogoutButtonState();
 
             function logout() {
                 $.get("/api/auth/logout", function(response) {

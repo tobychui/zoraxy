@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"imuslab.com/zoraxy/mod/pathmatch"
 )
 
 /*
@@ -62,14 +64,14 @@ const (
 
 // Config holds the configuration for CAPTCHA
 type Config struct {
-	Provider         Provider         `json:"Provider"`
-	SiteKey          string           `json:"SiteKey"`
-	SecretKey        string           `json:"SecretKey"`
-	SessionDuration  int              `json:"SessionDuration"`
-	RecaptchaVersion string           `json:"RecaptchaVersion"` // v2 or v3
-	RecaptchaScore   float64          `json:"RecaptchaScore"`   // v3 only, 0.0-1.0
-	ProtectedPathPrefixes []string    `json:"ProtectedPathPrefixes"` // Empty means protect all paths on this endpoint
-	ExceptionRules   []*ExceptionRule `json:"ExceptionRules"`
+	Provider              Provider         `json:"Provider"`
+	SiteKey               string           `json:"SiteKey"`
+	SecretKey             string           `json:"SecretKey"`
+	SessionDuration       int              `json:"SessionDuration"`
+	RecaptchaVersion      string           `json:"RecaptchaVersion"`      // v2 or v3
+	RecaptchaScore        float64          `json:"RecaptchaScore"`        // v3 only, 0.0-1.0
+	ProtectedPathPrefixes []string         `json:"ProtectedPathPrefixes"` // Empty means protect all paths on this endpoint
+	ExceptionRules        []*ExceptionRule `json:"ExceptionRules"`
 }
 
 // ExceptionRule defines rules for bypassing CAPTCHA
@@ -290,17 +292,20 @@ func GetClientIP(r *http.Request) string {
 
 // CheckException checks if the request matches any exception rules
 func CheckException(r *http.Request, rules []*ExceptionRule) bool {
-	if rules == nil || len(rules) == 0 {
+	if len(rules) == 0 {
 		return false
 	}
 
 	clientIP := GetClientIP(r)
-	requestPath := r.URL.Path
+	requestTarget := pathmatch.RequestTarget(r)
 
 	for _, rule := range rules {
+		if rule == nil {
+			continue
+		}
 		switch rule.RuleType {
 		case ExceptionTypePaths:
-			if strings.HasPrefix(requestPath, rule.PathPrefix) {
+			if pathmatch.RequestPathWithinPrefix(requestTarget, rule.PathPrefix) {
 				return true
 			}
 		case ExceptionTypeCIDR:
@@ -346,19 +351,16 @@ func normalizeProtectedPathPrefix(pathPrefix string) string {
 }
 
 func pathPrefixMatch(requestPath string, pathPrefix string) bool {
-	normalizedPath := normalizeProtectedPathPrefix(requestPath)
 	normalizedPrefix := normalizeProtectedPathPrefix(pathPrefix)
-	if normalizedPath == "" {
-		normalizedPath = "/"
-	}
 	if normalizedPrefix == "" {
 		return false
 	}
 	if normalizedPrefix == "/" {
+		//All endpoints are protected if the prefix is "/"
 		return true
 	}
 
-	return normalizedPath == normalizedPrefix || strings.HasPrefix(normalizedPath, normalizedPrefix+"/")
+	return pathmatch.RequestPathWithinPrefix(requestPath, normalizedPrefix)
 }
 
 // ShouldEnforcePath returns true when CAPTCHA should apply to the request path.

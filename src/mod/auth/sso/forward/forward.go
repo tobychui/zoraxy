@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/database"
@@ -145,8 +144,8 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	requestHeaders, _ := utils.PostPara(r, DatabaseKeyRequestHeaders)
 	requestIncludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestIncludedCookies)
 	requestExcludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestExcludedCookies)
-	requestIncludeBody, _ := utils.PostPara(r, DatabaseKeyRequestIncludeBody)
-	useXOriginalHeaders, _ := utils.PostPara(r, DatabaseKeyUseXOriginalHeaders)
+	requestIncludeBody, _ := utils.PostBool(r, DatabaseKeyRequestIncludeBody)
+	useXOriginalHeaders, _ := utils.PostBool(r, DatabaseKeyUseXOriginalHeaders)
 	ignoredPaths, _ := utils.PostPara(r, DatabaseKeyIgnoredPaths)
 
 	// Write changes to runtime
@@ -156,8 +155,8 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	ar.options.RequestHeaders = cleanSplit(requestHeaders)
 	ar.options.RequestIncludedCookies = cleanSplit(requestIncludedCookies)
 	ar.options.RequestExcludedCookies = cleanSplit(requestExcludedCookies)
-	ar.options.RequestIncludeBody, _ = strconv.ParseBool(requestIncludeBody)
-	ar.options.UseXOriginalHeaders, _ = strconv.ParseBool(useXOriginalHeaders)
+	ar.options.RequestIncludeBody = requestIncludeBody
+	ar.options.UseXOriginalHeaders = useXOriginalHeaders
 	ar.options.IgnoredPaths = cleanSplit(ignoredPaths)
 
 	// Write changes to database

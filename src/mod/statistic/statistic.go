@@ -1,6 +1,7 @@
 package statistic
 
 import (
+	"log"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -161,11 +162,20 @@ func (c *Collector) SetAutoSave(saveInterval int) {
 
 // Write the current in-memory summary to database file
 func (c *Collector) SaveSummaryOfDay() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("[Statistic] Recovered from panic while saving daily summary: ", r)
+		}
+	}()
+
 	//When it is called in 0:00am, make sure it is stored as yesterday key
 	t := time.Now().Add(-30 * time.Second)
 	summaryKey := t.Format("2006_01_02")
 	saveData := DailySummaryToExport(*c.DailySummary)
-	c.Option.Database.Write("stats", summaryKey, saveData)
+	err := c.Option.Database.Write("stats", summaryKey, saveData)
+	if err != nil {
+		log.Println("[Statistic] Failed to save daily summary of "+summaryKey+": ", err)
+	}
 }
 
 // Get the daily summary up until now
@@ -175,6 +185,12 @@ func (c *Collector) GetCurrentDailySummary() *DailySummary {
 
 // Load the summary of a day given
 func (c *Collector) LoadSummaryOfDay(year int, month time.Month, day int) *DailySummary {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("[Statistic] Recovered from panic while loading daily summary: ", r)
+		}
+	}()
+
 	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 	summaryKey := date.Format("2006_01_02")
 	targetSummaryExport := DailySummaryExport{}
@@ -210,6 +226,12 @@ func (c *Collector) Close() {
 // Please make sure there is no racing paramters in this function
 func (c *Collector) RecordRequest(ri RequestInfo) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Println("[Statistic] Recovered from panic while recording request: ", r)
+			}
+		}()
+
 		c.DailySummary.TotalRequest++
 		if ri.Succ {
 			c.DailySummary.ValidRequest++
@@ -249,10 +271,10 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 		filteredReferer := p.Sanitize(
 			ri.Referer,
 		)
-		c.incr(c.DailySummary.Referer, c.DailySummary.bounded.Referer, filteredReferer)
+		c.incr(c.DailySummary.Referer, c.DailySummary.bounded.Referer, truncateStatKey(filteredReferer))
 
 		//Record the UserAgent
-		c.incr(c.DailySummary.UserAgent, c.DailySummary.bounded.UserAgent, ri.UserAgent)
+		c.incr(c.DailySummary.UserAgent, c.DailySummary.bounded.UserAgent, truncateStatKey(ri.UserAgent))
 
 		//Record request URL, if it is a page
 		ext := filepath.Ext(ri.RequestURL)
@@ -261,7 +283,7 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 			return
 		}
 
-		c.incr(c.DailySummary.RequestURL, c.DailySummary.bounded.RequestURL, ri.RequestURL)
+		c.incr(c.DailySummary.RequestURL, c.DailySummary.bounded.RequestURL, truncateStatKey(ri.RequestURL))
 
 		//Record the downstream hostname
 		//This is the hostname that the user visited, not the target domain

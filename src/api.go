@@ -113,6 +113,12 @@ func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/OAuth2", oauth2Router.HandleSetOAuth2Settings)
 	authRouter.HandleFunc("/api/sso/zorxauth/provider", zorxAuthRouter.HandleAuthProviderSettings)
 	authRouter.HandleFunc("/api/sso/zorxauth/gateway", zorxAuthRouter.HandleGatewaySettings)
+
+	// Login page branding customization
+	authRouter.HandleFunc("/api/sso/zorxauth/customization", zorxAuthRouter.HandleCustomizationSettings)
+	authRouter.HandleFunc("/api/sso/zorxauth/customization/upload", zorxAuthRouter.HandleCustomizationUpload)
+	authRouter.HandleFunc("/api/sso/zorxauth/customization/reset", zorxAuthRouter.HandleCustomizationReset)
+	authRouter.HandleFunc("/api/sso/zorxauth/customization/preview", zorxAuthRouter.HandleCustomizationPreview)
 }
 
 // Register ZorxAuth user management APIs separately from generic SSO provider settings routes
@@ -320,6 +326,12 @@ func RegisterAuthAPIs(requireAuth bool, targetMux *http.ServeMux) {
 			utils.SendJSONResponse(w, "true")
 		}
 	})
+	targetMux.HandleFunc("/api/auth/authEnabled", func(w http.ResponseWriter, r *http.Request) {
+		//Report if the management interface authentication is enabled
+		//so the UI can hide auth related elements (e.g. logout button) in noauth mode
+		js, _ := json.Marshal(requireAuth)
+		utils.SendJSONResponse(w, string(js))
+	})
 	targetMux.HandleFunc("/api/auth/username", func(w http.ResponseWriter, r *http.Request) {
 		username, err := authAgent.GetUserName(w, r)
 		if err != nil {
@@ -436,6 +448,9 @@ func initAPIs(targetMux *http.ServeMux) {
 	targetMux.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
 	authRouter.HandleFunc("/api/info/ipcheck", HandleIpAccessCheck)
+	authRouter.HandleFunc("/api/geodb/updateStatus", HandleGeoDBUpdateStatus)
+	authRouter.HandleFunc("/api/geodb/updateNow", HandleGeoDBUpdateNow)
+	authRouter.HandleFunc("/api/geodb/autoUpdate", HandleGeoDBAutoUpdate)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
 	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)
