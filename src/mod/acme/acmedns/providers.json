@@ -1495,6 +1495,29 @@
    }
   ]
  },
+ "dnsmint": {
+  "Name": "dnsmint",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "dnsservices": {
   "Name": "dnsservices",
   "ConfigableFields": [
@@ -2073,6 +2096,29 @@
    },
    {
     "Title": "GroupName",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "feno": {
+  "Name": "feno",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
@@ -3419,6 +3465,28 @@
     "Datatype": "*http.Client"
    }
   ]
+ },
+ "myra": {
+  "Name": "myra",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APISecret",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": null
  },
  "namecheap": {
   "Name": "namecheap",
@@ -5449,6 +5517,33 @@
   "ConfigableFields": [
    {
     "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "webglobe": {
+  "Name": "webglobe",
+  "ConfigableFields": [
+   {
+    "Title": "Login",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Token",
     "Datatype": "string"
    },
    {
