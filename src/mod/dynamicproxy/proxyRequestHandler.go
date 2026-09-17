@@ -14,7 +14,6 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
-	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/websocketproxy"
 )
@@ -382,11 +381,16 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
 func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
+	// Resolve the client IP once via the trusted-proxy aware resolver so that
+	// untrusted proxy headers (X-Forwarded-For, X-Real-IP, etc.) cannot be used
+	// to spoof the IP recorded in the log file or the statistics collector.
+	clientIP := router.GetClientIPForEndpoint(r, endpoint)
+
 	// Notes: endpoint can be nil if the request has been handled before a host name can be resolved
 	// e.g. Redirection matching rule
 	if endpoint == nil || !endpoint.DisableLogging {
 		// log the http request to file
-		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
+		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname, clientIP)
 	}
 
 	if endpoint == nil || router.Option.StatisticCollector == nil {
@@ -398,9 +402,15 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		// Collect statistic from request
 
 		go func() {
+			countryISOCode := ""
+			if router.Option.GeodbStore != nil {
+				if countryInfo, err := router.Option.GeodbStore.ResolveCountryCodeFromIP(clientIP); err == nil {
+					countryISOCode = countryInfo.CountryIsoCode
+				}
+			}
 			requestInfo := statistic.RequestInfo{
-				IpAddr:                        netutils.GetRequesterIP(r),
-				RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
+				IpAddr:                        clientIP,
+				RequestOriginalCountryISOCode: countryISOCode,
 				Succ:                          succ,
 				StatusCode:                    statusCode,
 				ForwardType:                   forwardType,

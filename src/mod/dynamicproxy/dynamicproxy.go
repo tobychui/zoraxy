@@ -356,7 +356,8 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 			//Missing tailing slash. Redirect to target proxy endpoint
 			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
 			if !sep.DisableLogging {
-				router.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
+				clientIP := router.GetClientIPForEndpoint(r, sep)
+				router.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "", clientIP)
 			}
 			return
 		}
