@@ -532,25 +532,8 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 		ca = "Let's Encrypt"
 	}
 
-	var skipTLS bool
-
-	if skipTLSString, err := utils.PostPara(r, "skipTLS"); err != nil {
-		skipTLS = false
-	} else if skipTLSString != "true" {
-		skipTLS = false
-	} else {
-		skipTLS = true
-	}
-
-	var dns bool
-
-	if dnsString, err := utils.PostPara(r, "dns"); err != nil {
-		dns = false
-	} else if dnsString != "true" {
-		dns = false
-	} else {
-		dns = true
-	}
+	skipTLS, _ := utils.PostBool(r, "skipTLS")
+	dns, _ := utils.PostBool(r, "dns")
 
 	// Default propagation timeout is 600 seconds (10 minutes)
 	propagationTimeout := 600
@@ -606,8 +589,9 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	// Convert DNS servers slice to a single string
 	dnsServersString := strings.Join(dnsServers, ",")
 
-	// TODO: parse "recursive_ns" from request and pass to ObtainCert
-	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, false)
+	// PostBool returns false if the key is missing or not a valid bool
+	useRecursiveNS, _ := utils.PostBool(r, "recursive_ns")
+	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, useRecursiveNS)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
