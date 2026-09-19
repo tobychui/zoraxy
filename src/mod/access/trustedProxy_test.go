@@ -400,6 +400,67 @@ func TestGetClientIP_CFConnectingIP(t *testing.T) {
 	}
 }
 
+func TestGetClientIP_TrustedProxy_SkipsInvalidCandidates(t *testing.T) {
+	c, _ := newTestController(t)
+	c.AddTrustedProxy("10.0.0.1", "test proxy")
+
+	rule := &AccessRule{
+		TrustProxyHeadersOnly: true,
+		parent:                c,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.1:12345"
+	req.Header.Set("X-Real-Ip", "not-an-ip")
+	req.Header.Set("CF-Connecting-IP", "<img src=x>")
+	req.Header.Set("X-Forwarded-For", " 203.0.113.9 , 10.0.0.1")
+
+	ip := rule.GetClientIP(req)
+	if ip != "203.0.113.9" {
+		t.Errorf("expected first valid candidate (203.0.113.9), got %q", ip)
+	}
+}
+
+func TestGetClientIP_TrustedProxy_AllCandidatesInvalid(t *testing.T) {
+	c, _ := newTestController(t)
+	c.AddTrustedProxy("10.0.0.1", "test proxy")
+
+	rule := &AccessRule{
+		TrustProxyHeadersOnly: true,
+		parent:                c,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.1:12345"
+	req.Header.Set("X-Real-Ip", "1.2.3.4<script>")
+	req.Header.Set("Fastly-Client-IP", "")
+	req.Header.Set("X-Forwarded-For", "garbage, 5.6.7.8")
+
+	ip := rule.GetClientIP(req)
+	if ip != "10.0.0.1" {
+		t.Errorf("expected fallback to RemoteAddr (10.0.0.1), got %q", ip)
+	}
+}
+
+func TestGetClientIP_TrustedProxy_IPv6WithPort(t *testing.T) {
+	c, _ := newTestController(t)
+	c.AddTrustedProxy("10.0.0.1", "test proxy")
+
+	rule := &AccessRule{
+		TrustProxyHeadersOnly: true,
+		parent:                c,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.1:12345"
+	req.Header.Set("X-Forwarded-For", "[2001:db8::1]:8080, 10.0.0.1")
+
+	ip := rule.GetClientIP(req)
+	if ip != "2001:db8::1" {
+		t.Errorf("expected 2001:db8::1, got %q", ip)
+	}
+}
+
 // --- rebuildTrustedCIDRCache ---
 
 func TestRebuildCIDRCache_MixedEntries(t *testing.T) {

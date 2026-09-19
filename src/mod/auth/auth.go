@@ -41,6 +41,8 @@ type AuthEndpoints struct {
 // Constructor
 func NewAuthenticationAgent(sessionName string, key []byte, sysdb *db.Database, allowReg bool, systemLogger *logger.Logger, loginRedirectionHandler func(http.ResponseWriter, *http.Request)) *AuthAgent {
 	store := sessions.NewCookieStore(key)
+	store.Options.HttpOnly = true
+	store.Options.SameSite = http.SameSiteLaxMode
 	err := sysdb.NewTable("auth")
 	if err != nil {
 		systemLogger.Println("Failed to create auth database. Terminating.")
@@ -170,17 +172,21 @@ func (a *AuthAgent) LoginUserByRequest(w http.ResponseWriter, r *http.Request, u
 
 	//Check if remember me is clicked. If yes, set the maxage to 1 week.
 	if rememberme {
-		session.Options = &sessions.Options{
-			MaxAge: 3600 * 24 * 7, //One week
-			Path:   "/",
-		}
+		session.Options = newSessionOptions(r, 3600*24*7) //One week
 	} else {
-		session.Options = &sessions.Options{
-			MaxAge: 3600 * 1, //One hour
-			Path:   "/",
-		}
+		session.Options = newSessionOptions(r, 3600*1) //One hour
 	}
 	session.Save(r, w)
+}
+
+func newSessionOptions(r *http.Request, maxAge int) *sessions.Options {
+	return &sessions.Options{
+		MaxAge:   maxAge,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+	}
 }
 
 // Handle logout, reply OK after logged out. WILL NOT DO REDIRECTION
@@ -436,15 +442,9 @@ func (a *AuthAgent) UpdateSessionExpireTime(w http.ResponseWriter, r *http.Reque
 		rememberme := session.Values["rememberMe"].(bool)
 		//Extend the session expire time
 		if rememberme {
-			session.Options = &sessions.Options{
-				MaxAge: 3600 * 24 * 7, //One week
-				Path:   "/",
-			}
+			session.Options = newSessionOptions(r, 3600*24*7) //One week
 		} else {
-			session.Options = &sessions.Options{
-				MaxAge: 3600 * 1, //One hour
-				Path:   "/",
-			}
+			session.Options = newSessionOptions(r, 3600*1) //One hour
 		}
 		session.Save(r, w)
 		return true
