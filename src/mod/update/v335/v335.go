@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // UpdateFrom334To335 migrates cert JSON files to the new NSs check field names.
@@ -80,4 +81,27 @@ func UpdateFrom334To335() error {
 	}
 
 	return nil
+}
+
+// ProbeNSCheckMigrationNeeded checks if any cert JSON file still contains the
+// old "recursive_ns" key, indicating the v3.3.4→v3.3.5 migration has not run yet.
+func ProbeNSCheckMigrationNeeded() bool {
+	certStore := "./conf/certs"
+	jsonFiles, err := filepath.Glob(filepath.Join(certStore, "*.json"))
+	if err != nil {
+		return false
+	}
+	for _, jsonFile := range jsonFiles {
+		if filepath.Base(jsonFile) == "fallback.json" {
+			continue
+		}
+		data, err := os.ReadFile(jsonFile)
+		if err != nil {
+			continue
+		}
+		if strings.Contains(string(data), `"recursive_ns"`) {
+			return true
+		}
+	}
+	return false
 }

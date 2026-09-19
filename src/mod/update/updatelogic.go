@@ -42,6 +42,14 @@ func runUpdateRoutineWithVersion(fromVersion int, toVersion int) {
 		if err := v335.UpdateFrom334To335(); err != nil {
 			fmt.Println("Warning: ACME NSs check config migration failed (non-fatal):", err)
 		}
+	} else if fromVersion == 335 && toVersion == 335 {
+		//v3.3.5-rc1 → v3.3.5-rc2: probe and re-run migration if needed
+		if v335.ProbeNSCheckMigrationNeeded() {
+			fmt.Println("Probing v3.3.5 NSs check config migration...")
+			if err := v335.UpdateFrom334To335(); err != nil {
+				fmt.Println("Warning: ACME NSs check config migration failed (non-fatal):", err)
+			}
+		}
 	}
 
 	//ADD MORE VERSIONS HERE
