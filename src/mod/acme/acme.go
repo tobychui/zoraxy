@@ -41,13 +41,14 @@ var defaultNameservers = []string{
 }
 
 type CertificateInfoJSON struct {
-	AcmeName       string   `json:"acme_name"`    // ACME provider name
-	AcmeUrl        string   `json:"acme_url"`     // Custom ACME URL (if any)
-	SkipTLS        bool     `json:"skip_tls"`     // Skip TLS verification of upstream
-	UseDNS         bool     `json:"dns"`          // Use DNS challenge
-	PropTimeout    int      `json:"prop_time"`    // Propagation timeout
-	DNSServers     []string `json:"dnsServers"`   // DNS servers
-	UseRecursiveNS bool     `json:"recursive_ns"` // Enable Recursive NS Propagation Check
+	AcmeName                     string   `json:"acme_name"`                       // ACME provider name
+	AcmeUrl                      string   `json:"acme_url"`                        // Custom ACME URL (if any)
+	SkipTLS                      bool     `json:"skip_tls"`                        // Skip TLS verification of upstream
+	UseDNS                       bool     `json:"dns"`                             // Use DNS challenge
+	PropTimeout                  int      `json:"prop_time"`                       // Propagation timeout
+	DNSServers                   []string `json:"dnsServers"`                      // DNS servers
+	DisableRecursiveNssCheck     bool     `json:"disable_recursive_nss_check"`     // Disable Recursive NSs Propagation Check
+	DisableAuthoritativeNssCheck bool     `json:"disable_authoritative_nss_check"` // Disable Authoritative NSs Propagation Check
 }
 
 type EABConfig struct {
@@ -101,7 +102,7 @@ func (a *ACMEHandler) writeFileWithMode(filename string, data []byte, mode os.Fi
 }
 
 // ObtainCert obtains a certificate for the specified domains.
-func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string, useRecursiveNS bool) (bool, error) {
+func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email string, caName string, caUrl string, skipTLS bool, useDNS bool, propagationTimeout int, dnsServers string, disableRecursiveNssCheck bool, disableAuthoritativeNssCheck bool) (bool, error) {
 	ctx := context.TODO()
 
 	a.Logf("Obtaining certificate for: "+strings.Join(domains, ", "), nil)
@@ -196,9 +197,19 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		if certInfo.PropTimeout > 0 {
 			propagationTimeout = certInfo.PropTimeout
 		}
-		if certInfo.UseRecursiveNS {
-			useRecursiveNS = certInfo.UseRecursiveNS
+		if certInfo.DisableRecursiveNssCheck {
+			disableRecursiveNssCheck = certInfo.DisableRecursiveNssCheck
 		}
+		if certInfo.DisableAuthoritativeNssCheck {
+			disableAuthoritativeNssCheck = certInfo.DisableAuthoritativeNssCheck
+		}
+	}
+
+	// Ensure at least one NSs propagation check is enabled
+	// When disabling authoritative NSs check, recursive NSs check must stay enabled
+	if disableAuthoritativeNssCheck && disableRecursiveNssCheck {
+		a.Logf("DisableAuthoritativeNssCheck requires recursive NSs check to be enabled; forcing DisableRecursiveNssCheck = false", nil)
+		disableRecursiveNssCheck = false
 	}
 
 	// Clean DNS servers
@@ -251,8 +262,11 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 		dns01.SetDefaultClient(dns01.NewClient(opts))
 
 		dnsOpts := []dns01.ChallengeOption{}
-		if !useRecursiveNS {
+		if disableRecursiveNssCheck {
 			dnsOpts = append(dnsOpts, dns01.DisableRecursiveNSsPropagationRequirement())
+		}
+		if disableAuthoritativeNssCheck {
+			dnsOpts = append(dnsOpts, dns01.DisableAuthoritativeNssPropagationRequirement())
 		}
 		err = client.Challenge.SetDNS01Provider(provider, dnsOpts...)
 		if err != nil {
@@ -368,13 +382,14 @@ func (a *ACMEHandler) ObtainCert(domains []string, certificateName string, email
 
 	// Save certificate's ACME info for renew usage
 	certInfo = &CertificateInfoJSON{
-		AcmeName:       caName,
-		AcmeUrl:        caUrl,
-		SkipTLS:        skipTLS,
-		UseDNS:         useDNS,
-		PropTimeout:    propagationTimeout,
-		DNSServers:     dnsNameservers,
-		UseRecursiveNS: useRecursiveNS,
+		AcmeName:                     caName,
+		AcmeUrl:                      caUrl,
+		SkipTLS:                      skipTLS,
+		UseDNS:                       useDNS,
+		PropTimeout:                  propagationTimeout,
+		DNSServers:                   dnsNameservers,
+		DisableRecursiveNssCheck:     disableRecursiveNssCheck,
+		DisableAuthoritativeNssCheck: disableAuthoritativeNssCheck,
 	}
 
 	certInfoBytes, err := json.Marshal(certInfo)
@@ -590,8 +605,10 @@ func (a *ACMEHandler) HandleRenewCertificate(w http.ResponseWriter, r *http.Requ
 	dnsServersString := strings.Join(dnsServers, ",")
 
 	// PostBool returns false if the key is missing or not a valid bool
-	useRecursiveNS, _ := utils.PostBool(r, "recursive_ns")
-	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, useRecursiveNS)
+	disableRecursiveNssCheck, _ := utils.PostBool(r, "disable_recursive_nss_check")
+	disableAuthoritativeNssCheck, _ := utils.PostBool(r, "disable_authoritative_nss_check")
+
+	result, err := a.ObtainCert(cleanedDomains, filename, email, ca, caUrl, skipTLS, dns, propagationTimeout, dnsServersString, disableRecursiveNssCheck, disableAuthoritativeNssCheck)
 	if err != nil {
 		utils.SendErrorResponse(w, jsonEscape(err.Error()))
 		return
