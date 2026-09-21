@@ -653,9 +653,34 @@
                 Toggles for side wrapper
             */
 
+            /*
+                Load a URL into an iframe while guaranteeing the inline scripts
+                re-run. When the target document is already loaded (identical
+                URL, or only the #payload fragment differs) the browser treats
+                the assignment as an in-page navigation and does not re-execute
+                the snippet, so the payload would be stale. Resetting the frame
+                through about:blank forces a real navigation. Because the server
+                replies with a revalidatable ETag, the cached body is still
+                reused (304) instead of being downloaded again.
+            */
+            function setIframeSrcWithReload(iframe, url){
+                if (iframe == null || iframe.length === 0 || url == null || url == ""){
+                    return;
+                }
+                let currentSrc = iframe.attr("src") || "";
+                let currentBase = currentSrc.split("#")[0];
+                let targetBase = url.split("#")[0];
+                if (currentBase !== "" && currentBase === targetBase){
+                    iframe.attr("src", "about:blank");
+                    setTimeout(function(){ iframe.attr("src", url); }, 0);
+                }else{
+                    iframe.attr("src", url);
+                }
+            }
+
             function showSideWrapper(scriptpath="", extendedMode=false){
                 if (scriptpath != ""){
-                    $(".sideWrapper iframe").attr("src", scriptpath);
+                    setIframeSrcWithReload($(".sideWrapper iframe"), scriptpath);
                 }
 
                 if ($(".sideWrapper .content").transition("is animating") || $(".sideWrapper .content").transition("is visible")){

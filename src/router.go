@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gorilla/csrf"
 	"imuslab.com/zoraxy/mod/sshprox"
@@ -31,7 +36,7 @@ func FSHandler(handler http.Handler) http.Handler {
 				handleInjectHTML(w, r, r.URL.Path)
 				return
 			}
-			handler.ServeHTTP(w, r)
+			serveStaticWithCache(w, r, handler)
 			return
 		}
 
@@ -84,8 +89,77 @@ func FSHandler(handler http.Handler) http.Handler {
 			handleInjectHTML(w, r, r.URL.Path)
 			return
 		}
-		handler.ServeHTTP(w, r)
+		serveStaticWithCache(w, r, handler)
 	})
+}
+
+/*
+	Cache-Control / ETag utilities for static web resources.
+
+	The web UI is either served from an embedded filesystem (production) or
+	from disk (development). Embedded files report a zero modtime, which means
+	http.FileServer cannot emit Last-Modified and browsers have no validator to
+	reuse their cached copy. This results in every script (jquery, semantic,
+	utils.js) being re-downloaded on each iframe load. By emitting a strong
+	content based ETag with "Cache-Control: no-cache", browsers always
+	revalidate but can serve the cached body (304) instead of re-downloading it.
+*/
+
+// staticETagCache caches path -> ETag. Only used in production, where the
+// embedded resources are immutable for the lifetime of the process.
+var staticETagCache sync.Map
+
+// computeETag returns a quoted strong ETag derived from the content hash.
+func computeETag(content []byte) string {
+	sum := sha256.Sum256(content)
+	return `"` + hex.EncodeToString(sum[:16]) + `"`
+}
+
+// readWebResource loads a web resource by its request URL path, from the
+// embedded filesystem in production or from the "web" folder in development.
+func readWebResource(urlPath string) ([]byte, error) {
+	rel := strings.TrimPrefix(urlPath, "/")
+	if rel == "" || strings.Contains(rel, "..") {
+		return nil, os.ErrNotExist
+	}
+	if *development_build {
+		return os.ReadFile(filepath.Join("web", rel))
+	}
+	return webres.ReadFile("web/" + rel)
+}
+
+// getStaticETag returns the ETag of a static resource, or an empty string when
+// the resource cannot be read. In production the hash is cached after the
+// first read; in development it is recomputed on each request to support hot
+// reload.
+func getStaticETag(urlPath string) string {
+	if !*development_build {
+		if cached, ok := staticETagCache.Load(urlPath); ok {
+			return cached.(string)
+		}
+	}
+	content, err := readWebResource(urlPath)
+	if err != nil {
+		return ""
+	}
+	etag := computeETag(content)
+	if !*development_build {
+		staticETagCache.Store(urlPath, etag)
+	}
+	return etag
+}
+
+// serveStaticWithCache attaches revalidatable cache headers to static
+// resources before delegating to the underlying file server, which will then
+// handle If-None-Match and reply with 304 when appropriate.
+func serveStaticWithCache(w http.ResponseWriter, r *http.Request, next http.Handler) {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		if etag := getStaticETag(r.URL.Path); etag != "" {
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("ETag", etag)
+		}
+	}
+	next.ServeHTTP(w, r)
 }
 
 func isHTMLFilePath(requestURI string) bool {
@@ -95,29 +169,14 @@ func isHTMLFilePath(requestURI string) bool {
 // Serve the html file with template token injected
 func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath string) {
 	// Read the HTML file
-	var content []byte
-	var err error
 	if len(relativeFilepath) > 0 && relativeFilepath[len(relativeFilepath)-1:] == "/" {
 		relativeFilepath = relativeFilepath + "index.html"
 	}
-	if *development_build {
-		//Load from disk
-		targetFilePath := strings.ReplaceAll(filepath.Join("web/", relativeFilepath), "\\", "/")
-		content, err = os.ReadFile(targetFilePath)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		//Load from embedded fs, require trimming off the prefix slash for relative path
-		relativeFilepath = strings.TrimPrefix(relativeFilepath, "/")
-		relativeFilepath = filepath.ToSlash(filepath.Join("web/", relativeFilepath))
-		content, err = webres.ReadFile(relativeFilepath)
-		if err != nil {
-			SystemWideLogger.Println("Load embedded web file failed: ", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
+	content, err := readWebResource(relativeFilepath)
+	if err != nil {
+		SystemWideLogger.Println("Load web file failed: ", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	// Convert the file content to a string
@@ -134,7 +193,13 @@ func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath s
 		htmlContent = strings.ReplaceAll(htmlContent, placeholder, value)
 	}
 
-	// Write the modified HTML content to the response
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(htmlContent))
+	// Emit a strong ETag over the final body. The rendered content includes the
+	// per-session CSRF token, so the validator is session specific. Combined
+	// with "Cache-Control: no-cache" the browser revalidates on every load and
+	// reuses the cached body (304) when nothing changed.
+	body := []byte(htmlContent)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("ETag", computeETag(body))
+	http.ServeContent(w, r, filepath.Base(relativeFilepath), time.Time{}, bytes.NewReader(body))
 }

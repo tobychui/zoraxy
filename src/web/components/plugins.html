@@ -694,7 +694,7 @@ function showBuildErrorDialog(errorMessage) {
 /* Plugin information */
 function getPluginInfo(pluginId, btn){
   let payload = encodeURIComponent(JSON.stringify({plugin_id: pluginId}));
-  showSideWrapper("snippet/pluginInfo.html?t=" + Date.now() + "#" + payload);
+  showSideWrapper("snippet/pluginInfo.html#" + payload);
 }
 
 function openPluginStore(){

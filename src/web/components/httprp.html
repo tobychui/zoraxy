@@ -1264,7 +1264,7 @@
             ept: "host",
             ep: uuid
         }));
-        showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/basicAuthEditor.html#" + payload);
     }
 
     function editZorxAuthExceptions(uuid){
@@ -1272,7 +1272,7 @@
             ept: "host",
             ep: uuid
         }));
-        showEditorSideWrapper("snippet/zorxAuthExceptionEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/zorxAuthExceptionEditor.html#" + payload);
     }
 
 
@@ -1287,7 +1287,7 @@
             ept: "host",
             ep: uuid
         }));
-        showEditorSideWrapper("snippet/upstreams.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/upstreams.html#" + payload);
     }
 
     function handleProxyRuleToggle(object){
@@ -1549,7 +1549,7 @@
             ept: "host",
             ep: uuid
         }));
-        showEditorSideWrapper("snippet/tagEditor.html?t=" + Date.now() + "#" + payload);
+        showEditorSideWrapper("snippet/tagEditor.html#" + payload);
     }
 
     // Render the tags preview from tag editing snippet, callback from tags editor
@@ -1901,7 +1901,7 @@
                 ept: "host",
                 ep: uuid
             }));
-            let frameURL = "snippet/aliasEditor.html?t=" + Date.now() + "#" + payload;
+            let frameURL = "snippet/aliasEditor.html#" + payload;
             editor.find(".rpconfig_content[rpcfg='alias'] .wrapper_frame").attr('src', frameURL);
         })();
 
@@ -1911,7 +1911,7 @@
                 ept: "host",
                 ep: uuid
             }));
-            let frameURL = "snippet/customHeaders.html?t=" + Date.now() + "#" + payload;
+            let frameURL = "snippet/customHeaders.html#" + payload;
             editor.find(".rpconfig_content[rpcfg='headers'] .wrapper_frame").attr('src', frameURL);
         })();
 
@@ -1921,7 +1921,7 @@
                 ept: "host",
                 ep: uuid
             }));
-            let frameURL = "snippet/hostAccessEditor.html?t=" + Date.now() + "#" + payload;
+            let frameURL = "snippet/hostAccessEditor.html#" + payload;
             editor.find(".rpconfig_content[rpcfg='accessrule'] .wrapper_frame").attr('src', frameURL);
         })();
 
@@ -2166,7 +2166,7 @@
                 ept: "host",
                 ep: uuid
             }));
-            let frameURL = "snippet/tagEditor.html?t=" + Date.now() + "#" + payload;
+            let frameURL = "snippet/tagEditor.html#" + payload;
             editor.find(".rpconfig_content[rpcfg='tags'] .wrapper_frame").attr('src', frameURL);
         })();
 
@@ -2206,7 +2206,7 @@
     });
 
     function showEditorSideWrapper(url){
-        $("#httprpEditModal .editor_side_wrapper .wrapper_frame").attr('src', url);
+        setIframeSrcWithReload($("#httprpEditModal .editor_side_wrapper .wrapper_frame"), url);
         $("#httprpEditModal .editor_side_wrapper").fadeIn("fast");
     }
 
