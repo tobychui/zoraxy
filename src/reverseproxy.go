@@ -141,6 +141,10 @@ func ReverseProxyInit() {
 	sysdb.Read("settings", "minTLSVersion", &minTLSVersion)
 	SystemWideLogger.Println("Minimum TLS version set to v" + minTLSVersion)
 
+	tlsCipherProfile := dynamicproxy.TlsCipherProfileDefault // default
+	sysdb.Read("settings", "tlsCipherProfile", &tlsCipherProfile)
+	SystemWideLogger.Println("TLS cipher profile set to " + tlsCipherProfile)
+
 	developmentMode := false
 	sysdb.Read("settings", "devMode", &developmentMode)
 	if developmentMode {
@@ -208,6 +212,7 @@ func ReverseProxyInit() {
 		Port:               inboundPort,
 		UseTls:             useTls,
 		MinTLSVersion:      minTlsVersionStringToUint16(minTLSVersion),
+		TlsCipherProfile:   tlsCipherProfile,
 		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,

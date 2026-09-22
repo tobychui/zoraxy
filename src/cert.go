@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -87,6 +88,38 @@ func handleSetTlsMinVersion(w http.ResponseWriter, r *http.Request) {
 	// Update the setting
 	SystemWideLogger.PrintAndLog("TLS", "Updating minimum TLS version to v"+newVersion+" or above", nil)
 	dynamicProxyRouter.SetTlsMinVersion(tlsVersionUint16)
+	utils.SendOK(w)
+}
+
+// Handle the GET and SET of the reverse proxy TLS cipher profile
+func handleSetTlsCipherProfile(w http.ResponseWriter, r *http.Request) {
+	newProfile, err := utils.PostPara(r, "set")
+	if err != nil {
+		// GET
+		tlsCipherProfile := dynamicproxy.TlsCipherProfileDefault // Default to default
+		if sysdb.KeyExists("settings", "tlsCipherProfile") {
+			sysdb.Read("settings", "tlsCipherProfile", &tlsCipherProfile)
+		}
+		js, _ := json.Marshal(tlsCipherProfile)
+		utils.SendJSONResponse(w, string(js))
+		return
+	}
+
+	// Validate input
+	allowed := map[string]bool{
+		dynamicproxy.TlsCipherProfileDefault:      true,
+		dynamicproxy.TlsCipherProfileIntermediate: true,
+		dynamicproxy.TlsCipherProfileModern:       true,
+	}
+	if !allowed[newProfile] {
+		utils.SendErrorResponse(w, "invalid TLS cipher profile")
+		return
+	}
+
+	sysdb.Write("settings", "tlsCipherProfile", newProfile)
+	// Update the setting
+	SystemWideLogger.PrintAndLog("TLS", "Updating TLS cipher profile to "+newProfile, nil)
+	dynamicProxyRouter.SetTlsCipherProfile(newProfile)
 	utils.SendOK(w)
 }
 
