@@ -323,6 +323,10 @@
             // Bind change event
             $("#tlsCipherProfileSelect").off("change").on("change", function(){
                 var selectedProfile = $(this).val();
+                // Modern profile requires TLS v1.3: keep the minimum version dropdown consistent
+                if (selectedProfile === "modern" && $("#tlsVersionSelect").val() !== "1.3"){
+                    $("#tlsVersionSelect").val("1.3").trigger("change");
+                }
                 $.cjax({
                     url: "/api/cert/tlsCipherProfile",
                     method: "POST",
