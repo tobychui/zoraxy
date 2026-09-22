@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/quic-go/quic-go/http3"
+
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 
@@ -80,6 +82,10 @@ type RouterOption struct {
 	H2MaxUploadBufferPerConnection int32  //HTTP/2 max upload buffer per connection in bytes (0 = Go default)
 	H2MaxUploadBufferPerStream     int32  //HTTP/2 max upload buffer per stream in bytes (0 = Go default)
 
+	/* HTTP/3 (QUIC) */
+	EnableH3              bool   //Enable HTTP/3 (QUIC) listener alongside HTTP/1.1+2 (requires TLS; DB-persisted, runtime-toggleable)
+	H3MaxConcurrentStreams uint32 //HTTP/3 max concurrent streams per connection (0 = quic-go default)
+
 	/* Authentication Providers */
 	ForwardAuthRouter   *forward.AuthRouter
 	OAuth2Router        *oauth2.OAuth2Router //OAuth2Router router for OAuth2Router authentication
@@ -103,6 +109,8 @@ type Router struct {
 	loadBalancer *loadbalance.RouteManager //Load balancer routing manager
 	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
 	restarting   bool                      //If the router is restarting
+
+	h3Server   *http3.Server //HTTP/3 (QUIC) server, nil when disabled
 
 	tlsListener      net.Listener //TLS listener, handle SNI routing
 	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map

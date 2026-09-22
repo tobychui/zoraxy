@@ -1155,7 +1155,7 @@ function convertLocation(loc, config, unmappable, globalSkipCert) {
                     unmappable.push({
                         sev: 'warning',
                         item: `proxy_http_version ${val} (in ${locLabel})`,
-                        reason: 'Only HTTP/1.1 is configurable in Zoraxy (ForceHTTP11). HTTP/2 and HTTP/3 upstream are not manually selectable.',
+                        reason: 'Only HTTP/1.1 is configurable in Zoraxy upstream (ForceHTTP11). HTTP/2 and HTTP/3 upstream are not manually selectable. Note: HTTP/3 (QUIC) is now supported as an inbound listener (see Global Settings).',
                         action: 'Zoraxy defaults to HTTP/1.1 for upstream connections.'
                     });
                 }

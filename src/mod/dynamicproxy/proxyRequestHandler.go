@@ -256,6 +256,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		AllowUpgrade:                   target.EnableUpgradeForwarding,
 		Version:                        target.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.Option.DevelopmentMode,
+		AltSvc:                         h.Parent.getAltSvcValue(),
 	})
 
 	//validate the error
@@ -360,7 +361,8 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		AllowUpgrade:                   target.parent.EnableUpgradeForwarding,
 		Version:                        target.parent.parent.Option.HostVersion,
-		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
+		DevelopmentMode:                 target.parent.parent.Option.DevelopmentMode,
+		AltSvc:                         h.Parent.getAltSvcValue(),
 	})
 
 	var dnsError *net.DNSError

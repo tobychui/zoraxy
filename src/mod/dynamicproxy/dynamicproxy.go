@@ -14,6 +14,8 @@ import (
 	"time"
 
 	proxyproto "github.com/c0va23/go-proxyprotocol"
+	"github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go/http3"
 	"golang.org/x/net/http2"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
@@ -53,6 +55,68 @@ func (router *Router) configureHTTP2(srv *http.Server) error {
 	}
 
 	return http2.ConfigureServer(srv, h2s)
+}
+
+// getAltSvcValue returns the Alt-Svc header value to advertise HTTP/3 support.
+// Returns empty string when H3 is not active (disabled, no TLS, or PROXY protocol conflict).
+func (router *Router) getAltSvcValue() string {
+	if !router.Option.EnableH3 || !router.Option.UseTls || router.Option.UseProxyProtocol {
+		return ""
+	}
+	return `h3=":` + strconv.Itoa(router.Option.Port) + `"; ma=86400`
+}
+
+// startH3Listener boots the HTTP/3 (QUIC) listener on the same port as the TLS
+// listener. It reuses the router's mux (http.Handler) and the TlsManager's
+// GetCertificate callback. Returns the running server; StopProxyService shuts
+// it down synchronously via srv.Shutdown(ctx).
+//
+// Limitations:
+//   - PROXY protocol is not supported on the QUIC listener (quic-go limitation).
+//     If UseProxyProtocol is true, the QUIC listener is skipped with a warning.
+//   - UDP port must be reachable on the firewall / container publish map.
+func (router *Router) startH3Listener(tlsConfig *tls.Config) (*http3.Server, error) {
+	if !router.Option.EnableH3 {
+		return nil, nil
+	}
+
+	if router.Option.UseProxyProtocol {
+		router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 (QUIC) disabled: PROXY protocol is enabled and quic-go does not support PROXY protocol on QUIC listeners", nil)
+		return nil, nil
+	}
+
+	// quic-go requires NextProtos to be set to ["h3"] on the TLS config; use a
+	// clone so we don't perturb the TCP listener's ALPN (h2/http/1.1).
+	h3TLSConfig := tlsConfig.Clone()
+	h3TLSConfig.NextProtos = []string{"h3"}
+
+	port := strconv.Itoa(router.Option.Port)
+
+	srv := &http3.Server{
+		Addr:      ":" + port,
+		Handler:   router.mux,
+		TLSConfig: h3TLSConfig,
+		//Explicitly disable 0-RTT: quic-go enables Allow0RTT by default when no
+		//QUICConfig is set. Early data is replayable and http3 does not expose an
+		//early-data marker to handlers, so replay gating is not implementable here.
+		QUICConfig: &quic.Config{
+			Allow0RTT: false,
+		},
+	}
+
+	if router.Option.H3MaxConcurrentStreams > 0 {
+		srv.QUICConfig.MaxIncomingStreams = int64(router.Option.H3MaxConcurrentStreams)
+	}
+
+	router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 (QUIC) listener starting on UDP :"+port, nil)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 listener stopped", err)
+		}
+	}()
+
+	return srv, nil
 }
 
 func NewDynamicProxy(option RouterOption) (*Router, error) {
@@ -270,14 +334,24 @@ func (router *Router) StartProxyService() error {
 				finalListener = ln
 			}
 
-			if err := srv.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
-				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
-			}
+		if err := srv.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
+			router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
+		}
 
 		}(router.server)
+
+		// Start HTTP/3 (QUIC) listener alongside the TLS server
+		h3Srv, err := router.startH3Listener(config)
+		if err != nil {
+			router.Option.Logger.PrintAndLog("dprouter", "Could not start HTTP/3 listener", err)
+		}
+		router.h3Server = h3Srv
 	} else {
 		//Serve with non TLS mode
 		router.tlsListener = nil
+		if router.Option.EnableH3 {
+			router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 (QUIC) requires TLS; skipping QUIC listener in plain HTTP mode", nil)
+		}
 		router.server = &http.Server{
 			Addr:    ":" + strconv.Itoa(router.Option.Port),
 			Handler: router.mux,
@@ -388,6 +462,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		PathPrefix:              "",
 		Version:                 sep.parent.Option.HostVersion,
 		DevelopmentMode:         sep.parent.Option.DevelopmentMode,
+		AltSvc:                  router.getAltSvcValue(),
 	})
 }
 
@@ -553,7 +628,7 @@ func (router *Router) UpdateSecondaryListeners() {
 
 // StopProxyService stops the proxy server and waits for all listeners to close
 func (router *Router) StopProxyService() error {
-	if router.server == nil && router.tlsListener == nil && router.tlsRedirectStop == nil && len(router.secondaryServers) == 0 {
+	if router.server == nil && router.tlsListener == nil && router.tlsRedirectStop == nil && router.h3Server == nil && len(router.secondaryServers) == 0 {
 		return errors.New("reverse proxy server already stopped")
 	}
 
@@ -573,6 +648,21 @@ func (router *Router) StopProxyService() error {
 				srv.Close()
 			}
 		}(router.server)
+	}
+
+	// Stop HTTP/3 (QUIC) listener
+	if router.h3Server != nil {
+		wg.Add(1)
+		go func(srv *http3.Server) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 graceful shutdown timeout, forcing close", err)
+				srv.Close()
+			}
+		}(router.h3Server)
 	}
 
 	// Stop TLS redirect server
@@ -612,6 +702,7 @@ func (router *Router) StopProxyService() error {
 	router.tlsListener = nil
 	router.tlsRedirectStop = nil
 	router.rateLimterStop = nil
+	router.h3Server = nil
 
 	router.secondaryServerMutex.Lock()
 	router.secondaryServers = make(map[string]*http.Server)

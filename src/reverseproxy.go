@@ -170,6 +170,14 @@ func ReverseProxyInit() {
 	disableHttp2 := *proxyDisableHttp2
 	sysdb.Read("settings", "disableHttp2", &disableHttp2)
 
+	enableQuic := false
+	sysdb.Read("settings", "enableQuic", &enableQuic)
+	if enableQuic {
+		SystemWideLogger.Println("HTTP/3 (QUIC) listener enabled (experimental)")
+	} else {
+		SystemWideLogger.Println("HTTP/3 (QUIC) listener disabled")
+	}
+
 	listenOnPort80 := true
 	forceHttpsRedirect := true
 	sysdb.Read("settings", "listenP80", &listenOnPort80)
@@ -225,6 +233,9 @@ func ReverseProxyInit() {
 		H2MaxConcurrentStreams:         uint32(*proxyH2MaxStreams),
 		H2MaxUploadBufferPerConnection: int32(*proxyH2ConnBufferSize),
 		H2MaxUploadBufferPerStream:     int32(*proxyH2StreamBufferSize),
+		/* HTTP/3 (QUIC) */
+		EnableH3:               enableQuic,
+		H3MaxConcurrentStreams: uint32(*proxyH3MaxStreams),
 		/* Utilities */
 		DevelopmentMode: *development_build,
 		Logger:          SystemWideLogger,
@@ -1949,6 +1960,34 @@ func HandleProxyProtocolChange(w http.ResponseWriter, r *http.Request) {
 		//Restart the proxy to apply the changes if running
 		if dynamicProxyRouter.Running {
 			SystemWideLogger.Println("PROXY protocol setting changed, restarting proxy server...")
+			err := dynamicProxyRouter.Restart()
+			if err != nil {
+				utils.SendErrorResponse(w, "Failed to restart proxy: "+err.Error())
+				return
+			}
+		}
+		utils.SendOK(w)
+	}
+}
+
+// HandleQuicToggle handles the HTTP/3 (QUIC) listener enable/disable toggle.
+// This requires a listener restart to take effect.
+func HandleQuicToggle(w http.ResponseWriter, r *http.Request) {
+	enableQuic, err := utils.GetBool(r, "enable")
+	if err != nil {
+		//Load the current QUIC toggle state
+		js, _ := json.Marshal(dynamicProxyRouter.Option.EnableH3)
+		utils.SendJSONResponse(w, string(js))
+	} else {
+		//Update the option value
+		dynamicProxyRouter.Option.EnableH3 = enableQuic
+
+		//Write changes to database
+		sysdb.Write("settings", "enableQuic", enableQuic)
+
+		//Restart the proxy to apply the changes if running
+		if dynamicProxyRouter.Running {
+			SystemWideLogger.Println("HTTP/3 (QUIC) setting changed, restarting proxy server...")
 			err := dynamicProxyRouter.Restart()
 			if err != nil {
 				utils.SendErrorResponse(w, "Failed to restart proxy: "+err.Error())
