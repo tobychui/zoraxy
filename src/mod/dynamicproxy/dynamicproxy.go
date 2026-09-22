@@ -91,6 +91,12 @@ func (router *Router) SetTlsMinVersion(minTlsVersion uint16) {
 	router.Restart()
 }
 
+// Update TLS cipher profile in runtime. Will restart proxy server if running.
+func (router *Router) SetTlsCipherProfile(profile string) {
+	router.Option.TlsCipherProfile = profile
+	router.Restart()
+}
+
 // Update port 80 listener state
 func (router *Router) UpdatePort80ListenerState(useRedirect bool) {
 	router.Option.ListenOnPort80 = useRedirect
@@ -133,6 +139,9 @@ func (router *Router) StartProxyService() error {
 		GetCertificate: router.Option.TlsManager.GetCert,
 		MinVersion:     uint16(minVersion),
 	}
+
+	//Apply the TLS cipher profile (default = Go defaults, see tlscipherprofile.go)
+	ApplyTlsCipherProfile(config, router.Option.TlsCipherProfile)
 
 	//Start rate limitor
 	err := router.startRateLimterCounterResetTicker()

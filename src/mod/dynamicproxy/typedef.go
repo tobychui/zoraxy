@@ -54,6 +54,7 @@ type RouterOption struct {
 	Port               int    //Incoming port
 	UseTls             bool   //Use TLS to serve incoming requsts
 	MinTLSVersion      uint16 //Minimum TLS version
+	TlsCipherProfile   string //TLS cipher profile (default|intermediate|modern, see tlscipherprofile.go)
 	NoCache            bool   //Force set Cache-Control: no-store
 	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
