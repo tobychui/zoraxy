@@ -377,20 +377,25 @@
             //Bind change events
             $("#enableQuic").off("change").on("change", function(data){
                 let enableQuic = ($(this).find("input[type='checkbox']")[0].checked);
-                $.get("/api/proxy/quic?enable=" + enableQuic, function(data){
-                    if (data.error != undefined){
-                        msgbox(data.error, false, 5000);
-                        //Revert checkbox state on error
-                        if (enableQuic){
-                            $("#enableQuic").checkbox("set unchecked");
+                $.cjax({
+                    url: "/api/proxy/quic",
+                    method: "POST",
+                    data: {enable: enableQuic},
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false, 5000);
+                            //Revert checkbox state on error
+                            if (enableQuic){
+                                $("#enableQuic").checkbox("set unchecked");
+                            }else{
+                                $("#enableQuic").checkbox("set checked");
+                            }
                         }else{
-                            $("#enableQuic").checkbox("set checked");
-                        }
-                    }else{
-                        if (enableQuic){
-                            msgbox("HTTP/3 (QUIC) enabled");
-                        }else{
-                            msgbox("HTTP/3 (QUIC) disabled");
+                            if (enableQuic){
+                                msgbox("HTTP/3 (QUIC) enabled");
+                            }else{
+                                msgbox("HTTP/3 (QUIC) disabled");
+                            }
                         }
                     }
                 });

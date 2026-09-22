@@ -110,7 +110,8 @@ type Router struct {
 	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
 	restarting   bool                      //If the router is restarting
 
-	h3Server   *http3.Server //HTTP/3 (QUIC) server, nil when disabled
+	h3Server *http3.Server   //HTTP/3 (QUIC) server, nil when disabled
+	h3Conn   net.PacketConn  //UDP connection serving the HTTP/3 listener; closed on shutdown
 
 	tlsListener      net.Listener //TLS listener, handle SNI routing
 	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map

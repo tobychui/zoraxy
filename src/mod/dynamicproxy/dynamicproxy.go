@@ -58,9 +58,10 @@ func (router *Router) configureHTTP2(srv *http.Server) error {
 }
 
 // getAltSvcValue returns the Alt-Svc header value to advertise HTTP/3 support.
-// Returns empty string when H3 is not active (disabled, no TLS, or PROXY protocol conflict).
+// Returns empty string when H3 is not active (disabled, no TLS, PROXY protocol
+// conflict, or the QUIC listener is not running).
 func (router *Router) getAltSvcValue() string {
-	if !router.Option.EnableH3 || !router.Option.UseTls || router.Option.UseProxyProtocol {
+	if !router.Option.EnableH3 || !router.Option.UseTls || router.Option.UseProxyProtocol || router.h3Server == nil {
 		return ""
 	}
 	return `h3=":` + strconv.Itoa(router.Option.Port) + `"; ma=86400`
@@ -68,14 +69,18 @@ func (router *Router) getAltSvcValue() string {
 
 // startH3Listener boots the HTTP/3 (QUIC) listener on the same port as the TLS
 // listener. It reuses the router's mux (http.Handler) and the TlsManager's
-// GetCertificate callback. Returns the running server; StopProxyService shuts
-// it down synchronously via srv.Shutdown(ctx).
+// GetCertificate callback. The UDP socket is bound synchronously so bind errors
+// are returned to the caller; serving happens in the background. The listener
+// connection is stored on the router and closed by StopProxyService via
+// srv.Shutdown(ctx) followed by closing the connection.
 //
 // Limitations:
 //   - PROXY protocol is not supported on the QUIC listener (quic-go limitation).
 //     If UseProxyProtocol is true, the QUIC listener is skipped with a warning.
 //   - UDP port must be reachable on the firewall / container publish map.
 func (router *Router) startH3Listener(tlsConfig *tls.Config) (*http3.Server, error) {
+	router.h3Conn = nil
+
 	if !router.Option.EnableH3 {
 		return nil, nil
 	}
@@ -108,10 +113,21 @@ func (router *Router) startH3Listener(tlsConfig *tls.Config) (*http3.Server, err
 		srv.QUICConfig.MaxIncomingStreams = int64(router.Option.H3MaxConcurrentStreams)
 	}
 
+	// Bind the UDP socket synchronously so bind failures (e.g. port occupied)
+	// are reported to the caller instead of silently not serving. The listener
+	// connection is owned by us: quic-go's Serve does not close a caller-supplied
+	// net.PacketConn, so StopProxyService closes it after Shutdown.
+	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{Port: router.Option.Port})
+	if err != nil {
+		return nil, err
+	}
+	router.h3Conn = udpConn
+
 	router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 (QUIC) listener starting on UDP :"+port, nil)
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
+		defer udpConn.Close()
+		if err := srv.Serve(udpConn); err != nil && err != http.ErrServerClosed && !errors.Is(err, net.ErrClosed) {
 			router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 listener stopped", err)
 		}
 	}()
@@ -653,7 +669,7 @@ func (router *Router) StopProxyService() error {
 	// Stop HTTP/3 (QUIC) listener
 	if router.h3Server != nil {
 		wg.Add(1)
-		go func(srv *http3.Server) {
+		go func(srv *http3.Server, conn net.PacketConn) {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -662,7 +678,12 @@ func (router *Router) StopProxyService() error {
 				router.Option.Logger.PrintAndLog("dprouter", "HTTP/3 graceful shutdown timeout, forcing close", err)
 				srv.Close()
 			}
-		}(router.h3Server)
+			// quic-go does not close a caller-supplied PacketConn; close it so
+			// the serve goroutine unblocks (idempotent, close errors ignored)
+			if conn != nil {
+				conn.Close()
+			}
+		}(router.h3Server, router.h3Conn)
 	}
 
 	// Stop TLS redirect server
@@ -703,6 +724,7 @@ func (router *Router) StopProxyService() error {
 	router.tlsRedirectStop = nil
 	router.rateLimterStop = nil
 	router.h3Server = nil
+	router.h3Conn = nil
 
 	router.secondaryServerMutex.Lock()
 	router.secondaryServers = make(map[string]*http.Server)

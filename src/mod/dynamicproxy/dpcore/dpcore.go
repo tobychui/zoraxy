@@ -356,7 +356,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Remove hop-by-hop headers.
-	if !rrr.NoRemoveHopByHop {
+	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3, so
+	// they are always stripped from H3 requests even when hop-by-hop removal
+	// is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
 		removeHeaders(outreq.Header, rrr.NoCache)
 	}
 
@@ -452,7 +455,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response
-	if !rrr.NoRemoveHopByHop {
+	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3 responses;
+	// clients reject them. Always strip them for H3 requests even when hop-by-hop
+	// removal is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
 		removeHeaders(res.Header, rrr.NoCache)
 	}
 

@@ -1972,30 +1972,42 @@ func HandleProxyProtocolChange(w http.ResponseWriter, r *http.Request) {
 
 // HandleQuicToggle handles the HTTP/3 (QUIC) listener enable/disable toggle.
 // This requires a listener restart to take effect.
+// GET returns the current state; state changes are only accepted via POST form data.
 func HandleQuicToggle(w http.ResponseWriter, r *http.Request) {
-	enableQuic, err := utils.GetBool(r, "enable")
-	if err != nil {
+	if r.Method == http.MethodGet {
 		//Load the current QUIC toggle state
 		js, _ := json.Marshal(dynamicProxyRouter.Option.EnableH3)
 		utils.SendJSONResponse(w, string(js))
-	} else {
-		//Update the option value
-		dynamicProxyRouter.Option.EnableH3 = enableQuic
-
-		//Write changes to database
-		sysdb.Write("settings", "enableQuic", enableQuic)
-
-		//Restart the proxy to apply the changes if running
-		if dynamicProxyRouter.Running {
-			SystemWideLogger.Println("HTTP/3 (QUIC) setting changed, restarting proxy server...")
-			err := dynamicProxyRouter.Restart()
-			if err != nil {
-				utils.SendErrorResponse(w, "Failed to restart proxy: "+err.Error())
-				return
-			}
-		}
-		utils.SendOK(w)
+		return
 	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	enableQuic, err := utils.PostBool(r, "enable")
+	if err != nil {
+		utils.SendErrorResponse(w, "Missing or invalid enable parameter")
+		return
+	}
+
+	//Update the option value
+	dynamicProxyRouter.Option.EnableH3 = enableQuic
+
+	//Write changes to database
+	sysdb.Write("settings", "enableQuic", enableQuic)
+
+	//Restart the proxy to apply the changes if running
+	if dynamicProxyRouter.Running {
+		SystemWideLogger.Println("HTTP/3 (QUIC) setting changed, restarting proxy server...")
+		err := dynamicProxyRouter.Restart()
+		if err != nil {
+			utils.SendErrorResponse(w, "Failed to restart proxy: "+err.Error())
+			return
+		}
+	}
+	utils.SendOK(w)
 }
 
 func HandleGlobalProxyTimeoutSettings(w http.ResponseWriter, r *http.Request) {
