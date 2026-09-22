@@ -103,6 +103,10 @@ func FSHandler(handler http.Handler) http.Handler {
 	utils.js) being re-downloaded on each iframe load. By emitting a strong
 	content based ETag with "Cache-Control: no-cache", browsers always
 	revalidate but can serve the cached body (304) instead of re-downloading it.
+
+	Development builds (started with the -dev flag) are the exception: UI
+	developers expect every load to be served fresh from the backend, so no
+	cache headers are emitted and "Cache-Control: no-store" is sent instead.
 */
 
 // staticETagCache caches path -> ETag. Only used in production, where the
@@ -129,32 +133,32 @@ func readWebResource(urlPath string) ([]byte, error) {
 }
 
 // getStaticETag returns the ETag of a static resource, or an empty string when
-// the resource cannot be read. In production the hash is cached after the
-// first read; in development it is recomputed on each request to support hot
-// reload.
+// the resource cannot be read. The hash is cached after the first read, as the
+// embedded resources are immutable for the lifetime of the process.
 func getStaticETag(urlPath string) string {
-	if !*development_build {
-		if cached, ok := staticETagCache.Load(urlPath); ok {
-			return cached.(string)
-		}
+	if cached, ok := staticETagCache.Load(urlPath); ok {
+		return cached.(string)
 	}
 	content, err := readWebResource(urlPath)
 	if err != nil {
 		return ""
 	}
 	etag := computeETag(content)
-	if !*development_build {
-		staticETagCache.Store(urlPath, etag)
-	}
+	staticETagCache.Store(urlPath, etag)
 	return etag
 }
 
 // serveStaticWithCache attaches revalidatable cache headers to static
 // resources before delegating to the underlying file server, which will then
 // handle If-None-Match and reply with 304 when appropriate.
+//
+// In development builds no validators are emitted and "no-store" is sent, so
+// the browser always fetches the current file instead of reusing a cached copy.
 func serveStaticWithCache(w http.ResponseWriter, r *http.Request, next http.Handler) {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
-		if etag := getStaticETag(r.URL.Path); etag != "" {
+		if *development_build {
+			w.Header().Set("Cache-Control", "no-store")
+		} else if etag := getStaticETag(r.URL.Path); etag != "" {
 			w.Header().Set("Cache-Control", "no-cache")
 			w.Header().Set("ETag", etag)
 		}
@@ -193,12 +197,21 @@ func handleInjectHTML(w http.ResponseWriter, r *http.Request, relativeFilepath s
 		htmlContent = strings.ReplaceAll(htmlContent, placeholder, value)
 	}
 
+	body := []byte(htmlContent)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	// In development the UI must be reloaded from the backend every time, so
+	// never emit a validator and forbid the browser from storing a copy.
+	if *development_build {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Write(body)
+		return
+	}
+
 	// Emit a strong ETag over the final body. The rendered content includes the
 	// per-session CSRF token, so the validator is session specific. Combined
 	// with "Cache-Control: no-cache" the browser revalidates on every load and
 	// reuses the cached body (304) when nothing changed.
-	body := []byte(htmlContent)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", computeETag(body))
 	http.ServeContent(w, r, filepath.Base(relativeFilepath), time.Time{}, bytes.NewReader(body))
