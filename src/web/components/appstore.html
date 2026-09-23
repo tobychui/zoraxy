@@ -683,10 +683,15 @@
     return iconPath;
   }
 
-  //True when the app has no icon.png in its app folder, so the store index
-  //fell back to the generic placeholder icon (see IconPath handling in
-  //mod/plugins/store.go). Used to flag not-yet-polished apps as "Preview".
+  //True when the plugin opted in via the preview flag in its introspect, or
+  //when it has no icon.png in its app folder, so the store index fell back to
+  //the generic placeholder icon (see IconPath handling in mod/plugins/store.go).
+  //Used to flag not-yet-polished apps as "Preview".
   function asIsPreviewApp(app) {
+    let spec = app.PluginIntroSpect || {};
+    if (spec.preview === true) {
+      return true;
+    }
     return asGetIconSrc(app) == "img/plugin_icon.png";
   }
 
