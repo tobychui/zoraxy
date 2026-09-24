@@ -22,6 +22,7 @@ docker run -d \
   --add-host=host.docker.internal:host-gateway \
   -p 80:80 \
   -p 443:443 \
+  -p 443:443/udp \
   -p 8000:8000 \
   -v /path/to/zoraxy/config/:/opt/zoraxy/config/ \
   -v /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/ \
@@ -42,6 +43,7 @@ services:
     ports:
       - 80:80
       - 443:443
+      - 443:443/udp
       - 8000:8000
     volumes:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
@@ -60,6 +62,7 @@ services:
 |:-|:-|
 | `80` | HTTP traffic. |
 | `443` | HTTPS traffic. |
+| `443/udp` | HTTP/3 (QUIC). Only needed if HTTP/3 is enabled in Global Settings. |
 | `8000` | Management interface. Can be changed with the `PORT` env. |
 
 ### Volumes

@@ -74,6 +74,12 @@
                     <small>(Enable PROXY protocol v1/v2 support for TLS listener)</small></label>
                 </div>
                 <br>
+                <div id="enableQuic" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
+                    <input type="checkbox">
+                    <label>Enable HTTP/3 (QUIC)<br>
+                    <small>(Serve HTTP/3 over QUIC on the same port via UDP. Requires TLS. Incompatible with PROXY Protocol.)</small></label>
+                </div>
+                <br>
                 <div class="ui notloopbackOnly form" style="margin-top: 0.6em;">
                     <div class="field">
                         <label>Global Proxy Timeouts</label>
@@ -359,6 +365,44 @@
         });
     }
     initProxyProtocol();
+
+    function initQuicToggle(){
+        $.get("/api/proxy/quic", function(data){
+            if (data === true){
+                $("#enableQuic").checkbox("set checked")
+            }else{
+                $("#enableQuic").checkbox("set unchecked")
+            }
+
+            //Bind change events
+            $("#enableQuic").off("change").on("change", function(data){
+                let enableQuic = ($(this).find("input[type='checkbox']")[0].checked);
+                $.cjax({
+                    url: "/api/proxy/quic",
+                    method: "POST",
+                    data: {enable: enableQuic},
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false, 5000);
+                            //Revert checkbox state on error
+                            if (enableQuic){
+                                $("#enableQuic").checkbox("set unchecked");
+                            }else{
+                                $("#enableQuic").checkbox("set checked");
+                            }
+                        }else{
+                            if (enableQuic){
+                                msgbox("HTTP/3 (QUIC) enabled");
+                            }else{
+                                msgbox("HTTP/3 (QUIC) disabled");
+                            }
+                        }
+                    }
+                });
+            });
+        });
+    }
+    initQuicToggle();
 
     function initProxyTimeoutSettings(){
         $.get("/api/proxy/timeouts", function(data){

@@ -17,6 +17,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/moby/moby/client v0.3.0
 	github.com/pires/go-proxyproto v0.8.1
+	github.com/quic-go/quic-go v0.61.0
 	github.com/shirou/gopsutil/v4 v4.25.1
 	github.com/stretchr/testify v1.12.1
 	github.com/syndtr/goleveldb v1.0.0
@@ -87,6 +88,7 @@ require (
 	github.com/openshift/gssapi v0.0.0-20161010215902-5fb4217df13b // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
+	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/regfish/regfish-dnsapi-go v0.2.0 // indirect
 	github.com/sacloud/sacloud-sdk-go v0.2.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect

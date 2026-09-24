@@ -96,6 +96,9 @@ type ResponseRewriteRuleSet struct {
 	/* System Information Payload */
 	DevelopmentMode bool   //Inject dev mode information to requests
 	Version         string //Version number of Zoraxy, use for X-Proxy-By
+
+	/* HTTP/3 (QUIC) */
+	AltSvc string //Alt-Svc header value to advertise HTTP/3 support; empty = no header
 }
 
 type DpcoreOptions struct {
@@ -203,7 +206,7 @@ func copyHeader(dst, src http.Header) {
 // Hop-by-hop headers. These are removed when sent to the backend.
 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
 var hopHeaders = []string{
-	//"Connection",
+	"Connection",
 	"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
 	"Keep-Alive",
 	"Proxy-Authenticate",
@@ -353,7 +356,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Remove hop-by-hop headers.
-	if !rrr.NoRemoveHopByHop {
+	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3, so
+	// they are always stripped from H3 requests even when hop-by-hop removal
+	// is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
 		removeHeaders(outreq.Header, rrr.NoCache)
 	}
 
@@ -449,7 +455,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header of the response
-	if !rrr.NoRemoveHopByHop {
+	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3 responses;
+	// clients reject them. Always strip them for H3 requests even when hop-by-hop
+	// removal is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
 		removeHeaders(res.Header, rrr.NoCache)
 	}
 
@@ -530,6 +539,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 			trailerKeys = append(trailerKeys, k)
 		}
 		rw.Header().Add("Trailer", strings.Join(trailerKeys, ", "))
+	}
+
+	// Advertise HTTP/3 (QUIC) support via Alt-Svc header so browsers can upgrade
+	if rrr.AltSvc != "" {
+		rw.Header().Set("Alt-Svc", rrr.AltSvc)
 	}
 
 	rw.WriteHeader(res.StatusCode)
