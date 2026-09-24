@@ -91,3 +91,22 @@ func TestIntermediateProfileExcludesWeakSuites(t *testing.T) {
 		}
 	}
 }
+
+func TestMinTLSVersionForProfile(t *testing.T) {
+	tests := []struct {
+		profile string
+		want    uint16
+	}{
+		{dynamicproxy.TlsCipherProfileDefault, 0},
+		{"", 0},
+		{"bogus", 0},
+		{dynamicproxy.TlsCipherProfileIntermediate, tls.VersionTLS12},
+		{dynamicproxy.TlsCipherProfileModern, tls.VersionTLS13},
+	}
+
+	for _, tt := range tests {
+		if got := dynamicproxy.MinTLSVersionForProfile(tt.profile); got != tt.want {
+			t.Errorf("MinTLSVersionForProfile(%q) = 0x%04x, want 0x%04x", tt.profile, got, tt.want)
+		}
+	}
+}
