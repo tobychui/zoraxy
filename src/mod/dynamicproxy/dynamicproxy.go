@@ -86,15 +86,15 @@ func (router *Router) UpdateTLSSetting(tlsEnabled bool) {
 
 // Update TLS Version in runtime. Will restart proxy server if running.
 // Set this to true to force TLS 1.2 or above
-func (router *Router) SetTlsMinVersion(minTlsVersion uint16) {
+func (router *Router) SetTlsMinVersion(minTlsVersion uint16) error {
 	router.Option.MinTLSVersion = minTlsVersion
-	router.Restart()
+	return router.Restart()
 }
 
 // Update TLS cipher profile in runtime. Will restart proxy server if running.
-func (router *Router) SetTlsCipherProfile(profile string) {
+func (router *Router) SetTlsCipherProfile(profile string) error {
 	router.Option.TlsCipherProfile = profile
-	router.Restart()
+	return router.Restart()
 }
 
 // Update port 80 listener state

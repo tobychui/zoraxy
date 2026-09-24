@@ -77,3 +77,18 @@ func ApplyTlsCipherProfile(config *tls.Config, profile string) {
 		config.MinVersion = tls.VersionTLS13
 	}
 }
+
+// MinTLSVersionForProfile returns the minimum TLS version required by the
+// given cipher profile, or 0 if the profile imposes no requirement. The
+// intermediate profile only offers TLS 1.2 suites, so TLS 1.0/1.1 minimums
+// would leave those protocol versions without any usable cipher suite;
+// modern is TLS 1.3 only by definition.
+func MinTLSVersionForProfile(profile string) uint16 {
+	switch profile {
+	case TlsCipherProfileIntermediate:
+		return tls.VersionTLS12
+	case TlsCipherProfileModern:
+		return tls.VersionTLS13
+	}
+	return 0
+}
