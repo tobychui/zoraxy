@@ -1,3 +1,21 @@
+# v3.3.4 22 Aug 2026
+
++ Fix: statistic bounded maps by [ElmoViggiani](https://github.com/ElmoViggiani) in [#1191](https://github.com/tobychui/zoraxy/issues/1191)
++ Fix: Plugin Manager UI: iframe height and Developer Settings accordion by [ElmoViggiani](https://github.com/ElmoViggiani) in [#1211](https://github.com/tobychui/zoraxy/issues/1211)
++ feat(forward-auth): add Ignored Paths by [CrazyWolf13](https://github.com/CrazyWolf13)
++ fix: port80 listener toggle and default site routing on HTTP by @yannickid in [#1184](https://github.com/tobychui/zoraxy/issues/1184)
++ tlscert: use name-based fallback cert instead of file renaming by [zen8841](https://github.com/zen8841)1 in [#1218](https://github.com/tobychui/zoraxy/issues/1218)
++ fix 1217: frontend js forgot to call parameter by [zen8841](https://github.com/zen8841) in [#1221](https://github.com/tobychui/zoraxy/issues/1221)
++ Docker hardening by [PassiveLemon](https://github.com/PassiveLemon)
++ Fix: restore per-request TLS SNI for IP-addressed HTTPS upstreams by [ElmoViggiani](https://github.com/ElmoViggiani) in [#1228](https://github.com/tobychui/zoraxy/issues/1228)
++ feat(forward-auth): bulk apply/remove vdir for forward auth hosts by [CrazyWolf13](https://github.com/CrazyWolf13)
++ Feature (acme): custom acme preferred ca by [jacosta57](https://github.com/jacosta57)
++ fix: bulk-vdir: handle edited virtual directories as conflict by [CrazyWolf13](https://github.com/CrazyWolf13) in [#1237](https://github.com/tobychui/zoraxy/issues/1237)
++ Update to lego v5 by [zen8841](https://github.com/zen8841)
++ Fix SSO redirect loop when SSO URL omits http(s) scheme by [@stantheman0128](https://github.com/@stantheman0128) in [#1238](https://github.com/tobychui/zoraxy/issues/1239)
++ Fix HTTP proxy rate limit UI not loading per-host value (#1107) by [@stantheman0128](https://github.com/@stantheman0128) in [#1238](https://github.com/tobychui/zoraxy/issues/1238)
+
+
 # v3.3.3 09 Jun 2026
 
 + ACME: url.URL support for dnsCredentials by [t510599](https://github.com/t510599)
@@ -12,7 +30,7 @@
 + Chore: clean up Docker related files by [PassiveLemon](https://github.com/PassiveLemon)
 + Sync docker change to dev branch by [tobychui]([zen8841](https://github.com/tobychui)
 + Add custom URI for Uptime Monitor health check by [barto95100]([zen8841](https://github.com/barto95100)
-+ Fix: set ReadHeaderTimeout and IdleTimeout on main listeners by [ElmoViggiani]([zen8841](https://github.com/ElmoViggiani)
++ Fix: set ReadHeaderTimeout and IdleTimeout on main listeners by [ElmoViggiani](https://github.com/ElmoViggiani)
 + Fixed: "Require TLS" upstream on a proxy breaks if upstream sends 302 redirects [#1089](https://github.com/tobychui/zoraxy/issues/1089)
 + Fixed: Virtual Directory duplicating path in redirect [#1106](https://github.com/tobychui/zoraxy/issues/1106)
 + Fixed: Custom check interval for the Uptime Montior [#1091](https://github.com/tobychui/zoraxy/issues/1091)

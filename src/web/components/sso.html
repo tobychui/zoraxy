@@ -186,8 +186,8 @@
             </div>
 
             <div class="field">
-                <label for="oauth2UserInfoURL">User Info URL</label>
-                <input type="text" id="oauth2UserInfoURL" name="oauth2UserInfoURL" placeholder="Enter User Info URL">
+                <label for="oauth2UserInfoUrl">User Info URL</label>
+                <input type="text" id="oauth2UserInfoUrl" name="oauth2UserInfoUrl" placeholder="Enter User Info URL">
                 <small>URL used by the OAuth2 provider to validate generated token. Optional if Well-Known url is configured.</small>
             </div>
 
@@ -594,7 +594,7 @@
         }
 
         if ($('#oauth2WellKnownUrl').val().length === 0) {
-            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoURL').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
+            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoUrl').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
                 msgbox("You must specify either the Well Known URL or configure the Authorization URL, Token URL, User Info URL, and Scopes.", false);
 
                 return;
