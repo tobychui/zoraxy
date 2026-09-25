@@ -175,43 +175,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	/* WebSocket automatic proxy */
-	requestURL := r.URL.String()
 	if isWebSocketRequest(r) {
-		if target.DisableWebSocket {
-			http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
-			return
-		}
-		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
-		r.Header.Set("Zr-Origin-Upgrade", "websocket")
-		wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
-		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
-			//Append / to the end of the redirection endpoint if not exists
-			wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
-		}
-		if len(requestURL) > 0 && requestURL[:1] == "/" {
-			//Remove starting / from request URL if exists
-			requestURL = requestURL[1:]
-		}
-		u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
-		if selectedUpstream.RequireTLS {
-			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
-		}
-		h.Parent.logRequest(r, true, 101, "host-websocket", reqHostname, selectedUpstream.OriginIpOrDomain, target)
-
-		if target.HeaderRewriteRules == nil {
-			target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
-		}
-
-		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-			SkipTLSValidation:              selectedUpstream.SkipCertValidations,
-			SkipOriginCheck:                selectedUpstream.SkipWebSocketOriginCheck,
-			CopyAllHeaders:                 target.EnableWebsocketCustomHeaders,
-			UserDefinedHeaders:             target.HeaderRewriteRules.UserDefinedHeaders,
-			Logger:                         h.Parent.Option.Logger,
-			Timeout:                        target.WebsocketTimeout,
-			EnableTimeoutRefreshOnActivity: target.EnableTimeoutRefreshOnActivity,
-		})
-		wspHandler.ServeHTTP(w, r)
+		h.hostWebSocketRequest(w, r, target, selectedUpstream)
 		return
 	}
 
@@ -277,6 +242,46 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname, target)
+}
+
+// hostWebSocketRequest proxies a host level WebSocket upgrade request via websocketproxy
+func (h *ProxyHandler) hostWebSocketRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint, selectedUpstream *loadbalance.Upstream) {
+	if target.DisableWebSocket {
+		http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
+		return
+	}
+	//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
+	r.Header.Set("Zr-Origin-Upgrade", "websocket")
+	requestURL := r.URL.String()
+	wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
+	if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
+		//Append / to the end of the redirection endpoint if not exists
+		wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
+	}
+	if len(requestURL) > 0 && requestURL[:1] == "/" {
+		//Remove starting / from request URL if exists
+		requestURL = requestURL[1:]
+	}
+	u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
+	if selectedUpstream.RequireTLS {
+		u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
+	}
+	h.Parent.logRequest(r, true, 101, "host-websocket", r.Host, selectedUpstream.OriginIpOrDomain, target)
+
+	if target.HeaderRewriteRules == nil {
+		target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
+	}
+
+	wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
+		SkipTLSValidation:              selectedUpstream.SkipCertValidations,
+		SkipOriginCheck:                selectedUpstream.SkipWebSocketOriginCheck,
+		CopyAllHeaders:                 target.EnableWebsocketCustomHeaders,
+		UserDefinedHeaders:             target.HeaderRewriteRules.UserDefinedHeaders,
+		Logger:                         h.Parent.Option.Logger,
+		Timeout:                        target.WebsocketTimeout,
+		EnableTimeoutRefreshOnActivity: target.EnableTimeoutRefreshOnActivity,
+	})
+	wspHandler.ServeHTTP(w, r)
 }
 
 // Handle vdir type request

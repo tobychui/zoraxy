@@ -461,6 +461,13 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if isWebSocketRequest(r) {
+		//websocketproxy forwards and origin-checks against r.Host
+		r.Host = originalHostHeader
+		proxyHandler.hostWebSocketRequest(w, r, sep, selectedUpstream)
+		return
+	}
+
 	endpointProxyRewriteRules := GetDefaultHeaderRewriteRules()
 	if sep.HeaderRewriteRules != nil {
 		endpointProxyRewriteRules = sep.HeaderRewriteRules
