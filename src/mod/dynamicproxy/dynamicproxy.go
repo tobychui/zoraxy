@@ -393,14 +393,6 @@ func (router *Router) StartProxyService() error {
 // handleNonTLSRequest handles HTTP requests for endpoints that allow plain HTTP access
 // This is the common handler logic used by both port 80 listener and secondary listeners
 func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) {
-	originalHostHeader := r.Host
-	if r.URL != nil {
-		r.Host = r.URL.Host
-	} else {
-		//Fallback when the upstream proxy screw something up in the header
-		r.URL, _ = url.Parse(originalHostHeader)
-	}
-
 	//Access Check (blacklist / whitelist)
 	ruleID := sep.AccessFilterUUID
 	if sep.AccessFilterUUID == "" {
@@ -462,10 +454,17 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 	}
 
 	if isWebSocketRequest(r) {
-		//websocketproxy forwards and origin-checks against r.Host
-		r.Host = originalHostHeader
 		proxyHandler.hostWebSocketRequest(w, r, sep, selectedUpstream)
 		return
+	}
+
+	//Rewrite host only after auth and routing, which need the original Host
+	originalHostHeader := r.Host
+	if r.URL != nil {
+		r.Host = r.URL.Host
+	} else {
+		//Fallback when the upstream proxy screw something up in the header
+		r.URL, _ = url.Parse(originalHostHeader)
 	}
 
 	endpointProxyRewriteRules := GetDefaultHeaderRewriteRules()
