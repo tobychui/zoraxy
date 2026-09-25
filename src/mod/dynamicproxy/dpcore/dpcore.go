@@ -360,7 +360,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// they are always stripped from H3 requests even when hop-by-hop removal
 	// is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
 	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
-		removeHeaders(outreq.Header, rrr.NoCache)
+		removeHeaders(outreq.Header)
+	}
+
+	if rrr.NoCache {
+		setNoCacheHeader(outreq.Header)
 	}
 
 	// Restore the upgrade headers so the upstream still sees the upgrade request
@@ -459,7 +463,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// clients reject them. Always strip them for H3 requests even when hop-by-hop
 	// removal is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
 	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
-		removeHeaders(res.Header, rrr.NoCache)
+		removeHeaders(res.Header)
+	}
+
+	if rrr.NoCache {
+		setNoCacheHeader(res.Header)
 	}
 
 	//Remove the User-Agent header if exists

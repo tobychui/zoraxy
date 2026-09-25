@@ -1957,6 +1957,13 @@ func HandleProxyProtocolChange(w http.ResponseWriter, r *http.Request) {
 		//Write changes to database
 		sysdb.Write("settings", "useProxyProtocol", enableProxyProtocol)
 
+		//PROXY protocol and HTTP/3 (QUIC) are mutually exclusive, turn off QUIC
+		if enableProxyProtocol && dynamicProxyRouter.Option.EnableH3 {
+			dynamicProxyRouter.Option.EnableH3 = false
+			sysdb.Write("settings", "enableQuic", false)
+			SystemWideLogger.Println("PROXY protocol enabled, disabling HTTP/3 (QUIC) as they are incompatible")
+		}
+
 		//Restart the proxy to apply the changes if running
 		if dynamicProxyRouter.Running {
 			SystemWideLogger.Println("PROXY protocol setting changed, restarting proxy server...")
@@ -1997,6 +2004,13 @@ func HandleQuicToggle(w http.ResponseWriter, r *http.Request) {
 
 	//Write changes to database
 	sysdb.Write("settings", "enableQuic", enableQuic)
+
+	//PROXY protocol and HTTP/3 (QUIC) are mutually exclusive, turn off PROXY protocol
+	if enableQuic && dynamicProxyRouter.Option.UseProxyProtocol {
+		dynamicProxyRouter.Option.UseProxyProtocol = false
+		sysdb.Write("settings", "useProxyProtocol", false)
+		SystemWideLogger.Println("HTTP/3 (QUIC) enabled, disabling PROXY protocol as they are incompatible")
+	}
 
 	//Restart the proxy to apply the changes if running
 	if dynamicProxyRouter.Running {
