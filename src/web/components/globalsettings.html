@@ -60,6 +60,17 @@
                             <small>(Enhance security, but may not be compatible with legacy browsers)</small>
                         </p>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 1em; margin-top: 0.8em;">
+                        <select id="tlsCipherProfileSelect" class="ui dropdown">
+                            <option value="default">Default (Go)</option>
+                            <option value="intermediate">Intermediate (Mozilla)</option>
+                            <option value="modern">Modern (Mozilla)</option>
+                        </select>
+                        <label for="tlsCipherProfileSelect" style="margin: 0;">
+                            TLS Cipher Profile<br>
+                            <small>(Intermediate/modern remove legacy CBC ciphers flagged by SSL scanners; modern requires TLS v1.3)</small>
+                        </label>
+                    </div>
                 </div>
                 <br>
                 <div id="developmentMode" class="ui toggle checkbox" style="margin-top: 0.6em;">
@@ -308,6 +319,54 @@
         });
     }
     initTlsVersionSetting();
+
+    function initTlsCipherProfileSetting(){
+        $.get("/api/cert/tlsCipherProfile", function(data){
+            // Set dropdown value
+            if (data && typeof data === "string") {
+                $("#tlsCipherProfileSelect").val(data);
+            }
+            // Bind change event
+            $("#tlsCipherProfileSelect").off("change").on("change", function(){
+                var selectedProfile = $(this).val();
+                //The server enforces the minimum TLS version required by the profile,
+                //so bump the version first (if necessary) before applying the profile
+                var requiredVersion = {"intermediate": "1.2", "modern": "1.3"}[selectedProfile];
+                var applyProfile = function(){
+                    $.cjax({
+                        url: "/api/cert/tlsCipherProfile",
+                        method: "POST",
+                        data: {set: selectedProfile},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false, 5000);
+                            }else{
+                                msgbox("TLS cipher profile updated");
+                            }
+                        }
+                    });
+                };
+                if (requiredVersion !== undefined && $("#tlsVersionSelect").val() < requiredVersion){
+                    $.cjax({
+                        url: "/api/cert/tlsMinVersion",
+                        method: "POST",
+                        data: {set: requiredVersion},
+                        success: function(data){
+                            if (data.error != undefined){
+                                msgbox(data.error, false, 5000);
+                            }else{
+                                $("#tlsVersionSelect").val(requiredVersion);
+                                applyProfile();
+                            }
+                        }
+                    });
+                }else{
+                    applyProfile();
+                }
+            });
+        });
+    }
+    initTlsCipherProfileSetting();
 
     function initDevelopmentMode(){
         $.get("/api/proxy/developmentMode", function(data){
