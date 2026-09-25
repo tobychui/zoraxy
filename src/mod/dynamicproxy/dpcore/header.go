@@ -40,9 +40,7 @@ func removeHeaders(header http.Header) {
 	}
 }
 
-// setNoCacheHeader force set Cache-Control to no-store (development mode).
-// This is applied independently of hop-by-hop header removal so it still
-// takes effect on endpoints that disabled hop-by-hop header removal.
+// setNoCacheHeader force set Cache-Control to no-store, independent of hop-by-hop removal
 func setNoCacheHeader(header http.Header) {
 	header.Del("Cache-Control")
 	header.Set("Cache-Control", "no-store")

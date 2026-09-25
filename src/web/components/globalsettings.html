@@ -518,15 +518,12 @@
     }
     initDevelopmentMode();
 
-    //Update a toggle's visual state without dispatching a change event.
-    //checkbox("set checked") fires a native change event, which would re-enter
-    //the toggle handlers and send another request to the backend.
+    //Set a toggle's state without firing change (checkbox("set checked") would re-trigger handlers)
     function setToggleStateSilently(selector, checked){
         $(selector).toggleClass("checked", checked).find("input[type='checkbox']").prop("checked", checked);
     }
 
-    //PROXY protocol and HTTP/3 (QUIC) are mutually exclusive. The backend turns
-    //off the other option when one is enabled; mirror that here.
+    //PROXY protocol and HTTP/3 are mutually exclusive, enabling one turns off the other
     function initProxyProtocol(){
         $.get("/api/proxy/proxyProtocol", function(data){
             setToggleStateSilently("#proxyProtocol", data === true);
