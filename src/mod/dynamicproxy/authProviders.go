@@ -39,25 +39,29 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 	case AuthMethodBasic:
 		err := h.handleBasicAuthRouting(w, r, sep)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	case AuthMethodForward:
 		err := h.handleForwardAuth(w, r)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	case AuthMethodOauth2:
 		err := h.handleOAuth2Auth(w, r)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	case AuthMethodZorxAuth:
 		err := h.handleZorxAuth(w, r, sep)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	}

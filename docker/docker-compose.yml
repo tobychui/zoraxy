@@ -6,6 +6,7 @@ services:
     ports:
       - 80:80
       - 443:443
+      - 443:443/udp  # HTTP/3 (QUIC) - only needed if QUIC is enabled in Global Settings
       - 8000:8000
     volumes:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/

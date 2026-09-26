@@ -73,6 +73,8 @@ type Collector struct {
 	autSaveStop    chan bool
 	DailySummary   *DailySummary
 	Option         *CollectorOption
+	summaryKey     string     //Date key (2006_01_02) that DailySummary belongs to
+	summaryMu      sync.Mutex //Guards DailySummary swaps together with summaryKey
 	// incr is the per-request map-increment strategy, chosen once at startup
 	// based on Option.MaxEntriesPerStatMap. See newIncrFn.
 	incr incrFn
@@ -114,6 +116,7 @@ func NewStatisticCollector(option CollectorOption) (*Collector, error) {
 		DailySummary: NewDailySummary(),
 		Option:       &option,
 		incr:         newIncrFn(option.MaxEntriesPerStatMap),
+		summaryKey:   summaryKeyOf(time.Now()),
 	}
 
 	//Load the stat if exists for today
@@ -160,18 +163,36 @@ func (c *Collector) SetAutoSave(saveInterval int) {
 	}()
 }
 
-// Write the current in-memory summary to database file
+// summaryKeyOf returns the database key of the daily summary for the given time
+func summaryKeyOf(t time.Time) string {
+	return t.Format("2006_01_02")
+}
+
+// Write the current summary to database, rolling over to a new day if the date changed
 func (c *Collector) SaveSummaryOfDay() {
+	c.summaryMu.Lock()
+	defer c.summaryMu.Unlock()
+
+	todayKey := summaryKeyOf(time.Now())
+	if c.summaryKey != todayKey {
+		//Day rolled over, persist the finished day and start a new summary
+		c.writeSummary(c.summaryKey, c.DailySummary)
+		c.DailySummary = NewDailySummary()
+		c.summaryKey = todayKey
+	}
+
+	c.writeSummary(c.summaryKey, c.DailySummary)
+}
+
+// writeSummary writes the given summary to the database under summaryKey
+func (c *Collector) writeSummary(summaryKey string, summary *DailySummary) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("[Statistic] Recovered from panic while saving daily summary: ", r)
 		}
 	}()
 
-	//When it is called in 0:00am, make sure it is stored as yesterday key
-	t := time.Now().Add(-30 * time.Second)
-	summaryKey := t.Format("2006_01_02")
-	saveData := DailySummaryToExport(*c.DailySummary)
+	saveData := DailySummaryToExport(*summary)
 	err := c.Option.Database.Write("stats", summaryKey, saveData)
 	if err != nil {
 		log.Println("[Statistic] Failed to save daily summary of "+summaryKey+": ", err)
@@ -201,7 +222,10 @@ func (c *Collector) LoadSummaryOfDay(year int, month time.Month, day int) *Daily
 
 // Reset today summary, for debug or restoring injections
 func (c *Collector) ResetSummaryOfDay() {
+	c.summaryMu.Lock()
+	defer c.summaryMu.Unlock()
 	c.DailySummary = NewDailySummary()
+	c.summaryKey = summaryKeyOf(time.Now())
 }
 
 // This function gives the current slot in the 288- 5 minutes interval of the day
@@ -315,9 +339,8 @@ func (c *Collector) ScheduleResetRealtimeStats() chan bool {
 			duration := midnight.Sub(now)
 			select {
 			case <-time.After(duration):
-				// store daily summary to database and reset summary
+				// save and roll over, an early fire retries on the next loop
 				c.SaveSummaryOfDay()
-				c.DailySummary = NewDailySummary()
 			case <-doneCh:
 				// stop the routine
 				return

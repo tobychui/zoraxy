@@ -161,12 +161,6 @@
       <div id="dnsProviderAPIFields">
         <p><i class="ui loading circle notch icon"></i> Generating WebForm</p>
       </div>
-      <h4><i class="yellow exclamation triangle icon"></i> Notes & FAQ</h4>
-      <div class="ui bulleted list">
-        <div class="item">Domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</div>
-        <div class="item">For some DNS providers like CloudFlare, you do not need to fill in all fields.</div>
-        <div class="item">If you are not sure what to fill in, check out the documentation from <a href="https://go-acme.github.io/lego/dns/" target="_blank">lego (DNS challenge library)</a></div>
-      </div>
       
       <!-- 
         <label>Credentials File Content</label>
@@ -181,9 +175,30 @@
     <div class="field dnsChallengeOnly" style="display:none;">
       <label>Domain Name Server (optional)</label>
       <input id="dnsInput" type="text" placeholder="ns.example.com">
-      <small>If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com)</small>
     </div>
-    <!-- TODO: Add checkbox for recursive NS propagation check (recursive_ns), pass to /api/acme/obtainCert -->
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <div class="ui checkbox">
+        <input type="checkbox" id="disableRecursiveNssCheckbox">
+        <label>Disable Recursive NSs Propagation Check</label>
+      </div>
+    </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <div class="ui checkbox">
+        <input type="checkbox" id="disableAuthoritativeNssCheckbox">
+        <label>Disable Authoritative NSs Propagation Check</label>
+      </div>
+    </div>
+    <div class="field dnsChallengeOnly" style="display:none;">
+      <h4><i class="yellow exclamation triangle icon"></i> Notes & FAQ</h4>
+      <div class="ui bulleted list">
+        <div class="item">Domain DNS credentials are stored separately. For each new subdomain, you will need to enter a new DNS credentials.</div>
+        <div class="item">For some DNS providers like CloudFlare, you do not need to fill in all fields.</div>
+        <div class="item">If you are not sure what to fill in, check out the documentation from <a href="https://go-acme.github.io/lego/dns/" target="_blank">lego (DNS challenge library)</a></div>
+        <div class="item">Domain Name Server: If you have more than one DNS server, enter them separated by commas (e.g. ns1.example.com,ns2.example.com). Used for DNS-01 challenge propagation verification.</div>
+        <div class="item">Recursive NSs Propagation Check: Verify the TXT record has propagated to all specified DNS servers before proceeding. If no DNS servers are configured above, falls back to 8.8.8.8, 8.8.4.4, 1.1.1.1, 1.0.0.1. Required for CAs using MPIC (Multi-Perspective Issuance Corroboration). May take longer than the default 600s timeout — increase propagation timeout if needed. Leave disabled unless required.</div>
+        <div class="item">Authoritative NSs Propagation Check: Query authoritative nameservers directly during DNS-01 propagation verification. Disable this if direct outbound DNS traffic to Internet nameservers is blocked and all DNS resolution is handled through an internal recursive resolver. When disabled, Recursive NSs Propagation Check is automatically enabled to ensure at least one propagation check remains active.</div>
+      </div>
+    </div>
     <div class="field" id="caInput" style="display:none;">
       <label>ACME Server URL</label>
       <input id="caURL" type="text" placeholder="https://example.com/acme/dictionary">
@@ -216,6 +231,21 @@
     $(".accordion").accordion();
     $(".dropdown").dropdown();
     $(".checkbox").checkbox();
+
+    // Mutual exclusion: checking one unchecks the other to guarantee at least one NSs check
+    $("#disableAuthoritativeNssCheckbox").on("change", function() {
+      if (this.checked) {
+        $("#disableRecursiveNssCheckbox").parent().checkbox("set unchecked");
+      }
+    });
+    $("#disableRecursiveNssCheckbox").on("change", function() {
+      if (this.checked) {
+        $("#disableAuthoritativeNssCheckbox").parent().checkbox("set unchecked");
+      }
+    });
+
+    // Default: Disable Recursive NSs is checked
+    $("#disableRecursiveNssCheckbox").parent().checkbox("set checked");
 
     function setAutoRenewIfCASupportMode(useAutoMode = true){
       if (useAutoMode){
@@ -762,7 +792,9 @@
 
       var dns = $("#useDnsChallenge")[0].checked;
       var skipTLSValue = $("#skipTLSCheckbox")[0].checked;
-      var dnsServers = $("#dnsInput").val(); // Erfassen der DNS-Server
+      var dnsServers = $("#dnsInput").val();
+      var disableRecursiveNss = $("#disableRecursiveNssCheckbox")[0].checked;
+      var disableAuthoritativeNss = $("#disableAuthoritativeNssCheckbox")[0].checked;
 
       $.ajax({
         url: "/api/acme/obtainCert",
@@ -775,7 +807,9 @@
           caURL: caURL,
           skipTLS: skipTLSValue,
           dns: dns,
-          dnsServers: dnsServers // DNS-Server in die Anfrage einfügen
+          dnsServers: dnsServers,
+          disable_recursive_nss_check: disableRecursiveNss,
+          disable_authoritative_nss_check: disableAuthoritativeNss
         },
         success: function(response) {
           $("#obtainButton").removeClass("loading").removeClass("disabled");

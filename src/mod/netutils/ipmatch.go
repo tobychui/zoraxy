@@ -33,51 +33,42 @@ func GetRequesterIPUntrusted(r *http.Request) string {
 
 // Get the requester IP, trust the X-Real-IP and X-Forwarded-For headers
 func GetRequesterIP(r *http.Request) string {
-	ip := r.Header.Get("X-Real-Ip")
-	if ip == "" {
-		CF_Connecting_IP := r.Header.Get("CF-Connecting-IP")
-		Fastly_Client_IP := r.Header.Get("Fastly-Client-IP")
-		if CF_Connecting_IP != "" {
-			//Use CF Connecting IP
-			return CF_Connecting_IP
-		} else if Fastly_Client_IP != "" {
-			//Use Fastly Client IP
-			return Fastly_Client_IP
+	candidates := []string{
+		r.Header.Get("X-Real-Ip"),
+		r.Header.Get("CF-Connecting-IP"),
+		r.Header.Get("Fastly-Client-IP"),
+		r.Header.Get("X-Forwarded-For"),
+	}
+	for _, candidate := range candidates {
+		if ip := normalizeIP(candidate); ip != "" {
+			return ip
 		}
-		ip = r.Header.Get("X-Forwarded-For")
 	}
-	if ip == "" {
-		ip = r.RemoteAddr
+	return GetRequesterIPUntrusted(r)
+}
+
+/*
+Extract the first IP address from a header value, e.g.
+
+	127.0.0.1:61001
+	[15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7]:61002
+	127.0.0.1
+	158.250.160.114,109.21.249.211
+	[15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7],109.21.249.211
+
+Returns empty string if the value is not a valid IP address.
+*/
+func normalizeIP(raw string) string {
+	raw, _, _ = strings.Cut(raw, ",")
+	raw = strings.TrimSpace(raw)
+	if host, _, err := net.SplitHostPort(raw); err == nil {
+		raw = host
 	}
-
-	/*
-		Possible shits that might be extracted by this code
-		127.0.0.1:61001
-		[15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7]:61002
-		127.0.0.1
-		158.250.160.114,109.21.249.211
-		[15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7],109.21.249.211
-
-		We need to extract just the first ip address
-	*/
-	requesterRawIp := ip
-	if strings.Contains(requesterRawIp, ",") {
-		//Trim off all the forwarder IPs
-		requesterRawIp = strings.Split(requesterRawIp, ",")[0]
+	raw = strings.TrimSuffix(strings.TrimPrefix(raw, "["), "]")
+	if net.ParseIP(raw) == nil {
+		return ""
 	}
-
-	//Trim away the port number
-	reqHost, _, err := net.SplitHostPort(requesterRawIp)
-	if err == nil {
-		requesterRawIp = reqHost
-	}
-
-	if strings.HasPrefix(requesterRawIp, "[") && strings.HasSuffix(requesterRawIp, "]") {
-		//e.g. [15c4:cbb4:cc98:4291:ffc1:3a46:06a1:51a7]
-		requesterRawIp = requesterRawIp[1 : len(requesterRawIp)-1]
-	}
-
-	return requesterRawIp
+	return raw
 }
 
 // Match the IP address with a wildcard string

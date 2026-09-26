@@ -4,6 +4,112 @@
         pointer-events: none;
         user-select: none;
     }
+
+    /* Advance settings groups */
+    #globalsettings .ingressSettingGroup{
+        padding: 1.2em 0;
+        border-bottom: 1px solid var(--divider_color);
+    }
+
+    #globalsettings .ingressSettingGroup:first-child{
+        padding-top: 0.6em;
+    }
+
+    #globalsettings .ingressSettingGroup:last-child{
+        border-bottom: none;
+        padding-bottom: 0.4em;
+    }
+
+    #globalsettings .ingressGroupTitle{
+        font-size: 0.78em;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text_color_secondary);
+        margin-bottom: 0.9em;
+    }
+
+    #globalsettings .ingressGroupNote{
+        display: block;
+        margin-top: -0.6em;
+        margin-bottom: 0.9em;
+        opacity: 0.8;
+    }
+
+    #globalsettings .ingressFieldLabel{
+        display: block;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    #globalsettings .ingressFieldHint{
+        display: block;
+        opacity: 0.8;
+    }
+
+    /* TLS version segmented selector */
+    #globalsettings .ingressSettingGroup.disabled,
+    #globalsettings #tlsMinVer.disabled{
+        opacity: 0.45;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    #globalsettings .tlsVersionSlider{
+        position: relative;
+        display: flex;
+        max-width: 360px;
+        margin: 0.7em 0 0.4em 0;
+        padding: 3px;
+        border: 1px solid var(--divider_color);
+        border-radius: 999px;
+    }
+
+    #globalsettings .tlsVersionThumb{
+        position: absolute;
+        top: 3px;
+        bottom: 3px;
+        left: 3px;
+        width: calc((100% - 6px) / 4);
+        border-radius: 999px;
+        background: #2185d0;
+        opacity: 0;
+        transition: transform 0.25s ease, opacity 0.2s ease;
+    }
+
+    #globalsettings .tlsVersionSlider.ready .tlsVersionThumb{
+        opacity: 1;
+    }
+
+    #globalsettings .tlsVersionSlider button{
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        padding: 0.45em 0;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--text_color_secondary);
+        font-family: inherit;
+        font-size: 0.95em;
+        cursor: pointer;
+        transition: color 0.25s ease;
+    }
+
+    #globalsettings .tlsVersionSlider button.active{
+        color: #ffffff;
+        font-weight: 600;
+    }
+
+    #globalsettings .tlsVersionSlider button:focus-visible{
+        outline: 2px solid #2185d0;
+        outline-offset: 2px;
+    }
+
+    /* Timeout inputs, fixed width so browsers render them the same size */
+    #globalsettings .ingressTimeoutGrid .ui.input > input{
+        width: 8em;
+    }
 </style>
 <!-- Ingress Settings -->
 <div class="standardContainer">
@@ -47,55 +153,93 @@
                 Advance Settings
             </div>
             <div class="content">
-                <div id="tlsMinVer" class="ui notloopbackOnly tlsEnabledOnly" style="margin-top: 0.6em;">
-                    <div style="display: flex; align-items: center; gap: 1em;">
-                        <select id="tlsVersionSelect" class="ui dropdown">
-                            <option value="1.0">TLS v1.0</option>
-                            <option value="1.1">TLS v1.1</option>
-                            <option value="1.2">TLS v1.2</option>
-                            <option value="1.3">TLS v1.3</option>
-                        </select>
-                        <p for="tlsVersionSelect" style="margin: 0;">
-                            Minimum TLS Version<br>
-                            <small>(Enhance security, but may not be compatible with legacy browsers)</small>
-                        </p>
+                <!-- TLS -->
+                <div class="ingressSettingGroup">
+                    <div id="tlsMinVer" class="notloopbackOnly tlsEnabledOnly">
+                        <span class="ingressFieldLabel">Minimum TLS Version</span>
+                        <small class="ingressFieldHint">Clients that only support older versions will be rejected</small>
+                        <div id="tlsVersionSlider" class="tlsVersionSlider" role="radiogroup" aria-label="Minimum TLS Version">
+                            <span class="tlsVersionThumb"></span>
+                            <button type="button" role="radio" aria-checked="false" data-version="1.0">1.0</button>
+                            <button type="button" role="radio" aria-checked="false" data-version="1.1">1.1</button>
+                            <button type="button" role="radio" aria-checked="false" data-version="1.2">1.2</button>
+                            <button type="button" role="radio" aria-checked="false" data-version="1.3">1.3</button>
+                        </div>
+                        <small id="tlsVersionHint" class="ingressFieldHint"></small>
                     </div>
                 </div>
-                <br>
-                <div id="developmentMode" class="ui toggle checkbox" style="margin-top: 0.6em;">
-                    <input type="checkbox">
-                    <label>Development Mode<br>
-                    <small>(Set Cache-Control to no-store so browser will always fetch new contents from your sites)</small></label>
-                </div>
-                <br>
-                <div id="proxyProtocol" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.6em;">
-                    <input type="checkbox">
-                    <label>Enable PROXY Protocol<br>
-                    <small>(Enable PROXY protocol v1/v2 support for TLS listener)</small></label>
-                </div>
-                <br>
-                <div class="ui notloopbackOnly form" style="margin-top: 0.6em;">
-                    <div class="field">
-                        <label>Global Proxy Timeouts</label>
-                        <small>Timeouts are in seconds. Set any value to 0 to disable it. Changes will restart the reverse proxy if it is running.</small>
+
+                <!-- Protocols -->
+                <div class="ingressSettingGroup">
+                    <div class="ingressGroupTitle">Protocols</div>
+                    <small class="ingressGroupNote">PROXY protocol and HTTP/3 are mutually exclusive. Enabling one turns off the other.</small>
+                    <div id="proxyProtocol" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox">
+                        <input type="checkbox">
+                        <label>PROXY Protocol<br>
+                        <small>Accept PROXY protocol v1/v2 headers on the TLS listener</small></label>
                     </div>
-                    <div class="three stackable fields" style="margin-top: 0.8em; margin-bottom: 0.6em;">
-                        <div class="field">
-                            <label for="readHeaderTimeoutInput">Read Header Timeout</label>
-                            <input type="number" id="readHeaderTimeoutInput" min="0" step="1" placeholder="30">
+                    <br>
+                    <div id="enableQuic" class="ui toggle notloopbackOnly tlsEnabledOnly checkbox" style="margin-top: 0.8em;">
+                        <input type="checkbox">
+                        <label>HTTP/3 (QUIC)<br>
+                        <small>Serve HTTP/3 over UDP on the same port</small></label>
+                    </div>
+                </div>
+
+                <!-- Timeouts -->
+                <div class="ingressSettingGroup notloopbackOnly">
+                    <div class="ingressGroupTitle">Timeouts</div>
+                    <small class="ingressGroupNote">In seconds, 0 disables the timeout. Applying restarts the proxy if it is running.</small>
+                    <div class="ui middle aligned stackable grid ingressTimeoutGrid">
+                        <div class="row">
+                            <div class="ten wide column">
+                                <label class="ingressFieldLabel" for="readHeaderTimeoutInput">Read Header Timeout</label>
+                                <small class="ingressFieldHint">Time a client has to send its request headers. Limits slow-header (Slowloris) attacks.</small>
+                            </div>
+                            <div class="six wide column">
+                                <div class="ui right fluid labeled input">
+                                    <input type="number" id="readHeaderTimeoutInput" min="0" step="1" placeholder="30">
+                                    <div class="ui basic label">sec</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="writeTimeoutInput">Write Timeout</label>
-                            <input type="number" id="writeTimeoutInput" min="0" step="1" placeholder="0">
+                        <div class="row">
+                            <div class="ten wide column">
+                                <label class="ingressFieldLabel" for="writeTimeoutInput">Write Timeout</label>
+                                <small class="ingressFieldHint">Time allowed to send a full response. Keep 0 for large downloads and streaming.</small>
+                            </div>
+                            <div class="six wide column">
+                                <div class="ui right fluid labeled input">
+                                    <input type="number" id="writeTimeoutInput" min="0" step="1" placeholder="0">
+                                    <div class="ui basic label">sec</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label for="idleTimeoutInput">Idle Timeout</label>
-                            <input type="number" id="idleTimeoutInput" min="0" step="1" placeholder="300">
+                        <div class="row">
+                            <div class="ten wide column">
+                                <label class="ingressFieldLabel" for="idleTimeoutInput">Idle Timeout</label>
+                                <small class="ingressFieldHint">How long an idle keep-alive connection stays open before it is closed.</small>
+                            </div>
+                            <div class="six wide column">
+                                <div class="ui right fluid labeled input">
+                                    <input type="number" id="idleTimeoutInput" min="0" step="1" placeholder="300">
+                                    <div class="ui basic label">sec</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button class="ui basic green button" onclick="saveProxyTimeoutSettings();"><i class="ui checkmark icon"></i> Apply Timeout Settings</button>
+                    <button class="ui basic green button" style="margin-top: 0.6em;" onclick="saveProxyTimeoutSettings();"><i class="ui checkmark icon"></i> Apply Timeouts</button>
                 </div>
-                <br>
+
+                <!-- Development -->
+                <div class="ingressSettingGroup">
+                    <div class="ingressGroupTitle">Development</div>
+                    <div id="developmentMode" class="ui toggle checkbox">
+                        <input type="checkbox">
+                        <label>Development Mode<br>
+                        <small>Send Cache-Control: no-store so browsers always fetch fresh content. Turn off in production.</small></label>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -277,27 +421,74 @@
     }
     initHTTPtoHTTPSRedirectSetting();
 
+    const tlsVersionHints = {
+        "1.0": "Legacy. Deprecated by RFC 8996, only for very old clients.",
+        "1.1": "Legacy. Deprecated by RFC 8996, only for very old clients.",
+        "1.2": "Recommended. Supported by all modern browsers.",
+        "1.3": "Strictest. Rejects clients without TLS 1.3 support."
+    };
+
+    //Move the slider thumb to the given version without saving it
+    function renderTlsVersionSlider(version){
+        let buttons = $("#tlsVersionSlider button");
+        let index = buttons.index(buttons.filter(`[data-version="${version}"]`));
+        if (index < 0){
+            return;
+        }
+        buttons.removeClass("active").attr("aria-checked", "false").attr("tabindex", "-1");
+        buttons.eq(index).addClass("active").attr("aria-checked", "true").attr("tabindex", "0");
+        $("#tlsVersionSlider .tlsVersionThumb").css("transform", `translateX(${index * 100}%)`);
+        $("#tlsVersionSlider").addClass("ready");
+        $("#tlsVersionHint").text(tlsVersionHints[version] || "");
+    }
+
+    function setTlsMinVersion(version, previousVersion){
+        renderTlsVersionSlider(version);
+        $.cjax({
+            url: "/api/cert/tlsMinVersion",
+            method: "POST",
+            data: {set: version},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 5000);
+                    renderTlsVersionSlider(previousVersion);
+                }else{
+                    msgbox("Minimum TLS version set to " + version);
+                }
+            }
+        });
+    }
+
     function initTlsVersionSetting(){
         $.get("/api/cert/tlsMinVersion", function(data){
-            // Set dropdown value
             if (data && typeof data === "string") {
-                $("#tlsVersionSelect").val(data);
+                renderTlsVersionSlider(data);
             }
-            // Bind change event
-            $("#tlsVersionSelect").off("change").on("change", function(){
-                var selectedVersion = $(this).val();
-                $.cjax({
-                    url: "/api/cert/tlsMinVersion",
-                    method: "POST",
-                    data: {set: selectedVersion},
-                    success: function(data){
-                        if (data.error != undefined){
-                            msgbox(data.error, false, 5000);
-                        }else{
-                            msgbox("TLS minimum version updated");
-                        }
-                    }
-                });
+
+            $("#tlsVersionSlider button").off("click").on("click", function(){
+                let previousVersion = $("#tlsVersionSlider button.active").attr("data-version");
+                let version = $(this).attr("data-version");
+                if (version != previousVersion){
+                    setTlsMinVersion(version, previousVersion);
+                }
+            });
+
+            //Arrow key navigation for the radio group
+            $("#tlsVersionSlider").off("keydown").on("keydown", function(e){
+                let buttons = $("#tlsVersionSlider button");
+                let current = buttons.index(buttons.filter(".active"));
+                let next = current;
+                if (e.key == "ArrowRight" || e.key == "ArrowDown"){
+                    next = Math.min(current + 1, buttons.length - 1);
+                }else if (e.key == "ArrowLeft" || e.key == "ArrowUp"){
+                    next = Math.max(current - 1, 0);
+                }else{
+                    return;
+                }
+                e.preventDefault();
+                if (next != current){
+                    buttons.eq(next).trigger("click").trigger("focus");
+                }
             });
         });
     }
@@ -327,28 +518,30 @@
     }
     initDevelopmentMode();
 
+    //Set a toggle's state without firing change (checkbox("set checked") would re-trigger handlers)
+    function setToggleStateSilently(selector, checked){
+        $(selector).toggleClass("checked", checked).find("input[type='checkbox']").prop("checked", checked);
+    }
+
+    //PROXY protocol and HTTP/3 are mutually exclusive, enabling one turns off the other
     function initProxyProtocol(){
         $.get("/api/proxy/proxyProtocol", function(data){
-            if (data === true){
-                $("#proxyProtocol").checkbox("set checked")
-            }else{
-                $("#proxyProtocol").checkbox("set unchecked")
-            }
+            setToggleStateSilently("#proxyProtocol", data === true);
 
             //Bind change events
             $("#proxyProtocol").off("change").on("change", function(data){
                 let enableProxyProtocol = ($(this).find("input[type='checkbox']")[0].checked);
+                let quicWasEnabled = $("#enableQuic").find("input[type='checkbox']")[0].checked;
                 $.get("/api/proxy/proxyProtocol?enable=" + enableProxyProtocol, function(data){
                     if (data.error != undefined){
                         msgbox(data.error, false, 5000);
                         //Revert checkbox state on error
-                        if (enableProxyProtocol){
-                            $("#proxyProtocol").checkbox("set unchecked");
-                        }else{
-                            $("#proxyProtocol").checkbox("set checked");
-                        }
+                        setToggleStateSilently("#proxyProtocol", !enableProxyProtocol);
                     }else{
-                        if (enableProxyProtocol){
+                        if (enableProxyProtocol && quicWasEnabled){
+                            setToggleStateSilently("#enableQuic", false);
+                            msgbox("PROXY protocol enabled, HTTP/3 (QUIC) disabled");
+                        }else if (enableProxyProtocol){
                             msgbox("PROXY protocol enabled");
                         }else{
                             msgbox("PROXY protocol disabled");
@@ -359,6 +552,40 @@
         });
     }
     initProxyProtocol();
+
+    function initQuicToggle(){
+        $.get("/api/proxy/quic", function(data){
+            setToggleStateSilently("#enableQuic", data === true);
+
+            //Bind change events
+            $("#enableQuic").off("change").on("change", function(data){
+                let enableQuic = ($(this).find("input[type='checkbox']")[0].checked);
+                let proxyProtocolWasEnabled = $("#proxyProtocol").find("input[type='checkbox']")[0].checked;
+                $.cjax({
+                    url: "/api/proxy/quic",
+                    method: "POST",
+                    data: {enable: enableQuic},
+                    success: function(data){
+                        if (data.error != undefined){
+                            msgbox(data.error, false, 5000);
+                            //Revert checkbox state on error
+                            setToggleStateSilently("#enableQuic", !enableQuic);
+                        }else{
+                            if (enableQuic && proxyProtocolWasEnabled){
+                                setToggleStateSilently("#proxyProtocol", false);
+                                msgbox("HTTP/3 (QUIC) enabled, PROXY protocol disabled");
+                            }else if (enableQuic){
+                                msgbox("HTTP/3 (QUIC) enabled");
+                            }else{
+                                msgbox("HTTP/3 (QUIC) disabled");
+                            }
+                        }
+                    }
+                });
+            });
+        });
+    }
+    initQuicToggle();
 
     function initProxyTimeoutSettings(){
         $.get("/api/proxy/timeouts", function(data){

@@ -93,7 +93,8 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err := h.handleRateLimitRouting(w, r, sep)
 			if err != nil {
 				if !sep.DisableLogging {
-					h.Parent.Option.Logger.LogHTTPRequest(r, "host", 307, r.Host, "")
+					clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+					h.Parent.Option.Logger.LogHTTPRequest(r, "host", 307, r.Host, "", clientIP)
 				}
 				return
 			}
@@ -115,7 +116,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//Plugin routing
-		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags) {
+		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags, h.Parent.GetClientIPForEndpoint(r, sep)) {
 			//Request handled by subroute
 			return
 		}
@@ -133,7 +134,8 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				//Missing tailing slash. Redirect to target proxy endpoint
 				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
 				if !sep.DisableLogging {
-					h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "")
+					clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+					h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "", clientIP)
 				}
 				return
 			}

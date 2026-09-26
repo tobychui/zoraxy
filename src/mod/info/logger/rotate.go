@@ -86,6 +86,11 @@ func (l *Logger) ArchiveLog(filename string) error {
 			return err
 		}
 		os.Remove(archivedPath)
+		archivedPath += ".gz"
+	}
+
+	if err := l.cleanupOldBackups(backupDir, filename); err != nil {
+		return err
 	}
 
 	return nil
@@ -151,17 +156,8 @@ func (l *Logger) RotateLog() error {
 		rotatedPath += ".gz"
 	}
 
-	// Remove old backups if exceeding MaxBackups
-	if l.RotateOption.MaxBackups > 0 {
-		files, err := filepath.Glob(filepath.Join(backupDir, baseName+".*"))
-		if err == nil && len(files) > l.RotateOption.MaxBackups {
-			sort.Slice(files, func(i, j int) bool {
-				return files[i] < files[j]
-			})
-			for _, old := range files[:len(files)-l.RotateOption.MaxBackups] {
-				os.Remove(old)
-			}
-		}
+	if err := l.cleanupOldBackups(backupDir, l.CurrentLogFile); err != nil {
+		return err
 	}
 
 	// Reopen a new log file
@@ -173,6 +169,62 @@ func (l *Logger) RotateLog() error {
 	if l.logger != nil {
 		l.logger.SetOutput(file)
 	}
+	return nil
+}
+
+func (l *Logger) cleanupOldBackups(backupDir string, excludeFile string) error {
+	if l.RotateOption.MaxBackups <= 0 {
+		return nil
+	}
+
+	files, err := filepath.Glob(filepath.Join(backupDir, l.Prefix+"_*.log*"))
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]string, 0, len(files))
+	for _, file := range files {
+		if file == excludeFile {
+			continue
+		}
+		filtered = append(filtered, file)
+	}
+
+	if len(filtered) <= l.RotateOption.MaxBackups {
+		return nil
+	}
+
+	type backupFile struct {
+		path    string
+		modTime time.Time
+	}
+
+	backups := make([]backupFile, 0, len(filtered))
+	for _, file := range filtered {
+		info, statErr := os.Stat(file)
+		if statErr != nil {
+			continue
+		}
+		backups = append(backups, backupFile{path: file, modTime: info.ModTime()})
+	}
+
+	if len(backups) <= l.RotateOption.MaxBackups {
+		return nil
+	}
+
+	sort.Slice(backups, func(i, j int) bool {
+		if backups[i].modTime.Equal(backups[j].modTime) {
+			return backups[i].path < backups[j].path
+		}
+		return backups[i].modTime.Before(backups[j].modTime)
+	})
+
+	for _, old := range backups[:len(backups)-l.RotateOption.MaxBackups] {
+		if err := os.Remove(old.path); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
 	return nil
 }
 

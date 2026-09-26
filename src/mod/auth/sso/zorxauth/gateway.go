@@ -372,7 +372,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !gs.router.ValidateUserAccessToHost(u.Username, host) && r.Host != host {
+	if !gs.router.ValidateUserAccessToHost(u.Username, host) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]interface{}{
