@@ -11,12 +11,13 @@ import (
 	"strconv"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/info/shellexec"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
 func Ifconfig(w http.ResponseWriter, r *http.Request) {
 	cmdin := `ip link show`
-	cmd := exec.Command("bash", "-c", cmdin)
+	cmd := shellexec.Command(cmdin)
 	networkInterfaces, err := cmd.CombinedOutput()
 	if err != nil {
 		networkInterfaces = []byte{}
@@ -42,7 +43,7 @@ func Ifconfig(w http.ResponseWriter, r *http.Request) {
 
 func GetUSB(w http.ResponseWriter, r *http.Request) {
 	cmdin := `lsusb`
-	cmd := exec.Command("bash", "-c", cmdin)
+	cmd := shellexec.Command(cmdin)
 	usbd, err := cmd.CombinedOutput()
 	if err != nil {
 		usbd = []byte{}
@@ -65,25 +66,25 @@ func GetUSB(w http.ResponseWriter, r *http.Request) {
 
 func GetCPUInfo(w http.ResponseWriter, r *http.Request) {
 	cmdin := `cat /proc/cpuinfo | grep -m1 "model name"`
-	cmd := exec.Command("bash", "-c", cmdin)
+	cmd := shellexec.Command(cmdin)
 	hardware, err := cmd.CombinedOutput()
 	if err != nil {
 		hardware = []byte("??? ")
 	}
 
 	cmdin = `lscpu | grep -m1 "Model name"`
-	cmd = exec.Command("bash", "-c", cmdin)
+	cmd = shellexec.Command(cmdin)
 	cpuModel, err := cmd.CombinedOutput()
 	if err != nil {
 		cpuModel = []byte("Generic Processor")
 	}
 
 	cmdin = `lscpu | grep "CPU max MHz"`
-	cmd = exec.Command("bash", "-c", cmdin)
+	cmd = shellexec.Command(cmdin)
 	speed, err := cmd.CombinedOutput()
 	if err != nil {
 		cmdin = `cat /proc/cpuinfo | grep -m1 "cpu MHz"`
-		cmd = exec.Command("bash", "-c", cmdin)
+		cmd = shellexec.Command(cmdin)
 		intelSpeed, err := cmd.CombinedOutput()
 		if err != nil {
 			speed = []byte("??? ")
@@ -92,7 +93,7 @@ func GetCPUInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cmdin = `cat /proc/cpuinfo | grep -m1 "Hardware"`
-	cmd = exec.Command("bash", "-c", cmdin)
+	cmd = shellexec.Command(cmdin)
 	cpuhardware, err := cmd.CombinedOutput()
 	if err != nil {
 
@@ -102,12 +103,12 @@ func GetCPUInfo(w http.ResponseWriter, r *http.Request) {
 
 	//On ARM
 	cmdin = `cat /proc/cpuinfo | grep -m1 "Revision"`
-	cmd = exec.Command("bash", "-c", cmdin)
+	cmd = shellexec.Command(cmdin)
 	revision, err := cmd.CombinedOutput()
 	if err != nil {
 		//On x64
 		cmdin = `cat /proc/cpuinfo | grep -m1 "family"`
-		cmd = exec.Command("bash", "-c", cmdin)
+		cmd = shellexec.Command(cmdin)
 		intelrev, err := cmd.CombinedOutput()
 		if err != nil {
 			revision = []byte("??? ")
@@ -117,8 +118,8 @@ func GetCPUInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Get Arch
-	cmdin = `uname --m`
-	cmd = exec.Command("bash", "-c", cmdin)
+	cmdin = `uname -m`
+	cmd = shellexec.Command(cmdin)
 	arch, err := cmd.CombinedOutput()
 	if err != nil {
 		arch = []byte("??? ")

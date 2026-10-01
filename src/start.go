@@ -30,6 +30,7 @@ import (
 	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
+	"imuslab.com/zoraxy/mod/info/shellexec"
 	"imuslab.com/zoraxy/mod/info/usageinfo"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
@@ -230,6 +231,7 @@ func startupSequence() {
 	//Start the status page host resource monitors
 	//CPU / RAM usage is sampled once per second in the background so the
 	//dashboard API can return cached values without blocking
+	shellexec.SetDockerMode(*runningInDocker) //Docker images ship sh but not bash
 	usageinfo.StartBackgroundMonitor()
 	hardwareinfo.SetLogger(SystemWideLogger)
 	hardwareinfo.StartHostInfoCache()
