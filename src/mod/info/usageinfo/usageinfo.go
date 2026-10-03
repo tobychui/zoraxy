@@ -10,6 +10,7 @@ import (
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
+	"imuslab.com/zoraxy/mod/info/shellexec"
 )
 
 /*
@@ -64,7 +65,7 @@ func GetCPUUsage() float64 {
 		*/
 
 		//Get CPU first 10 processes uses most CPU resources
-		cmd := exec.Command("bash", "-c", query_cpuproc_command)
+		cmd := shellexec.Command(query_cpuproc_command)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			usage = 0
@@ -96,7 +97,7 @@ func GetCPUUsage() float64 {
 		if runtime.GOOS == "freebsd" {
 			cmd = exec.Command(queryNCPUCommand)
 		} else if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-			cmd = exec.Command("bash", "-c", queryNCPUCommand)
+			cmd = shellexec.Command(queryNCPUCommand)
 		}
 
 		out, err = cmd.CombinedOutput()
@@ -136,7 +137,7 @@ func GetNumericRAMUsage() (int64, int64) {
 		}
 		return int64(vm.Used), int64(vm.Total)
 	} else if runtime.GOOS == "linux" {
-		cmd := exec.Command("bash", "-c", "free -m | grep Mem:")
+		cmd := shellexec.Command("free -m | grep Mem:")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam
@@ -173,7 +174,7 @@ func GetNumericRAMUsage() (int64, int64) {
 	} else if runtime.GOOS == "freebsd" {
 
 		// Get usused memory size (free)
-		cmd := exec.Command("bash", "-c", query_freemem_command)
+		cmd := shellexec.Command(query_freemem_command)
 
 		freeMemByteArr, err := cmd.CombinedOutput()
 		if err != nil {
@@ -184,7 +185,7 @@ func GetNumericRAMUsage() (int64, int64) {
 		freeMemSize, err := strconv.ParseFloat(strings.ReplaceAll(string(freeMemStr), "M", ""), 10)
 
 		// Get phy memory size
-		cmd = exec.Command("bash", "-c", query_phymem_command)
+		cmd = shellexec.Command(query_phymem_command)
 		phyMemByteArr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam
@@ -207,12 +208,12 @@ func GetNumericRAMUsage() (int64, int64) {
 		usedRam = int64(used)
 		return usedRam, totalRam
 	} else if runtime.GOOS == "darwin" {
-		cmd := exec.Command("bash", "-c", query_freemem_command_darwin)
+		cmd := shellexec.Command(query_freemem_command_darwin)
 		freeMemStr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam
 		}
-		cmd = exec.Command("bash", "-c", query_phymem_command_darwin)
+		cmd = shellexec.Command(query_phymem_command_darwin)
 		phyMemStr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam
@@ -248,7 +249,7 @@ func GetRAMUsage() (string, string, float64) {
 		usedPercentage = vm.UsedPercent
 		return usedRam, totalRam, usedPercentage
 	} else if runtime.GOOS == "linux" {
-		cmd := exec.Command("bash", "-c", "free -m | grep Mem:")
+		cmd := shellexec.Command("free -m | grep Mem:")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam, usedPercentage
@@ -288,7 +289,7 @@ func GetRAMUsage() (string, string, float64) {
 	} else if runtime.GOOS == "freebsd" {
 
 		// Get usused memory size (free)
-		cmd := exec.Command("bash", "-c", query_freemem_command)
+		cmd := shellexec.Command(query_freemem_command)
 		freeMemByteArr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam, usedPercentage
@@ -297,7 +298,7 @@ func GetRAMUsage() (string, string, float64) {
 		freeMemStr = strings.ReplaceAll(freeMemStr, "\n", "")
 		freeMemSize, err := strconv.ParseFloat(strings.ReplaceAll(string(freeMemStr), "M", ""), 10)
 		// Get phy memory size
-		cmd = exec.Command("bash", "-c", query_phymem_command)
+		cmd = shellexec.Command(query_phymem_command)
 		phyMemByteArr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam, usedPercentage
@@ -321,12 +322,12 @@ func GetRAMUsage() (string, string, float64) {
 
 		return usedRam, totalRam, usedPercentage
 	} else if runtime.GOOS == "darwin" {
-		cmd := exec.Command("bash", "-c", query_freemem_command_darwin)
+		cmd := shellexec.Command(query_freemem_command_darwin)
 		freeMemStr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam, usedPercentage
 		}
-		cmd = exec.Command("bash", "-c", query_phymem_command_darwin)
+		cmd = shellexec.Command(query_phymem_command_darwin)
 		phyMemStr, err := cmd.CombinedOutput()
 		if err != nil {
 			return usedRam, totalRam, usedPercentage

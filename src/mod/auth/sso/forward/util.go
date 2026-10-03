@@ -96,6 +96,22 @@ func headerCopyIncludedExact(original, destination http.Header, keys []string) {
 	}
 }
 
+func headerReplaceIncluded(original, destination http.Header, keys []string) {
+	for _, key := range keys {
+		key = strings.TrimSpace(key)
+
+		if key == "" || stringInSliceFold(key, doNotCopyHeaders) {
+			continue
+		}
+
+		destination.Del(key)
+
+		for _, value := range original.Values(key) {
+			destination.Add(key, value)
+		}
+	}
+}
+
 func stringInSlice(needle string, haystack []string) bool {
 	if len(haystack) == 0 {
 		return false
