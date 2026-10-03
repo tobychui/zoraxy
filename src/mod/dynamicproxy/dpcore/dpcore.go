@@ -69,6 +69,7 @@ type ReverseProxy struct {
 	// by IP, where a fixed ServerName would be an IP literal that Go omits from
 	// the TLS ClientHello (crypto/tls, per RFC 6066). See NewDynamicProxyCore.
 	useRequestHostAsSNI bool
+	useH2C              bool
 
 	//Appended by Zoraxy project
 
@@ -107,6 +108,7 @@ type DpcoreOptions struct {
 	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
 	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
 	DevelopmentMode         bool          //Enable development mode for this proxy core
+	UseH2C                  bool          //Use HTTP/2 prior knowledge without TLS for this upstream
 	UpstreamTLSServerName   string        //Override the TLS SNI / cert verification hostname for HTTPS upstreams. Empty = derive from the upstream address
 }
 
@@ -179,6 +181,7 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		Verbal:              dpcOptions.DevelopmentMode,
 		Transport:           thisTransporter,
 		useRequestHostAsSNI: useRequestHostAsSNI,
+		useH2C:              dpcOptions.UseH2C,
 	}
 }
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
@@ -314,12 +317,20 @@ func newBaseTransport(opts *DpcoreOptions) *http.Transport {
 	if opts.IgnoreTLSVerification {
 		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+	if opts.UseH2C {
+		// Explicit prior knowledge: never fall back to HTTP/1.1 on a gRPC upstream.
+		tr.Protocols = new(http.Protocols)
+		tr.Protocols.SetUnencryptedHTTP2(true)
+	}
 
 	return tr
 }
 
 func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	transport := p.Transport
+	if p.useH2C && rrr.ForceHTTP11 {
+		return http.StatusBadGateway, errors.New("h2c cannot be combined with Force HTTP/1.1")
+	}
 
 	// Bind cancel context to request
 	outreq := req.Clone(req.Context())
@@ -346,6 +357,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// Capture the requested upgrade before the hop-by-hop removal strips it, see issue #1290
 	reqUpType := upgradeType(outreq.Header)
 	if reqUpType != "" {
+		if p.useH2C {
+			http.Error(rw, "HTTP/1.1 upgrades are not supported by an h2c upstream", http.StatusBadRequest)
+			return http.StatusBadRequest, nil
+		}
 		if !isPrintableASCII(reqUpType) {
 			return http.StatusBadRequest, errors.New("client requested an invalid upgrade protocol")
 		}
@@ -359,8 +374,12 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3, so
 	// they are always stripped from H3 requests even when hop-by-hop removal
 	// is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
-	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 || p.useH2C {
 		removeHeaders(outreq.Header)
+	}
+	// gRPC uses TE: trailers to detect proxies that cannot forward its status.
+	if strings.EqualFold(req.Header.Get("Te"), "trailers") {
+		outreq.Header.Set("Te", "trailers")
 	}
 
 	if rrr.NoCache {
@@ -387,7 +406,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Fix for #1204 HTTP/2 to HTTP/1.1 translation for bodyless POST requests.
-	if outreq.ContentLength == -1 && outreq.Body != nil && outreq.Body != http.NoBody {
+	if !p.useH2C && outreq.ContentLength == -1 && outreq.Body != nil && outreq.Body != http.NoBody {
 		buf := make([]byte, 1)
 		n, err := outreq.Body.Read(buf)
 		switch {
@@ -541,7 +560,8 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	permissionpolicy.InjectPermissionPolicyHeader(rw, nil)
 
 	// The "Trailer" header isn't included in the Transport's response, Build it up from Trailer.
-	if len(res.Trailer) > 0 {
+	announcedTrailers := len(res.Trailer)
+	if announcedTrailers > 0 {
 		trailerKeys := make([]string, 0, len(res.Trailer))
 		for k := range res.Trailer {
 			trailerKeys = append(trailerKeys, k)
@@ -570,7 +590,14 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 
 	// close now, instead of defer, to populate res.Trailer
 	res.Body.Close()
-	copyHeader(rw.Header(), res.Trailer)
+	if len(res.Trailer) == announcedTrailers {
+		copyHeader(rw.Header(), res.Trailer)
+	} else {
+		// HTTP/2 can send trailers without announcing their names in the headers.
+		for key, values := range res.Trailer {
+			rw.Header()[http.TrailerPrefix+key] = values
+		}
+	}
 
 	return res.StatusCode, nil
 }

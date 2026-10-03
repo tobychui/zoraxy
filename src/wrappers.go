@@ -45,9 +45,9 @@ type TrafficMapUpstream struct {
 
 // TrafficMapProxy represents a proxy rule node for the traffic flow diagram
 type TrafficMapProxy struct {
-	Domain       string               `json:"domain"`
-	Disabled     bool                 `json:"disabled"`
-	RequestCount int                  `json:"requestCount"`
+	Domain       string                `json:"domain"`
+	Disabled     bool                  `json:"disabled"`
+	RequestCount int                   `json:"requestCount"`
 	Upstreams    []*TrafficMapUpstream `json:"upstreams"`
 }
 
@@ -66,7 +66,9 @@ func HandleTrafficMapData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Helper to look up today's request count for a given key
-	lookupCount := func(m interface{ Load(key interface{}) (interface{}, bool) }, key string) int {
+	lookupCount := func(m interface {
+		Load(key interface{}) (interface{}, bool)
+	}, key string) int {
 		if v, ok := m.Load(key); ok {
 			if count, ok := v.(int); ok {
 				return count
@@ -192,6 +194,7 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 				Protocol:          protocol,
 				ProxyType:         uptime.ProxyType_Host,
 				SkipTlsValidation: origin.SkipCertValidations,
+				UseH2C:            origin.UseH2C,
 				HealthCheckURI:    target.UptimeMonitorURI,
 			})
 
@@ -199,7 +202,7 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 			for _, vdir := range target.VirtualDirectories {
 				url := "http://" + vdir.Domain
 				protocol := "http"
-				if origin.RequireTLS {
+				if vdir.RequireTLS {
 					url = "https://" + vdir.Domain
 					protocol = "https"
 				}
@@ -210,7 +213,8 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 					URL:               url,
 					Protocol:          protocol,
 					ProxyType:         uptime.ProxyType_Vdir,
-					SkipTlsValidation: origin.SkipCertValidations,
+					SkipTlsValidation: vdir.SkipCertValidations,
+					UseH2C:            vdir.UseH2C,
 					HealthCheckURI:    target.UptimeMonitorURI,
 				})
 

@@ -246,6 +246,10 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 
 // hostWebSocketRequest proxies a host level WebSocket upgrade request via websocketproxy
 func (h *ProxyHandler) hostWebSocketRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint, selectedUpstream *loadbalance.Upstream) {
+	if selectedUpstream.UseH2C {
+		http.Error(w, "WebSocket upgrades are not supported by an h2c upstream", http.StatusBadRequest)
+		return
+	}
 	if target.DisableWebSocket {
 		http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
 		return
@@ -286,6 +290,10 @@ func (h *ProxyHandler) hostWebSocketRequest(w http.ResponseWriter, r *http.Reque
 
 // Handle vdir type request
 func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, target *VirtualDirectoryEndpoint) {
+	if target.UseH2C && isWebSocketRequest(r) {
+		http.Error(w, "WebSocket upgrades are not supported by an h2c upstream", http.StatusBadRequest)
+		return
+	}
 	rewriteURL := h.Parent.rewriteURL(target.MatchingPath, r.RequestURI)
 	r.URL, _ = url.Parse(rewriteURL)
 	r.Header.Set("X-Forwarded-Host", r.Host)
@@ -366,7 +374,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		AllowUpgrade:                   target.parent.EnableUpgradeForwarding,
 		Version:                        target.parent.parent.Option.HostVersion,
-		DevelopmentMode:                 target.parent.parent.Option.DevelopmentMode,
+		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
 		AltSvc:                         h.Parent.getAltSvcValue(),
 	})
 

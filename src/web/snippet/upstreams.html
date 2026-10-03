@@ -120,6 +120,11 @@
                      <label>Skip Verification<br>
                         <small>Check this if proxy target is using self signed certificates</small></label>
                 </div><br>
+                <div class="ui checkbox" style="margin-top: 0.6em;">
+                    <input type="checkbox" id="useH2C">
+                    <label>Use HTTP/2 without TLS (h2c)<br>
+                        <small>For upstreams that support plaintext HTTP/2. Requires TLS and Force HTTP/1.1 to be off.</small></label>
+                </div><br>
                  <div class="ui checkbox" style="margin-top: 0.4em;">
                     <input type="checkbox" id="SkipWebSocketOriginCheck" checked>
                     <label>Skip WebSocket Origin Check<br>
@@ -285,6 +290,11 @@
                                 <label>Skip Verification<br>
                                 <small>Check this if proxy target is using self signed certificates</small></label>
                         </div><br>
+                        <div class="ui checkbox" style="margin-top: 0.6em;">
+                            <input type="checkbox" class="useH2CCheckbox" ${upstream.UseH2C?"checked":""}>
+                            <label>Use HTTP/2 without TLS (h2c)<br>
+                                <small>For upstreams that support plaintext HTTP/2. Requires TLS and Force HTTP/1.1 to be off.</small></label>
+                        </div><br>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                             <input type="checkbox" class="SkipWebSocketOriginCheck" ${upstream.SkipWebSocketOriginCheck?"checked":""}>
                             <label>Skip WebSocket Origin Check<br>
@@ -365,6 +375,11 @@
             function addNewUpstream(){
                 let origin = $("#originURL").val().trim();
                 let requireTLS = $("#requireTLS")[0].checked;
+                let useH2C = $("#useH2C")[0].checked;
+                if (useH2C && requireTLS){
+                    parent.msgbox("Disable Require TLS before enabling h2c", false);
+                    return;
+                }
                 let skipVerification = $("#skipTlsVerification")[0].checked;
                 let skipWebSocketOriginCheck = $("#SkipWebSocketOriginCheck")[0].checked;
                 let activateLoadbalancer = $("#activateNewUpstreamCheckbox")[0].checked;
@@ -394,6 +409,7 @@
                         "ep": editingEndpoint.ep,
                         "origin": origin,
                         "tls": requireTLS,
+                        "h2c": useH2C,
                         "tlsval": skipVerification,
                         "bpwsorg":skipWebSocketOriginCheck,
                         "active": activateLoadbalancer,
@@ -442,6 +458,7 @@
                 //Update the original setting with new one just applied
                 originalSettings.OriginIpOrDomain = $(upstream).find(".newOrigin").val();
                 originalSettings.RequireTLS = requireTLS;
+                originalSettings.UseH2C = $(upstream).find(".useH2CCheckbox")[0].checked;
                 originalSettings.SkipCertValidations = skipTLSVerification;
                 originalSettings.SkipWebSocketOriginCheck = skipWebSocketOriginCheck;
                 originalSettings.MaxConn = parseInt(maxConn);

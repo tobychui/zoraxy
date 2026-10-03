@@ -17,6 +17,9 @@ import (
 // hostname used when connecting to a HTTPS upstream. Pass an empty string to derive
 // it from the upstream address.
 func (u *Upstream) StartProxy(tlsServerName string) error {
+	if err := dpcore.ValidateH2C(u.OriginIpOrDomain, u.UseH2C, u.RequireTLS, false); err != nil {
+		return err
+	}
 	//Filter the tailing slash if any
 	domain := u.OriginIpOrDomain
 	if len(domain) == 0 {
@@ -26,7 +29,7 @@ func (u *Upstream) StartProxy(tlsServerName string) error {
 		domain = domain[:len(domain)-1]
 	}
 
-	if !strings.HasPrefix("http://", domain) && !strings.HasPrefix("https://", domain) {
+	if !strings.HasPrefix(domain, "http://") && !strings.HasPrefix(domain, "https://") {
 		//TLS is not hardcoded in proxy target domain
 		if u.RequireTLS {
 			domain = "https://" + domain
@@ -43,6 +46,7 @@ func (u *Upstream) StartProxy(tlsServerName string) error {
 
 	proxy := dpcore.NewDynamicProxyCore(path, "", &dpcore.DpcoreOptions{
 		IgnoreTLSVerification:   u.SkipCertValidations,
+		UseH2C:                  u.UseH2C,
 		FlushInterval:           100 * time.Millisecond,
 		ResponseHeaderTimeout:   u.RespTimeout,
 		MaxConcurrentConnection: u.MaxConn,

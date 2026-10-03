@@ -9,6 +9,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
+	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -21,6 +22,19 @@ import (
 
 // Prepare proxy route generate a proxy handler service object for your endpoint
 func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint, error) {
+	// Validate every target first, including inactive ones, before changing runtime state.
+	for _, origins := range [][]*loadbalance.Upstream{endpoint.ActiveOrigins, endpoint.InactiveOrigins} {
+		for _, origin := range origins {
+			if err := dpcore.ValidateH2C(origin.OriginIpOrDomain, origin.UseH2C, origin.RequireTLS, endpoint.ForceHTTP11); err != nil {
+				return nil, err
+			}
+		}
+	}
+	for _, vdir := range endpoint.VirtualDirectories {
+		if err := dpcore.ValidateH2C(vdir.Domain, vdir.UseH2C, vdir.RequireTLS, endpoint.ForceHTTP11); err != nil {
+			return nil, err
+		}
+	}
 	for _, thisOrigin := range endpoint.ActiveOrigins {
 		//Create the proxy routing handler
 		err := thisOrigin.StartProxy(endpoint.upstreamTLSServerName())
@@ -45,7 +59,7 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 
 		//Parse the web proxy endpoint
 		webProxyEndpoint := domain
-		if !strings.HasPrefix("http://", domain) && !strings.HasPrefix("https://", domain) {
+		if !strings.HasPrefix(domain, "http://") && !strings.HasPrefix(domain, "https://") {
 			//TLS is not hardcoded in proxy target domain
 			if vdir.RequireTLS {
 				webProxyEndpoint = "https://" + webProxyEndpoint
@@ -61,6 +75,7 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 
 		proxy := dpcore.NewDynamicProxyCore(path, vdir.MatchingPath, &dpcore.DpcoreOptions{
 			IgnoreTLSVerification: vdir.SkipCertValidations,
+			UseH2C:                vdir.UseH2C,
 			FlushInterval:         500 * time.Millisecond,
 			UpstreamTLSServerName: endpoint.upstreamTLSServerName(),
 		})

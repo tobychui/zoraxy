@@ -346,7 +346,7 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 func (m *Monitor) getWebsiteStatusWithLatency(target *Target, timeout time.Duration) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
 	checkURL := buildHealthCheckURL(target.URL, target.HealthCheckURI)
-	statusCode, err := m.getWebsiteStatus(checkURL, target.SkipTlsValidation, timeout)
+	statusCode, err := m.getWebsiteStatusWithProtocol(checkURL, target.SkipTlsValidation, target.UseH2C, timeout)
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
 		if m.Config.Verbal {
@@ -385,6 +385,10 @@ func (m *Monitor) getWebsiteStatusWithLatency(target *Target, timeout time.Durat
 }
 
 func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout time.Duration) (int, error) {
+	return m.getWebsiteStatusWithProtocol(url, skipTLSVerification, false, timeout)
+}
+
+func (m *Monitor) getWebsiteStatusWithProtocol(url string, skipTLSVerification, useH2C bool, timeout time.Duration) (int, error) {
 	// Create a one-time use cookie jar to store cookies
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
@@ -396,6 +400,11 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 	transport := &http.Transport{
 		DisableKeepAlives: true,
 		IdleConnTimeout:   15 * time.Second,
+	}
+	defer transport.CloseIdleConnections()
+	if useH2C {
+		transport.Protocols = new(http.Protocols)
+		transport.Protocols.SetUnencryptedHTTP2(true)
 	}
 	if skipTLSVerification {
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -417,6 +426,9 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 
 	resp, err := client.Do(req)
 	if err != nil {
+		if useH2C {
+			return 0, err
+		}
 		//Try replace the http with https and vise versa
 		rewriteURL := ""
 		if strings.Contains(url, "https://") {

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -120,6 +121,7 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 		RequireTLS:          reqTLS,
 		SkipCertValidations: skipValid,
 	}
+	newVirtualDirectoryRouter.UseH2C, _ = utils.PostBool(r, "h2c")
 
 	//Add Virtual Directory Rule to this Proxy Endpoint
 	activatedProxyEndpoint, err := targetProxyEndpoint.AddVirtualDirectoryRule(&newVirtualDirectoryRouter)
@@ -252,6 +254,11 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 		RequireTLS:          reqTLS,
 		SkipCertValidations: skipValid,
 		Disabled:            false,
+	}
+	newVdirRule.UseH2C, _ = utils.PostBool(r, "h2c")
+	if err := dpcore.ValidateH2C(newVdirRule.Domain, newVdirRule.UseH2C, newVdirRule.RequireTLS, targetEndpoint.ForceHTTP11); err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
 	}
 
 	targetEndpoint.RemoveVirtualDirectoryRuleByMatchingPath(vdir)

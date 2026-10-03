@@ -36,6 +36,7 @@ type Target struct {
 	Protocol          string
 	ProxyType         ProxyType
 	SkipTlsValidation bool
+	UseH2C            bool
 	HealthCheckURI    string //Optional URI path appended to URL for the health check. If empty, "/" is used.
 }
 

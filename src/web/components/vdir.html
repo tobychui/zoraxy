@@ -68,6 +68,13 @@
                         </div>
                     </div>
 
+                    <div class="field">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="vdUseH2C">
+                            <label>Use HTTP/2 without TLS (h2c)<br><small>For upstreams that support plaintext HTTP/2. Requires TLS and Force HTTP/1.1 to be off.</small></label>
+                        </div>
+                    </div>
+
                     <!-- Advance configs -->
                     <div class="ui basic segment advanceoptions">
                         <div id="advanceProxyRules" class="ui fluid accordion">
@@ -266,6 +273,7 @@
                 "path": matchingPath,
                 "domain":targetDomain,
                 "reqTLS":reqTLS,
+                "h2c":$("#vdUseH2C")[0].checked,
                 "skipValid":skipTLSValidation,
             },
             success: function(data){
@@ -290,6 +298,7 @@
         $("#virtualDirectoryDomain").val("");
         $("#vdReqTls").parent().checkbox("set unchecked");
         $("#vdSkipTLSValidation").parent().checkbox("set unchecked");
+        $("#vdUseH2C").parent().checkbox("set unchecked");
     }
 
     //Remove Vdir 
@@ -360,6 +369,11 @@
                         <label>Skip Verification<br>
                         <small>Check this if proxy target is using self signed certificates</small></label>
                     </div>
+                    <br>
+                    <div class="ui checkbox" style="margin-top: 0.4em;">
+                        <input type="checkbox" class="UseH2C" ${payload.UseH2C?"checked":""}>
+                        <label>Use HTTP/2 without TLS (h2c)<br><small>Requires TLS and Force HTTP/1.1 to be off.</small></label>
+                    </div>
                 `;
                 column.empty().append(input);
             }else if (datatype == 'action'){
@@ -398,6 +412,7 @@
                 "domain":newDomain,
                 "path":path,
                 "reqTLS":requireTLS,
+                "h2c":$("#vdirList").find(".UseH2C")[0].checked,
                 "skipValid": skipValidation
             },
             success: function(data){

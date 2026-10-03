@@ -83,7 +83,7 @@ type RouterOption struct {
 	H2MaxUploadBufferPerStream     int32  //HTTP/2 max upload buffer per stream in bytes (0 = Go default)
 
 	/* HTTP/3 (QUIC) */
-	EnableH3              bool   //Enable HTTP/3 (QUIC) listener alongside HTTP/1.1+2 (requires TLS; DB-persisted, runtime-toggleable)
+	EnableH3               bool   //Enable HTTP/3 (QUIC) listener alongside HTTP/1.1+2 (requires TLS; DB-persisted, runtime-toggleable)
 	H3MaxConcurrentStreams uint32 //HTTP/3 max concurrent streams per connection (0 = quic-go default)
 
 	/* Authentication Providers */
@@ -110,8 +110,8 @@ type Router struct {
 	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
 	restarting   bool                      //If the router is restarting
 
-	h3Server *http3.Server   //HTTP/3 (QUIC) server, nil when disabled
-	h3Conn   net.PacketConn  //UDP connection serving the HTTP/3 listener; closed on shutdown
+	h3Server *http3.Server  //HTTP/3 (QUIC) server, nil when disabled
+	h3Conn   net.PacketConn //UDP connection serving the HTTP/3 listener; closed on shutdown
 
 	tlsListener      net.Listener //TLS listener, handle SNI routing
 	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map
@@ -176,6 +176,7 @@ type VirtualDirectoryEndpoint struct {
 	MatchingPath        string               //Matching prefix of the request path, also act as key
 	Domain              string               //Domain or IP to proxy to
 	RequireTLS          bool                 //Target domain require TLS
+	UseH2C              bool                 //Use HTTP/2 without TLS (prior knowledge)
 	SkipCertValidations bool                 //Set to true to accept self signed certs
 	Disabled            bool                 //If the rule is enabled
 	proxy               *dpcore.ReverseProxy `json:"-"`

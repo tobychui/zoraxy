@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 )
@@ -102,7 +103,7 @@ func (ep *ProxyEndpoint) GetVirtualDirectoryRuleByMatchingPath(matchingPath stri
 // whether a bulk apply/remove may treat an existing directory as "ours" (safe to skip or remove)
 // or as a user-customized one that must be left untouched.
 func (vdir *VirtualDirectoryEndpoint) HasSameTarget(domain string, requireTLS bool, skipCertValidations bool) bool {
-	return vdir.Domain == domain && vdir.RequireTLS == requireTLS && vdir.SkipCertValidations == skipCertValidations
+	return !vdir.UseH2C && vdir.Domain == domain && vdir.RequireTLS == requireTLS && vdir.SkipCertValidations == skipCertValidations
 }
 
 // BulkVdirAction describes what a bulk virtual-directory apply/remove operation should do for one host.
@@ -168,6 +169,9 @@ func (ep *ProxyEndpoint) RemoveVirtualDirectoryRuleByMatchingPath(matchingPath s
 
 // Add a vdir rule by its matching path
 func (ep *ProxyEndpoint) AddVirtualDirectoryRule(vdir *VirtualDirectoryEndpoint) (*ProxyEndpoint, error) {
+	if err := dpcore.ValidateH2C(vdir.Domain, vdir.UseH2C, vdir.RequireTLS, ep.ForceHTTP11); err != nil {
+		return nil, err
+	}
 	//Check for matching path duplicate
 	if ep.GetVirtualDirectoryRuleByMatchingPath(vdir.MatchingPath) != nil {
 		return nil, errors.New("rule with same matching path already exists")
@@ -239,6 +243,9 @@ func (ep *ProxyEndpoint) upstreamTLSServerName() string {
 
 // Add upstream to endpoint and update it to runtime
 func (ep *ProxyEndpoint) AddUpstreamOrigin(newOrigin *loadbalance.Upstream, activate bool) error {
+	if err := dpcore.ValidateH2C(newOrigin.OriginIpOrDomain, newOrigin.UseH2C, newOrigin.RequireTLS, ep.ForceHTTP11); err != nil {
+		return err
+	}
 	//Check if the upstream already exists
 	if ep.UpstreamOriginExists(newOrigin.OriginIpOrDomain) {
 		return errors.New("upstream with same origin already exists")

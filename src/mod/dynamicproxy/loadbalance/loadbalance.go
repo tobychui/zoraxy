@@ -39,6 +39,7 @@ type Upstream struct {
 	//Upstream Proxy Configs
 	OriginIpOrDomain         string //Target IP address or domain name with port
 	RequireTLS               bool   //Require TLS connection
+	UseH2C                   bool   //Use HTTP/2 without TLS (prior knowledge)
 	SkipCertValidations      bool   //Set to true to accept self signed certs
 	SkipWebSocketOriginCheck bool   //Skip origin check on websocket upgrade connections
 

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -93,6 +94,7 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requireTLS, _ := utils.PostBool(r, "tls")
+	useH2C, _ := utils.PostBool(r, "h2c")
 	skipTlsValidation, _ := utils.PostBool(r, "tlsval")
 	bpwsorg, _ := utils.PostBool(r, "bpwsorg")
 	preactivate, _ := utils.PostBool(r, "active")
@@ -101,6 +103,7 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 	newUpstream := loadbalance.Upstream{
 		OriginIpOrDomain:         upstreamOrigin,
 		RequireTLS:               requireTLS,
+		UseH2C:                   useH2C,
 		SkipCertValidations:      skipTlsValidation,
 		SkipWebSocketOriginCheck: bpwsorg,
 		Weight:                   1,
@@ -174,6 +177,12 @@ func ReverseProxyUpstreamUpdate(w http.ResponseWriter, r *http.Request) {
 	//Overwrite the new value into the old upstream
 	err = json.Unmarshal([]byte(payload), &newUpstream)
 	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	// Reject conflicting protocols before removing the working upstream.
+	if err := dpcore.ValidateH2C(newUpstream.OriginIpOrDomain, newUpstream.UseH2C, newUpstream.RequireTLS, targetEndpoint.ForceHTTP11); err != nil {
 		utils.SendErrorResponse(w, err.Error())
 		return
 	}
