@@ -111,6 +111,7 @@ type DynamicSniffForwardRequest struct {
 	URL        string              `json:"url"`
 	Header     map[string][]string `json:"header"`
 	RemoteAddr string              `json:"remote_addr"`
+	ClientIP   string              `json:"client_ip"` //Trusted-proxy resolved client IP; use this instead of the Header or RemoteAddr fields to identify the client
 	Host       string              `json:"host"`
 	RequestURI string              `json:"request_uri"`
 	Proto      string              `json:"proto"`
@@ -122,14 +123,18 @@ type DynamicSniffForwardRequest struct {
 	requestUUID string        `json:"-"`
 }
 
-// GetForwardRequestPayload returns a DynamicSniffForwardRequest object from an http.Request object
-func EncodeForwardRequestPayload(r *http.Request) DynamicSniffForwardRequest {
+// GetForwardRequestPayload returns a DynamicSniffForwardRequest object from an http.Request object.
+// clientIP should be the trusted-proxy resolved client IP (e.g. from the access rule's
+// GetClientIP), not re-derived from the raw request headers, otherwise a client can spoof
+// its reported IP via X-Forwarded-For / X-Real-IP / etc.
+func EncodeForwardRequestPayload(r *http.Request, clientIP string) DynamicSniffForwardRequest {
 	return DynamicSniffForwardRequest{
 		Method:     r.Method,
 		Hostname:   r.Host,
 		URL:        r.URL.String(),
 		Header:     r.Header,
 		RemoteAddr: r.RemoteAddr,
+		ClientIP:   clientIP,
 		Host:       r.Host,
 		RequestURI: r.RequestURI,
 		Proto:      r.Proto,
