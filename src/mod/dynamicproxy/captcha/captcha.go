@@ -186,7 +186,7 @@ func VerifyCloudflareToken(token, secretKey, remoteIP string) (bool, error) {
 		"secret":   {secretKey},
 		"response": {token},
 	}
-	if remoteIP != "" {
+	if net.ParseIP(remoteIP) != nil {
 		formData.Add("remoteip", remoteIP)
 	}
 
@@ -223,7 +223,7 @@ func VerifyGoogleRecaptchaToken(token, secretKey, remoteIP string, version strin
 		"secret":   {secretKey},
 		"response": {token},
 	}
-	if remoteIP != "" {
+	if net.ParseIP(remoteIP) != nil {
 		formData.Add("remoteip", remoteIP)
 	}
 
@@ -257,46 +257,17 @@ func VerifyGoogleRecaptchaToken(token, secretKey, remoteIP string, version strin
 	return true, nil
 }
 
-// GetClientIP extracts the real client IP from the request
-func GetClientIP(r *http.Request) string {
-	// Check X-Real-IP header first
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
-		return ip
-	}
-
-	// Check CF-Connecting-IP for Cloudflare
-	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
-		return ip
-	}
-
-	// Check Fastly-Client-IP
-	if ip := r.Header.Get("Fastly-Client-IP"); ip != "" {
-		return ip
-	}
-
-	// Check X-Forwarded-For
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		ips := strings.Split(xff, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
-		}
-	}
-
-	// Fall back to RemoteAddr
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return ip
-}
-
-// CheckException checks if the request matches any exception rules
-func CheckException(r *http.Request, rules []*ExceptionRule) bool {
+// CheckException checks if the request matches any exception rules.
+// clientIP must be resolved by the caller with the endpoint's trusted proxy
+// policy (see Router.GetClientIPForEndpoint). This package does not read
+// forwarding headers itself, so a direct client cannot claim an exempted
+// address by sending X-Real-Ip, X-Forwarded-For, etc.
+func CheckException(r *http.Request, rules []*ExceptionRule, clientIP string) bool {
 	if len(rules) == 0 {
 		return false
 	}
 
-	clientIP := GetClientIP(r)
+	requesterIP := net.ParseIP(clientIP)
 	requestTarget := pathmatch.RequestTarget(r)
 
 	for _, rule := range rules {
@@ -309,28 +280,31 @@ func CheckException(r *http.Request, rules []*ExceptionRule) bool {
 				return true
 			}
 		case ExceptionTypeCIDR:
-			if rule.CIDR != "" {
-				// Check if it's a single IP or CIDR
-				if !strings.Contains(rule.CIDR, "/") {
-					// Single IP
-					if clientIP == rule.CIDR {
-						return true
-					}
-				} else {
-					// CIDR range
-					_, ipNet, err := net.ParseCIDR(rule.CIDR)
-					if err == nil {
-						ip := net.ParseIP(clientIP)
-						if ip != nil && ipNet.Contains(ip) {
-							return true
-						}
-					}
-				}
+			if requesterIP != nil && ipMatchesRule(requesterIP, rule.CIDR) {
+				return true
 			}
 		}
 	}
 
 	return false
+}
+
+// ipMatchesRule reports whether ip is the single address or falls in the CIDR
+// range given by rule. Addresses are compared after parsing so that equivalent
+// notations (e.g. "::1" and "0:0:0:0:0:0:0:1") match the same rule.
+func ipMatchesRule(ip net.IP, rule string) bool {
+	rule = strings.TrimSpace(rule)
+	if rule == "" {
+		return false
+	}
+
+	if strings.Contains(rule, "/") {
+		_, ipNet, err := net.ParseCIDR(rule)
+		return err == nil && ipNet.Contains(ip)
+	}
+
+	ruleIP := net.ParseIP(rule)
+	return ruleIP != nil && ruleIP.Equal(ip)
 }
 
 func normalizeProtectedPathPrefix(pathPrefix string) string {
@@ -488,8 +462,10 @@ func RenderChallenge(w http.ResponseWriter, r *http.Request, config *Config, dom
 	w.Write(buf.Bytes())
 }
 
-// HandleVerification processes CAPTCHA verification requests
-func HandleVerification(w http.ResponseWriter, r *http.Request, config *Config, sessionStore *SessionStore) error {
+// HandleVerification processes CAPTCHA verification requests. clientIP is
+// forwarded to the provider as remoteip and must be resolved by the caller
+// with the endpoint's trusted proxy policy, same as CheckException.
+func HandleVerification(w http.ResponseWriter, r *http.Request, config *Config, sessionStore *SessionStore, clientIP string) error {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return errors.New("invalid method")
@@ -535,7 +511,6 @@ func HandleVerification(w http.ResponseWriter, r *http.Request, config *Config, 
 		return errors.New("token missing")
 	}
 
-	clientIP := GetClientIP(r)
 	var verified bool
 	var verifyErr error
 

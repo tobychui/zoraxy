@@ -32,7 +32,7 @@ func TestCheckExceptionPathRules(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tc.target, nil)
-			if got := CheckException(r, rules); got != tc.want {
+			if got := CheckException(r, rules, "192.0.2.1"); got != tc.want {
 				t.Errorf("CheckException(%q) = %v, expected %v", tc.target, got, tc.want)
 			}
 		})
@@ -43,7 +43,7 @@ func TestCheckExceptionUnusablePrefix(t *testing.T) {
 	for _, prefix := range []string{"", "  ", "/"} {
 		rules := []*ExceptionRule{{RuleType: ExceptionTypePaths, PathPrefix: prefix}}
 		r := httptest.NewRequest(http.MethodGet, "/admin/secret.txt", nil)
-		if CheckException(r, rules) {
+		if CheckException(r, rules, "192.0.2.1") {
 			t.Errorf("prefix %q exempted the request, expected no match", prefix)
 		}
 	}
@@ -51,11 +51,60 @@ func TestCheckExceptionUnusablePrefix(t *testing.T) {
 
 func TestCheckExceptionNilSafety(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/public", nil)
-	if CheckException(r, nil) {
+	if CheckException(r, nil, "192.0.2.1") {
 		t.Error("nil rule slice should not match")
 	}
-	if CheckException(r, []*ExceptionRule{nil}) {
+	if CheckException(r, []*ExceptionRule{nil}, "192.0.2.1") {
 		t.Error("nil rule entry should not match")
+	}
+}
+
+func TestCheckExceptionCIDRRules(t *testing.T) {
+	cases := []struct {
+		name     string
+		rule     string
+		clientIP string
+		want     bool
+	}{
+		{"cidr_inside", "10.0.0.0/8", "10.1.2.3", true},
+		{"cidr_outside", "10.0.0.0/8", "203.0.113.5", false},
+		{"single_ip_match", "192.0.2.10", "192.0.2.10", true},
+		{"single_ip_mismatch", "192.0.2.10", "192.0.2.11", false},
+		{"single_ip_with_spaces", " 192.0.2.10 ", "192.0.2.10", true},
+		{"ipv6_cidr_inside", "2001:db8::/32", "2001:db8::1", true},
+		{"ipv6_equivalent_notation", "2001:db8::1", "2001:db8:0:0:0:0:0:1", true},
+		{"ipv4_mapped_ipv6", "10.0.0.0/8", "::ffff:10.1.2.3", true},
+		{"empty_client_ip", "10.0.0.0/8", "", false},
+		{"invalid_client_ip", "10.0.0.0/8", "10.1.2.3, 203.0.113.5", false},
+		{"invalid_rule", "not-an-ip", "10.1.2.3", false},
+		{"empty_rule", "", "10.1.2.3", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := []*ExceptionRule{{RuleType: ExceptionTypeCIDR, CIDR: tc.rule}}
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			if got := CheckException(r, rules, tc.clientIP); got != tc.want {
+				t.Errorf("CheckException(rule=%q, clientIP=%q) = %v, expected %v", tc.rule, tc.clientIP, got, tc.want)
+			}
+		})
+	}
+}
+
+// CIDR exceptions must only be matched against the caller resolved client IP.
+// Forwarding headers on the request are attacker controlled unless the caller
+// decided to trust them, so they must never be read here (#1321)
+func TestCheckExceptionIgnoresForwardingHeaders(t *testing.T) {
+	rules := []*ExceptionRule{{RuleType: ExceptionTypeCIDR, CIDR: "10.0.0.0/8"}}
+	for _, headerName := range []string{"X-Real-Ip", "CF-Connecting-IP", "Fastly-Client-IP", "X-Forwarded-For"} {
+		t.Run(headerName, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.RemoteAddr = "203.0.113.5:44321"
+			r.Header.Set(headerName, "10.1.2.3")
+			if CheckException(r, rules, "203.0.113.5") {
+				t.Errorf("%s header satisfied a CIDR exception", headerName)
+			}
+		})
 	}
 }
 
