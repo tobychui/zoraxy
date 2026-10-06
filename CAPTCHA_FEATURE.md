@@ -97,6 +97,14 @@ You can exclude certain paths or IP addresses from CAPTCHA challenges:
    }
    ```
 
+   The client IP is resolved with the access rule of the host, the same way as
+   for blacklists, whitelists and rate limiting. Forwarding headers such as
+   `X-Real-IP`, `CF-Connecting-IP` or `X-Forwarded-For` are only honored when
+   **Enable Trusted Proxy Gating** is turned on for that access rule and the
+   connection comes from a trusted proxy. Otherwise the connection address is
+   used. If Zoraxy runs behind a CDN or another reverse proxy, enable trusted
+   proxy gating so IP-based exceptions match the real client address.
+
 ### Use Cases
 
 - Exclude API endpoints from CAPTCHA
