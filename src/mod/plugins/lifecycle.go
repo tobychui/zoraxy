@@ -74,6 +74,10 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+	// The output readers below belong to exactly this process. Pass its PID to
+	// them instead of reading thisPlugin.process, which is assigned later and
+	// may already belong to a newer process after a restart.
+	pid := cmd.Process.Pid
 
 	//Create a goroutine to handle the STDOUT of the plugin
 	go func() {
@@ -85,7 +89,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 				lineBuf += string(buf[:n])
 				for {
 					if idx := strings.IndexByte(lineBuf, '\n'); idx != -1 {
-						m.handlePluginSTDOUT(pluginID, lineBuf[:idx])
+						m.handlePluginSTDOUT(pluginID, pid, lineBuf[:idx])
 						lineBuf = lineBuf[idx+1:]
 					} else {
 						break
@@ -94,7 +98,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 			}
 			if err != nil {
 				if err != io.EOF {
-					m.handlePluginSTDOUT(pluginID, lineBuf) // handle any remaining data
+					m.handlePluginSTDOUT(pluginID, pid, lineBuf) // handle any remaining data
 				}
 				break
 			}
@@ -111,7 +115,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 				lineBuf += string(buf[:n])
 				for {
 					if idx := strings.IndexByte(lineBuf, '\n'); idx != -1 {
-						m.handlePluginSTDERR(pluginID, lineBuf[:idx])
+						m.handlePluginSTDERR(pluginID, pid, lineBuf[:idx])
 						lineBuf = lineBuf[idx+1:]
 					} else {
 						break
@@ -120,7 +124,7 @@ func (m *Manager) StartPlugin(pluginID string) error {
 			}
 			if err != nil {
 				if err != io.EOF {
-					m.handlePluginSTDERR(pluginID, lineBuf) // handle any remaining data
+					m.handlePluginSTDERR(pluginID, pid, lineBuf) // handle any remaining data
 				}
 				break
 			}
@@ -210,13 +214,11 @@ func (m *Manager) StartUIHandlerForPlugin(targetPlugin *Plugin, pluginListeningP
 	return nil
 }
 
-func (m *Manager) handlePluginSTDOUT(pluginID string, line string) {
+// handlePluginSTDOUT logs one stdout line of the plugin process with the given
+// PID. The PID is passed in by the reader goroutine that owns the process, so
+// no shared plugin state is read concurrently with StartPlugin.
+func (m *Manager) handlePluginSTDOUT(pluginID string, processID int, line string) {
 	thisPlugin, err := m.GetPluginByID(pluginID)
-	processID := -1
-	if thisPlugin.process != nil && thisPlugin.process.Process != nil {
-		// Get the process ID of the plugin
-		processID = thisPlugin.process.Process.Pid
-	}
 	if err != nil {
 		m.Log("[unknown:"+strconv.Itoa(processID)+"] "+line, err)
 		return
@@ -224,15 +226,11 @@ func (m *Manager) handlePluginSTDOUT(pluginID string, line string) {
 	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
 }
 
-func (m *Manager) handlePluginSTDERR(pluginID string, line string) {
+// handlePluginSTDERR logs one stderr line of the plugin process with the given PID.
+func (m *Manager) handlePluginSTDERR(pluginID string, processID int, line string) {
 	thisPlugin, err := m.GetPluginByID(pluginID)
 	if err != nil {
 		return
-	}
-	processID := -1
-	if thisPlugin.process != nil && thisPlugin.process.Process != nil {
-		// Get the process ID of the plugin
-		processID = thisPlugin.process.Process.Pid
 	}
 	m.Log("["+thisPlugin.Spec.Name+":"+strconv.Itoa(processID)+"] "+line, nil)
 }

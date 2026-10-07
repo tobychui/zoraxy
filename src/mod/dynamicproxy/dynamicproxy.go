@@ -493,8 +493,13 @@ func (router *Router) handleCaptchaGating(w http.ResponseWriter, r *http.Request
 		return false, false
 	}
 
+	// Resolve the client IP with the same trusted proxy policy used by access
+	// rules and rate limiting, so a spoofed X-Real-Ip / X-Forwarded-For header
+	// cannot satisfy a CIDR exception or be reported to the CAPTCHA provider
+	clientIP := router.GetClientIPForEndpoint(r, sep)
+
 	if r.URL.Path == captcha.VerifyPath {
-		captcha.HandleVerification(w, r, sep.CaptchaConfig, router.captchaSessionStore)
+		captcha.HandleVerification(w, r, sep.CaptchaConfig, router.captchaSessionStore, clientIP)
 		return true, false
 	}
 
@@ -502,7 +507,7 @@ func (router *Router) handleCaptchaGating(w http.ResponseWriter, r *http.Request
 		return false, false
 	}
 
-	if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules) || captcha.CheckSession(r, router.captchaSessionStore) {
+	if captcha.CheckException(r, sep.CaptchaConfig.ExceptionRules, clientIP) || captcha.CheckSession(r, router.captchaSessionStore) {
 		return false, false
 	}
 

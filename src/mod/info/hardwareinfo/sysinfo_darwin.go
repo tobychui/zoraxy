@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/info/shellexec"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -45,9 +45,9 @@ const query_memsize_command = "sysctl hw.memsize | awk '{print $NF}'"
 // GetCPUFreq() -> String
 // Returns the CPU frequency in the terms of MHz
 func GetCPUFreq() string {
-	shell := exec.Command("bash", "-c", query_frequency_command) // Run command
-	freqByteArr, err := shell.CombinedOutput()                   // Response from cmdline
-	if err != nil {                                              // If done w/ errors then
+	shell := shellexec.Command(query_frequency_command) // Run command
+	freqByteArr, err := shell.CombinedOutput()          // Response from cmdline
+	if err != nil {                                     // If done w/ errors then
 		printAndLog(fmt.Sprint(err), nil)
 		return unknown_string
 	}
@@ -65,9 +65,9 @@ func GetCPUFreq() string {
 // GetCPUModel -> String
 // Returns the CPU model name string
 func GetCPUModel() string {
-	shell := exec.Command("bash", "-c", query_cpumodel_command) // Run command
-	modelStr, err := shell.CombinedOutput()                     // Response from cmdline
-	if err != nil {                                             // If done w/ errors then
+	shell := shellexec.Command(query_cpumodel_command) // Run command
+	modelStr, err := shell.CombinedOutput()            // Response from cmdline
+	if err != nil {                                    // If done w/ errors then
 		printAndLog(fmt.Sprint(err), nil)
 		return unknown_string
 	}
@@ -78,9 +78,9 @@ func GetCPUModel() string {
 // GetCPUHardware -> String
 // Returns the CPU ID string
 func GetCPUHardware() string {
-	shell := exec.Command("bash", "-c", query_cpuhardware_command) // Run command
-	hwStr, err := shell.CombinedOutput()                           // Response from cmdline
-	if err != nil {                                                // If done w/ errors then
+	shell := shellexec.Command(query_cpuhardware_command) // Run command
+	hwStr, err := shell.CombinedOutput()                  // Response from cmdline
+	if err != nil {                                       // If done w/ errors then
 		printAndLog(fmt.Sprint(err), nil)
 		return unknown_string
 	}
@@ -91,9 +91,9 @@ func GetCPUHardware() string {
 // GetCPUArch -> String
 // Returns the CPU architecture string
 func GetCPUArch() string {
-	shell := exec.Command("bash", "-c", query_cpuarch_command) // Run command
-	archStr, err := shell.CombinedOutput()                     // Response from cmdline
-	if err != nil {                                            // If done w/ errors then
+	shell := shellexec.Command(query_cpuarch_command) // Run command
+	archStr, err := shell.CombinedOutput()            // Response from cmdline
+	if err != nil {                                   // If done w/ errors then
 		printAndLog(fmt.Sprint(err), nil)
 		return unknown_string
 	}
@@ -122,7 +122,7 @@ func GetCPUInfo(w http.ResponseWriter, r *http.Request) {
 // Inherited code from sysinfo.go
 func Ifconfig(w http.ResponseWriter, r *http.Request) {
 	cmdin := query_netinfo_command
-	cmd := exec.Command("bash", "-c", cmdin)
+	cmd := shellexec.Command(cmdin)
 	networkInterfaces, err := cmd.CombinedOutput()
 	if err != nil {
 		networkInterfaces = []byte{}
@@ -151,7 +151,7 @@ func Ifconfig(w http.ResponseWriter, r *http.Request) {
 // Send TextResponse containing USB information extracted from shell in JSON
 func GetUSB(w http.ResponseWriter, r *http.Request) {
 	cmdin := query_usbinfo_command
-	cmd := exec.Command("bash", "-c", cmdin)
+	cmd := shellexec.Command(cmdin)
 	usbd, err := cmd.CombinedOutput()
 	if err != nil {
 		usbd = []byte{}
@@ -177,7 +177,7 @@ func GetUSB(w http.ResponseWriter, r *http.Request) {
 // Send TextResponse containing physical memory size
 // extracted from shell in JSON
 func GetRamInfo(w http.ResponseWriter, r *http.Request) {
-	cmd := exec.Command("bash", "-c", query_memsize_command)
+	cmd := shellexec.Command(query_memsize_command)
 	out, _ := cmd.CombinedOutput()
 
 	strOut := string(out)

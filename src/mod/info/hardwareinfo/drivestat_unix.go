@@ -16,7 +16,7 @@ import (
 // Shared by linux, darwin and freebsd; see drivestat.go for the parser.
 func GetDriveStat(w http.ResponseWriter, r *http.Request) {
 	//Get drive status using df command.
-	cmd := exec.Command("bash", "-c", `df -kP`)
+	cmd := exec.Command("df", "-kP")
 	dev, err := cmd.Output()
 	if err != nil {
 		printAndLog("unable to query drive statistics", err)

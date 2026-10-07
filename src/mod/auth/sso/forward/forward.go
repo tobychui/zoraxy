@@ -207,6 +207,14 @@ func (ar *AuthRouter) handleOptionsMethodNotAllowed(w http.ResponseWriter, r *ht
 
 // HandleAuthProviderRouting is the internal handler for Forward Auth authentication.
 func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.Request) error {
+	// Skip forward auth for SSO-ignored paths. These paths are served WITHOUT authentication
+	// (e.g. an auth provider callback subpath that must reach its own handler), so matching is
+	// hardened against path traversal / boundary tricks (see IsIgnoredPath).
+	if ar.IsIgnoredPath(r.RequestURI) {
+		headerReplaceIncluded(nil, r.Header, ar.options.ResponseHeaders)
+		return nil
+	}
+
 	if ar.options.Address == "" {
 		return ar.handle500Error(w, nil, "Address not set")
 	}
@@ -253,7 +261,7 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 		if len(ar.options.ResponseHeaders) != 0 {
 			// Copy specific user-specified headers from the response of the forward auth request to the request sent to the
 			// upstream server/next hop.
-			headerCopyIncluded(respForwarded.Header, r.Header, ar.options.ResponseHeaders, false)
+			headerReplaceIncluded(respForwarded.Header, r.Header, ar.options.ResponseHeaders)
 		}
 
 		// Return the request to the proxy for forwarding to the backend.
