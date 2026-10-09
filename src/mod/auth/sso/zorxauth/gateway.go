@@ -220,6 +220,7 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 
 		if gs.router.ValidateUserAccessToHost(username, host) {
 			// Renew the gateway session expiry time since the user is actively using it
+			rememberMe := false
 			cookie, cookieErr := r.Cookie(gs.router.Options.CookieName)
 			if cookieErr == nil && cookie.Value != "" {
 				// Load the existing gateway session
@@ -229,6 +230,7 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 						newExpiry := time.Now().Add(time.Duration(gs.router.Options.CookieDuration) * time.Second)
 						gatewaySession.Expiry = newExpiry
 						gs.router.gatewaySessionStore.Store(cookie.Value, gatewaySession)
+						rememberMe = gatewaySession.RememberMe
 					}
 				}
 			}
@@ -251,6 +253,11 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 					targetProtocol, hostWithPort,
 					strings.TrimPrefix(gs.router.Options.SSOSessionSetURL, "/"),
 					sessionId, url.QueryEscape(redirectURL))
+				if rememberMe {
+					// Carry the "Remember Me" choice over so the target host issues
+					// its session cookie with the remember-me duration as well
+					sessionSetURL += "&remember_me=true"
+				}
 				http.Redirect(w, r, sessionSetURL, http.StatusSeeOther)
 				return
 			}
@@ -431,8 +438,9 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	sessionToken := gs.router.generateSessionToken()
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
 	gatewaySession := &GatewaySession{
-		Username: u.Username,
-		Expiry:   expiryTime,
+		Username:   u.Username,
+		Expiry:     expiryTime,
+		RememberMe: rememberMe,
 	}
 	gs.router.gatewaySessionStore.Store(sessionToken, gatewaySession)
 
@@ -687,8 +695,9 @@ func (gs *GatewayServer) handleTOTPVerify(w http.ResponseWriter, r *http.Request
 	sessionToken := gs.router.generateSessionToken()
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
 	gs.router.gatewaySessionStore.Store(sessionToken, &GatewaySession{
-		Username: u.Username,
-		Expiry:   expiryTime,
+		Username:   u.Username,
+		Expiry:     expiryTime,
+		RememberMe: pending.RememberMe,
 	})
 	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
 		gs.router.gatewaySessionStore.Delete(sessionToken)
