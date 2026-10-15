@@ -69,6 +69,51 @@ func TestHandleAuthPageFastPathCarriesRememberMe(t *testing.T) {
 	}
 }
 
+// storedGatewaySession returns the gateway session currently stored for the
+// token used by fastPathRedirect.
+func storedGatewaySession(t *testing.T, ar *AuthRouter) *GatewaySession {
+	t.Helper()
+	sessionData, exists := ar.gatewaySessionStore.Load("gateway-session-token")
+	if !exists {
+		t.Fatalf("gateway session was not found in the session store")
+	}
+	gatewaySession, ok := sessionData.(*GatewaySession)
+	if !ok {
+		t.Fatalf("unexpected gateway session type %T", sessionData)
+	}
+	return gatewaySession
+}
+
+func TestHandleAuthPageFastPathRenewsRememberMeSessionWithRememberMeDuration(t *testing.T) {
+	ar, gs := newTestGateway(t)
+	before := time.Now()
+	fastPathRedirect(t, ar, gs, true)
+
+	session := storedGatewaySession(t, ar)
+	minExpiry := before.Add(time.Duration(ar.Options.CookieDurationRememberMe) * time.Second)
+	if session.Expiry.Before(minExpiry) {
+		t.Fatalf("expected remembered gateway session to be renewed for at least %ds, got expiry %s (now %s)",
+			ar.Options.CookieDurationRememberMe, session.Expiry, before)
+	}
+	if !session.RememberMe {
+		t.Fatalf("expected gateway session to keep RememberMe after renewal")
+	}
+}
+
+func TestHandleAuthPageFastPathRenewsPlainSessionWithCookieDuration(t *testing.T) {
+	ar, gs := newTestGateway(t)
+	before := time.Now()
+	fastPathRedirect(t, ar, gs, false)
+
+	session := storedGatewaySession(t, ar)
+	minExpiry := before.Add(time.Duration(ar.Options.CookieDuration) * time.Second)
+	maxExpiry := time.Now().Add(time.Duration(ar.Options.CookieDuration) * time.Second)
+	if session.Expiry.Before(minExpiry) || session.Expiry.After(maxExpiry) {
+		t.Fatalf("expected plain gateway session to be renewed for %ds, got expiry %s (now %s)",
+			ar.Options.CookieDuration, session.Expiry, before)
+	}
+}
+
 func TestHandleAuthPageFastPathWithoutRememberMe(t *testing.T) {
 	ar, gs := newTestGateway(t)
 	location := fastPathRedirect(t, ar, gs, false)

@@ -226,11 +226,16 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 				// Load the existing gateway session
 				if sessionData, exists := gs.router.gatewaySessionStore.Load(cookie.Value); exists {
 					if gatewaySession, ok := sessionData.(*GatewaySession); ok {
-						// Extend the session expiry time
-						newExpiry := time.Now().Add(time.Duration(gs.router.Options.CookieDuration) * time.Second)
+						// Extend the session expiry time, keeping the "Remember Me"
+						// duration if the session was created with it
+						rememberMe = gatewaySession.RememberMe
+						renewDuration := gs.router.Options.CookieDuration
+						if rememberMe {
+							renewDuration = gs.router.Options.CookieDurationRememberMe
+						}
+						newExpiry := time.Now().Add(time.Duration(renewDuration) * time.Second)
 						gatewaySession.Expiry = newExpiry
 						gs.router.gatewaySessionStore.Store(cookie.Value, gatewaySession)
-						rememberMe = gatewaySession.RememberMe
 					}
 				}
 			}
