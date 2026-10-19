@@ -15,6 +15,15 @@
 			.userFormSection .field {
 				margin-bottom: 0.6em !important;
 			}
+			/* Keep wide tables reachable inside the narrow side panel */
+			.tableScrollWrapper {
+				overflow-x: auto;
+			}
+			/* Allow long emails / hostnames to wrap instead of widening the table */
+			.ui.table td {
+				overflow-wrap: anywhere;
+				word-break: break-word;
+			}
 		</style>
 	</head>
 	<body>
@@ -32,21 +41,23 @@
 			<div class="ui bottom attached active tab segment" data-tab="users">
 				<!-- User List -->
 				<h4 class="ui header">Registered Users</h4>
-				<table class="ui very compact basic unstackable celled table">
-					<thead>
-						<tr>
-							<th>Username</th>
-							<th>Email</th>
-							<th>Access Policy</th>
-							<th style="width:5em; text-align:right;">Actions</th>
-						</tr>
-					</thead>
-					<tbody id="usersTableBody">
-						<tr>
-							<td colspan="4"><small>Loading users...</small></td>
-						</tr>
-					</tbody>
-				</table>
+				<div class="tableScrollWrapper">
+					<table class="ui very compact basic unstackable celled table">
+						<thead>
+							<tr>
+								<th>Username</th>
+								<th>Email</th>
+								<th>Access Policy</th>
+								<th style="width:5em; text-align:right;">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="usersTableBody">
+							<tr>
+								<td colspan="4"><small>Loading users...</small></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 				<!-- Edit User Form  -->
 				<div id="editUserSection" class="ui form userFormSection" style="display:none;">
 					<div class="ui divider"></div>
@@ -156,21 +167,23 @@
 				<!-- Group Policy Management -->
 				<h4 class="ui header">Group Policies</h4>
 				<p>Group policies let you define shared access rules and assign them to multiple users.</p>
-				<table class="ui very compact basic unstackable celled table">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Description</th>
-							<th>Allowed Hosts</th>
-							<th style="width:5em; text-align:right;">Actions</th>
-						</tr>
-					</thead>
-					<tbody id="groupPoliciesTableBody">
-						<tr>
-							<td colspan="4"><small>Loading group policies...</small></td>
-						</tr>
-					</tbody>
-				</table>
+				<div class="tableScrollWrapper">
+					<table class="ui very compact basic unstackable celled table">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Description</th>
+								<th>Allowed Hosts</th>
+								<th style="width:5em; text-align:right;">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="groupPoliciesTableBody">
+							<tr>
+								<td colspan="4"><small>Loading group policies...</small></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 
 				<!-- Edit Group Policy Form -->
 				<div id="editGroupPolicySection" class="ui form userFormSection" style="display:none;">

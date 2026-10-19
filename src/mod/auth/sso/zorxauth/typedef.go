@@ -76,8 +76,9 @@ type BrowserSession struct {
 }
 
 type GatewaySession struct {
-	Username string
-	Expiry   time.Time
+	Username   string
+	Expiry     time.Time
+	RememberMe bool // Whether the user selected "Remember Me" when the gateway session was created
 }
 
 // PendingTOTPSession holds login context while waiting for 2FA verification

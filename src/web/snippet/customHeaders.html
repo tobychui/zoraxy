@@ -28,6 +28,39 @@
                 background-color: rgb(41, 41, 41);
             }
 
+            /* Keep the remove column reachable when header values are long */
+            .customHeaderTableWrapper{
+                overflow-x: auto;
+            }
+
+            #customHeaderTable{
+                table-layout: fixed;
+            }
+
+            #customHeaderTable th.keyCol{
+                width: 35%;
+            }
+
+            #customHeaderTable th.removeCol{
+                width: 4.5em;
+            }
+
+            #customHeaderTable td{
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            /* Keep the add / remove icon on the same line as the value */
+            #customHeaderTable .headerValueCell{
+                display: flex;
+                align-items: flex-start;
+            }
+
+            #customHeaderTable .headerValueCell > span{
+                flex: 1;
+                min-width: 0;
+            }
+
             .advanceoptions{
                background: var(--theme_advance) !important;
                border-radius: 0.4em !important;
@@ -44,19 +77,21 @@
                 <a class="item narrowpadding" data-tab="security">Security Headers</a>
             </div>
             <div class="ui tab basic segment active" data-tab="customheaders">
-                <table class="ui basic very compacted unstackable celled table">
-                    <thead>
-                    <tr>
-                        <th>Key</th>
-                        <th>Value</th>
-                        <th>Remove</th>
-                    </tr></thead>
-                    <tbody id="headerTable">
-                    <tr>
-                        <td colspan="3"><i class="ui green circle check icon"></i> No Additional Header</td>
-                    </tr>
-                    </tbody>
-                </table>
+                <div class="customHeaderTableWrapper">
+                    <table id="customHeaderTable" class="ui basic very compacted unstackable celled table">
+                        <thead>
+                        <tr>
+                            <th class="keyCol">Key</th>
+                            <th>Value</th>
+                            <th class="removeCol">Remove</th>
+                        </tr></thead>
+                        <tbody id="headerTable">
+                        <tr>
+                            <td colspan="3"><i class="ui green circle check icon"></i> No Additional Header</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <p>
                     <i class="angle double right blue icon"></i> Add or remove headers before sending to origin server <br>
                     <i class="angle double left orange icon"></i> Modify headers from origin server responses before sending to client
@@ -341,7 +376,7 @@
                                 $("#headerTable").append(`
                                 <tr>
                                     <td>${direction} ${header.Key}</td>
-                                    <td>${editModeIcon} ${valueField}</td>
+                                    <td><div class="headerValueCell">${editModeIcon}<span>${valueField}</span></div></td>
                                     <td><button class="ui basic circular mini red icon button" onclick="deleteCustomHeader('${header.Key}');"><i class="ui trash icon"></i></button></td>
                                 </tr>
                                 `);
