@@ -20,7 +20,7 @@ func TestApplyTlsCipherProfile(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		profile          string
+		profile          dynamicproxy.TlsCipherProfile
 		minVersion       uint16
 		wantMinVersion   uint16
 		wantCipherSuites []uint16
@@ -33,7 +33,7 @@ func TestApplyTlsCipherProfile(t *testing.T) {
 		},
 		{
 			name:           "unknown profile keeps Go defaults",
-			profile:        "bogus",
+			profile:        dynamicproxy.TlsCipherProfile("bogus"),
 			minVersion:     tls.VersionTLS12,
 			wantMinVersion: tls.VersionTLS12,
 		},
@@ -94,12 +94,12 @@ func TestIntermediateProfileExcludesWeakSuites(t *testing.T) {
 
 func TestMinTLSVersionForProfile(t *testing.T) {
 	tests := []struct {
-		profile string
+		profile dynamicproxy.TlsCipherProfile
 		want    uint16
 	}{
 		{dynamicproxy.TlsCipherProfileDefault, 0},
 		{"", 0},
-		{"bogus", 0},
+		{dynamicproxy.TlsCipherProfile("bogus"), 0},
 		{dynamicproxy.TlsCipherProfileIntermediate, tls.VersionTLS12},
 		{dynamicproxy.TlsCipherProfileModern, tls.VersionTLS13},
 	}
@@ -107,6 +107,26 @@ func TestMinTLSVersionForProfile(t *testing.T) {
 	for _, tt := range tests {
 		if got := dynamicproxy.MinTLSVersionForProfile(tt.profile); got != tt.want {
 			t.Errorf("MinTLSVersionForProfile(%q) = 0x%04x, want 0x%04x", tt.profile, got, tt.want)
+		}
+	}
+}
+
+func TestTlsCipherProfileIsValid(t *testing.T) {
+	valid := []dynamicproxy.TlsCipherProfile{
+		dynamicproxy.TlsCipherProfileDefault,
+		dynamicproxy.TlsCipherProfileIntermediate,
+		dynamicproxy.TlsCipherProfileModern,
+	}
+	for _, p := range valid {
+		if !p.IsValid() {
+			t.Errorf("profile %q should be valid", p)
+		}
+	}
+
+	invalid := []dynamicproxy.TlsCipherProfile{"", "bogus", "Default", "MODERN"}
+	for _, p := range invalid {
+		if p.IsValid() {
+			t.Errorf("profile %q should be invalid", p)
 		}
 	}
 }

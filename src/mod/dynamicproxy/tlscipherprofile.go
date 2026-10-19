@@ -21,14 +21,8 @@ import (
 	configurable in Go, and the key exchange groups (which carry the
 	post-quantum hybrids like X25519MLKEM768) are left at their Go defaults.
 
-	Added in Zoraxy v3.3.6 by Michael Lux
+	Added in Zoraxy v3.3.5 by Michael Lux
 */
-
-const (
-	TlsCipherProfileDefault      = "default"
-	TlsCipherProfileIntermediate = "intermediate"
-	TlsCipherProfileModern       = "modern"
-)
 
 // mozillaIntermediateCipherSuites is the TLS 1.2 cipher suite list of the
 // Mozilla "intermediate" recommendation (guideline v6.0), in guideline
@@ -67,7 +61,7 @@ func filterSupportedCipherSuites(suites []uint16) []uint16 {
 // ApplyTlsCipherProfile applies the given cipher profile to a TLS server
 // config. Unknown profiles (including the empty default) leave the config
 // at Go's built-in defaults.
-func ApplyTlsCipherProfile(config *tls.Config, profile string) {
+func ApplyTlsCipherProfile(config *tls.Config, profile TlsCipherProfile) {
 	switch profile {
 	case TlsCipherProfileIntermediate:
 		//Restrict the TLS 1.2 cipher suites to the Mozilla intermediate list
@@ -83,7 +77,7 @@ func ApplyTlsCipherProfile(config *tls.Config, profile string) {
 // intermediate profile only offers TLS 1.2 suites, so TLS 1.0/1.1 minimums
 // would leave those protocol versions without any usable cipher suite;
 // modern is TLS 1.3 only by definition.
-func MinTLSVersionForProfile(profile string) uint16 {
+func MinTLSVersionForProfile(profile TlsCipherProfile) uint16 {
 	switch profile {
 	case TlsCipherProfileIntermediate:
 		return tls.VersionTLS12
