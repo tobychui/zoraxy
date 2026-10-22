@@ -1,6 +1,6 @@
 module imuslab.com/zoraxy
 
-go 1.26.0
+go 1.26.10
 
 require (
 	github.com/armon/go-radix v1.0.0
