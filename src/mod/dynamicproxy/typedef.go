@@ -48,6 +48,25 @@ type ProxyHandler struct {
 	Parent *Router
 }
 
+// TlsCipherProfile is the enum of supported TLS cipher profiles for the
+// reverse proxy TLS listeners (see tlscipherprofile.go for profile details)
+type TlsCipherProfile string
+
+const (
+	TlsCipherProfileDefault      TlsCipherProfile = "default"      //Go's built-in defaults
+	TlsCipherProfileIntermediate TlsCipherProfile = "intermediate" //Mozilla intermediate: TLS 1.2 + 1.3, ECDHE + AEAD only
+	TlsCipherProfileModern       TlsCipherProfile = "modern"       //Mozilla modern: TLS 1.3 only
+)
+
+// IsValid returns true if the cipher profile is one of the defined profiles
+func (p TlsCipherProfile) IsValid() bool {
+	switch p {
+	case TlsCipherProfileDefault, TlsCipherProfileIntermediate, TlsCipherProfileModern:
+		return true
+	}
+	return false
+}
+
 /* Router Object Options */
 type RouterOption struct {
 	/* Basic Settings */
@@ -56,6 +75,7 @@ type RouterOption struct {
 	Port               int    //Incoming port
 	UseTls             bool   //Use TLS to serve incoming requsts
 	MinTLSVersion      uint16 //Minimum TLS version
+	TlsCipherProfile   TlsCipherProfile //TLS cipher profile (see TlsCipherProfile enum and tlscipherprofile.go)
 	NoCache            bool   //Force set Cache-Control: no-store
 	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/utils"
 )
 
@@ -63,31 +64,119 @@ func minTlsVersionStringToUint16(version string) uint16 {
 
 // Handle the GET and SET of reverse proxy minimum TLS version
 func handleSetTlsMinVersion(w http.ResponseWriter, r *http.Request) {
-	newVersion, err := utils.PostPara(r, "set")
-	if err != nil {
-		// GET
+	switch r.Method {
+	case http.MethodGet:
 		var minTLSVersion string = "1.2" // Default to 1.2
 		if sysdb.KeyExists("settings", "minTLSVersion") {
 			sysdb.Read("settings", "minTLSVersion", &minTLSVersion)
 		}
 		js, _ := json.Marshal(minTLSVersion)
 		utils.SendJSONResponse(w, string(js))
-		return
-	}
+	case http.MethodPost:
+		newVersion, err := utils.PostPara(r, "set")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid TLS version")
+			return
+		}
 
-	// Validate input
-	allowed := map[string]bool{"1.0": true, "1.1": true, "1.2": true, "1.3": true}
-	if !allowed[newVersion] {
-		utils.SendErrorResponse(w, "invalid TLS version")
-		return
-	}
+		// Validate input
+		allowed := map[string]bool{"1.0": true, "1.1": true, "1.2": true, "1.3": true}
+		if !allowed[newVersion] {
+			utils.SendErrorResponse(w, "invalid TLS version")
+			return
+		}
 
-	sysdb.Write("settings", "minTLSVersion", newVersion)
-	tlsVersionUint16 := minTlsVersionStringToUint16(newVersion)
-	// Update the setting
-	SystemWideLogger.PrintAndLog("TLS", "Updating minimum TLS version to v"+newVersion+" or above", nil)
-	dynamicProxyRouter.SetTlsMinVersion(tlsVersionUint16)
-	utils.SendOK(w)
+		//Do not allow lowering the minimum version below the requirement of the active TLS cipher profile
+		newVersionUint16 := minTlsVersionStringToUint16(newVersion)
+		if dynamicProxyRouter.Option != nil && newVersionUint16 < dynamicproxy.MinTLSVersionForProfile(dynamicProxyRouter.Option.TlsCipherProfile) {
+			utils.SendErrorResponse(w, "cannot lower minimum TLS version below the requirement of the active TLS cipher profile")
+			return
+		}
+
+		//Remember the previous setting for rollback
+		oldVersion := "1.2"
+		if sysdb.KeyExists("settings", "minTLSVersion") {
+			sysdb.Read("settings", "minTLSVersion", &oldVersion)
+		}
+
+		sysdb.Write("settings", "minTLSVersion", newVersion)
+		// Update the setting
+		SystemWideLogger.PrintAndLog("TLS", "Updating minimum TLS version to v"+newVersion+" or above", nil)
+		if err := dynamicProxyRouter.SetTlsMinVersion(newVersionUint16); err != nil {
+			//Rollback: restore the previous minimum version in DB and runtime and try to
+			//revive the listener, as a failed restart may have left it stopped
+			sysdb.Write("settings", "minTLSVersion", oldVersion)
+			if dynamicProxyRouter.Option != nil {
+				dynamicProxyRouter.Option.MinTLSVersion = minTlsVersionStringToUint16(oldVersion)
+			}
+			if err := dynamicProxyRouter.Restart(); err != nil {
+				SystemWideLogger.PrintAndLog("TLS", "Failed to restore proxy listener after rollback", err)
+			}
+			utils.SendErrorResponse(w, "failed to apply minimum TLS version: "+err.Error())
+			return
+		}
+		utils.SendOK(w)
+	default:
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// Handle the GET and SET of the reverse proxy TLS cipher profile
+func handleSetTlsCipherProfile(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		tlsCipherProfile := dynamicproxy.TlsCipherProfileDefault // Default to default
+		if sysdb.KeyExists("settings", "tlsCipherProfile") {
+			sysdb.Read("settings", "tlsCipherProfile", &tlsCipherProfile)
+		}
+		js, _ := json.Marshal(tlsCipherProfile)
+		utils.SendJSONResponse(w, string(js))
+	case http.MethodPost:
+		newProfileRaw, err := utils.PostPara(r, "set")
+		if err != nil {
+			utils.SendErrorResponse(w, "invalid TLS cipher profile")
+			return
+		}
+
+		//Validate input: casting an unknown string yields an invalid profile
+		newProfile := dynamicproxy.TlsCipherProfile(newProfileRaw)
+		if !newProfile.IsValid() {
+			utils.SendErrorResponse(w, "invalid TLS cipher profile")
+			return
+		}
+
+		//Do not allow selecting a cipher profile that requires a higher minimum TLS version than currently set
+		if dynamicProxyRouter.Option != nil && dynamicProxyRouter.Option.MinTLSVersion < dynamicproxy.MinTLSVersionForProfile(newProfile) {
+			utils.SendErrorResponse(w, "minimum TLS version too low for this cipher profile; raise the minimum TLS version first")
+			return
+		}
+
+		//Remember the previous setting for rollback
+		oldProfile := dynamicproxy.TlsCipherProfileDefault
+		if dynamicProxyRouter.Option != nil {
+			oldProfile = dynamicProxyRouter.Option.TlsCipherProfile
+		}
+
+		sysdb.Write("settings", "tlsCipherProfile", newProfile)
+		// Update the setting
+		SystemWideLogger.PrintAndLog("TLS", "Updating TLS cipher profile to "+string(newProfile), nil)
+		if err := dynamicProxyRouter.SetTlsCipherProfile(newProfile); err != nil {
+			//Rollback: restore the previous profile in DB and runtime and try to
+			//revive the listener, as a failed restart may have left it stopped
+			sysdb.Write("settings", "tlsCipherProfile", oldProfile)
+			if dynamicProxyRouter.Option != nil {
+				dynamicProxyRouter.Option.TlsCipherProfile = oldProfile
+			}
+			if err := dynamicProxyRouter.Restart(); err != nil {
+				SystemWideLogger.PrintAndLog("TLS", "Failed to restore proxy listener after rollback", err)
+			}
+			utils.SendErrorResponse(w, "failed to apply TLS cipher profile: "+err.Error())
+			return
+		}
+		utils.SendOK(w)
+	default:
+		http.Error(w, "405 - Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func handleCertTryResolve(w http.ResponseWriter, r *http.Request) {
