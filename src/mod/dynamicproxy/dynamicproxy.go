@@ -174,7 +174,10 @@ func (router *Router) SetTlsMinVersion(minTlsVersion uint16) error {
 // Update TLS cipher profile in runtime. Will restart proxy server if running.
 func (router *Router) SetTlsCipherProfile(profile TlsCipherProfile) error {
 	router.Option.TlsCipherProfile = profile
-	return router.Restart()
+	if router.Running {
+		return router.Restart()
+	}
+	return nil
 }
 
 // Update port 80 listener state

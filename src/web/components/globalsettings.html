@@ -525,13 +525,14 @@
                         success: function(data){
                             if (data.error != undefined){
                                 msgbox(data.error, false, 5000);
+                                initTlsCipherProfileSetting();
                             }else{
                                 msgbox("TLS cipher profile updated");
                             }
                         }
                     });
                 };
-                if (requiredVersion !== undefined && $("#tlsVersionSelect").val() < requiredVersion){
+                if (requiredVersion !== undefined && $("#tlsVersionSlider button.active").attr("data-version") < requiredVersion){
                     $.cjax({
                         url: "/api/cert/tlsMinVersion",
                         method: "POST",
@@ -540,7 +541,7 @@
                             if (data.error != undefined){
                                 msgbox(data.error, false, 5000);
                             }else{
-                                $("#tlsVersionSelect").val(requiredVersion);
+                                renderTlsVersionSlider(requiredVersion);
                                 applyProfile();
                             }
                         }
