@@ -25,6 +25,7 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 		OnlineStatusLog: map[string][]*Record{},
 		onlineTargets:   make([]*Target, len(config.Targets)),
 		offlineTargets:  []*Target{},
+		lastCheck:       map[string]time.Time{},
 	}
 
 	// All targets start in the online list
@@ -59,10 +60,11 @@ func NewUptimeMonitor(config *Config) (*Monitor, error) {
 	thisMonitor.pingTargets(time.Duration(config.Interval)*time.Second, config.Targets, true)
 
 	// Start the online target ticker
-	onlineTicker := time.NewTicker(time.Duration(config.Interval) * time.Second)
+	// Ticks at a fine granularity; each target is only checked when its own interval elapsed
+	onlineTicker := time.NewTicker(5 * time.Second)
 	go func() {
 		for range onlineTicker.C {
-			thisMonitor.masterPingTargets()
+			thisMonitor.masterPingTargets(false)
 		}
 	}()
 
@@ -88,12 +90,24 @@ func (m *Monitor) shadowPingTargets() {
 
 // masterPingTargets is the main check that pings all targets and updates the online status log,
 // this is called by the main ticker and also externally after config changes
-func (m *Monitor) masterPingTargets() {
+// If force is false, only targets whose own check interval has elapsed are checked.
+func (m *Monitor) masterPingTargets(force bool) {
 	m.targetMutex.Lock()
-	var targets []*Target = m.Config.Targets
+	targets := []*Target{}
+	now := time.Now()
+	for _, t := range m.Config.Targets {
+		interval := t.CheckInterval
+		if interval <= 0 {
+			interval = m.Config.Interval
+		}
+		last, ok := m.lastCheck[t.ID]
+		// 1s slack so ticker jitter doesn't delay a check by a whole tick
+		if force || !ok || now.Sub(last) >= time.Duration(interval)*time.Second-time.Second {
+			targets = append(targets, t)
+		}
+	}
 	m.targetMutex.Unlock()
 	m.pingTargets(5*time.Second, targets, true)
-
 }
 
 // pingTargets pings a list of targets with a given timeout and whether to log the results in the online status log
@@ -102,6 +116,12 @@ func (m *Monitor) pingTargets(timeout time.Duration, targets []*Target, requireO
 		if target.Protocol != "http" && target.Protocol != "https" {
 			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, "Unknown protocol: "+target.Protocol, errors.New("unsupported protocol"))
 			continue
+		}
+
+		if requireOnlineStatusLog {
+			m.targetMutex.Lock()
+			m.lastCheck[target.ID] = time.Now()
+			m.targetMutex.Unlock()
 		}
 
 		// Run each check in a separate goroutine to avoid blocking
@@ -140,7 +160,11 @@ func (m *Monitor) pingTargets(timeout time.Duration, targets []*Target, requireO
 					m.OnlineStatusLog[target.ID] = []*Record{&thisRecord}
 				} else {
 					thisRecords = append(thisRecords, &thisRecord)
-					if len(thisRecords) > m.Config.MaxRecordsStore {
+					maxRecords := target.MaxRecords
+					if maxRecords <= 0 {
+						maxRecords = m.Config.MaxRecordsStore
+					}
+					for len(thisRecords) > maxRecords && len(thisRecords) > 0 {
 						thisRecords = thisRecords[1:]
 					}
 					m.OnlineStatusLog[target.ID] = thisRecords
@@ -189,7 +213,7 @@ func targetExistsInList(list []*Target, id string) bool {
 // ExecuteUptimeCheck runs an immediate check on all targets (both online and offline).
 // This is called externally after config changes.
 func (m *Monitor) ExecuteUptimeCheck() {
-	m.masterPingTargets()
+	m.masterPingTargets(true)
 }
 
 func (m *Monitor) UpdateReocrdsAfterConfigChange() { // Populate the Record map with new targets, preserving existing records where possible
@@ -346,7 +370,7 @@ func (m *Monitor) HandleUptimeLogRead(w http.ResponseWriter, r *http.Request) {
 func (m *Monitor) getWebsiteStatusWithLatency(target *Target, timeout time.Duration) (bool, int64, int) {
 	start := time.Now().UnixNano() / int64(time.Millisecond)
 	checkURL := buildHealthCheckURL(target.URL, target.HealthCheckURI)
-	statusCode, err := m.getWebsiteStatus(checkURL, target.SkipTlsValidation, timeout)
+	statusCode, err := m.getWebsiteStatus(checkURL, target.SkipTlsValidation, timeout, normalizeMethod(target.CheckMethod))
 	end := time.Now().UnixNano() / int64(time.Millisecond)
 	if err != nil {
 		if m.Config.Verbal {
@@ -384,7 +408,7 @@ func (m *Monitor) getWebsiteStatusWithLatency(target *Target, timeout time.Durat
 
 }
 
-func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout time.Duration) (int, error) {
+func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout time.Duration, method string) (int, error) {
 	// Create a one-time use cookie jar to store cookies
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
@@ -410,7 +434,7 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 		Transport: transport,
 	}
 
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest(method, url, nil)
 	req.Header = http.Header{
 		"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 	}
@@ -429,7 +453,7 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
 		}
 
-		req, _ = http.NewRequest("GET", rewriteURL, nil)
+		req, _ = http.NewRequest(method, rewriteURL, nil)
 		req.Header = http.Header{
 			"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 		}

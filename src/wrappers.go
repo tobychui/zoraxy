@@ -193,6 +193,9 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 				ProxyType:         uptime.ProxyType_Host,
 				SkipTlsValidation: origin.SkipCertValidations,
 				HealthCheckURI:    target.UptimeMonitorURI,
+				CheckMethod:       target.UptimeMonitorMethod,
+				CheckInterval:     target.UptimeMonitorInterval,
+				MaxRecords:        target.UptimeMonitorMaxRecords,
 			})
 
 			//Add each virtual directory into the list
@@ -212,6 +215,9 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 					ProxyType:         uptime.ProxyType_Vdir,
 					SkipTlsValidation: origin.SkipCertValidations,
 					HealthCheckURI:    target.UptimeMonitorURI,
+					CheckMethod:       target.UptimeMonitorMethod,
+					CheckInterval:     target.UptimeMonitorInterval,
+					MaxRecords:        target.UptimeMonitorMaxRecords,
 				})
 
 			}

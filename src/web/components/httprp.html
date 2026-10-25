@@ -377,18 +377,47 @@
                             </div>
                             <button class="ui basic compact button editUpstreamButton" style="margin-left: 0.4em; margin-top: 1em;"><i class="grey server icon"></i> Edit Upstreams</button>
                             <div class="ui divider"></div>
+                            <h4 style="margin-top: 0px;">Uptime Monitor</h4>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="EnableUptimeMonitor">
                                 <label>Monitor Uptime<br>
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
-                            <br>
-                            <b>Health-check URI <span style="opacity:0.6; font-weight:normal;">(optional)</span></b>
-                            <div class="ui small fluid input" style="margin-top: 0.4em;">
-                                <input type="text" class="UptimeMonitorURI" placeholder="/" autocomplete="off">
+                            <div class="ui basic segment" style="margin: 0.4em 0 0 0; padding: 0;">
+                                <div class="ui uptimeMonitorAdvancedSettings accordion">
+                                    <div class="title" style="color: inherit; padding: 0.4em 0;">
+                                        <i class="dropdown icon"></i>
+                                        Advanced Settings
+                                    </div>
+                                    <div class="content">
+                                        <b>Health-check URI <span style="opacity:0.6; font-weight:normal;">(optional)</span></b>
+                                        <div class="ui small fluid input" style="margin-top: 0.4em;">
+                                            <input type="text" class="UptimeMonitorURI" placeholder="/" autocomplete="off">
+                                        </div>
+                                        <small style="opacity:0.7;">Path appended to the upstream URL when the uptime monitor performs its check (e.g. <code>/identity</code> for Plex, <code>/healthz</code>). Leave empty to use <code>/</code>.</small>
+                                        <br><br>
+                                        <b>Check Method</b>
+                                        <select class="UptimeMonitorMethod" style="margin-top: 0.4em; width: 100%; padding: 0.6em 0.8em; border: 1px solid rgba(34,36,38,.15); border-radius: 0.28rem; background: inherit; color: inherit;">
+                                            <option value="GET">GET</option>
+                                            <option value="HEAD">HEAD</option>
+                                            <option value="OPTIONS">OPTIONS</option>
+                                        </select>
+                                        <br><br>
+                                        <b>Check Interval (seconds)</b>
+                                        <div class="ui small fluid input" style="margin-top: 0.4em;">
+                                            <input type="number" class="UptimeMonitorInterval" min="10" max="86400" placeholder="300" autocomplete="off">
+                                        </div>
+                                        <small style="opacity:0.7;">Minimum 10 seconds. Leave empty to use the default (300 seconds).</small>
+                                        <br><br>
+                                        <b>Records to Keep</b>
+                                        <div class="ui small fluid input" style="margin-top: 0.4em;">
+                                            <input type="number" class="UptimeMonitorMaxRecords" min="1" max="10000" placeholder="288" autocomplete="off">
+                                        </div>
+                                        <small style="opacity:0.7;">Number of check results kept per upstream. Leave empty to use the default (288).</small>
+                                    </div>
+                                </div>
                             </div>
-                            <small style="opacity:0.7;">Path appended to the upstream URL when the uptime monitor performs its check (e.g. <code>/identity</code> for Plex, <code>/healthz</code>). Leave empty to use <code>/</code>.</small>
-                            <br>
+                            <div class="ui divider"></div>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -684,6 +713,7 @@
 
     $('#httprpEditModal .tabular.menu .item').tab();
     $('.hostDownstreamAdvancedSettings.accordion').accordion();
+    $('.uptimeMonitorAdvancedSettings.accordion').accordion();
 
     /* Renderers */
     function renderUpstreamList(subd){
@@ -1150,6 +1180,11 @@
         let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
         let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
         let uptimeMonitorURI = $(editor).find(".UptimeMonitorURI").val().trim();
+        let uptimeMonitorMethod = $(editor).find(".UptimeMonitorMethod").val() || "GET";
+        let uptimeMonitorInterval = parseInt($(editor).find(".UptimeMonitorInterval").val()) || 0;
+        if (uptimeMonitorInterval < 0) uptimeMonitorInterval = 0;
+        let uptimeMonitorMaxRecords = parseInt($(editor).find(".UptimeMonitorMaxRecords").val()) || 0;
+        if (uptimeMonitorMaxRecords < 0) uptimeMonitorMaxRecords = 0;
         let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
@@ -1192,6 +1227,9 @@
                 "ss":useStickySession,
                 "dutm": DisableUptimeMonitor,
                 "utmURI": uptimeMonitorURI,
+                "utmMethod": uptimeMonitorMethod,
+                "utmInterval": uptimeMonitorInterval,
+                "utmMaxRecords": uptimeMonitorMaxRecords,
                 "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
                 "enableConnectSupport": enableConnectSupport,
@@ -1826,10 +1864,22 @@
             // Enable/disable the auto fallback option based on uptime monitor state
             var isUptimeMonitorEnabled = $(this).is(":checked");
             editor.find(".DisableAutoFallback").prop("disabled", !isUptimeMonitorEnabled);
-            editor.find(".UptimeMonitorURI").prop("disabled", !isUptimeMonitorEnabled);
+            editor.find(".UptimeMonitorURI, .UptimeMonitorMethod, .UptimeMonitorInterval, .UptimeMonitorMaxRecords").prop("disabled", !isUptimeMonitorEnabled);
             if (!isUptimeMonitorEnabled) {
                 editor.find(".DisableAutoFallback").prop("checked", false);
             }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".UptimeMonitorMethod").off("change");
+        editor.find(".UptimeMonitorMethod").val(subd.UptimeMonitorMethod || "GET");
+        editor.find(".UptimeMonitorInterval").off("change");
+        editor.find(".UptimeMonitorInterval").val(subd.UptimeMonitorInterval > 0 ? subd.UptimeMonitorInterval : "");
+        editor.find(".UptimeMonitorMaxRecords").off("change");
+        editor.find(".UptimeMonitorMaxRecords").val(subd.UptimeMonitorMaxRecords > 0 ? subd.UptimeMonitorMaxRecords : "");
+        editor.find(".UptimeMonitorMethod").prop("disabled", !!subd.DisableUptimeMonitor);
+        editor.find(".UptimeMonitorMethod, .UptimeMonitorInterval, .UptimeMonitorMaxRecords").prop("disabled", subd.DisableUptimeMonitor);
+        editor.find(".UptimeMonitorMethod, .UptimeMonitorInterval, .UptimeMonitorMaxRecords").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 

@@ -43,7 +43,7 @@ func TestGetWebsiteStatusClosesConnections(t *testing.T) {
 
 	const n = 5
 	for i := 0; i < n; i++ {
-		code, err := m.getWebsiteStatus(server.URL, false, 2*time.Second)
+		code, err := m.getWebsiteStatus(server.URL, false, 2*time.Second, "GET")
 		if err != nil {
 			t.Fatalf("check %d failed: %v", i, err)
 		}

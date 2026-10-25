@@ -289,6 +289,9 @@ type ProxyEndpoint struct {
 	//Uptime Monitor
 	DisableUptimeMonitor       bool   //Disable uptime monitor for this endpoint
 	UptimeMonitorURI           string //Optional URI path used by the uptime monitor health check (e.g. "/identity", "/healthz"). Empty = default "/"
+	UptimeMonitorMethod        string //HTTP method used by the uptime monitor (GET, HEAD, OPTIONS). Empty = GET
+	UptimeMonitorInterval      int    //Check interval in seconds. 0 = use the system default
+	UptimeMonitorMaxRecords    int    //Max number of uptime records kept. 0 = use the system default
 	DisableAutoFallback        bool   //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
 	DisableLogging             bool   //Disable logging of reverse proxy requests
 	DisableStatisticCollection bool   //Disable statistic collection for this endpoint

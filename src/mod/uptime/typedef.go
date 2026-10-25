@@ -1,7 +1,9 @@
 package uptime
 
 import (
+	"strings"
 	"sync"
+	"time"
 
 	"imuslab.com/zoraxy/mod/info/logger"
 )
@@ -37,6 +39,9 @@ type Target struct {
 	ProxyType         ProxyType
 	SkipTlsValidation bool
 	HealthCheckURI    string //Optional URI path appended to URL for the health check. If empty, "/" is used.
+	CheckMethod       string //HTTP method used for the check (GET, HEAD, OPTIONS). Empty = GET
+	CheckInterval     int    //Check interval in seconds. <=0 = use the monitor default
+	MaxRecords        int    //Max number of records kept. <=0 = use the monitor default
 }
 
 type Config struct {
@@ -59,6 +64,19 @@ type Monitor struct {
 	onlineTargets  []*Target
 	offlineTargets []*Target
 	targetMutex    sync.Mutex //Mutex for online/offline target list access
+	lastCheck      map[string]time.Time
+}
+
+// normalizeMethod returns a supported HTTP method, defaulting to GET
+func normalizeMethod(method string) string {
+	switch strings.ToUpper(strings.TrimSpace(method)) {
+	case "HEAD":
+		return "HEAD"
+	case "OPTIONS":
+		return "OPTIONS"
+	default:
+		return "GET"
+	}
 }
 
 // Default configs

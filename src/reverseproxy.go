@@ -337,6 +337,38 @@ func ReverseProxyHandleOnOff(w http.ResponseWriter, r *http.Request) {
 	utils.SendOK(w)
 }
 
+// parseUptimeAdvancedParams reads the optional uptime monitor method, interval (seconds)
+// and max record count from the request. Invalid values fall back to defaults (empty / 0).
+func parseUptimeAdvancedParams(r *http.Request) (string, int, int) {
+	method, _ := utils.PostPara(r, "utmMethod")
+	method = strings.ToUpper(strings.TrimSpace(method))
+	if method != "HEAD" && method != "OPTIONS" {
+		method = "GET"
+	}
+	interval := 0
+	if v, _ := utils.PostPara(r, "utmInterval"); v != "" {
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
+			interval = n
+			if interval < 10 {
+				interval = 10
+			}
+			if interval > 86400 {
+				interval = 86400
+			}
+		}
+	}
+	maxRecords := 0
+	if v, _ := utils.PostPara(r, "utmMaxRecords"); v != "" {
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && n > 0 {
+			maxRecords = n
+			if maxRecords > 10000 {
+				maxRecords = 10000
+			}
+		}
+	}
+	return method, interval, maxRecords
+}
+
 func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
@@ -374,6 +406,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Custom URI used by the uptime monitor health check (optional)
 	utmURI, _ := utils.PostPara(r, "utmURI")
 	utmURI = strings.TrimSpace(utmURI)
+	utmMethod, utmInterval, utmMaxRecords := parseUptimeAdvancedParams(r)
 
 	// Disable logging?
 	disableLog, _ := utils.PostBool(r, "disableLog")
@@ -580,6 +613,9 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			// Uptime Monitor
 			DisableUptimeMonitor: !enableUtm,
 			UptimeMonitorURI:     utmURI,
+			UptimeMonitorMethod:  utmMethod,
+			UptimeMonitorInterval:   utmInterval,
+			UptimeMonitorMaxRecords: utmMaxRecords,
 			DisableAutoFallback:  false, // Default to false for new endpoints
 
 			// Logger
@@ -711,6 +747,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Custom URI used by the uptime monitor health check (optional)
 	utmURI, _ := utils.PostPara(r, "utmURI")
 	utmURI = strings.TrimSpace(utmURI)
+	utmMethod, utmInterval, utmMaxRecords := parseUptimeAdvancedParams(r)
 
 	// Auth Provider
 	authProviderTypeStr, _ := utils.PostPara(r, "authprovider")
@@ -831,6 +868,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.UseStickySession = useStickySession
 	newProxyEndpoint.DisableUptimeMonitor = disbleUtm
 	newProxyEndpoint.UptimeMonitorURI = utmURI
+	newProxyEndpoint.UptimeMonitorMethod = utmMethod
+	newProxyEndpoint.UptimeMonitorInterval = utmInterval
+	newProxyEndpoint.UptimeMonitorMaxRecords = utmMaxRecords
 	newProxyEndpoint.DisableAutoFallback = disableAutoFallback
 	newProxyEndpoint.DisableChunkedTransferEncoding = disableChunkedEncoding
 	newProxyEndpoint.ForceHTTP11 = forceHTTP11
