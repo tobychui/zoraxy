@@ -131,11 +131,11 @@
                         Advanced Options
                     </div>
                     <div class="content">
-                        <p>Max Concurrent Connections</p>
+                        <p>Max Idle Connections</p>
                         <div class="ui mini fluid input" style="margin-top: -0.6em;">
                             <input type="number" min="0" id="maxConn" value="0">
                         </div>
-                        <small>Set to 0 for automatic</small>
+                        <small>Idle connections kept open for reuse. This does not limit concurrent requests. Set to 0 for automatic</small>
                         <br><br>
                         <p>Response Timeout</p>
                         <div class="ui mini right labeled fluid input" style="margin-top: -0.6em;">
@@ -146,6 +146,11 @@
                         </div>
                         <small>Maximum waiting time for server header response, set to 0 for default</small>
                         <br>
+                        <div class="ui checkbox" style="margin-top: 0.6em;">
+                            <input type="checkbox" id="disableKeepAlive">
+                            <label>Disable Upstream Keep-Alive<br>
+                            <small>Open a new connection for every request. Check this if the upstream closes connections after each response</small></label>
+                        </div>
                     </div>
                 </div>
                 
@@ -297,11 +302,11 @@
                                 Advanced Options
                             </div>
                             <div class="content">
-                                <p>Max Concurrent Connections</p>
+                                <p>Max Idle Connections</p>
                                 <div class="ui mini fluid input" style="margin-top: -0.6em;">
                                     <input type="number" min="0" class="maxConn" value="${upstream.MaxConn}">
                                 </div>
-                                <small>Set to 0 for default value</small>
+                                <small>Idle connections kept open for reuse. This does not limit concurrent requests. Set to 0 for default value</small>
                                 <br>
                                 <p style="margin-top: 0.6em;">Response Timeout</p>
                                 <div class="ui mini right labeled fluid input" style="margin-top: -0.6em;">
@@ -311,7 +316,12 @@
                                     </div>
                                 </div>
                                 <small>Maximum waiting time before Zoraxy receive server header response, set to 0 for default</small>
-                                
+                                <br>
+                                <div class="ui checkbox" style="margin-top: 0.6em;">
+                                    <input type="checkbox" class="disableKeepAlive" ${upstream.DisableKeepAlive?"checked":""}>
+                                    <label>Disable Upstream Keep-Alive<br>
+                                    <small>Open a new connection for every request. Check this if the upstream closes connections after each response</small></label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -370,8 +380,9 @@
                 let activateLoadbalancer = $("#activateNewUpstreamCheckbox")[0].checked;
                 let maxConn = $("#maxConn").val();
                 let respTimeout = $("#respTimeout").val();
+                let disableKeepAlive = $("#disableKeepAlive")[0].checked;
 
-                if (maxConn == "" || isNaN(maxConn)){ 
+                if (maxConn == "" || isNaN(maxConn)){
                     maxConn = 0;
                 }
 
@@ -399,6 +410,7 @@
                         "active": activateLoadbalancer,
                         "maxconn": maxConn,
                         "respt": respTimeout,
+                        "nokeepalive": disableKeepAlive,
                     },
                     success: function(data){
                         if (data.error != undefined){
@@ -409,6 +421,7 @@
                             $("#originURL").val("");
                             $("#maxConn").val("0");
                             $("#respTimeout").val("0");
+                            $("#disableKeepAlive").parent().checkbox("set unchecked");
                         }
                     }
                 })
@@ -428,6 +441,7 @@
                 //Advance options
                 let maxConn = $(upstream).find(".maxConn").val();
                 let respTimeout = $(upstream).find(".respTimeout").val();
+                let disableKeepAlive = $(upstream).find(".disableKeepAlive")[0].checked;
 
                 if (maxConn == "" || isNaN(maxConn)){ 
                     maxConn = 0;
@@ -446,6 +460,7 @@
                 originalSettings.SkipWebSocketOriginCheck = skipWebSocketOriginCheck;
                 originalSettings.MaxConn = parseInt(maxConn);
                 originalSettings.RespTimeout = respTimeout;
+                originalSettings.DisableKeepAlive = disableKeepAlive;
 
                 //console.log(originalSettings);
                 return originalSettings;

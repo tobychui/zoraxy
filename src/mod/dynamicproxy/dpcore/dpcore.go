@@ -1,7 +1,6 @@
 package dpcore
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -104,7 +103,8 @@ type ResponseRewriteRuleSet struct {
 type DpcoreOptions struct {
 	IgnoreTLSVerification   bool          //Disable all TLS verification when request pass through this proxy router
 	FlushInterval           time.Duration //Duration to flush in normal requests. Stream request or keep-alive request will always flush with interval of -1 (immediately)
-	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
+	MaxConcurrentConnection int           //Maxmium idle connections kept open to this server
+	DisableKeepAlive        bool          //Open a new upstream connection for every request
 	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
 	DevelopmentMode         bool          //Enable development mode for this proxy core
 	UpstreamTLSServerName   string        //Override the TLS SNI / cert verification hostname for HTTPS upstreams. Empty = derive from the upstream address
@@ -304,7 +304,7 @@ func newBaseTransport(opts *DpcoreOptions) *http.Transport {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		DisableCompression:    true,
-		DisableKeepAlives:     false,
+		DisableKeepAlives:     opts.DisableKeepAlive,
 	}
 
 	if opts.ResponseHeaderTimeout > 0 {
@@ -386,21 +386,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
-	// Fix for #1204 HTTP/2 to HTTP/1.1 translation for bodyless POST requests.
-	if outreq.ContentLength == -1 && outreq.Body != nil && outreq.Body != http.NoBody {
-		buf := make([]byte, 1)
-		n, err := outreq.Body.Read(buf)
-		switch {
-		case n == 0 && err == io.EOF:
-			// Body is confirmed empty, prevent chunked encoding downstream.
-			outreq.Body = http.NoBody
-			outreq.ContentLength = 0
-			outreq.GetBody = nil
-		case n > 0:
-			// Body has content; put the peeked byte back.
-			outreq.Body = io.NopCloser(io.MultiReader(bytes.NewReader(buf[:n]), outreq.Body))
-		}
-	}
+	markEmptyBody(outreq)
 
 	// Fix for #997
 	// Only clone transport when configuration needs to change to preserve connection pooling.

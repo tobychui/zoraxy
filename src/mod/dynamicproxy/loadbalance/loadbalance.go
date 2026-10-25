@@ -46,8 +46,9 @@ type Upstream struct {
 	Weight int //Random weight for round robin, 0 for fallback only
 
 	//HTTP Transport Config
-	MaxConn     int   //Maxmium concurrent requests to this upstream dpcore instance
-	RespTimeout int64 //Response header timeout in milliseconds
+	MaxConn          int   //Maxmium idle connections kept open to this upstream dpcore instance
+	RespTimeout      int64 //Response header timeout in milliseconds
+	DisableKeepAlive bool  //Do not reuse upstream connections, for servers that close after every response
 
 	//currentConnectionCounts atomic.Uint64 //Counter for number of client currently connected
 	proxy *dpcore.ReverseProxy

@@ -122,6 +122,36 @@ func isExternalDomainName(hostname string) bool {
 	return true
 }
 
+// markEmptyBody replaces a request body known to be empty with http.NoBody.
+// HTTP/2 and HTTP/3 servers hand bodyless requests a non-nil Body, which makes
+// the transport send them chunked (#1204) and refuse to retry them when a reused
+// upstream connection turns out to be closed already.
+func markEmptyBody(req *http.Request) {
+	if req.Body == nil || req.Body == http.NoBody {
+		return
+	}
+
+	switch req.ContentLength {
+	case 0:
+		setNoBody(req)
+	case -1:
+		peek := make([]byte, 1)
+		n, err := req.Body.Read(peek)
+		switch {
+		case n == 0 && err == io.EOF:
+			setNoBody(req)
+		case n > 0:
+			req.Body = io.NopCloser(io.MultiReader(bytes.NewReader(peek[:n]), req.Body))
+		}
+	}
+}
+
+func setNoBody(req *http.Request) {
+	req.Body = http.NoBody
+	req.ContentLength = 0
+	req.GetBody = nil
+}
+
 // DeepCopyRequest returns a deep copy of the given http.Request.
 func DeepCopyRequest(req *http.Request) (*http.Request, error) {
 	// Copy the URL
