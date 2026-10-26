@@ -218,6 +218,7 @@ func ReverseProxyInit() {
 		GeodbStore:          geodbStore,
 		StatisticCollector:  statisticCollector,
 		WebDirectory:        *path_webserver,
+		ErrorPageManager:    errorPageManager,
 		AccessController:    accessController,
 		ForwardAuthRouter:   forwardAuthRouter,
 		OAuth2Router:        oauth2Router,
@@ -805,9 +806,13 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Disable logging
 	disableLogging, _ := utils.PostBool(r, "dLogging")
+	disableErrorRequestLogging, _ := utils.PostBool(r, "dErrorLogging")
+	disableSuccRequestLogging, _ := utils.PostBool(r, "dSuccLogging")
 
 	// Disable statistic collection
 	disableStatisticCollection, _ := utils.PostBool(r, "dStatisticCollection")
+	disableErrorStatistic, _ := utils.PostBool(r, "dErrorStatistic")
+	disableSuccStatistic, _ := utils.PostBool(r, "dSuccStatistic")
 
 	// Exploit Detection
 	blockCommonExploits, _ := utils.PostBool(r, "blockCommonExploits")
@@ -878,7 +883,11 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.WebsocketTimeout = websocketTimeout
 	newProxyEndpoint.EnableTimeoutRefreshOnActivity = enableTimeoutRefreshOnActivity
 	newProxyEndpoint.DisableLogging = disableLogging
+	newProxyEndpoint.DisableErrorRequestLogging = disableErrorRequestLogging
+	newProxyEndpoint.DisableSuccRequestLogging = disableSuccRequestLogging
 	newProxyEndpoint.DisableStatisticCollection = disableStatisticCollection
+	newProxyEndpoint.DisableErrorStatistic = disableErrorStatistic
+	newProxyEndpoint.DisableSuccStatistic = disableSuccStatistic
 	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
 	newProxyEndpoint.BlockAICrawlers = blockAICrawlers
 	newProxyEndpoint.MitigationAction = mitigationAction

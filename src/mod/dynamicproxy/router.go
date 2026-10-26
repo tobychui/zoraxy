@@ -34,6 +34,12 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 
 	//Prepare proxy routing handler for each of the virtual directories
 	for _, vdir := range endpoint.VirtualDirectories {
+		vdir.parent = endpoint
+		if vdir.BlockAccess {
+			//Blocked vdir respond with error page, no proxy needed
+			continue
+		}
+
 		domain := vdir.Domain
 		if len(domain) == 0 {
 			//invalid vdir

@@ -3,10 +3,12 @@ package dynamicproxy
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
 )
@@ -102,7 +104,15 @@ func (ep *ProxyEndpoint) GetVirtualDirectoryRuleByMatchingPath(matchingPath stri
 // whether a bulk apply/remove may treat an existing directory as "ours" (safe to skip or remove)
 // or as a user-customized one that must be left untouched.
 func (vdir *VirtualDirectoryEndpoint) HasSameTarget(domain string, requireTLS bool, skipCertValidations bool) bool {
-	return vdir.Domain == domain && vdir.RequireTLS == requireTLS && vdir.SkipCertValidations == skipCertValidations
+	return !vdir.BlockAccess && vdir.Domain == domain && vdir.RequireTLS == requireTLS && vdir.SkipCertValidations == skipCertValidations
+}
+
+// Get the status code to respond for a vdir in block access mode, default to 403 if not set or invalid
+func (vdir *VirtualDirectoryEndpoint) GetBlockStatusCode() int {
+	if !errorpage.IsErrorStatusCode(vdir.BlockStatusCode) {
+		return http.StatusForbidden
+	}
+	return vdir.BlockStatusCode
 }
 
 // BulkVdirAction describes what a bulk virtual-directory apply/remove operation should do for one host.

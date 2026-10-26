@@ -8,7 +8,6 @@ package dynamicproxy
 	If you are looking for the default object initailization, please refer to default.go
 */
 import (
-	_ "embed"
 	"net"
 	"net/http"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"imuslab.com/zoraxy/mod/auth/sso/forward"
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/dynamicproxy/exploits"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
@@ -68,6 +68,7 @@ type RouterOption struct {
 	AccessController   *access.Controller        //Blacklist / whitelist controller
 	StatisticCollector *statistic.Collector      //Statistic collector for storing stats on incoming visitors
 	WebDirectory       string                    //The static web server directory containing the templates folder
+	ErrorPageManager   *errorpage.Manager        //Error page template manager, serve built-in pages if nil
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
 	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
 
@@ -83,7 +84,7 @@ type RouterOption struct {
 	H2MaxUploadBufferPerStream     int32  //HTTP/2 max upload buffer per stream in bytes (0 = Go default)
 
 	/* HTTP/3 (QUIC) */
-	EnableH3              bool   //Enable HTTP/3 (QUIC) listener alongside HTTP/1.1+2 (requires TLS; DB-persisted, runtime-toggleable)
+	EnableH3               bool   //Enable HTTP/3 (QUIC) listener alongside HTTP/1.1+2 (requires TLS; DB-persisted, runtime-toggleable)
 	H3MaxConcurrentStreams uint32 //HTTP/3 max concurrent streams per connection (0 = quic-go default)
 
 	/* Authentication Providers */
@@ -110,8 +111,8 @@ type Router struct {
 	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
 	restarting   bool                      //If the router is restarting
 
-	h3Server *http3.Server   //HTTP/3 (QUIC) server, nil when disabled
-	h3Conn   net.PacketConn  //UDP connection serving the HTTP/3 listener; closed on shutdown
+	h3Server *http3.Server  //HTTP/3 (QUIC) server, nil when disabled
+	h3Conn   net.PacketConn //UDP connection serving the HTTP/3 listener; closed on shutdown
 
 	tlsListener      net.Listener //TLS listener, handle SNI routing
 	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map
@@ -178,6 +179,8 @@ type VirtualDirectoryEndpoint struct {
 	RequireTLS          bool                 //Target domain require TLS
 	SkipCertValidations bool                 //Set to true to accept self signed certs
 	Disabled            bool                 //If the rule is enabled
+	BlockAccess         bool                 //Block requests to this path with an error page instead of proxying, Domain is ignored
+	BlockStatusCode     int                  //Status code to respond when BlockAccess is set, see GetBlockStatusCode
 	proxy               *dpcore.ReverseProxy `json:"-"`
 	parent              *ProxyEndpoint       `json:"-"`
 }
@@ -294,7 +297,11 @@ type ProxyEndpoint struct {
 	UptimeMonitorMaxRecords    int    //Max number of uptime records kept. 0 = use the system default
 	DisableAutoFallback        bool   //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
 	DisableLogging             bool   //Disable logging of reverse proxy requests
+	DisableErrorRequestLogging bool   //Disable logging of requests rejected or failed by Zoraxy (e.g. blocked by access rules), no effect if DisableLogging is set
+	DisableSuccRequestLogging  bool   //Disable logging of requests served by the upstream, no effect if DisableLogging is set
 	DisableStatisticCollection bool   //Disable statistic collection for this endpoint
+	DisableErrorStatistic      bool   //Exclude requests rejected or failed by Zoraxy from statistic, no effect if DisableStatisticCollection is set
+	DisableSuccStatistic       bool   //Exclude requests served by the upstream from statistic, no effect if DisableStatisticCollection is set
 
 	//Exploit Detection
 	BlockCommonExploits bool //Enable blocking of common exploits (SQLi, XSS, etc.)
@@ -335,41 +342,6 @@ const (
 
 	DefaultSite_TeaPot = 418 //I'm a teapot
 )
-
-/*
-Web Templates
-*/
-var (
-	//go:embed templates/forbidden.html
-	page_forbidden []byte
-	//go:embed templates/hosterror.html
-	page_hosterror []byte
-	//go:embed templates/rperror.html
-	page_rperror []byte
-)
-
-// ErrorTemplateType defines the type of error template to serve
-type ErrorTemplateType int
-
-const (
-	ErrorTemplateForbidden ErrorTemplateType = iota
-	ErrorTemplateHostError
-	ErrorTemplateRPError
-)
-
-// getTemplateContent returns the embedded content and filename for a given template type
-func (e ErrorTemplateType) getTemplateContent() ([]byte, string) {
-	switch e {
-	case ErrorTemplateForbidden:
-		return page_forbidden, "forbidden.html"
-	case ErrorTemplateHostError:
-		return page_hosterror, "hosterror.html"
-	case ErrorTemplateRPError:
-		return page_rperror, "rperror.html"
-	default:
-		return page_rperror, "rperror.html"
-	}
-}
 
 // isWebSocketRequest checks if the incoming HTTP request is a WebSocket upgrade request
 func isWebSocketRequest(r *http.Request) bool {

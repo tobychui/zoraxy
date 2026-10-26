@@ -22,6 +22,7 @@ import (
 	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/dockerux"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
@@ -44,7 +45,7 @@ import (
 const (
 	/* Build Constants */
 	SYSTEM_NAME    = "Zoraxy"
-	SYSTEM_VERSION = "3.3.5"
+	SYSTEM_VERSION = "3.3.6"
 
 	/* System Constants */
 	WEBSERV_DEFAULT_PORT         = 5487
@@ -141,6 +142,7 @@ var (
 	CONF_GEODB_PATH            string //GeoIP database path
 	CONF_LOG_CONFIG            string //Log configuration path
 	CONF_TRUSTED_PROXIES       string //Trusted proxy IPs configuration path
+	CONF_ERROR_PAGES           string //Error page template assignments configuration path
 
 	/* mDNS */
 	previousmdnsScanResults = []*mdns.NetworkHost{}
@@ -177,6 +179,7 @@ var (
 	forwardProxy       *forwardproxy.Handler     //HTTP Forward proxy, basically VPN for web browser
 	loadBalancer       *loadbalance.RouteManager //Global scope loadbalancer, store the state of the lb routing
 	pluginManager      *plugins.Manager          //Plugin manager for managing plugins
+	errorPageManager   *errorpage.Manager        //Error page template manager
 
 	//Plugin auth related
 	pluginApiKeyManager *auth.APIKeyManager //API key manager for plugin authentication

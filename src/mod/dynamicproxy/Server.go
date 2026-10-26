@@ -3,9 +3,9 @@ package dynamicproxy
 import (
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 )
 
 /*
@@ -92,7 +92,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sep.RequireRateLimit {
 			err := h.handleRateLimitRouting(w, r, sep)
 			if err != nil {
-				if !sep.DisableLogging {
+				if sep.shouldLogRequest(false) {
 					clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
 					h.Parent.Option.Logger.LogHTTPRequest(r, "host", 307, r.Host, "", clientIP)
 				}
@@ -133,7 +133,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 				//Missing tailing slash. Redirect to target proxy endpoint
 				http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
-				if !sep.DisableLogging {
+				if sep.shouldLogRequest(true) {
 					clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
 					h.Parent.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "", clientIP)
 				}
@@ -274,12 +274,5 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 
 // Serve 404 page with template if exists
 func (h *ProxyHandler) serve404PageWithTemplate(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusNotFound)
-	template, err := os.ReadFile(filepath.Join(h.Parent.Option.WebDirectory, "templates/notfound.html"))
-	if err != nil {
-		w.Write(page_hosterror)
-	} else {
-		w.Write(template)
-	}
+	h.Parent.errorPages().ServeErrorPage(w, errorpage.ActionNotFound, http.StatusNotFound)
 }

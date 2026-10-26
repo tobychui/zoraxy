@@ -200,6 +200,10 @@ func GetUptimeTargetsFromReverseProxyRules(dp *dynamicproxy.Router) []*uptime.Ta
 
 			//Add each virtual directory into the list
 			for _, vdir := range target.VirtualDirectories {
+				if vdir.BlockAccess {
+					//Blocked vdir has no upstream to monitor
+					continue
+				}
 				url := "http://" + vdir.Domain
 				protocol := "http"
 				if origin.RequireTLS {

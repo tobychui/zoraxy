@@ -11,12 +11,33 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/utils"
 )
+
+// Parse the block access options of a vdir from request, status code default to 403 if not given
+func parseVdirBlockOptions(r *http.Request) (bool, int, error) {
+	blockAccess, _ := utils.PostBool(r, "blockAccess")
+	if !blockAccess {
+		return false, 0, nil
+	}
+
+	rawStatusCode, err := utils.PostPara(r, "blockStatusCode")
+	if err != nil {
+		return true, http.StatusForbidden, nil
+	}
+	statusCode, err := strconv.Atoi(strings.TrimSpace(rawStatusCode))
+	if err != nil || !errorpage.IsErrorStatusCode(statusCode) {
+		return false, 0, errors.New("block status code must be between 400 and 599")
+	}
+	return true, statusCode, nil
+}
 
 // List the Virtual directory under given proxy rule
 func ReverseProxyListVdir(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +96,14 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 		matchingPath = "/" + matchingPath
 	}
 
-	domain, err := utils.PostPara(r, "domain")
+	blockAccess, blockStatusCode, err := parseVdirBlockOptions(r)
 	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil && !blockAccess {
 		utils.SendErrorResponse(w, "target domain not defined")
 		return
 	}
@@ -84,6 +111,13 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 	//Assume false if not given
 	reqTLS, _ := utils.PostBool(r, "reqTLS")
 	skipValid, _ := utils.PostBool(r, "skipValid")
+
+	if blockAccess {
+		//Blocked vdir has no proxy target
+		domain = ""
+		reqTLS = false
+		skipValid = false
+	}
 
 	//Load the target proxy endpoint from runtime
 	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
@@ -119,6 +153,8 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 		Domain:              domain,
 		RequireTLS:          reqTLS,
 		SkipCertValidations: skipValid,
+		BlockAccess:         blockAccess,
+		BlockStatusCode:     blockStatusCode,
 	}
 
 	//Add Virtual Directory Rule to this Proxy Endpoint
@@ -205,8 +241,14 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domain, err := utils.PostPara(r, "domain")
+	blockAccess, blockStatusCode, err := parseVdirBlockOptions(r)
 	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil && !blockAccess {
 		utils.SendErrorResponse(w, "target domain not defined")
 		return
 	}
@@ -214,6 +256,13 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 	//Assume false if not given
 	reqTLS, _ := utils.PostBool(r, "reqTLS")
 	skipValid, _ := utils.PostBool(r, "skipValid")
+
+	if blockAccess {
+		//Blocked vdir has no proxy target
+		domain = ""
+		reqTLS = false
+		skipValid = false
+	}
 
 	var targetEndpoint *dynamicproxy.ProxyEndpoint
 	if eptype == "root" {
@@ -252,6 +301,8 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 		RequireTLS:          reqTLS,
 		SkipCertValidations: skipValid,
 		Disabled:            false,
+		BlockAccess:         blockAccess,
+		BlockStatusCode:     blockStatusCode,
 	}
 
 	targetEndpoint.RemoveVirtualDirectoryRuleByMatchingPath(vdir)

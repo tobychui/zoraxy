@@ -1,6 +1,12 @@
 package dynamicproxy
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
+)
 
 // TestVirtualDirectoryEndpointHasSameTarget verifies the target-equality check used to decide
 // whether a bulk apply/remove may treat an existing virtual directory as one it owns.
@@ -54,5 +60,52 @@ func TestClassifyBulkVdir(t *testing.T) {
 				t.Errorf("ClassifyBulkVdir(ensurePresent=%v) = %q, want %q", tc.ensurePresent, got, tc.want)
 			}
 		})
+	}
+}
+
+// TestVirtualDirectoryBlockAccess verifies a vdir in block access mode responds with the
+// configured status code and status code template instead of proxying the request
+func TestVirtualDirectoryBlockAccess(t *testing.T) {
+	templateDir := t.TempDir()
+	pages := errorpage.NewManager(&errorpage.Options{TemplateDir: templateDir})
+	if err := pages.WriteTemplate("410.html", []byte("gone {{status_code}}"), false); err != nil {
+		t.Fatal(err)
+	}
+
+	router := &Router{Option: &RouterOption{ErrorPageManager: pages}}
+	endpoint := &ProxyEndpoint{
+		DisableLogging:             true,
+		DisableStatisticCollection: true,
+		parent:                     router,
+	}
+	handler := &ProxyHandler{Parent: router}
+
+	cases := []struct {
+		statusCode   int
+		expectedCode int
+		expectedBody string
+	}{
+		{410, 410, "gone 410"},
+		{0, 403, ""},   //Not set, default to 403 with built-in page
+		{200, 403, ""}, //Not an error code, default to 403
+	}
+	for _, c := range cases {
+		vdir := &VirtualDirectoryEndpoint{MatchingPath: "/blocked/", BlockAccess: true, BlockStatusCode: c.statusCode, parent: endpoint}
+		req := httptest.NewRequest(http.MethodGet, "/blocked/secret", nil)
+		rec := httptest.NewRecorder()
+		handler.vdirRequest(rec, req, vdir)
+
+		if rec.Code != c.expectedCode {
+			t.Errorf("status code %d: expected response %d, got %d", c.statusCode, c.expectedCode, rec.Code)
+		}
+		if c.expectedBody != "" && rec.Body.String() != c.expectedBody {
+			t.Errorf("status code %d: unexpected body %q", c.statusCode, rec.Body.String())
+		}
+	}
+
+	//Blocked vdir must never be treated as the same target in bulk operations
+	blocked := &VirtualDirectoryEndpoint{MatchingPath: "/x/", BlockAccess: true}
+	if blocked.HasSameTarget("", false, false) {
+		t.Errorf("blocked vdir must not match any proxy target")
 	}
 }

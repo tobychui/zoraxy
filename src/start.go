@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/dockerux"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
@@ -220,6 +222,13 @@ func startupSequence() {
 	})
 	//Restore the web server to previous shutdown state
 	staticWebServer.RestorePreviousState()
+
+	//Create the error page template manager, templates are stored in the web root templates folder
+	errorPageManager = errorpage.NewManager(&errorpage.Options{
+		TemplateDir: filepath.Join(*path_webserver, "templates"),
+		ConfigFile:  CONF_ERROR_PAGES,
+		Logger:      SystemWideLogger,
+	})
 
 	//Create a netstat buffer
 	netstatBuffers, err = netstat.NewNetStatBuffer(300, SystemWideLogger)

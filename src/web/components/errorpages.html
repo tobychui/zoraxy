@@ -1,0 +1,571 @@
+<style>
+    @media only screen and (max-width: 767px) {
+        .errorPageTable td[data-label]::before {
+            content: attr(data-label);
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.3em;
+        }
+    }
+</style>
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Error Pages</h2>
+        <p>Customize the error pages Zoraxy serves when it rejects or fails a request by itself (e.g. blocked by access rules, rate limited or upstream unreachable).<br>
+            Templates are stored in the <code>templates</code> folder of the static web server root. Changes take effect immediately after saving.</p>
+    </div>
+    <div class="ui divider"></div>
+
+    <!-- Action to template assignments -->
+    <div class="ui basic segment">
+        <h3>Template Assignments</h3>
+        <p>Assign a template to each situation. When set to <b>Default</b>, Zoraxy looks for the legacy template (e.g. <code>whitelist.html</code>), then the status code template (e.g. <code>403.html</code>), and finally falls back to the built-in page.</p>
+        <table class="ui celled stackable compact table errorPageTable">
+                <thead>
+                    <tr>
+                        <th>Situation</th>
+                        <th>Status Code</th>
+                        <th style="min-width: 14em;">Template</th>
+                        <th>Currently Serving</th>
+                    </tr>
+                </thead>
+                <tbody id="errorPageActionList">
+                    <tr><td colspan="4"><i class="loading spinner icon"></i> Loading</td></tr>
+                </tbody>
+            </table>
+    </div>
+    <div class="ui divider"></div>
+
+    <!-- Template list -->
+    <div class="ui basic segment">
+        <h3>Templates</h3>
+        <p>Templates named after a status code (e.g. <code>404.html</code>) are used for all error responses with that status code unless a template is assigned above.</p>
+        <table class="ui celled stackable compact table errorPageTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Used By</th>
+                        <th>Size</th>
+                        <th>Last Modified</th>
+                        <th style="min-width: 9em;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="errorPageTemplateList">
+                    <tr><td colspan="6"><i class="loading spinner icon"></i> Loading</td></tr>
+                </tbody>
+            </table>
+        <button class="ui basic button" id="errorPageRefreshBtn" style="margin-top: 0.6em;"><i class="green refresh icon"></i> Refresh</button>
+    </div>
+
+    <!-- Template editor -->
+    <div id="errorPageEditor" class="ui basic segment" style="display:none;">
+        <div class="ui divider"></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5em;">
+            <h3 style="margin:0;"><i class="code icon"></i> <span id="errorPageEditorName"></span> <small id="errorPageEditorDirty" style="color: #db2828; display:none;">(unsaved)</small></h3>
+            <div>
+                <button class="ui basic green button" id="errorPageSaveBtn" title="Save (Ctrl + S)"><i class="save icon"></i> Save</button>
+                <button class="ui basic button" id="errorPageCloseEditorBtn"><i class="times icon"></i> Close</button>
+            </div>
+        </div>
+        <p style="margin-top: 0.6em;"><small>Placeholders <code>{{status_code}}</code> and <code>{{status_text}}</code> are replaced with the response status when the page is served. The preview updates as you type.</small></p>
+        <div class="ui stackable two column grid">
+            <div class="column">
+                <textarea id="errorPageEditorContent" spellcheck="false" wrap="off"
+                    style="width:100%; height: 520px; font-family: monospace; font-size: 0.9em; padding: 0.75em; border: 1px solid rgba(34,36,38,.15); border-radius: 0.28571429rem; resize: vertical; tab-size: 4;"></textarea>
+            </div>
+            <div class="column">
+                <div style="display:flex; align-items:center; gap:0.5em; margin-bottom: 0.4em;">
+                    <small>Preview as status code</small>
+                    <div class="ui mini input" style="width: 6em;">
+                        <input type="number" id="errorPagePreviewCode" min="400" max="599" value="403">
+                    </div>
+                </div>
+                <!-- Scripts in the preview run in an isolated origin without access to this page -->
+                <iframe id="errorPagePreview" sandbox="allow-scripts" referrerpolicy="no-referrer"
+                    style="width:100%; height: 488px; border: 1px solid rgba(34,36,38,.15); border-radius: 0.28571429rem; background: white;"></iframe>
+            </div>
+        </div>
+    </div>
+    <div class="ui divider"></div>
+
+    <!-- New template -->
+    <div class="ui basic segment">
+        <h3>New Template</h3>
+        <div class="ui form">
+            <div class="field">
+                <label>Template Type</label>
+                <div id="errorPageNewTypeSelector" class="ui small basic buttons">
+                    <button type="button" class="ui active button" mode="code"><i class="blue hashtag icon"></i> Status Code</button>
+                    <button type="button" class="ui button" mode="custom"><i class="orange file code outline icon"></i> Custom Name</button>
+                </div>
+            </div>
+            <div class="field" id="errorPageNewCodeField">
+                <label>Status Code</label>
+                <div class="ui fluid search selection dropdown" id="errorPageNewCode">
+                    <input type="hidden" value="">
+                    <i class="dropdown icon"></i>
+                    <div class="default text">Select a status code</div>
+                    <div class="menu"></div>
+                </div>
+                <small>Generic template for all error responses with this status code, saved as <code>&lt;status code&gt;.html</code></small>
+            </div>
+            <div class="field" id="errorPageNewNameField" style="display:none;">
+                <label>Template Name</label>
+                <input type="text" id="errorPageNewName" placeholder="maintenance">
+                <small>Letters, numbers, dash, underscore and dot only. <code>.html</code> is appended automatically. Assign it to a situation above after creating.</small>
+            </div>
+            <div class="field">
+                <label>Start From</label>
+                <div class="ui selection dropdown" id="errorPageNewBase">
+                    <input type="hidden" value="generic">
+                    <i class="dropdown icon"></i>
+                    <div class="default text">Built-in template</div>
+                    <div class="menu"></div>
+                </div>
+            </div>
+            <button class="ui basic button" id="errorPageCreateBtn"><i class="green add icon"></i> Create Template</button>
+        </div>
+    </div>
+    <br><br>
+</div>
+<script>
+(function(){
+    let errorPageTemplates = [];
+    let errorPageEditing = "";      //Name of the template in the editor
+    let errorPageEditorDirty = false;
+    let errorPagePreviewTimer = undefined;
+
+    //Error status codes that can have a template, same as Go net/http status texts plus 521 used by Zoraxy
+    const errorPageStatusTexts = {
+        400: "Bad Request", 401: "Unauthorized", 402: "Payment Required", 403: "Forbidden",
+        404: "Not Found", 405: "Method Not Allowed", 406: "Not Acceptable", 407: "Proxy Authentication Required",
+        408: "Request Timeout", 409: "Conflict", 410: "Gone", 411: "Length Required",
+        412: "Precondition Failed", 413: "Request Entity Too Large", 414: "Request URI Too Long", 415: "Unsupported Media Type",
+        416: "Requested Range Not Satisfiable", 417: "Expectation Failed", 418: "I'm a teapot", 421: "Misdirected Request",
+        422: "Unprocessable Entity", 423: "Locked", 424: "Failed Dependency", 425: "Too Early",
+        426: "Upgrade Required", 428: "Precondition Required", 429: "Too Many Requests", 431: "Request Header Fields Too Large",
+        451: "Unavailable For Legal Reasons", 500: "Internal Server Error", 501: "Not Implemented", 502: "Bad Gateway",
+        503: "Service Unavailable", 504: "Gateway Timeout", 505: "HTTP Version Not Supported", 506: "Variant Also Negotiates",
+        507: "Insufficient Storage", 508: "Loop Detected", 510: "Not Extended", 511: "Network Authentication Required",
+        521: "Web Server Is Down"
+    };
+
+    function escapeHTML(text){
+        return $("<div>").text(text == undefined ? "" : text).html();
+    }
+
+    function formatSize(bytes){
+        if (bytes < 1024) return bytes + " B";
+        return (bytes / 1024).toFixed(1) + " KB";
+    }
+
+    /*
+        Template assignments
+    */
+    function loadActions(){
+        $.get("/api/errorpage/actions/list", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+                return;
+            }
+            $("#errorPageActionList").html("");
+            data.forEach(action => {
+                let statusCode = action.StatusCode > 0 ? action.StatusCode : `<small>Set by rule</small>`;
+                let defaultHint = [];
+                if (action.LegacyTemplate != ""){
+                    defaultHint.push(action.LegacyTemplate);
+                }
+                defaultHint.push(action.StatusCode > 0 ? action.StatusCode + ".html" : "&lt;code&gt;.html");
+                defaultHint.push("built-in");
+
+                let options = `<div class="item" data-value="">Default</div>
+                    <div class="item" data-value="@builtin">Built-in page</div>`;
+                errorPageTemplates.forEach(t => {
+                    options += `<div class="item" data-value="${escapeHTML(t.Name)}"><i class="file code outline icon"></i> ${escapeHTML(t.Name)}</div>`;
+                });
+                if (action.Assigned != "" && action.Assigned != "@builtin" && !errorPageTemplates.some(t => t.Name == action.Assigned)){
+                    //Assigned template removed outside of the template manager
+                    options += `<div class="item" data-value="${escapeHTML(action.Assigned)}"><i class="yellow exclamation triangle icon"></i> ${escapeHTML(action.Assigned)} (missing)</div>`;
+                }
+
+                let serving = action.Effective == "" ? `<i class="grey cube icon"></i> Built-in page` : `<i class="green file code outline icon"></i> ${escapeHTML(action.Effective)}`;
+                if (action.StatusCode == 0 && action.Assigned == ""){
+                    serving = `<small>Status code template of the rule, or built-in page</small>`;
+                }
+
+                $("#errorPageActionList").append(`<tr>
+                    <td><b>${escapeHTML(action.Name)}</b><br><small>${escapeHTML(action.Description)}</small></td>
+                    <td data-label="Status Code">${statusCode}</td>
+                    <td data-label="Template">
+                        <div class="ui fluid selection dropdown errorPageAssignDropdown" action="${escapeHTML(action.ID)}">
+                            <input type="hidden" value="${escapeHTML(action.Assigned)}">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Default</div>
+                            <div class="menu">${options}</div>
+                        </div>
+                        <small style="opacity: 0.6;">Default: ${defaultHint.join(" &rarr; ")}</small>
+                    </td>
+                    <td data-label="Currently Serving">${serving}</td>
+                </tr>`);
+            });
+
+            $("#errorPageActionList .errorPageAssignDropdown").each(function(){
+                let dropdown = $(this);
+                dropdown.dropdown({
+                    onChange: function(value){
+                        assignTemplate(dropdown.attr("action"), value);
+                    }
+                });
+            });
+        });
+    }
+
+    function assignTemplate(action, templateName){
+        $.cjax({
+            url: "/api/errorpage/actions/assign",
+            method: "POST",
+            data: {"action": action, "template": templateName},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                }else{
+                    msgbox("Template assignment updated");
+                }
+                loadActions();
+            }
+        });
+    }
+
+    /*
+        Template list
+    */
+    function loadTemplates(callback=undefined){
+        $.get("/api/errorpage/templates/list", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+                return;
+            }
+            errorPageTemplates = data;
+            $("#errorPageTemplateList").html("");
+            if (data.length == 0){
+                $("#errorPageTemplateList").append(`<tr><td colspan="6"><i class="green check circle icon"></i> No custom template. Built-in pages are being served.</td></tr>`);
+            }
+            data.forEach(t => {
+                let type = t.StatusCode > 0 ? `<div class="ui mini blue basic label">Status ${t.StatusCode}</div>` : `<div class="ui mini basic label">Custom</div>`;
+                let usedBy = t.UsedBy.length == 0 ? `<small style="opacity: 0.5;">Not in use</small>` : t.UsedBy.map(u => `<small>${escapeHTML(u)}</small>`).join("<br>");
+                let name = escapeHTML(t.Name);
+                $("#errorPageTemplateList").append(`<tr>
+                    <td><a style="cursor: pointer;" class="errorPageEditLink" template="${name}">${name}</a></td>
+                    <td data-label="Type">${type}</td>
+                    <td data-label="Used By">${usedBy}</td>
+                    <td data-label="Size">${formatSize(t.Size)}</td>
+                    <td data-label="Last Modified"><small>${new Date(t.ModTime * 1000).toLocaleString()}</small></td>
+                    <td class="center aligned">
+                        <button class="ui circular mini basic icon button errorPageEditBtn" template="${name}" title="Edit"><i class="edit icon"></i></button>
+                        <button class="ui circular mini basic icon button errorPageRenameBtn" template="${name}" title="Rename"><i class="i cursor icon"></i></button>
+                        <button class="ui circular mini red basic icon button errorPageDeleteBtn" template="${name}" title="Delete"><i class="trash icon"></i></button>
+                    </td>
+                </tr>`);
+            });
+
+            //Assignment dropdowns list the templates, reload after the template list
+            loadActions();
+            if (callback != undefined){
+                callback();
+            }
+        });
+    }
+
+    function renameTemplate(name, cell){
+        let originalHTML = cell.html();
+        cell.html(`<div class="ui mini action fluid input">
+            <input type="text" class="errorPageRenameInput" value="${escapeHTML(name)}">
+            <button class="ui basic icon button errorPageRenameConfirm" title="Save"><i class="green check icon"></i></button>
+            <button class="ui basic icon button errorPageRenameCancel" title="Cancel"><i class="times icon"></i></button>
+        </div>`);
+        let input = cell.find(".errorPageRenameInput");
+        input.focus().select();
+
+        let cancel = function(){ cell.html(originalHTML); };
+        let confirm = function(){
+            let newName = input.val().trim();
+            if (newName == "" || newName == name){
+                cancel();
+                return;
+            }
+            $.cjax({
+                url: "/api/errorpage/templates/rename",
+                method: "POST",
+                data: {"name": name, "newName": newName},
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 5000);
+                        return;
+                    }
+                    msgbox("Template renamed to " + data);
+                    if (errorPageEditing == name){
+                        errorPageEditing = data;
+                        $("#errorPageEditorName").text(data);
+                    }
+                    loadTemplates();
+                }
+            });
+        };
+        cell.find(".errorPageRenameConfirm").on("click", confirm);
+        cell.find(".errorPageRenameCancel").on("click", cancel);
+        input.on("keydown", function(e){
+            if (e.key == "Enter") confirm();
+            if (e.key == "Escape") cancel();
+        });
+    }
+
+    function deleteTemplate(name){
+        confirmBox("Delete template " + name + "?", function(answer){
+            if (answer != true){
+                return;
+            }
+            $.cjax({
+                url: "/api/errorpage/templates/delete",
+                method: "POST",
+                data: {"name": name},
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false);
+                        return;
+                    }
+                    msgbox("Template deleted");
+                    if (errorPageEditing == name){
+                        closeEditor(true);
+                    }
+                    loadTemplates();
+                }
+            });
+        });
+    }
+
+    /*
+        Editor
+    */
+    function setEditorDirty(dirty){
+        errorPageEditorDirty = dirty;
+        $("#errorPageEditorDirty").toggle(dirty);
+    }
+
+    function openEditor(name){
+        let load = function(){
+            $.get("/api/errorpage/templates/read?name=" + encodeURIComponent(name), function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                    return;
+                }
+                errorPageEditing = data.name;
+                $("#errorPageEditorName").text(data.name);
+                $("#errorPageEditorContent").val(data.content);
+                let code = parseInt(data.name);
+                if (!isNaN(code) && code >= 400 && code <= 599 && data.name == code + ".html"){
+                    $("#errorPagePreviewCode").val(code);
+                }
+                setEditorDirty(false);
+                $("#errorPageEditor").show();
+                updatePreview();
+                $("#errorPageEditor")[0].scrollIntoView({behavior: "smooth", block: "start"});
+            });
+        };
+
+        if (errorPageEditorDirty && errorPageEditing != name){
+            confirmBox("Discard unsaved changes to " + errorPageEditing + "?", function(answer){
+                if (answer == true){
+                    load();
+                }
+            });
+            return;
+        }
+        load();
+    }
+
+    function closeEditor(force=false){
+        if (errorPageEditorDirty && !force){
+            confirmBox("Discard unsaved changes?", function(answer){
+                if (answer == true){
+                    closeEditor(true);
+                }
+            });
+            return;
+        }
+        errorPageEditing = "";
+        setEditorDirty(false);
+        $("#errorPageEditorContent").val("");
+        $("#errorPagePreview").attr("srcdoc", "");
+        $("#errorPageEditor").hide();
+    }
+
+    function saveEditor(){
+        if (errorPageEditing == ""){
+            return;
+        }
+        let name = errorPageEditing;
+        $.cjax({
+            url: "/api/errorpage/templates/save",
+            method: "POST",
+            data: {"name": name, "content": $("#errorPageEditorContent").val()},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false);
+                    return;
+                }
+                setEditorDirty(false);
+                msgbox("Template saved");
+                loadTemplates();
+            },
+            error: function(){
+                msgbox("Unable to save template", false);
+            }
+        });
+    }
+
+    function updatePreview(){
+        let code = parseInt($("#errorPagePreviewCode").val());
+        if (isNaN(code)){
+            code = 403;
+        }
+        let statusText = errorPageStatusTexts[code] == undefined ? "Error" : errorPageStatusTexts[code];
+        let content = $("#errorPageEditorContent").val()
+            .split("{{status_code}}").join(code)
+            .split("{{status_text}}").join(statusText);
+        $("#errorPagePreview").attr("srcdoc", content);
+    }
+
+    /*
+        New template
+    */
+    function loadBuiltinTemplates(){
+        $.get("/api/errorpage/builtin", function(data){
+            if (data.error != undefined){
+                return;
+            }
+            let menu = $("#errorPageNewBase .menu");
+            menu.html(`<div class="item" data-value="@empty">Empty template</div>`);
+            data.forEach(t => {
+                menu.append(`<div class="item" data-value="${escapeHTML(t.ID)}">Built-in: ${escapeHTML(t.Name)}</div>`);
+            });
+            $("#errorPageNewBase").dropdown("set selected", "generic");
+        });
+    }
+
+    function setNewTemplateType(mode){
+        $("#errorPageNewTypeSelector .button").removeClass("active");
+        $(`#errorPageNewTypeSelector .button[mode='${mode}']`).addClass("active");
+        $("#errorPageNewCodeField").toggle(mode == "code");
+        $("#errorPageNewNameField").toggle(mode == "custom");
+    }
+
+    function createTemplate(){
+        let mode = $("#errorPageNewTypeSelector .button.active").attr("mode");
+        let name = "";
+        if (mode == "code"){
+            let code = parseInt($("#errorPageNewCode").dropdown("get value"));
+            if (isNaN(code) || code < 400 || code > 599){
+                $("#errorPageNewCodeField").addClass("error");
+                msgbox("Please select a status code", false);
+                return;
+            }
+            $("#errorPageNewCodeField").removeClass("error");
+            name = code + ".html";
+        }else{
+            name = $("#errorPageNewName").val().trim();
+            if (!/^[A-Za-z0-9][A-Za-z0-9_.\-]*$/.test(name) || name.includes("..")){
+                $("#errorPageNewNameField").addClass("error");
+                msgbox("Only letters, numbers, dash, underscore and dot are allowed", false);
+                return;
+            }
+            $("#errorPageNewNameField").removeClass("error");
+        }
+
+        let save = function(content){
+            $.cjax({
+                url: "/api/errorpage/templates/save",
+                method: "POST",
+                data: {"name": name, "content": content, "create": true},
+                success: function(data){
+                    if (data.error != undefined){
+                        msgbox(data.error, false, 5000);
+                        return;
+                    }
+                    msgbox("Template " + data + " created");
+                    $("#errorPageNewCode").dropdown("clear");
+                    $("#errorPageNewName").val("");
+                    loadTemplates(function(){
+                        openEditor(data);
+                    });
+                }
+            });
+        };
+
+        let base = $("#errorPageNewBase").dropdown("get value");
+        if (base == "@empty" || base == ""){
+            save("");
+            return;
+        }
+        $.get("/api/errorpage/builtin?id=" + encodeURIComponent(base), function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+                return;
+            }
+            save(data.content);
+        });
+    }
+
+    /*
+        Event bindings
+    */
+    $("#errorPageRefreshBtn").on("click", function(){ loadTemplates(); });
+    $("#errorPageTemplateList").on("click", ".errorPageEditBtn, .errorPageEditLink", function(){
+        openEditor($(this).attr("template"));
+    });
+    $("#errorPageTemplateList").on("click", ".errorPageRenameBtn", function(){
+        renameTemplate($(this).attr("template"), $(this).closest("tr").find("td").first());
+    });
+    $("#errorPageTemplateList").on("click", ".errorPageDeleteBtn", function(){
+        deleteTemplate($(this).attr("template"));
+    });
+
+    $("#errorPageSaveBtn").on("click", saveEditor);
+    $("#errorPageCloseEditorBtn").on("click", function(){ closeEditor(); });
+    $("#errorPagePreviewCode").on("input", updatePreview);
+    $("#errorPageEditorContent").on("input", function(){
+        setEditorDirty(true);
+        clearTimeout(errorPagePreviewTimer);
+        errorPagePreviewTimer = setTimeout(updatePreview, 300);
+    });
+    $("#errorPageEditorContent").on("keydown", function(e){
+        if (e.key == "Tab"){
+            //Insert indent instead of moving focus
+            e.preventDefault();
+            let start = this.selectionStart;
+            let end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 4;
+            $(this).trigger("input");
+        }else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() == "s"){
+            e.preventDefault();
+            saveEditor();
+        }
+    });
+
+    $("#errorPageNewTypeSelector .button").on("click", function(){
+        setNewTemplateType($(this).attr("mode"));
+    });
+    $("#errorPageCreateBtn").on("click", createTemplate);
+    $("#errorPageNewBase").dropdown();
+    $("#errorPageNewCode .menu").html(Object.keys(errorPageStatusTexts).map(code => `<div class="item" data-value="${code}">${code} ${escapeHTML(errorPageStatusTexts[code])}</div>`).join(""));
+    $("#errorPageNewCode").dropdown({fullTextSearch: true});
+
+    tabSwitchEventBind["errorpages"] = function(){
+        loadTemplates();
+    }
+
+    loadBuiltinTemplates();
+    loadTemplates();
+})();
+</script>

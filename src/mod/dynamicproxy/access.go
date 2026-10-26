@@ -2,10 +2,9 @@ package dynamicproxy
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"imuslab.com/zoraxy/mod/access"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/eventsystem"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin/events"
@@ -23,7 +22,7 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 		return true
 	}
 
-	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.Option.WebDirectory, w, r)
+	isBlocked, blockedReason := accessRequestBlocked(accessRule, h.Parent.errorPages(), w, r)
 	if isBlocked {
 		h.Parent.logRequest(r, false, 403, blockedReason, r.Host, "", sep)
 	}
@@ -32,18 +31,11 @@ func (h *ProxyHandler) handleAccessRouting(ruleID string, w http.ResponseWriter,
 
 // Return boolean, return true if access is blocked
 // For string, it will return the blocked reason (if any)
-func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory string, w http.ResponseWriter, r *http.Request) (bool, string) {
+func accessRequestBlocked(accessRule *access.AccessRule, errorPages *errorpage.Manager, w http.ResponseWriter, r *http.Request) (bool, string) {
 	//Check if this ip is in blacklist
 	clientIpAddr := accessRule.GetClientIP(r)
 	if accessRule.IsBlacklisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile(filepath.Join(templateDirectory, "templates/blacklist.html"))
-		if err != nil {
-			w.Write(page_forbidden)
-		} else {
-			w.Write(template)
-		}
+		errorPages.ServeErrorPage(w, errorpage.ActionBlacklist, http.StatusForbidden)
 
 		// Emit blacklisted IP blocked event
 		// Get the comment for this IP
@@ -67,14 +59,7 @@ func accessRequestBlocked(accessRule *access.AccessRule, templateDirectory strin
 
 	//Check if this ip is in whitelist
 	if !accessRule.IsWhitelisted(clientIpAddr) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusForbidden)
-		template, err := os.ReadFile(filepath.Join(templateDirectory, "templates/whitelist.html"))
-		if err != nil {
-			w.Write(page_forbidden)
-		} else {
-			w.Write(template)
-		}
+		errorPages.ServeErrorPage(w, errorpage.ActionWhitelist, http.StatusForbidden)
 		return true, "whitelist"
 	}
 

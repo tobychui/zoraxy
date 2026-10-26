@@ -118,6 +118,31 @@ body.darkTheme .ui.basic.buttons .button i.icon {
     color: #ffffff !important;
 }
 
+body.darkTheme .ui.basic.buttons {
+    border: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.basic.buttons .button {
+    color: var(--button_text_color) !important;
+    background-color: transparent !important;
+    border-left: 1px solid var(--button_border_color) !important;
+}
+
+body.darkTheme .ui.basic.buttons .button:first-child {
+    border-left: none !important;
+}
+
+body.darkTheme .ui.basic.buttons .button:hover {
+    color: #ffffff !important;
+    background-color: var(--theme_bg_active) !important;
+}
+
+body.darkTheme .ui.basic.buttons .active.button {
+    color: #ffffff !important;
+    background-color: var(--theme_bg_active) !important;
+    box-shadow: inset 0 0 0 1px var(--theme_highlight) !important;
+}
+
 body.darkTheme .ui.basic.button:not(.red) {
     color: #ffffff !important;
     border: 1px solid var(--button_border_color) !important;

@@ -20,6 +20,7 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/captcha"
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/pathmatch"
 )
@@ -401,7 +402,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 	}
 	accessRule, err := router.Option.AccessController.GetAccessRuleByID(ruleID)
 	if err == nil {
-		isBlocked, _ := accessRequestBlocked(accessRule, router.Option.WebDirectory, w, r)
+		isBlocked, _ := accessRequestBlocked(accessRule, router.errorPages(), w, r)
 		if isBlocked {
 			return
 		}
@@ -437,7 +438,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		if potentialProxtEndpoint != nil && !potentialProxtEndpoint.Disabled {
 			//Missing tailing slash. Redirect to target proxy endpoint
 			http.Redirect(w, r, r.RequestURI+"/", http.StatusTemporaryRedirect)
-			if !sep.DisableLogging {
+			if sep.shouldLogRequest(true) {
 				clientIP := router.GetClientIPForEndpoint(r, sep)
 				router.Option.Logger.LogHTTPRequest(r, "redirect", 307, r.Host, "", clientIP)
 			}
@@ -447,7 +448,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 
 	selectedUpstream, err := router.loadBalancer.GetRequestUpstreamTarget(w, r, sep.ActiveOrigins, sep.UseStickySession, sep.DisableAutoFallback)
 	if err != nil {
-		serveProxyRequestError(w, 404, router, ErrorTemplateHostError)
+		serveProxyRequestError(w, 404, router, errorpage.ActionHostError)
 		router.Option.Logger.PrintAndLog("dprouter", "failed to get upstream for hostname", err)
 		router.logRequest(r, false, 404, "vdir-http", r.Host, "", sep)
 		return

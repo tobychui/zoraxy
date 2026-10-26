@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Zoraxy Generic Error Template -->
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{status_code}} - {{status_text}}</title>
+        <style>
+            :root{
+                --bg: #f6f7f9;
+                --fg: #1f2328;
+                --muted: #6a737d;
+                --accent: #db2828;
+                --divider: rgba(0, 0, 0, 0.1);
+            }
+
+            @media (prefers-color-scheme: dark){
+                :root{
+                    --bg: #1b1c1d;
+                    --fg: #e8e8e8;
+                    --muted: #9da5b4;
+                    --accent: #ff695e;
+                    --divider: rgba(255, 255, 255, 0.12);
+                }
+            }
+
+            body{
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--bg);
+                color: var(--fg);
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            }
+
+            #msg{
+                width: 100%;
+                max-width: 500px;
+                padding: 2em 1em;
+                text-align: center;
+            }
+
+            .code{
+                font-size: 6em;
+                font-weight: bold;
+                margin: 0;
+                color: var(--accent);
+            }
+
+            .divider{
+                border-top: 1px solid var(--divider);
+                margin: 1em 0;
+            }
+
+            small{
+                color: var(--muted);
+                word-break: break-word;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="msg">
+            <p class="code">{{status_code}}</p>
+            <h3>{{status_text}}</h3>
+            <div class="divider"></div>
+            <p>The server is unable to fulfill your request.</p>
+            <div class="divider"></div>
+            <div style="text-align: left;">
+                <small>Request time: <span id="reqtime"></span></small><br>
+                <small>Request URI: <span id="requrl"></span></small>
+            </div>
+        </div>
+        <script>
+            document.getElementById("reqtime").textContent = new Date().toLocaleString();
+            document.getElementById("requrl").textContent = window.location.href;
+        </script>
+    </body>
+</html>

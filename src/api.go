@@ -88,6 +88,18 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/delete", RemoveProxyZorxAuthExceptionRule)
 }
 
+// Register the APIs for error page template management
+func RegisterErrorPageAPIs(authRouter *auth.RouterDef) {
+	authRouter.HandleFunc("/api/errorpage/templates/list", errorPageManager.HandleListTemplates)
+	authRouter.HandleFunc("/api/errorpage/templates/read", errorPageManager.HandleReadTemplate)
+	authRouter.HandleFunc("/api/errorpage/templates/save", errorPageManager.HandleSaveTemplate)
+	authRouter.HandleFunc("/api/errorpage/templates/delete", errorPageManager.HandleDeleteTemplate)
+	authRouter.HandleFunc("/api/errorpage/templates/rename", errorPageManager.HandleRenameTemplate)
+	authRouter.HandleFunc("/api/errorpage/actions/list", errorPageManager.HandleListActions)
+	authRouter.HandleFunc("/api/errorpage/actions/assign", errorPageManager.HandleAssignTemplate)
+	authRouter.HandleFunc("/api/errorpage/builtin", errorPageManager.HandleGetBuiltinTemplate)
+}
+
 // Register the APIs for TLS / SSL certificate management functions
 func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 	//Global certificate settings
@@ -440,6 +452,7 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterACMEAndAutoRenewerAPIs(authRouter)
 	RegisterStaticWebServerAPIs(authRouter)
 	RegisterPluginAPIs(authRouter)
+	RegisterErrorPageAPIs(authRouter)
 
 	//Docker UX Optimizations
 	authRouter.HandleFunc("/api/docker/available", DockerUXOptimizer.HandleDockerAvailable)

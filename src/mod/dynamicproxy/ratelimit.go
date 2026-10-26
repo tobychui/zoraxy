@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 )
 
 // IpTable is a rate limiter implementation using sync.Map with atomic int64
@@ -67,7 +69,7 @@ func (router *Router) handleRateLimit(w http.ResponseWriter, r *http.Request, pe
 	router.rateLimitCounter.Increment(ip)
 
 	if router.rateLimitCounter.Exceeded(ip, int64(pe.RateLimit)) {
-		w.WriteHeader(429)
+		router.errorPages().ServeErrorPage(w, errorpage.ActionRateLimit, http.StatusTooManyRequests)
 		return errors.New("rate limit exceeded")
 	}
 
