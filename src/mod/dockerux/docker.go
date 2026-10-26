@@ -33,15 +33,20 @@ func (d *UXOptimizer) HandleDockerContainersList(w http.ResponseWriter, r *http.
 		return
 	}
 
-	networks, err := apiClient.NetworkList(context.Background(), client.NetworkListOptions{})
-	if err != nil {
-		d.SystemWideLogger.PrintAndLog("Docker", "List docker network failed", err)
-		utils.SendErrorResponse(w, "List docker network failed")
-		return
-	}
+	/*
+		UI is currently not consuming the docker network list.
+		Removing the list fixes https://github.com/tobychui/zoraxy/issues/1339 for now.
+
+		networks, err := apiClient.NetworkList(context.Background(), client.NetworkListOptions{})
+		if err != nil {
+			d.SystemWideLogger.PrintAndLog("Docker", "List docker network failed", err)
+			utils.SendErrorResponse(w, "List docker network failed")
+			return
+		}
+	*/
 
 	result := map[string]interface{}{
-		"network":    networks.Items,
+		//"network":    networks.Items,
 		"containers": containers.Items,
 	}
 
