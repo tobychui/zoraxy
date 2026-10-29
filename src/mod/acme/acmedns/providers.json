@@ -863,6 +863,37 @@
    }
   ]
  },
+ "cloudpress": {
+  "Name": "cloudpress",
+  "ConfigableFields": [
+   {
+    "Title": "BaseURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "AccountID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "cloudru": {
   "Name": "cloudru",
   "ConfigableFields": [
@@ -1107,7 +1138,11 @@
   "Name": "curanet",
   "ConfigableFields": [
    {
-    "Title": "APIKey",
+    "Title": "ClientID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ClientSecret",
     "Datatype": "string"
    },
    {
@@ -1117,6 +1152,10 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
    }
   ],
   "HiddenFields": [
@@ -1153,7 +1192,11 @@
   "Name": "dandomain",
   "ConfigableFields": [
    {
-    "Title": "APIKey",
+    "Title": "ClientID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ClientSecret",
     "Datatype": "string"
    },
    {
@@ -1163,6 +1206,10 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
    }
   ],
   "HiddenFields": [
@@ -2381,6 +2428,29 @@
    },
    {
     "Title": "APISecret",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "godaddyv3": {
+  "Name": "godaddyv3",
+  "ConfigableFields": [
+   {
+    "Title": "PersonalAccessToken",
     "Datatype": "string"
    },
    {
@@ -3711,6 +3781,29 @@
    }
   ]
  },
+ "netcupv1": {
+  "Name": "netcupv1",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "netlify": {
   "Name": "netlify",
   "ConfigableFields": [
@@ -3943,6 +4036,33 @@
   "ConfigableFields": [
    {
     "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "nordname": {
+  "Name": "nordname",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "CustomerUUID",
     "Datatype": "string"
    },
    {
@@ -4359,6 +4479,29 @@
    }
   ]
  },
+ "primedns": {
+  "Name": "primedns",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "rackspace": {
   "Name": "rackspace",
   "ConfigableFields": [
@@ -4688,7 +4831,11 @@
   "Name": "scannet",
   "ConfigableFields": [
    {
-    "Title": "APIKey",
+    "Title": "ClientID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ClientSecret",
     "Datatype": "string"
    },
    {
@@ -4698,6 +4845,10 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
    }
   ],
   "HiddenFields": [
@@ -4751,6 +4902,37 @@
    }
   ],
   "HiddenFields": [
+   {
+    "Title": "RecordsMapping",
+    "Datatype": "map[string]*Seq"
+   },
+   {
+    "Title": "recordsMappingMu",
+    "Datatype": "sync.Mutex"
+   },
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "selfhostdev2": {
+  "Name": "selfhostdev2",
+  "ConfigableFields": [
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "Credentials",
+    "Datatype": "map[string]string"
+   },
    {
     "Title": "RecordsMapping",
     "Datatype": "map[string]*Seq"
@@ -4823,11 +5005,11 @@
   "Name": "simply",
   "ConfigableFields": [
    {
-    "Title": "AccountName",
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
-    "Title": "APIKey",
+    "Title": "AccountName",
     "Datatype": "string"
    },
    {
@@ -5516,7 +5698,11 @@
   "Name": "wannafind",
   "ConfigableFields": [
    {
-    "Title": "APIKey",
+    "Title": "ClientID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ClientSecret",
     "Datatype": "string"
    },
    {
@@ -5526,6 +5712,10 @@
    {
     "Title": "PollingInterval",
     "Datatype": "time.Duration"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
    }
   ],
   "HiddenFields": [

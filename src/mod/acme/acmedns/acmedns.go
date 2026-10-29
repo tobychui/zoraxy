@@ -38,6 +38,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/clouddns"
 	"github.com/go-acme/lego/v5/providers/dns/cloudflare"
 	"github.com/go-acme/lego/v5/providers/dns/cloudns"
+	"github.com/go-acme/lego/v5/providers/dns/cloudpress"
 	"github.com/go-acme/lego/v5/providers/dns/cloudru"
 	"github.com/go-acme/lego/v5/providers/dns/com35"
 	"github.com/go-acme/lego/v5/providers/dns/connbyte"
@@ -93,6 +94,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/glesys"
 	"github.com/go-acme/lego/v5/providers/dns/gname"
 	"github.com/go-acme/lego/v5/providers/dns/godaddy"
+	"github.com/go-acme/lego/v5/providers/dns/godaddyv3"
 	"github.com/go-acme/lego/v5/providers/dns/gravity"
 	"github.com/go-acme/lego/v5/providers/dns/hetzner"
 	"github.com/go-acme/lego/v5/providers/dns/hostingde"
@@ -142,6 +144,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/nederhost"
 	"github.com/go-acme/lego/v5/providers/dns/neodigit"
 	"github.com/go-acme/lego/v5/providers/dns/netcup"
+	"github.com/go-acme/lego/v5/providers/dns/netcupv1"
 	"github.com/go-acme/lego/v5/providers/dns/netlify"
 	"github.com/go-acme/lego/v5/providers/dns/netnod"
 	"github.com/go-acme/lego/v5/providers/dns/nexdns"
@@ -151,6 +154,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/nifcloud"
 	"github.com/go-acme/lego/v5/providers/dns/njalla"
 	"github.com/go-acme/lego/v5/providers/dns/nodion"
+	"github.com/go-acme/lego/v5/providers/dns/nordname"
 	"github.com/go-acme/lego/v5/providers/dns/ns1"
 	"github.com/go-acme/lego/v5/providers/dns/octenium"
 	"github.com/go-acme/lego/v5/providers/dns/omglol"
@@ -165,6 +169,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/pointdns"
 	"github.com/go-acme/lego/v5/providers/dns/porkbun"
 	"github.com/go-acme/lego/v5/providers/dns/poweradmin"
+	"github.com/go-acme/lego/v5/providers/dns/primedns"
 	"github.com/go-acme/lego/v5/providers/dns/rackspace"
 	"github.com/go-acme/lego/v5/providers/dns/rage4"
 	"github.com/go-acme/lego/v5/providers/dns/rainyun"
@@ -179,6 +184,7 @@ import (
 	"github.com/go-acme/lego/v5/providers/dns/scannet"
 	"github.com/go-acme/lego/v5/providers/dns/selectel"
 	"github.com/go-acme/lego/v5/providers/dns/selfhostde"
+	"github.com/go-acme/lego/v5/providers/dns/selfhostdev2"
 	"github.com/go-acme/lego/v5/providers/dns/servercow"
 	"github.com/go-acme/lego/v5/providers/dns/shellrent"
 	"github.com/go-acme/lego/v5/providers/dns/simply"
@@ -483,6 +489,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return cloudns.NewDNSProviderConfig(cfg)
+	case "cloudpress":
+		cfg := cloudpress.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return cloudpress.NewDNSProviderConfig(cfg)
 	case "cloudru":
 		cfg := cloudru.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -979,6 +994,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return godaddy.NewDNSProviderConfig(cfg)
+	case "godaddyv3":
+		cfg := godaddyv3.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return godaddyv3.NewDNSProviderConfig(cfg)
 	case "gravity":
 		cfg := gravity.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1420,6 +1444,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return netcup.NewDNSProviderConfig(cfg)
+	case "netcupv1":
+		cfg := netcupv1.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return netcupv1.NewDNSProviderConfig(cfg)
 	case "netlify":
 		cfg := netlify.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1501,6 +1534,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return nodion.NewDNSProviderConfig(cfg)
+	case "nordname":
+		cfg := nordname.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return nordname.NewDNSProviderConfig(cfg)
 	case "ns1":
 		cfg := ns1.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1628,6 +1670,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return poweradmin.NewDNSProviderConfig(cfg)
+	case "primedns":
+		cfg := primedns.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return primedns.NewDNSProviderConfig(cfg)
 	case "rackspace":
 		cfg := rackspace.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
@@ -1754,6 +1805,15 @@ func GetDNSProviderByJsonConfig(name string, js string, propagationTimeout int64
 		cfg.PropagationTimeout = pgDuration
 		cfg.PollingInterval = plInterval
 		return selfhostde.NewDNSProviderConfig(cfg)
+	case "selfhostdev2":
+		cfg := selfhostdev2.NewDefaultConfig()
+		err := json.Unmarshal([]byte(js), &cfg)
+		if err != nil {
+			return nil, err
+		}
+		cfg.PropagationTimeout = pgDuration
+		cfg.PollingInterval = plInterval
+		return selfhostdev2.NewDNSProviderConfig(cfg)
 	case "servercow":
 		cfg := servercow.NewDefaultConfig()
 		err := json.Unmarshal([]byte(js), &cfg)
