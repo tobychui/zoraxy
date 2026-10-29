@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth"
@@ -28,6 +29,8 @@ type Plugin struct {
 	staticRouteProxy  map[string]*dpcore.ReverseProxy //Storing longest prefix => dpcore map for static route
 	dynamicRouteProxy *dpcore.ReverseProxy            //The reverse proxy for the dynamic route
 	process           *exec.Cmd                       //The process of the plugin
+	inspectFailed     bool                            //Inspection binding retained after an unexpected exit
+	processExited     chan struct{}                   //Closed when process has exited
 	SupportHotRebuild bool                            //Whether the plugin source code exists in the plugin folder tree
 }
 
@@ -73,4 +76,9 @@ type Manager struct {
 	pluginCheckMutex   sync.RWMutex //Mutex for the plugin hash
 	pluginReloadTicker *time.Ticker //Ticker for the plugin reload
 	pluginReloadStop   chan bool    //Channel to stop the plugin reload ticker
+
+	/* Request inspection */
+	lifecycleMutex sync.Mutex                      //Guards Enabled, AssignedPort, Spec and process changes that affect inspection
+	inspectors     atomic.Pointer[inspectSnapshot] //Immutable inspector selection, rebuilt under lifecycleMutex
+	inspectPolicy  map[string]*inspectPolicyCache  //Last-known-good policy per plugin ID, guarded by lifecycleMutex
 }

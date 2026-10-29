@@ -178,6 +178,7 @@ func (m *Manager) UpdatePlugin(pluginID string) error {
 		return fmt.Errorf("plugin updated but failed to reload plugin spec: %w", err)
 	}
 
+	m.lifecycleMutex.Lock()
 	m.loadedPluginsMutex.Lock()
 	if updatedPlugin.Spec.ID != pluginID {
 		//Plugin changed its ID after the update, re-register under the new ID
@@ -187,6 +188,8 @@ func (m *Manager) UpdatePlugin(pluginID string) error {
 	installedPlugin.SupportHotRebuild = updatedPlugin.SupportHotRebuild
 	m.LoadedPlugins[updatedPlugin.Spec.ID] = installedPlugin
 	m.loadedPluginsMutex.Unlock()
+	m.publishInspectorsLocked()
+	m.lifecycleMutex.Unlock()
 
 	//Update the plugin hash list to reflect the new binary
 	m.InitPluginHashList()

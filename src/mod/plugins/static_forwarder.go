@@ -15,6 +15,9 @@ import (
 */
 
 func (m *Manager) UpdateTagsToPluginMaps() {
+	m.lifecycleMutex.Lock()
+	defer m.lifecycleMutex.Unlock()
+
 	//build the tag to plugin pointer sync.Map
 	//Note: this can be invoked concurrently by multiple plugins exiting at the same time
 	//(e.g. on shutdown), so m.tagPluginMap itself must never be reassigned here.
@@ -45,6 +48,7 @@ func (m *Manager) UpdateTagsToPluginMaps() {
 		}
 	}
 	m.tagPluginListMutex.Unlock()
+	m.publishInspectorsLocked()
 }
 
 // GenerateForwarderRadixTree generates the radix tree for static forwarders

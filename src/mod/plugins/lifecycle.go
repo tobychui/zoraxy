@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,6 +25,13 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	if err != nil {
 		return err
 	}
+
+	//Retain an unavailable inspection binding if startup fails. Only an
+	//explicit stop/disable withdraws a configured inspector.
+	m.lifecycleMutex.Lock()
+	thisPlugin.inspectFailed = true
+	m.publishInspectorsLocked()
+	m.lifecycleMutex.Unlock()
 
 	//Get the plugin Entry point
 	pluginEntryPoint, err := m.GetPluginEntryPoint(thisPlugin.RootDir)
@@ -78,6 +86,11 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	// them instead of reading thisPlugin.process, which is assigned later and
 	// may already belong to a newer process after a restart.
 	pid := cmd.Process.Pid
+	exited := make(chan struct{})
+	m.lifecycleMutex.Lock()
+	thisPlugin.process = cmd
+	thisPlugin.processExited = exited
+	m.lifecycleMutex.Unlock()
 
 	//Create a goroutine to handle the STDOUT of the plugin
 	go func() {
@@ -134,28 +147,28 @@ func (m *Manager) StartPlugin(pluginID string) error {
 	//Create a goroutine to wait for the plugin to exit
 	go func() {
 		err := cmd.Wait()
-		if err != nil {
-			//In theory this should not happen except for a crash
-			m.Log("plugin "+thisPlugin.Spec.ID+" encounted a fatal error. Disabling plugin...", err)
-
-			//Set the plugin state to disabled
-			thisPlugin.Enabled = false
-
-			//Generate a new static forwarder radix tree
-			m.UpdateTagsToPluginMaps()
-			return
-		}
+		close(exited)
+		m.handlePluginExit(thisPlugin, cmd, err)
 	}()
 
 	//Create a UI forwarder if the plugin has UI
+	m.lifecycleMutex.Lock()
 	err = m.StartUIHandlerForPlugin(thisPlugin, pluginConfiguration.Port)
+	select {
+	case <-exited:
+		//A crash before this point must not leave a dead process enabled
+		err = errors.New("plugin " + thisPlugin.Spec.ID + " exited during startup")
+	default:
+	}
+	if err == nil {
+		thisPlugin.Enabled = true
+		thisPlugin.inspectFailed = false
+		m.publishInspectorsLocked()
+	}
+	m.lifecycleMutex.Unlock()
 	if err != nil {
 		return err
 	}
-
-	// Store the cmd object so it can be accessed later for stopping the plugin
-	thisPlugin.process = cmd
-	thisPlugin.Enabled = true
 
 	// Register event subscriptions
 	if thisPlugin.Spec.SubscriptionsEvents != nil {
@@ -214,6 +227,28 @@ func (m *Manager) StartUIHandlerForPlugin(targetPlugin *Plugin, pluginListeningP
 	return nil
 }
 
+// handlePluginExit disables a plugin whose current process failed. The exit
+// of a replaced process must not disable the instance that superseded it.
+func (m *Manager) handlePluginExit(thisPlugin *Plugin, cmd *exec.Cmd, err error) {
+	m.lifecycleMutex.Lock()
+	current := thisPlugin.process == cmd && thisPlugin.Enabled
+	if current {
+		thisPlugin.inspectFailed = true
+		thisPlugin.Enabled = false
+		m.publishInspectorsLocked()
+	}
+	m.lifecycleMutex.Unlock()
+	if !current {
+		return
+	}
+
+	//In theory this should not happen except for a crash
+	m.Log("plugin "+thisPlugin.Spec.ID+" encounted a fatal error. Disabling plugin...", err)
+
+	//Generate a new static forwarder radix tree
+	m.UpdateTagsToPluginMaps()
+}
+
 // handlePluginSTDOUT logs one stdout line of the plugin process with the given
 // PID. The PID is passed in by the reader goroutine that owns the process, so
 // no shared plugin state is read concurrently with StartPlugin.
@@ -241,6 +276,14 @@ func (m *Manager) StopPlugin(pluginID string) error {
 	if err != nil {
 		return err
 	}
+
+	//Withdraw the plugin from request inspection before it starts shutting down
+	m.lifecycleMutex.Lock()
+	thisPlugin.Enabled = false
+	thisPlugin.inspectFailed = false
+	m.publishInspectorsLocked()
+	exited := thisPlugin.processExited
+	m.lifecycleMutex.Unlock()
 
 	//Make a GET request to plugin ui path /term to gracefully stop the plugin
 	if thisPlugin.uiProxy != nil {
@@ -273,30 +316,30 @@ func (m *Manager) StopPlugin(pluginID string) error {
 		//There is no SIGTERM in windows, kill the process directly
 		time.Sleep(300 * time.Millisecond)
 		thisPlugin.process.Process.Kill()
-	} else {
+	} else if thisPlugin.process != nil && thisPlugin.process.Process != nil {
 		//Send SIGTERM to the plugin process, if it is still running
 		err = thisPlugin.process.Process.Signal(syscall.SIGTERM)
 		if err != nil {
 			m.Log("Failed to send Interrupt signal to plugin "+thisPlugin.Spec.Name+": "+err.Error(), nil)
 		}
 
-		//Wait for the plugin to stop
-		for range 5 {
-			time.Sleep(1 * time.Second)
-			if thisPlugin.process.ProcessState != nil && thisPlugin.process.ProcessState.Exited() {
-				m.Log("Plugin "+thisPlugin.Spec.Name+" background process stopped", nil)
-				break
-			}
-		}
-		if thisPlugin.process.ProcessState == nil || !thisPlugin.process.ProcessState.Exited() {
+		//Wait for the plugin to stop. ProcessState is owned by the goroutine
+		//running cmd.Wait, so wait for its exit signal instead of polling it.
+		select {
+		case <-exited:
+			m.Log("Plugin "+thisPlugin.Spec.Name+" background process stopped", nil)
+		case <-time.After(5 * time.Second):
 			m.Log("Plugin "+thisPlugin.Spec.Name+" failed to stop gracefully, killing it", nil)
 			thisPlugin.process.Process.Kill()
 		}
 	}
 
 	//Remove the UI proxy
+	m.lifecycleMutex.Lock()
 	thisPlugin.uiProxy = nil
 	thisPlugin.Enabled = false
+	m.publishInspectorsLocked()
+	m.lifecycleMutex.Unlock()
 	thisPlugin.StopAllStaticPathRouters()
 	thisPlugin.StopDynamicForwardRouter()
 

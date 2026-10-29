@@ -115,6 +115,11 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//Optional inspection before capture or normal forwarding.
+		if h.Parent.inspectRoute(w, r, sep) {
+			return
+		}
+
 		//Plugin routing
 		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags, h.Parent.GetClientIPForEndpoint(r, sep)) {
 			//Request handled by subroute
@@ -195,6 +200,9 @@ func (h *ProxyHandler) handleRootRouting(w http.ResponseWriter, r *http.Request)
 	case DefaultSite_InternalStaticWebServer:
 		fallthrough
 	case DefaultSite_ReverseProxy:
+		if h.Parent.inspectRoute(w, r, proot) {
+			return
+		}
 		//They both share the same behavior
 		//Check if any virtual directory rules matches
 		proxyingPath := strings.TrimSpace(r.RequestURI)

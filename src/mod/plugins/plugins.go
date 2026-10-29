@@ -46,6 +46,7 @@ func NewPluginManager(options *ManagerOptions) *Manager {
 
 	//Create database table
 	options.Database.NewTable("plugins")
+	options.Database.NewTable(inspectPolicyTable)
 
 	thisManager := &Manager{
 		LoadedPlugins:      make(map[string]*Plugin),
@@ -98,7 +99,10 @@ func (m *Manager) ReloadPluginFromDisk() {
 			thisPlugin, err := m.LoadPluginSpec(pluginPath)
 			if err != nil {
 				m.Log("Failed to load plugin: "+filepath.Base(pluginPath), err)
-				continue
+				thisPlugin = m.restoreInspector(pluginPath)
+				if thisPlugin == nil {
+					continue
+				}
 			}
 
 			//Check if the plugin id is already loaded into the runtime
@@ -141,7 +145,10 @@ func (m *Manager) LoadPluginsFromDisk() error {
 			thisPlugin, err := m.LoadPluginSpec(pluginPath)
 			if err != nil {
 				m.Log("Failed to load plugin: "+filepath.Base(pluginPath), err)
-				continue
+				thisPlugin = m.restoreInspector(pluginPath)
+				if thisPlugin == nil {
+					continue
+				}
 			}
 			thisPlugin.RootDir = filepath.ToSlash(pluginPath)
 			thisPlugin.staticRouteProxy = make(map[string]*dpcore.ReverseProxy)
@@ -152,7 +159,7 @@ func (m *Manager) LoadPluginsFromDisk() error {
 
 			// If the plugin was enabled, start it now
 			//fmt.Println("Plugin enabled state", m.GetPluginPreviousEnableState(thisPlugin.Spec.ID))
-			if m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
+			if !thisPlugin.inspectFailed && m.GetPluginPreviousEnableState(thisPlugin.Spec.ID) {
 				err = m.StartPlugin(thisPlugin.Spec.ID)
 				if err != nil {
 					m.Log("Failed to enable plugin: "+thisPlugin.Spec.Name, err)

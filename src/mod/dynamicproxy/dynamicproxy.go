@@ -362,9 +362,9 @@ func (router *Router) StartProxyService() error {
 				finalListener = ln
 			}
 
-		if err := srv.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
-			router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
-		}
+			if err := srv.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
+				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
+			}
 
 		}(router.server)
 
@@ -434,6 +434,10 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 	//Validate authentication using all configured auth methods (Basic, ForwardAuth, OAuth2, ZorxAuth)
 	proxyHandler := router.mux.(*ProxyHandler)
 	if handleAuthProviderRouting(sep, w, r, proxyHandler) {
+		return
+	}
+
+	if router.inspectRoute(w, r, sep) {
 		return
 	}
 

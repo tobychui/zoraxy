@@ -98,6 +98,12 @@ type IntroSpect struct {
 	DynamicCaptureSniff   string `json:"dynamic_capture_sniff"`   //Dynamic capture sniff path of your plugin (e.g. /d_sniff)
 	DynamicCaptureIngress string `json:"dynamic_capture_ingress"` //Dynamic capture ingress path of your plugin (e.g. /d_handler)
 
+	/* Optional request inspection; allow continues normal proxy routing. */
+	RequestInspect           string `json:"request_inspect,omitempty"`             //POST endpoint; empty disables inspection
+	RequestInspectMaxBody    int    `json:"request_inspect_max_body,omitempty"`    //KiB; default 64, capped at 1024
+	RequestInspectFailClosed bool   `json:"request_inspect_fail_closed,omitempty"` //Return 503 on inspection errors instead of allowing
+	RequestInspectPolicy     string `json:"request_inspect_policy,omitempty"`      //Optional GET endpoint serving RequestInspectPolicy; replaces the two fields above
+
 	/* UI Path for your plugin */
 	UIPath string `json:"ui_path"` //UI path of your plugin (e.g. /ui), will proxy the whole subpath tree to Zoraxy Web UI as plugin UI
 
