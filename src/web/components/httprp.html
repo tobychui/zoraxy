@@ -547,7 +547,37 @@
                                     <small>Automatically request a certificate for the domain</small>
                                 </label>
                             </div>
-                            
+                            <div class="ui divider"></div>
+                            <h4><i class="id card icon"></i> Client Certificate (mTLS)</h4>
+                            <p>Ask visitors of this host to present a client certificate issued by one of your trusted client CAs.
+                                CAs are managed in the <b>mTLS</b> tab under Security.</p>
+                            <div class="ui form">
+                                <div class="field">
+                                    <label>Mode</label>
+                                    <select class="ui dropdown Mtls_Mode">
+                                        <option value="off">Off</option>
+                                        <option value="optional">Optional (verify the certificate if the client sends one)</option>
+                                        <option value="required">Required (reject clients without a valid certificate)</option>
+                                    </select>
+                                </div>
+                                <div class="field Mtls_CAField">
+                                    <label>Trusted Client CAs</label>
+                                    <div class="Mtls_CAList"></div>
+                                </div>
+                                <div class="field Mtls_BypassField">
+                                    <div class="ui checkbox">
+                                        <input type="checkbox" class="Mtls_BypassAuth">
+                                        <label>Skip login for clients with a valid certificate<br>
+                                            <small>Clients without a certificate still go through the authentication provider (Basic Auth / SSO) if one is set</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="ui small yellow message Mtls_RequiredWarning" style="display:none;">
+                                    <i class="exclamation triangle icon"></i> Install a client certificate on your device before saving, or you will be locked out of this host.
+                                    Client certificates require HTTPS, so plain HTTP access to this host is refused.
+                                </div>
+                                <button class="ui basic small button Mtls_SaveBtn"><i class="green save icon"></i> Save Client Certificate Settings</button>
+                            </div>
                             <br>
                             <div class="ui divider"></div>
                             <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
@@ -1120,6 +1150,77 @@
                 }
                 updateTlsResolveList(uuid);
             }
+        });
+    }
+
+    /* Client certificate (mTLS) settings of a proxy rule */
+    function initMtlsEditor(editor, subd, uuid){
+        let currentMode = (subd.TlsOptions && subd.TlsOptions.MTLSMode) ? subd.TlsOptions.MTLSMode : "off";
+        let currentCAs = (subd.TlsOptions && subd.TlsOptions.MTLSCAs) ? subd.TlsOptions.MTLSCAs : [];
+        let modeSelect = editor.find(".Mtls_Mode");
+        let caList = editor.find(".Mtls_CAList");
+
+        function refreshVisibility(){
+            let mode = modeSelect.dropdown("get value");
+            editor.find(".Mtls_CAField, .Mtls_BypassField").toggle(mode != "off");
+            editor.find(".Mtls_RequiredWarning").toggle(mode == "required");
+        }
+
+        //The select is turned into a Semantic UI dropdown on load, so go through its API
+        modeSelect.dropdown("setting", "onChange", function(){});
+        modeSelect.dropdown("set selected", currentMode);
+        editor.find(".Mtls_BypassAuth").prop("checked", !!(subd.TlsOptions && subd.TlsOptions.MTLSBypassAuth));
+        modeSelect.dropdown("setting", "onChange", refreshVisibility);
+        refreshVisibility();
+
+        caList.empty();
+        $.get("/api/mtls/list", function(data){
+            if (data.error != undefined || !Array.isArray(data)){
+                return;
+            }
+            if (data.length == 0){
+                caList.append($("<small>").text("No client CA added yet. Add one in Security > mTLS first."));
+                return;
+            }
+            data.forEach(function(ca){
+                let checkbox = $('<input type="checkbox">').attr("caname", ca.Name).prop("checked", currentCAs.includes(ca.Name));
+                let label = $("<label>").text(ca.Name + (ca.Expired ? " (expired)" : ""));
+                caList.append($('<div class="ui checkbox" style="display:block; margin-bottom: 0.4em;">').append(checkbox).append(label));
+            });
+        });
+
+        editor.find(".Mtls_SaveBtn").off("click").on("click", function(){
+            let mode = modeSelect.dropdown("get value");
+            let selected = [];
+            caList.find("input[type=checkbox]:checked").each(function(){
+                selected.push($(this).attr("caname"));
+            });
+            if (mode != "off" && selected.length == 0){
+                msgbox("Select at least one client CA", false, 4000);
+                return;
+            }
+            $.cjax({
+                url: "/api/mtls/setHostConfig",
+                method: "POST",
+                data: {
+                    ep: uuid,
+                    mode: mode,
+                    cas: JSON.stringify(selected),
+                    bypassAuth: editor.find(".Mtls_BypassAuth")[0].checked
+                },
+                success: function(data){
+                    if (data.error !== undefined){
+                        msgbox(data.error, false, 5000);
+                    }else{
+                        msgbox("Client certificate settings updated");
+                        //Keep the in-memory copy in sync so reopening the tab shows the saved values
+                        if (!subd.TlsOptions){ subd.TlsOptions = {}; }
+                        subd.TlsOptions.MTLSMode = mode;
+                        subd.TlsOptions.MTLSCAs = selected;
+                        subd.TlsOptions.MTLSBypassAuth = editor.find(".Mtls_BypassAuth")[0].checked;
+                    }
+                }
+            });
         });
     }
 
@@ -2226,6 +2327,7 @@
         editor.find(".Tls_EnableAutoHTTPS").off("change").on("change", function() {
             saveTlsConfigs(uuid);
         });
+        initMtlsEditor(editor, subd, uuid);
 
         /* Quick access to get certificate for the current host */
         let enableQuickRequestButton = true;

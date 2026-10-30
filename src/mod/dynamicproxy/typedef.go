@@ -28,6 +28,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
+	"imuslab.com/zoraxy/mod/mtls"
 	"imuslab.com/zoraxy/mod/geodb"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/plugins"
@@ -63,6 +64,7 @@ type RouterOption struct {
 
 	/* Routing Service Managers */
 	TlsManager         *tlscert.Manager          //TLS manager for serving SAN certificates
+	MTLSManager        *mtls.Manager             //Client CA store for mTLS enabled hosts, mTLS is unavailable if nil
 	RedirectRuleTable  *redirection.RuleTable    //Redirection rules handler and table
 	GeodbStore         *geodb.Store              //GeoIP resolver
 	AccessController   *access.Controller        //Blacklist / whitelist controller

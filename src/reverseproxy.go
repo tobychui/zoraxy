@@ -214,6 +214,7 @@ func ReverseProxyInit() {
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
 		TlsManager:          tlsCertManager,
+		MTLSManager:         mtlsManager,
 		RedirectRuleTable:   redirectTable,
 		GeodbStore:          geodbStore,
 		StatisticCollector:  statisticCollector,
@@ -1054,6 +1055,13 @@ func ReverseProxyHandleSetTlsConfig(w http.ResponseWriter, r *http.Request) {
 	if newTlsConfig.PreferredCertificate == nil {
 		//No update needed, reuse the current TLS config
 		newTlsConfig.PreferredCertificate = ept.TlsOptions.PreferredCertificate
+	}
+
+	//The mTLS settings are managed by /api/mtls/setHostConfig, keep them untouched
+	if ept.TlsOptions != nil {
+		newTlsConfig.MTLSMode = ept.TlsOptions.MTLSMode
+		newTlsConfig.MTLSCAs = ept.TlsOptions.MTLSCAs
+		newTlsConfig.MTLSBypassAuth = ept.TlsOptions.MTLSBypassAuth
 	}
 
 	ept.TlsOptions = newTlsConfig

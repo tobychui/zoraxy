@@ -1,0 +1,195 @@
+<style>
+    #mtls .expiredCA { color: rgb(238, 31, 31); }
+    #mtls .caFingerprint { font-family: monospace; font-size: 0.85em; word-break: break-all; }
+    #mtls textarea.pemInput { font-family: monospace; font-size: 0.85em; }
+</style>
+<div class="standardContainer">
+    <div class="ui basic segment">
+        <h2>Mutual TLS (mTLS)</h2>
+        <p>Only allow visitors that present a client certificate issued by a CA you trust</p>
+    </div>
+    <div class="ui divider"></div>
+    <div class="ui yellow message">
+        <div class="header">Experimental Feature</div>
+        <p>This feature is experimental and may change in future releases. Use with caution.</p>
+    </div>
+    <div class="ui blue message">
+        <div class="header">How it works</div>
+        <ol style="margin-top: 0.5em;">
+            <li>Upload the <b>public certificate</b> of the CA that signed your client certificates below.</li>
+            <li>Open a HTTP proxy rule, go to <b>TLS / SSL</b> and pick that CA under <b>Client Certificate (mTLS)</b>.</li>
+            <li>Install the client certificate (e.g. a .p12 file) on your phone or computer.</li>
+        </ol>
+        <small>Never upload a private key here. Zoraxy only needs the CA's public certificate.</small>
+    </div>
+
+    <h3>Trusted Client CAs</h3>
+    <div style="width: 100%; overflow-x: auto;">
+        <table class="ui celled unstackable compact table" id="mtlsCATable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Subject</th>
+                    <th>Valid Until</th>
+                    <th>SHA-256 Fingerprint</th>
+                    <th>Used By</th>
+                    <th class="no-sort">Remove</th>
+                </tr>
+            </thead>
+            <tbody id="mtlsCATableBody"></tbody>
+        </table>
+    </div>
+    <small><i class="ui red info circle icon"></i> Certificates in red are expired. Clients they signed will be rejected.</small>
+
+    <div class="ui divider"></div>
+    <h3>Add Client CA</h3>
+    <div class="ui fluid form">
+        <div class="field">
+            <label>Name</label>
+            <input type="text" id="mtlsCAName" maxlength="64" placeholder="e.g. Home Devices CA">
+        </div>
+        <div class="field">
+            <label>Certificate File (.pem / .crt / .cer)</label>
+            <input type="file" id="mtlsCAFile" accept=".pem,.crt,.cer">
+        </div>
+        <div class="field">
+            <label>or paste the PEM text</label>
+            <textarea class="pemInput" id="mtlsCAPem" rows="6" placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"></textarea>
+        </div>
+        <button class="ui basic button" onclick="mtlsAddCA();"><i class="green add icon"></i> Add CA</button>
+    </div>
+
+    <div class="ui divider"></div>
+    <div class="ui accordion">
+        <div class="title"><i class="dropdown icon"></i> Don't have a CA yet? Create one with OpenSSL</div>
+        <div class="content">
+<pre style="overflow-x: auto;"># 1. Create the CA (upload ca.crt above, keep ca.key private)
+openssl req -x509 -newkey rsa:4096 -nodes -keyout ca.key -out ca.crt -days 3650 -subj "/CN=My Zoraxy Client CA"
+
+# 2. Create a client certificate for a device
+openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -subj "/CN=my-phone"
+printf "extendedKeyUsage=clientAuth" > ext.cnf
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 825 -extfile ext.cnf
+
+# 3. Bundle it for import into a phone or browser
+openssl pkcs12 -export -inkey client.key -in client.crt -certfile ca.crt -out client.p12</pre>
+        </div>
+    </div>
+    <br><br>
+</div>
+<script>
+(function(){
+    $("#mtls .ui.accordion").accordion();
+
+    function shortFingerprint(fp){
+        return fp.match(/.{1,2}/g).join(":");
+    }
+
+    function renderCAList(list){
+        var body = $("#mtlsCATableBody");
+        body.empty();
+        if (list.length == 0){
+            body.append('<tr><td colspan="6"><i class="ui circle info icon"></i> No client CA added yet</td></tr>');
+            return;
+        }
+        list.forEach(function(ca){
+            var row = $("<tr>");
+            row.append($("<td>").append($("<b>").text(ca.Name)));
+            var subject = $("<td>").text(ca.Subject);
+            if (ca.CertCount > 1){
+                subject.append($("<br>")).append($("<small>").text("+" + (ca.CertCount - 1) + " more certificate(s) in bundle"));
+            }
+            if (!ca.IsCA){
+                subject.append($("<br>")).append($("<small>").css("color", "#e07b39").text("Not marked as a CA, only this exact certificate is trusted"));
+            }
+            row.append(subject);
+            var until = new Date(ca.NotAfter * 1000).toLocaleDateString();
+            row.append($("<td>").addClass(ca.Expired ? "expiredCA" : "").text(until + (ca.Expired ? " (expired)" : "")));
+            row.append($("<td>").addClass("caFingerprint").text(shortFingerprint(ca.Fingerprint)));
+            row.append($("<td>").text(ca.UsedBy.length == 0 ? "-" : ca.UsedBy.join(", ")));
+            var removeBtn = $('<button class="ui basic mini red icon button" title="Remove"><i class="trash icon"></i></button>');
+            if (ca.UsedBy.length > 0){
+                removeBtn.addClass("disabled");
+            }
+            removeBtn.on("click", function(){
+                mtlsRemoveCA(ca.Name);
+            });
+            row.append($("<td>").append(removeBtn));
+            body.append(row);
+        });
+    }
+
+    function loadCAList(){
+        $.get("/api/mtls/list", function(data){
+            if (data.error != undefined){
+                msgbox(data.error, false);
+                return;
+            }
+            renderCAList(data);
+        });
+    }
+
+    $("#mtlsCAFile").on("change", function(){
+        var file = this.files[0];
+        if (!file){ return; }
+        var reader = new FileReader();
+        reader.onload = function(e){
+            $("#mtlsCAPem").val(e.target.result);
+            if ($("#mtlsCAName").val().trim() == ""){
+                $("#mtlsCAName").val(file.name.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9._ -]/g, "_"));
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    window.mtlsAddCA = function(){
+        var name = $("#mtlsCAName").val().trim();
+        var pem = $("#mtlsCAPem").val().trim();
+        if (name == ""){
+            msgbox("Please enter a name for this CA", false);
+            return;
+        }
+        if (pem == ""){
+            msgbox("Please select a certificate file or paste the PEM text", false);
+            return;
+        }
+        $.cjax({
+            url: "/api/mtls/add",
+            method: "POST",
+            data: {name: name, pem: pem},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                    return;
+                }
+                msgbox("Client CA added");
+                $("#mtlsCAName").val("");
+                $("#mtlsCAPem").val("");
+                $("#mtlsCAFile").val("");
+                loadCAList();
+            }
+        });
+    };
+
+    window.mtlsRemoveCA = function(name){
+        if (!confirm("Remove client CA \"" + name + "\"?\nClients using certificates from this CA can no longer be verified.")){
+            return;
+        }
+        $.cjax({
+            url: "/api/mtls/remove",
+            method: "POST",
+            data: {name: name},
+            success: function(data){
+                if (data.error != undefined){
+                    msgbox(data.error, false, 6000);
+                    return;
+                }
+                msgbox("Client CA removed");
+                loadCAList();
+            }
+        });
+    };
+
+    loadCAList();
+})();
+</script>

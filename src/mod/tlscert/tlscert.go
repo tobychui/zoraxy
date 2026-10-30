@@ -27,6 +27,11 @@ type HostSpecificTlsBehavior struct {
 	DisableLegacyCertificateMatching bool              //If legacy certificate matching is disabled for this server name
 	EnableAutoHTTPS                  bool              //If auto HTTPS is enabled for this server name
 	PreferredCertificate             map[string]string //Preferred certificate for this server name, if empty, use the first matching certificate
+
+	//Client certificate authentication (mTLS)
+	MTLSMode       string   //"off" (or empty), "optional" or "required". See the mtls package
+	MTLSCAs        []string //Names of the client CA bundles (mtls package) trusted for this host
+	MTLSBypassAuth bool     //Clients with a valid certificate skip the authentication provider (basic auth / SSO)
 }
 
 type Manager struct {

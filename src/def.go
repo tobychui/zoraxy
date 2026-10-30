@@ -37,6 +37,7 @@ import (
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/streamproxy"
+	"imuslab.com/zoraxy/mod/mtls"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/uptime"
 	"imuslab.com/zoraxy/mod/webserv"
@@ -135,6 +136,7 @@ var (
 	CONF_HTTP_PROXY            string //HTTP proxy configuration path
 	CONF_STREAM_PROXY          string //Stream proxy configuration path
 	CONF_CERT_STORE            string //Certificate store path
+	CONF_MTLS_CA_STORE         string //mTLS client CA certificate store path
 	CONF_REDIRECTION           string //Redirection configuration path
 	CONF_ACCESS_RULE           string //Access rule configuration path
 	CONF_PATH_RULE             string //Path rule configuration path
@@ -160,6 +162,7 @@ var (
 	sysdb          *database.Database              //System database
 	authAgent      *auth.AuthAgent                 //Authentication agent
 	tlsCertManager *tlscert.Manager                //TLS / SSL management
+	mtlsManager    *mtls.Manager                   //Client CA store for mTLS (client certificate authentication)
 	redirectTable  *redirection.RuleTable          //Handle special redirection rule sets
 	webminPanelMux *http.ServeMux                  //Server mux for handling webmin panel APIs
 	csrfMiddleware func(http.Handler) http.Handler //CSRF protection middleware

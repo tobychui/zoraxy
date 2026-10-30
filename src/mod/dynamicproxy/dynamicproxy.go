@@ -214,6 +214,7 @@ func (router *Router) StartProxyService() error {
 		GetCertificate: router.Option.TlsManager.GetCert,
 		MinVersion:     uint16(minVersion),
 	}
+	config.GetConfigForClient = router.newMTLSConfigForClient(config)
 
 	//Start rate limitor
 	err := router.startRateLimterCounterResetTicker()
@@ -406,6 +407,11 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 		if isBlocked {
 			return
 		}
+	}
+
+	//Client certificates cannot be verified over plain HTTP
+	if handled, _, _ := router.checkMTLS(w, r, sep); handled {
+		return
 	}
 
 	// Rate Limit

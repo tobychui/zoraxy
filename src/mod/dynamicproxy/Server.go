@@ -76,6 +76,12 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		/* Client certificate (mTLS) */
+		mtlsHandled, mtlsVerified, mtlsPol := h.Parent.checkMTLS(w, r, sep)
+		if mtlsHandled {
+			return
+		}
+
 		/* Exploit Detection */
 		if sep.detector != nil {
 			if sep.detector.CheckIsAttack(w, r) {
@@ -109,10 +115,13 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//Validate auth (basic auth or SSO auth)
-		respWritten := handleAuthProviderRouting(sep, w, r, h)
-		if respWritten {
-			//Request handled by subroute
-			return
+		//A verified client certificate can replace the login if the host is set up that way
+		if !(mtlsVerified && mtlsPol.BypassAuth) {
+			respWritten := handleAuthProviderRouting(sep, w, r, h)
+			if respWritten {
+				//Request handled by subroute
+				return
+			}
 		}
 
 		//Plugin routing

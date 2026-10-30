@@ -118,6 +118,12 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/cert/checkDefault", tlsCertManager.HandleDefaultCertCheck)
 	authRouter.HandleFunc("/api/cert/delete", tlsCertManager.HandleCertRemove)
 	authRouter.HandleFunc("/api/cert/selfsign", tlsCertManager.HandleSelfSignCertGenerate)
+
+	//mTLS (client certificate authentication)
+	authRouter.HandleFunc("/api/mtls/list", handleMTLSListCA)
+	authRouter.HandleFunc("/api/mtls/add", handleMTLSAddCA)
+	authRouter.HandleFunc("/api/mtls/remove", handleMTLSRemoveCA)
+	authRouter.HandleFunc("/api/mtls/setHostConfig", handleMTLSSetHostConfig)
 }
 
 // Register the APIs for Authentication handlers like Forward Auth and OAUTH2

@@ -69,6 +69,7 @@ func main() {
 	CONF_HTTP_PROXY = CONF_FOLDER + "/proxy"
 	CONF_STREAM_PROXY = CONF_FOLDER + "/streamproxy"
 	CONF_CERT_STORE = CONF_FOLDER + "/certs"
+	CONF_MTLS_CA_STORE = CONF_FOLDER + "/mtls_ca"
 	CONF_REDIRECTION = CONF_FOLDER + "/redirect"
 	CONF_ACCESS_RULE = CONF_FOLDER + "/access"
 	CONF_PATH_RULE = CONF_FOLDER + "/rules/pathrules"

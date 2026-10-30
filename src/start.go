@@ -43,6 +43,7 @@ import (
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/statistic/analytic"
 	"imuslab.com/zoraxy/mod/streamproxy"
+	"imuslab.com/zoraxy/mod/mtls"
 	"imuslab.com/zoraxy/mod/tlscert"
 	"imuslab.com/zoraxy/mod/webserv"
 )
@@ -140,6 +141,12 @@ func startupSequence() {
 
 	//Create a TLS certificate manager
 	tlsCertManager, err = tlscert.NewManager(CONF_CERT_STORE, SystemWideLogger)
+	if err != nil {
+		panic(err)
+	}
+
+	//Create the mTLS client CA store
+	mtlsManager, err = mtls.NewManager(CONF_MTLS_CA_STORE, SystemWideLogger)
 	if err != nil {
 		panic(err)
 	}
