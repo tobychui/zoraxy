@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -19,6 +20,7 @@ type SniffResult int
 const (
 	SniffResultAccept SniffResult = iota // Forward the request to this plugin dynamic capture ingress
 	SniffResultSkip                      // Skip this plugin and let the next plugin handle the request
+	SniffResultDeny                      // Ask Zoraxy to reject the request; see DynamicSniffForwardRequest.Deny for status and reason
 )
 
 type SniffHandler func(*DynamicSniffForwardRequest) SniffResult
@@ -65,6 +67,17 @@ func (p *PathRouter) RegisterDynamicSniffHandler(sniff_ingress string, mux *http
 		if sniffResult == SniffResultAccept {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
+		} else if sniffResult == SniffResultDeny {
+			status := payload.denyStatus
+			if status < 400 || status > 599 {
+				status = http.StatusForbidden
+			}
+			w.Header().Set("X-Zoraxy-Deny-Status", strconv.Itoa(status))
+			if payload.denyReason != "" {
+				w.Header().Set("X-Zoraxy-Deny-Reason", payload.denyReason)
+			}
+			w.WriteHeader(int(ControlStatusCode_DENY))
+			w.Write([]byte("DENY"))
 		} else {
 			w.WriteHeader(http.StatusNotImplemented)
 			w.Write([]byte("SKIP"))
@@ -119,6 +132,8 @@ type DynamicSniffForwardRequest struct {
 	ProtoMinor int                 `json:"proto_minor"`
 
 	/* Internal use */
+	denyStatus  int           `json:"-"`
+	denyReason  string        `json:"-"`
 	rawRequest  *http.Request `json:"-"`
 	requestUUID string        `json:"-"`
 }
@@ -164,4 +179,13 @@ func (dsfr *DynamicSniffForwardRequest) GetRequest() *http.Request {
 // is not coming from the dynamic router
 func (dsfr *DynamicSniffForwardRequest) GetRequestUUID() string {
 	return dsfr.requestUUID
+}
+
+// Deny tells Zoraxy to answer the client with the given status (400-599, default 403)
+// instead of forwarding the request. The reason is a short, single-line text for the log.
+// Return SniffResultDeny from the sniff handler after calling this.
+func (dsfr *DynamicSniffForwardRequest) Deny(status int, reason string) SniffResult {
+	dsfr.denyStatus = status
+	dsfr.denyReason = reason
+	return SniffResultDeny
 }

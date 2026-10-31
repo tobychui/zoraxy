@@ -92,6 +92,20 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == int(zoraxy_plugin.ControlStatusCode_DENY) {
+		// Plugin asked Zoraxy to reject this request. Answer the client directly
+		// and do not forward the request anywhere.
+		status := http.StatusForbidden
+		if v, err := strconv.Atoi(resp.Header.Get("X-Zoraxy-Deny-Status")); err == nil && v >= 400 && v <= 599 {
+			status = v
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.WriteHeader(status)
+		w.Write([]byte(http.StatusText(status)))
+		return true
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		// Sniff endpoint did not return OK, let the next plugin handle the request
 		return false
