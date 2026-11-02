@@ -182,7 +182,9 @@ func (dsfr *DynamicSniffForwardRequest) GetRequestUUID() string {
 }
 
 // Deny tells Zoraxy to answer the client with the given status (400-599, default 403)
-// instead of forwarding the request. The reason is a short, single-line text for the log.
+// instead of forwarding the request. Zoraxy logs the request as plugin-deny:<reason>;
+// in the reason, anything except letters, digits, '.', '_' and '-' becomes '-',
+// and it is cut to 64 characters. Statistics count all denials as plugin-deny.
 // Return SniffResultDeny from the sniff handler after calling this.
 func (dsfr *DynamicSniffForwardRequest) Deny(status int, reason string) SniffResult {
 	dsfr.denyStatus = status
