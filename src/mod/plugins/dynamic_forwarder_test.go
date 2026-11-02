@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"imuslab.com/zoraxy/mod/plugins/zoraxy_plugin"
@@ -50,8 +51,12 @@ func TestHandleDynamicRoute_DenyWithDefaultStatus(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://example.com/admin?id=1%20OR%201=1", nil)
-	if handled := p.HandleDynamicRoute(rec, req, "203.0.113.5"); !handled {
+	handled, denial := p.HandleDynamicRoute(rec, req, "203.0.113.5")
+	if !handled {
 		t.Fatal("deny must count as handled so no other plugin or upstream sees the request")
+	}
+	if denial == nil || denial.Status != http.StatusForbidden || denial.Reason != "" {
+		t.Fatalf("deny must be reported for logging with its status, got %+v", denial)
 	}
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("expected 403 by default, got %d", rec.Code)
@@ -96,7 +101,7 @@ func TestHandleDynamicRoute_SkipStillFallsThrough(t *testing.T) {
 	defer stop()
 
 	rec := httptest.NewRecorder()
-	if handled := p.HandleDynamicRoute(rec, httptest.NewRequest("GET", "http://example.com/", nil), "203.0.113.5"); handled {
+	if handled, denial := p.HandleDynamicRoute(rec, httptest.NewRequest("GET", "http://example.com/", nil), "203.0.113.5"); handled || denial != nil {
 		t.Fatal("skip must not count as handled")
 	}
 	if *ingressHits != 0 {
@@ -121,5 +126,34 @@ func TestSniffHandler_DenyHelperSetsHeaders(t *testing.T) {
 	}
 	if rec.Header().Get("X-Zoraxy-Deny-Status") != "406" || rec.Header().Get("X-Zoraxy-Deny-Reason") != "test rule 1" {
 		t.Fatalf("unexpected deny headers: %v", rec.Header())
+	}
+}
+
+func TestHandleDynamicRoute_DenyReportsSanitisedReason(t *testing.T) {
+	p, _, stop := startSniffPlugin(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Zoraxy-Deny-Status", "429")
+		w.Header().Set("X-Zoraxy-Deny-Reason", "WAF: SQL injection (942100)")
+		w.WriteHeader(int(zoraxy_plugin.ControlStatusCode_DENY))
+	})
+	defer stop()
+
+	_, denial := p.HandleDynamicRoute(httptest.NewRecorder(), httptest.NewRequest("GET", "http://example.com/", nil), "203.0.113.5")
+	if denial == nil || denial.Status != http.StatusTooManyRequests || denial.Reason != "WAF-SQL-injection-942100" {
+		t.Fatalf("unexpected denial %+v", denial)
+	}
+}
+
+func TestSanitizeDenyReason(t *testing.T) {
+	for in, want := range map[string]string{
+		"":                       "",
+		"crowdsec-ban":           "crowdsec-ban",
+		"line1\r\nline2 [x]":     "line1-line2-x",
+		"  spaced  ":             "spaced",
+		"\u00fcml\u00e4ut":       "ml-ut",
+		strings.Repeat("a", 100): strings.Repeat("a", maxDenyReasonLen),
+	} {
+		if got := sanitizeDenyReason(in); got != want {
+			t.Errorf("sanitizeDenyReason(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
