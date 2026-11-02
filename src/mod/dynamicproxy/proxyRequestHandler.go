@@ -395,11 +395,16 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 }
 
 // logPluginDenial records a request a dynamic capture plugin rejected, the
-// same way access rule blocks are recorded. The access log line carries the
-// plugin's short reason (plugin-deny:<reason>); statistics count every denial
-// as "plugin-deny", so plugin-chosen reasons cannot grow the statistic maps.
+// same way access rule blocks are recorded. The access log line names the
+// plugin and its short reason (plugin-deny:<plugin id>:<reason>); statistics
+// count every denial as "plugin-deny", so plugin-chosen values cannot grow
+// the statistic maps.
 func (router *Router) logPluginDenial(r *http.Request, denial *plugins.Denial, originalHostname string, endpoint *ProxyEndpoint) {
-	logClass := "plugin-deny"
+	plugin := denial.Plugin
+	if plugin == "" {
+		plugin = "unknown"
+	}
+	logClass := "plugin-deny:" + plugin
 	if denial.Reason != "" {
 		logClass += ":" + denial.Reason
 	}

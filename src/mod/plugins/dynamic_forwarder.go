@@ -44,6 +44,7 @@ func (p *Plugin) AcceptDynamicRoute() bool {
 // already answered the client; the router only records it in the log.
 type Denial struct {
 	Status int
+	Plugin string // ID of the plugin that denied the request, as a short token
 	Reason string // short token from X-Zoraxy-Deny-Reason, may be empty
 }
 
@@ -141,7 +142,7 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.WriteHeader(status)
 		w.Write([]byte(http.StatusText(status)))
-		return true, &Denial{Status: status, Reason: sanitizeDenyReason(resp.Header.Get("X-Zoraxy-Deny-Reason"))}
+		return true, &Denial{Status: status, Plugin: sanitizeDenyReason(p.Spec.ID), Reason: sanitizeDenyReason(resp.Header.Get("X-Zoraxy-Deny-Reason"))}
 	}
 
 	if resp.StatusCode != http.StatusOK {

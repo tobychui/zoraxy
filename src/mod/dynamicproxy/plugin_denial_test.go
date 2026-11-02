@@ -29,7 +29,7 @@ func TestLogPluginDenialRecordsReasonAndHonoursLoggingSwitch(t *testing.T) {
 	denied.Host = "chat.example.test"
 	quiet := httptest.NewRequest("GET", "/secret", nil)
 	quiet.Host = "quiet.example.test"
-	router.logPluginDenial(denied, &plugins.Denial{Status: 403, Reason: "waf-942100"}, "chat.example.test", &ProxyEndpoint{})
+	router.logPluginDenial(denied, &plugins.Denial{Status: 403, Plugin: "org.example.waf", Reason: "waf-942100"}, "chat.example.test", &ProxyEndpoint{})
 	router.logPluginDenial(quiet, &plugins.Denial{Status: 429}, "quiet.example.test", &ProxyEndpoint{DisableLogging: true})
 
 	// LogHTTPRequest writes asynchronously.
@@ -43,7 +43,7 @@ func TestLogPluginDenialRecordsReasonAndHonoursLoggingSwitch(t *testing.T) {
 			break
 		}
 	}
-	if !strings.Contains(got, "[router:plugin-deny:waf-942100]") || !strings.Contains(got, "[origin:chat.example.test]") || !strings.Contains(got, "POST /login 403") {
+	if !strings.Contains(got, "[router:plugin-deny:org.example.waf:waf-942100]") || !strings.Contains(got, "[origin:chat.example.test]") || !strings.Contains(got, "POST /login 403") {
 		t.Fatalf("denial not logged as expected:\n%s", got)
 	}
 	time.Sleep(100 * time.Millisecond)

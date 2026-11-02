@@ -35,6 +35,7 @@ func startSniffPlugin(t *testing.T, sniff http.HandlerFunc) (*Plugin, *int, func
 		Enabled:      true,
 		AssignedPort: ln.Addr().(*net.TCPAddr).Port,
 		Spec: &zoraxy_plugin.IntroSpect{
+			ID:                    "org.example.sniffer",
 			DynamicCaptureSniff:   "/sniff",
 			DynamicCaptureIngress: "/ingress",
 		},
@@ -138,7 +139,7 @@ func TestHandleDynamicRoute_DenyReportsSanitisedReason(t *testing.T) {
 	defer stop()
 
 	_, denial := p.HandleDynamicRoute(httptest.NewRecorder(), httptest.NewRequest("GET", "http://example.com/", nil), "203.0.113.5")
-	if denial == nil || denial.Status != http.StatusTooManyRequests || denial.Reason != "WAF-SQL-injection-942100" {
+	if denial == nil || denial.Status != http.StatusTooManyRequests || denial.Reason != "WAF-SQL-injection-942100" || denial.Plugin == "" || denial.Plugin != sanitizeDenyReason(p.Spec.ID) {
 		t.Fatalf("unexpected denial %+v", denial)
 	}
 }
