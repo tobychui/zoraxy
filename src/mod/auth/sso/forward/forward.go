@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"imuslab.com/zoraxy/mod/database"
@@ -43,6 +42,12 @@ type AuthRouterOptions struct {
 	// X-Forwarded-* headers.
 	UseXOriginalHeaders bool
 
+	// IgnoredPaths is a list of request path prefixes that bypass forward auth entirely. Any
+	// request whose (normalized) path falls within one of these prefixes is served WITHOUT
+	// authentication. Used for auth callback subpaths that must not be gated, e.g. Authentik's
+	// /outpost.goauthentik.io in single-application mode. Matching is hardened against traversal.
+	IgnoredPaths []string
+
 	Logger   *logger.Logger
 	Database *database.Database
 }
@@ -60,6 +65,7 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	options.Database.Read(DatabaseTable, DatabaseKeyAddress, &options.Address)
 
 	responseHeaders, responseClientHeaders, requestHeaders, requestIncludedCookies, requestExcludedCookies := "", "", "", "", ""
+	ignoredPaths := ""
 
 	options.Database.Read(DatabaseTable, DatabaseKeyResponseHeaders, &responseHeaders)
 	options.Database.Read(DatabaseTable, DatabaseKeyResponseClientHeaders, &responseClientHeaders)
@@ -68,12 +74,14 @@ func NewAuthRouter(options *AuthRouterOptions) *AuthRouter {
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestExcludedCookies, &requestExcludedCookies)
 	options.Database.Read(DatabaseTable, DatabaseKeyRequestIncludeBody, &options.RequestIncludeBody)
 	options.Database.Read(DatabaseTable, DatabaseKeyUseXOriginalHeaders, &options.UseXOriginalHeaders)
+	options.Database.Read(DatabaseTable, DatabaseKeyIgnoredPaths, &ignoredPaths)
 
 	options.ResponseHeaders = cleanSplit(responseHeaders)
 	options.ResponseClientHeaders = cleanSplit(responseClientHeaders)
 	options.RequestHeaders = cleanSplit(requestHeaders)
 	options.RequestIncludedCookies = cleanSplit(requestIncludedCookies)
 	options.RequestExcludedCookies = cleanSplit(requestExcludedCookies)
+	options.IgnoredPaths = cleanSplit(ignoredPaths)
 
 	r := &AuthRouter{
 		client: &http.Client{
@@ -113,6 +121,7 @@ func (ar *AuthRouter) handleOptionsGET(w http.ResponseWriter, r *http.Request) {
 		DatabaseKeyRequestExcludedCookies: ar.options.RequestExcludedCookies,
 		DatabaseKeyRequestIncludeBody:     ar.options.RequestIncludeBody,
 		DatabaseKeyUseXOriginalHeaders:    ar.options.UseXOriginalHeaders,
+		DatabaseKeyIgnoredPaths:           ar.options.IgnoredPaths,
 	})
 
 	utils.SendJSONResponse(w, string(js))
@@ -135,8 +144,9 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	requestHeaders, _ := utils.PostPara(r, DatabaseKeyRequestHeaders)
 	requestIncludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestIncludedCookies)
 	requestExcludedCookies, _ := utils.PostPara(r, DatabaseKeyRequestExcludedCookies)
-	requestIncludeBody, _ := utils.PostPara(r, DatabaseKeyRequestIncludeBody)
-	useXOriginalHeaders, _ := utils.PostPara(r, DatabaseKeyUseXOriginalHeaders)
+	requestIncludeBody, _ := utils.PostBool(r, DatabaseKeyRequestIncludeBody)
+	useXOriginalHeaders, _ := utils.PostBool(r, DatabaseKeyUseXOriginalHeaders)
+	ignoredPaths, _ := utils.PostPara(r, DatabaseKeyIgnoredPaths)
 
 	// Write changes to runtime
 	ar.options.Address = address
@@ -145,8 +155,9 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	ar.options.RequestHeaders = cleanSplit(requestHeaders)
 	ar.options.RequestIncludedCookies = cleanSplit(requestIncludedCookies)
 	ar.options.RequestExcludedCookies = cleanSplit(requestExcludedCookies)
-	ar.options.RequestIncludeBody, _ = strconv.ParseBool(requestIncludeBody)
-	ar.options.UseXOriginalHeaders, _ = strconv.ParseBool(useXOriginalHeaders)
+	ar.options.RequestIncludeBody = requestIncludeBody
+	ar.options.UseXOriginalHeaders = useXOriginalHeaders
+	ar.options.IgnoredPaths = cleanSplit(ignoredPaths)
 
 	// Write changes to database
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyAddress, address)
@@ -157,6 +168,7 @@ func (ar *AuthRouter) handleOptionsPOST(w http.ResponseWriter, r *http.Request) 
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestExcludedCookies, requestExcludedCookies)
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyRequestIncludeBody, ar.options.RequestIncludeBody)
 	ar.options.Database.Write(DatabaseTable, DatabaseKeyUseXOriginalHeaders, ar.options.UseXOriginalHeaders)
+	ar.options.Database.Write(DatabaseTable, DatabaseKeyIgnoredPaths, ignoredPaths)
 
 	ar.logOptions()
 
@@ -172,6 +184,7 @@ func (ar *AuthRouter) handleOptionsDelete(w http.ResponseWriter, r *http.Request
 	ar.options.RequestExcludedCookies = nil
 	ar.options.RequestIncludeBody = false
 	ar.options.UseXOriginalHeaders = false
+	ar.options.IgnoredPaths = nil
 
 	ar.options.Database.Delete(DatabaseTable, DatabaseKeyAddress)
 	ar.options.Database.Delete(DatabaseTable, DatabaseKeyResponseHeaders)
@@ -181,6 +194,7 @@ func (ar *AuthRouter) handleOptionsDelete(w http.ResponseWriter, r *http.Request
 	ar.options.Database.Delete(DatabaseTable, DatabaseKeyRequestExcludedCookies)
 	ar.options.Database.Delete(DatabaseTable, DatabaseKeyRequestIncludeBody)
 	ar.options.Database.Delete(DatabaseTable, DatabaseKeyUseXOriginalHeaders)
+	ar.options.Database.Delete(DatabaseTable, DatabaseKeyIgnoredPaths)
 
 	utils.SendOK(w)
 }
@@ -193,6 +207,14 @@ func (ar *AuthRouter) handleOptionsMethodNotAllowed(w http.ResponseWriter, r *ht
 
 // HandleAuthProviderRouting is the internal handler for Forward Auth authentication.
 func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.Request) error {
+	// Skip forward auth for SSO-ignored paths. These paths are served WITHOUT authentication
+	// (e.g. an auth provider callback subpath that must reach its own handler), so matching is
+	// hardened against path traversal / boundary tricks (see IsIgnoredPath).
+	if ar.IsIgnoredPath(r.RequestURI) {
+		headerReplaceIncluded(nil, r.Header, ar.options.ResponseHeaders)
+		return nil
+	}
+
 	if ar.options.Address == "" {
 		return ar.handle500Error(w, nil, "Address not set")
 	}
@@ -239,7 +261,7 @@ func (ar *AuthRouter) HandleAuthProviderRouting(w http.ResponseWriter, r *http.R
 		if len(ar.options.ResponseHeaders) != 0 {
 			// Copy specific user-specified headers from the response of the forward auth request to the request sent to the
 			// upstream server/next hop.
-			headerCopyIncluded(respForwarded.Header, r.Header, ar.options.ResponseHeaders, false)
+			headerReplaceIncluded(respForwarded.Header, r.Header, ar.options.ResponseHeaders)
 		}
 
 		// Return the request to the proxy for forwarding to the backend.
@@ -272,5 +294,5 @@ func (ar *AuthRouter) handle500Error(w http.ResponseWriter, err error, message s
 }
 
 func (ar *AuthRouter) logOptions() {
-	ar.options.Logger.PrintAndLog(LogTitle, fmt.Sprintf("Forward Authz Options -> Address: %s, Response Headers: %s, Response Client Headers: %s, Request Headers: %s, Request Included Cookies: %s, Request Excluded Cookies: %s, Request Include Body: %t, Use X-Original Headers: %t", ar.options.Address, strings.Join(ar.options.ResponseHeaders, ";"), strings.Join(ar.options.ResponseClientHeaders, ";"), strings.Join(ar.options.RequestHeaders, ";"), strings.Join(ar.options.RequestIncludedCookies, ";"), strings.Join(ar.options.RequestExcludedCookies, ";"), ar.options.RequestIncludeBody, ar.options.UseXOriginalHeaders), nil)
+	ar.options.Logger.PrintAndLog(LogTitle, fmt.Sprintf("Forward Authz Options -> Address: %s, Response Headers: %s, Response Client Headers: %s, Request Headers: %s, Request Included Cookies: %s, Request Excluded Cookies: %s, Request Include Body: %t, Use X-Original Headers: %t, Ignored Paths: %s", ar.options.Address, strings.Join(ar.options.ResponseHeaders, ";"), strings.Join(ar.options.ResponseClientHeaders, ";"), strings.Join(ar.options.RequestHeaders, ";"), strings.Join(ar.options.RequestIncludedCookies, ";"), strings.Join(ar.options.RequestExcludedCookies, ";"), ar.options.RequestIncludeBody, ar.options.UseXOriginalHeaders, strings.Join(ar.options.IgnoredPaths, ";")), nil)
 }

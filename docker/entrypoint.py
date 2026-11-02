@@ -22,6 +22,7 @@ def run(command):
 def popen(command):
   proc = subprocess.Popen(command)
   time.sleep(1)
+  # Check for early exits which may indicate crashes or other failures
   if proc.poll() is not None:
     print(f"{command} exited early with code {proc.returncode}")
     raise RuntimeError(f"Failed to start {command}")
@@ -40,6 +41,7 @@ def cleanup(_signum, _frame):
     print("Terminating ZeroTier-One...")
     zerotier_proc.terminate()
 
+  # Wait for Zoraxy and ZeroTier to cleanly exit
   if zoraxy_proc:
     try:
       zoraxy_proc.wait(timeout=8)
@@ -73,6 +75,7 @@ def start_zerotier():
 
   os.makedirs(config_dir, exist_ok=True)
 
+  # Symlink the host mount to the ZeroTier config path
   try:
     os.symlink(config_dir, zt_path, target_is_directory=True)
   except FileExistsError:
@@ -107,6 +110,7 @@ def start_zoraxy():
   zoraxy_proc = popen(zoraxy_args)
 
 def main():
+  # Register signal handlers to allow clean shutdowns
   signal.signal(signal.SIGTERM, cleanup)
   signal.signal(signal.SIGINT, cleanup)
 

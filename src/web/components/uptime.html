@@ -193,7 +193,7 @@
                 dotType = "offline";
             }else if (statusCode < 200){
                 //1xx
-                dotType = "error";
+                dotType = "fine";
                 ontimeRate++;
             }else if (statusCode < 300){
                 //2xx
@@ -205,7 +205,7 @@
                 ontimeRate++;
             }else if (statusCode < 500){
                 //4xx
-                dotType = "error";
+                dotType = "fine";
                 ontimeRate++;
             }else if (statusCode < 600){
                 //5xx
@@ -261,9 +261,8 @@
                         break;
                 }
                 
-                onlineStatusCss = `color: #f38020;`;
-                reminderEle = `<small style="${onlineStatusCss}">Target online but not accessible</small>`;
-                
+                onlineStatusCss = `color: #5583ee;`;
+                reminderEle = `<small style="${onlineStatusCss}">Target online and returning ${latestStatusCode} status code</small>`;
             }else{
                 currentOnlineStatus = `Unreachable`;
                 onlineStatusCss = `color: #df484a;`;

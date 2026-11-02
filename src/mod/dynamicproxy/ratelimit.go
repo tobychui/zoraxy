@@ -2,9 +2,7 @@ package dynamicproxy
 
 import (
 	"errors"
-	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -57,28 +55,12 @@ func (h *ProxyHandler) handleRateLimitRouting(w http.ResponseWriter, r *http.Req
 }
 
 func (router *Router) handleRateLimit(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
-	//Get the real client-ip from request header
-	clientIP := r.RemoteAddr
-	if r.Header.Get("X-Real-Ip") == "" {
-		CF_Connecting_IP := r.Header.Get("CF-Connecting-IP")
-		Fastly_Client_IP := r.Header.Get("Fastly-Client-IP")
-		if CF_Connecting_IP != "" {
-			//Use CF Connecting IP
-			clientIP = CF_Connecting_IP
-		} else if Fastly_Client_IP != "" {
-			//Use Fastly Client IP
-			clientIP = Fastly_Client_IP
-		} else {
-			ips := strings.Split(clientIP, ",")
-			if len(ips) > 0 {
-				clientIP = strings.TrimSpace(ips[0])
-			}
-		}
-	}
-
-	ip, _, err := net.SplitHostPort(clientIP)
-	if err != nil {
-		//Default allow passthrough on error
+	//Resolve the client IP using the same trusted proxy gated logic as the access
+	//control check, so a header supplied address can neither break the limiter nor
+	//be spoofed to escape it
+	ip := router.GetClientIPForEndpoint(r, pe)
+	if ip == "" {
+		//Unable to resolve the client IP. Default allow passthrough
 		return nil
 	}
 

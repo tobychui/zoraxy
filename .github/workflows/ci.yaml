@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 'stable'
           cache-dependency-path: src/go.sum
@@ -55,10 +55,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: 'stable'
           cache-dependency-path: src/go.sum
@@ -73,7 +73,7 @@ jobs:
 
       - name: Example plugins are up to date and build successfully
         run: |
-          bash build_all.sh && git diff --exit-code # if code fails to build, or if there are code changes, this step will fail
+          bash build_all.sh && git diff --exit-code -- . # if code fails to build, or if there are changes under example/plugins, this step will fail
         working-directory: example/plugins
 
       # TODO: if possible, it may be good to test whether the plugins correctly

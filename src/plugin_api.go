@@ -36,6 +36,8 @@ func RegisterHTTPProxyRestAPI(authMiddleware *auth.PluginAuthMiddleware) {
 	authMiddleware.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
 	/* Reverse proxy auth related */
 	authMiddleware.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
+	/* ZorxAuth SSO per-endpoint exception rules */
+	authMiddleware.HandleFunc("/api/proxy/auth/zorxauth/exceptions/list", ListProxyZorxAuthExceptionRules)
 }
 
 // Register the APIs for redirection rules management functions

@@ -50,7 +50,7 @@ func GetPara(r *http.Request, key string) (string, error) {
 	return value, nil
 }
 
-// Get GET paramter as boolean, accept 1 or true
+// Get GET parameter as boolean, only accept "true" or "false" (case insensitive)
 func GetBool(r *http.Request, key string) (bool, error) {
 	x, err := GetPara(r, key)
 	if err != nil {
@@ -59,9 +59,9 @@ func GetBool(r *http.Request, key string) (bool, error) {
 
 	// Convert to lowercase and trim spaces just once to compare
 	switch strings.ToLower(strings.TrimSpace(x)) {
-	case "1", "true", "on":
+	case "true":
 		return true, nil
-	case "0", "false", "off":
+	case "false":
 		return false, nil
 	}
 
@@ -102,7 +102,7 @@ func PostDuration(r *http.Request, key string) (*time.Duration, error) {
 	return &duration, nil
 }
 
-// Get POST paramter as boolean, accept 1 or true
+// Get POST parameter as boolean, only accept "true" or "false" (case insensitive)
 func PostBool(r *http.Request, key string) (bool, error) {
 	x, err := PostPara(r, key)
 	if err != nil {
@@ -111,9 +111,9 @@ func PostBool(r *http.Request, key string) (bool, error) {
 
 	// Convert to lowercase and trim spaces just once to compare
 	switch strings.ToLower(strings.TrimSpace(x)) {
-	case "1", "true", "on":
+	case "true":
 		return true, nil
-	case "0", "false", "off":
+	case "false":
 		return false, nil
 	}
 

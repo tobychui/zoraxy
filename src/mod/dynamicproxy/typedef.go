@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/quic-go/quic-go/http3"
+
 	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/auth/sso/zorxauth"
 
@@ -46,6 +48,25 @@ type ProxyHandler struct {
 	Parent *Router
 }
 
+// TlsCipherProfile is the enum of supported TLS cipher profiles for the
+// reverse proxy TLS listeners (see tlscipherprofile.go for profile details)
+type TlsCipherProfile string
+
+const (
+	TlsCipherProfileDefault      TlsCipherProfile = "default"      //Go's built-in defaults
+	TlsCipherProfileIntermediate TlsCipherProfile = "intermediate" //Mozilla intermediate: TLS 1.2 + 1.3, ECDHE + AEAD only
+	TlsCipherProfileModern       TlsCipherProfile = "modern"       //Mozilla modern: TLS 1.3 only
+)
+
+// IsValid returns true if the cipher profile is one of the defined profiles
+func (p TlsCipherProfile) IsValid() bool {
+	switch p {
+	case TlsCipherProfileDefault, TlsCipherProfileIntermediate, TlsCipherProfileModern:
+		return true
+	}
+	return false
+}
+
 /* Router Object Options */
 type RouterOption struct {
 	/* Basic Settings */
@@ -54,6 +75,7 @@ type RouterOption struct {
 	Port               int    //Incoming port
 	UseTls             bool   //Use TLS to serve incoming requsts
 	MinTLSVersion      uint16 //Minimum TLS version
+	TlsCipherProfile   TlsCipherProfile //TLS cipher profile (see TlsCipherProfile enum and tlscipherprofile.go)
 	NoCache            bool   //Force set Cache-Control: no-store
 	ListenOnPort80     bool   //Enable port 80 http listener
 	ForceHttpsRedirect bool   //Force redirection of http to https endpoint
@@ -68,6 +90,21 @@ type RouterOption struct {
 	WebDirectory       string                    //The static web server directory containing the templates folder
 	LoadBalancer       *loadbalance.RouteManager //Load balancer that handle load balancing of proxy target
 	PluginManager      *plugins.Manager          //Plugin manager for handling plugin routing
+
+	/* Timeouts */
+	ReadHeaderTimeout int64 //HTTP server read timeout in seconds
+	WriteTimeout      int64 //HTTP server write timeout in seconds
+	IdleTimeout       int64 //HTTP server idle timeout in seconds
+
+	/* HTTP/2 */
+	DisableHttp2                   bool   //Disable HTTP/2 on the TLS listener and serve HTTP/1.1 only
+	H2MaxConcurrentStreams         uint32 //HTTP/2 max concurrent streams per connection (0 = Go default)
+	H2MaxUploadBufferPerConnection int32  //HTTP/2 max upload buffer per connection in bytes (0 = Go default)
+	H2MaxUploadBufferPerStream     int32  //HTTP/2 max upload buffer per stream in bytes (0 = Go default)
+
+	/* HTTP/3 (QUIC) */
+	EnableH3              bool   //Enable HTTP/3 (QUIC) listener alongside HTTP/1.1+2 (requires TLS; DB-persisted, runtime-toggleable)
+	H3MaxConcurrentStreams uint32 //HTTP/3 max concurrent streams per connection (0 = quic-go default)
 
 	/* Authentication Providers */
 	ForwardAuthRouter   *forward.AuthRouter
@@ -92,6 +129,9 @@ type Router struct {
 	loadBalancer *loadbalance.RouteManager //Load balancer routing manager
 	routingRules []*RoutingRule            //Special routing rules, handle high priority routing like ACME request handling
 	restarting   bool                      //If the router is restarting
+
+	h3Server *http3.Server   //HTTP/3 (QUIC) server, nil when disabled
+	h3Conn   net.PacketConn  //UDP connection serving the HTTP/3 listener; closed on shutdown
 
 	tlsListener      net.Listener //TLS listener, handle SNI routing
 	tlsBehaviorMutex sync.RWMutex //Mutex for tlsBehavior map
@@ -131,9 +171,21 @@ const (
 
 // Paths to exclude in basic auth enabled proxy handler
 type BasicAuthExceptionRule struct {
-	RuleType   AuthExceptionType //The type of the exception rule
-	PathPrefix string            //Path prefix to match, e.g. /api/v1/
-	CIDR       string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
+	RuleType        AuthExceptionType //The type of the exception rule
+	PathPrefix      string            //Path prefix to match, e.g. /api/v1/
+	CaseInsensitive bool              //If true, the path prefix is matched without regard to letter case
+	CIDR            string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
+	UseTrustedProxy bool              //If true, trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) for CIDR matching. WARNING: enabling this allows header spoofing if the upstream proxy is not trusted.
+}
+
+// ZorxAuthExceptionRule defines an exception rule for ZorxAuth SSO authentication.
+// Requests matching this rule bypass authentication entirely.
+type ZorxAuthExceptionRule struct {
+	RuleType        AuthExceptionType //The type of the exception rule (path or CIDR)
+	PathPattern     string            //Path prefix or regex pattern to match, e.g. /api/v1/ or ^/api/.*$
+	IsRegex         bool              //If true, PathPattern is treated as a regular expression; otherwise it is a path prefix
+	CIDR            string            //CIDR to match, e.g. 192.168.1.0/24 or IP address, e.g. 192.168.1.1
+	UseTrustedProxy bool              //If true, trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) for CIDR matching. WARNING: enabling this allows header spoofing if the upstream proxy is not trusted.
 }
 
 /* Routing Rule Data Structures */
@@ -191,6 +243,9 @@ type AuthenticationProvider struct {
 	ForwardAuthResponseClientHeaders  []string // List of headers to copy from the forward auth server response to the client response.
 	ForwardAuthRequestHeaders         []string // List of headers to copy from the original request to the auth server. If empty all are copied.
 	ForwardAuthRequestExcludedCookies []string // List of cookies to exclude from the request after sending it to the forward auth server.
+
+	/* ZorxAuth SSO Settings */
+	ZorxAuthExceptionRules []*ZorxAuthExceptionRule //Rules to bypass ZorxAuth SSO authentication (path prefix/regex or IP/CIDR)
 }
 
 /* CAPTCHA Provider Configuration */
@@ -221,11 +276,15 @@ type ProxyEndpoint struct {
 	ListeningPorts       []string                //Alternative listening ports in format "ip:port" or ":port" (e.g., ":8080", "192.168.1.1:8080")
 
 	//Inbound TLS/SSL Related
-	BypassGlobalTLS bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
-	TlsOptions      *tlscert.HostSpecificTlsBehavior //TLS options for this endpoint, if nil, use global TLS options
+	BypassGlobalTLS      bool                             //Bypass global TLS setting options if TLS Listener enabled (parent.tlsListener != nil)
+	EnableConnectSupport bool                             //Allow HTTP CONNECT tunneling to the configured upstream (disabled by default to prevent open-proxy abuse)
+	TlsOptions           *tlscert.HostSpecificTlsBehavior //TLS options for this endpoint, if nil, use global TLS options
 
 	//Virtual Directories
 	VirtualDirectories []*VirtualDirectoryEndpoint
+
+	//Generic HTTP protocol upgrade (non-WebSocket, e.g. Tailscale TS2021)
+	EnableUpgradeForwarding bool //Forward non-WebSocket Upgrade requests to the upstream (disabled by default)
 
 	//Websocket auto proxy
 	DisableWebSocket               bool  //Block all WebSocket upgrade requests with an HTTP error response
@@ -248,10 +307,11 @@ type ProxyEndpoint struct {
 	CaptchaConfig  *CaptchaConfig // CAPTCHA provider configuration
 
 	//Uptime Monitor
-	DisableUptimeMonitor       bool //Disable uptime monitor for this endpoint
-	DisableAutoFallback        bool //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
-	DisableLogging             bool //Disable logging of reverse proxy requests
-	DisableStatisticCollection bool //Disable statistic collection for this endpoint
+	DisableUptimeMonitor       bool   //Disable uptime monitor for this endpoint
+	UptimeMonitorURI           string //Optional URI path used by the uptime monitor health check (e.g. "/identity", "/healthz"). Empty = default "/"
+	DisableAutoFallback        bool   //Disable automatic fallback when uptime monitor detects an upstream is down (continue monitoring but don't auto-disable upstream)
+	DisableLogging             bool   //Disable logging of reverse proxy requests
+	DisableStatisticCollection bool   //Disable statistic collection for this endpoint
 
 	//Exploit Detection
 	BlockCommonExploits bool //Enable blocking of common exploits (SQLi, XSS, etc.)

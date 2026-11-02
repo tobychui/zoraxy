@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -118,10 +117,7 @@ func (ar *AuthRouter) handleSessionSetCallback(w http.ResponseWriter, r *http.Re
 
 	redirectURL := r.URL.Query().Get("redirect")
 	if redirectURL == "" {
-		redirectURL = ar.Options.FallbackRedirectURL
-		if redirectURL == "" {
-			redirectURL = "/"
-		}
+		redirectURL = "/" // default to home page if redirect URL is missing
 	}
 
 	usernameObj, exists := ar.sessionIdStore.Load(sessionID)
@@ -214,11 +210,32 @@ func (ar *AuthRouter) setAuthHeaders(r *http.Request, user *User) {
 	r.Header.Set("X-Auth-Method", "zoraxy_sso")
 	r.Header.Set("Remote-User", user.Username) //Authelia compatibility
 	r.Header.Set("Remote-Name", user.Username) //Authelia compatibility
+	r.Header.Del("Remote-Groups")
 	if user.Email != "" {
 		r.Header.Set("Remote-Email", user.Email) //Authelia compatibility
 	} else {
 		r.Header.Del("Remote-Email")
 	}
+}
+
+// buildLoginRedirectURL returns the absolute SSO login URL for an unauthenticated request.
+// Host-only SSORedirectURL values are normalized so they are never treated as relative paths.
+func (ar *AuthRouter) buildLoginRedirectURL(r *http.Request) (string, error) {
+	if ar.Options.SSORedirectURL == "" {
+		return "", errors.New("SSO Redirect URL is not set")
+	}
+
+	scheme := requestScheme(r)
+	ssoBase, err := ensureAbsoluteHTTPURL(ar.Options.SSORedirectURL, scheme)
+	if err != nil {
+		return "", errors.New("SSO Redirect URL is invalid: " + err.Error())
+	}
+	if ssoRedirectWouldLoop(ssoBase, r) {
+		return "", errors.New("SSO Redirect URL resolves to the same host as the protected request")
+	}
+
+	originalURL := buildOriginalRequestURL(r)
+	return buildSSOAuthRedirect(ssoBase, originalURL)
 }
 
 // HandleAuthRouting handles the routing for ZorxAuth authentication provider.
@@ -232,18 +249,13 @@ func (ar *AuthRouter) HandleAuthRouting(w http.ResponseWriter, r *http.Request) 
 
 	if !ar.RequestIsAuthenticatedInHost(w, r) {
 		// Not authenticated in the current site
-		if ar.Options.SSORedirectURL == "" {
+		redirectURL, err := ar.buildLoginRedirectURL(r)
+		if err != nil {
 			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write(invalidHTML)
-			return errors.New("SSO Redirect URL is not set")
+			return err
 		}
-		scheme := "http"
-		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-			scheme = "https"
-		}
-		originalURL := scheme + "://" + r.Host + r.RequestURI
-		redirectURL := ar.Options.SSORedirectURL + "?redirect=" + url.QueryEscape(originalURL)
 
 		// For AJAX requests, return 401 with JSON instead of redirecting
 		// This avoids CORS issues with cross-origin redirects
@@ -274,12 +286,13 @@ func (ar *AuthRouter) HandleAuthRouting(w http.ResponseWriter, r *http.Request) 
 			MaxAge:   -1,
 		})
 
-		scheme := "http"
-		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-			scheme = "https"
+		redirectURL, buildErr := ar.buildLoginRedirectURL(r)
+		if buildErr != nil {
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(invalidHTML)
+			return buildErr
 		}
-		originalURL := scheme + "://" + r.Host + r.RequestURI
-		redirectURL := ar.Options.SSORedirectURL + "?redirect=" + url.QueryEscape(originalURL)
 
 		// For AJAX requests, return 401 with JSON instead of redirecting
 		if isAjaxRequest(r) {

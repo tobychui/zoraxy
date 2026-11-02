@@ -3,10 +3,11 @@ package dynamicproxy
 import (
 	"errors"
 	"net/http"
-	"strings"
+	"regexp"
 
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/netutils"
+	"imuslab.com/zoraxy/mod/pathmatch"
 )
 
 /*
@@ -38,25 +39,29 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 	case AuthMethodBasic:
 		err := h.handleBasicAuthRouting(w, r, sep)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	case AuthMethodForward:
 		err := h.handleForwardAuth(w, r)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	case AuthMethodOauth2:
 		err := h.handleOAuth2Auth(w, r)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	case AuthMethodZorxAuth:
-		err := h.handleZorxAuth(w, r)
+		err := h.handleZorxAuth(w, r, sep)
 		if err != nil {
-			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "")
+			clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
+			h.Parent.Option.Logger.LogHTTPRequest(r, "host-http", 401, requestHostname, "", clientIP)
 			return true
 		}
 	}
@@ -71,44 +76,69 @@ func (h *ProxyHandler) handleBasicAuthRouting(w http.ResponseWriter, r *http.Req
 	return handleBasicAuth(w, r, pe)
 }
 
+// basicAuthExceptionMatched reports whether the request is exempt from basic auth
+// by one of the configured exception rules.
+func basicAuthExceptionMatched(pe *ProxyEndpoint, r *http.Request) bool {
+	if pe == nil || pe.AuthenticationProvider == nil {
+		return false
+	}
+	requestTarget := pathmatch.RequestTarget(r)
+	for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
+		if exceptionRule == nil {
+			continue
+		}
+		exceptionType := exceptionRule.RuleType
+		switch exceptionType {
+		case AuthExceptionType_Paths:
+			//Path matching is case sensitive unless the rule opts out of it
+			matched := pathmatch.RequestPathWithinPrefix(requestTarget, exceptionRule.PathPrefix)
+			if exceptionRule.CaseInsensitive {
+				matched = pathmatch.RequestPathWithinPrefixFold(requestTarget, exceptionRule.PathPrefix)
+			}
+			if matched {
+				return true
+			}
+		case AuthExceptionType_CIDR:
+			// By default, use the untrusted (RemoteAddr-only) IP to prevent header-spoofing bypass.
+			// Only trust proxy headers (X-Real-Ip, CF-Connecting-IP, etc.) when the rule
+			// was explicitly configured with UseTrustedProxy = true.
+			var requesterIp string
+			if exceptionRule.UseTrustedProxy {
+				requesterIp = netutils.GetRequesterIP(r)
+			} else {
+				requesterIp = netutils.GetRequesterIPUntrusted(r)
+			}
+			if requesterIp != "" {
+				if requesterIp == exceptionRule.CIDR {
+					// This IP is excluded from basic auth
+					return true
+				}
+
+				wildcardMatch := netutils.MatchIpWildcard(requesterIp, exceptionRule.CIDR)
+				if wildcardMatch {
+					// This IP is excluded from basic auth
+					return true
+				}
+
+				cidrMatch := netutils.MatchIpCIDR(requesterIp, exceptionRule.CIDR)
+				if cidrMatch {
+					// This IP is excluded from basic auth
+					return true
+				}
+			}
+		default:
+			//Unknown exception type, skip this rule
+			continue
+		}
+	}
+	return false
+}
+
 // Handle basic auth logic
 // do not write to http.ResponseWriter if err return is not nil (already handled by this function)
 func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) error {
-	if len(pe.AuthenticationProvider.BasicAuthExceptionRules) > 0 {
-		//Check if the current path matches the exception rules
-		for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
-			exceptionType := exceptionRule.RuleType
-			switch exceptionType {
-			case AuthExceptionType_Paths:
-				if strings.HasPrefix(r.RequestURI, exceptionRule.PathPrefix) {
-					//This path is excluded from basic auth
-					return nil
-				}
-			case AuthExceptionType_CIDR:
-				requesterIp := netutils.GetRequesterIP(r)
-				if requesterIp != "" {
-					if requesterIp == exceptionRule.CIDR {
-						// This IP is excluded from basic auth
-						return nil
-					}
-
-					wildcardMatch := netutils.MatchIpWildcard(requesterIp, exceptionRule.CIDR)
-					if wildcardMatch {
-						// This IP is excluded from basic auth
-						return nil
-					}
-
-					cidrMatch := netutils.MatchIpCIDR(requesterIp, exceptionRule.CIDR)
-					if cidrMatch {
-						// This IP is excluded from basic auth
-						return nil
-					}
-				}
-			default:
-				//Unknown exception type, skip this rule
-				continue
-			}
-		}
+	if basicAuthExceptionMatched(pe, r) {
+		return nil
 	}
 
 	u, p, ok := r.BasicAuth()
@@ -143,16 +173,67 @@ func handleBasicAuth(w http.ResponseWriter, r *http.Request, pe *ProxyEndpoint) 
 }
 
 /* Forward Auth */
-
-// Handle forward auth routing
 func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request) error {
 	return h.Parent.Option.ForwardAuthRouter.HandleAuthProviderRouting(w, r)
 }
 
+/* OAuth2 Auth */
 func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
 	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r)
 }
 
-func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request) error {
+/* ZorxAuth */
+func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) error {
+	// Check ZorxAuth exception rules before applying authentication
+	if sep != nil && sep.AuthenticationProvider != nil {
+		if zorxAuthExceptionMatched(sep.AuthenticationProvider.ZorxAuthExceptionRules, r) {
+			return nil
+		}
+	}
 	return h.Parent.Option.ZorxAuthAgentRouter.HandleAuthRouting(w, r)
+}
+
+// zorxAuthExceptionMatched reports whether the request is exempt from ZorxAuth by
+// one of the configured exception rules. It takes the rule slice directly so it
+// can be exercised without a configured SSO agent.
+func zorxAuthExceptionMatched(rules []*ZorxAuthExceptionRule, r *http.Request) bool {
+	requestTarget := pathmatch.RequestTarget(r)
+	normalizedPath := pathmatch.CleanRequestPath(requestTarget)
+	for _, rule := range rules {
+		if rule == nil {
+			continue
+		}
+		switch rule.RuleType {
+		case AuthExceptionType_Paths:
+			if rule.IsRegex {
+				matched, err := regexp.MatchString(rule.PathPattern, normalizedPath)
+				if err == nil && matched {
+					return true
+				}
+			} else {
+				if pathmatch.RequestPathWithinPrefix(requestTarget, rule.PathPattern) {
+					return true
+				}
+			}
+		case AuthExceptionType_CIDR:
+			var requesterIp string
+			if rule.UseTrustedProxy {
+				requesterIp = netutils.GetRequesterIP(r)
+			} else {
+				requesterIp = netutils.GetRequesterIPUntrusted(r)
+			}
+			if requesterIp != "" {
+				if requesterIp == rule.CIDR {
+					return true
+				}
+				if netutils.MatchIpWildcard(requesterIp, rule.CIDR) {
+					return true
+				}
+				if netutils.MatchIpCIDR(requesterIp, rule.CIDR) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

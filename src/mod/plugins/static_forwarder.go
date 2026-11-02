@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/armon/go-radix"
 )
@@ -17,11 +16,20 @@ import (
 
 func (m *Manager) UpdateTagsToPluginMaps() {
 	//build the tag to plugin pointer sync.Map
-	m.tagPluginMap = sync.Map{}
+	//Note: this can be invoked concurrently by multiple plugins exiting at the same time
+	//(e.g. on shutdown), so m.tagPluginMap itself must never be reassigned here.
+	currentTags := make(map[string]bool)
 	for tag, pluginIds := range m.Options.PluginGroups {
+		currentTags[tag] = true
 		tree := m.GetForwarderRadixTreeFromPlugins(pluginIds)
 		m.tagPluginMap.Store(tag, tree)
 	}
+	m.tagPluginMap.Range(func(key, _ interface{}) bool {
+		if tag, ok := key.(string); ok && !currentTags[tag] {
+			m.tagPluginMap.Delete(tag)
+		}
+		return true
+	})
 
 	//build the plugin list for each tag
 	m.tagPluginListMutex.Lock()

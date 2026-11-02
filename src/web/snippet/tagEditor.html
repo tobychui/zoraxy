@@ -231,10 +231,9 @@
                 });
                 console.log(tags);
                 $.cjax({
-                    url: "/api/proxy/edit",
+                    url: "/api/proxy/setTags",
                     method: "POST",
                     data: {
-                        type: "host",
                         rootname: editingEndpoint.ep,
                         tags: tags.join(",")
                     },

@@ -255,38 +255,59 @@
             //Filename cannot contain wildcards, and wildcards are possible with DNS challenges
             filename = filename.replace("*", "_");
 
-            $.ajax({
-                url: "/api/acme/obtainCert",
-                method: "GET",
-                data: {
-                    domains: domains,
-                    filename: filename,
-                    email: email,
-                    ca: usingCa,
-                    dns: dns
-                },
-                success: function(response) {
-                    if (response.error) {
-                        console.log("Error:", response.error);
-                        // Show error message
-                        msgbox(response.error, false, 12000);
+            let requestCert = function(caURL="", skipTLSValue=false){
+                $.ajax({
+                    url: "/api/acme/obtainCert",
+                    method: "GET",
+                    data: {
+                        domains: domains,
+                        filename: filename,
+                        email: email,
+                        ca: usingCa,
+                        caURL: caURL,
+                        skipTLS: skipTLSValue,
+                        dns: dns,
+                    },
+                    success: function(response) {
+                        if (response.error) {
+                            console.log("Error:", response.error);
+                            // Show error message
+                            msgbox(response.error, false, 12000);
+                            if (callback != undefined){
+                                callback(false);
+                            }
+                        } else {
+                            console.log("Certificate installed successfully");
+                            // Show success message
+                            msgbox("Certificate installed successfully");
+                            
+                            if (callback != undefined){
+                                callback(true);
+                            }
+                        }
+                    },
+                    error: function(error) {
+                        console.log("Failed to install certificate:", error);
+                    }
+                });
+            }
+
+            if (usingCa == "custom"){
+                $.get("/api/acme/autoRenew/ca", function(data){
+                    if (data.url == undefined || data.url.trim() == ""){
+                        msgbox("Custom ACME URL not set.", false);
                         if (callback != undefined){
                             callback(false);
                         }
-                    } else {
-                        console.log("Certificate installed successfully");
-                        // Show success message
-                        msgbox("Certificate installed successfully");
-                        
-                        if (callback != undefined){
-                            callback(true);
-                        }
+                        return;
                     }
-                },
-                error: function(error) {
-                    console.log("Failed to install certificate:", error);
-                }
-            });
+                    requestCert(data.url.trim(), data.skipTLS);
+                })
+            } else {
+                requestCert();
+            }
+
+            
         });
     }
 

@@ -199,9 +199,6 @@
                         <div id="loginbtn" class="ui fluid basic button loginOnly"> <i class="ui blue sign-in icon"></i> Login</div>
                         <div id="regsiterbtn" class="ui fluid basic button registerOnly"><i class="ui green checkmark icon"></i> Confirm</div>
                         <div id="errmsg"></div>
-                        <div id="forgetPassword" class="field loginOnly" style="text-align: right; margin-top: 2em;">
-                            <a href="#" onclick="sendResetAccountEmail();">Forget Password</a>
-                        </div>
                     </div>
                 </form>
             </div>
@@ -341,20 +338,6 @@
                 }
             });
         });
-
-        //Send account reset email to preset admin account  
-        function sendResetAccountEmail(){
-            $("#forgetPassword").html(`<i class="ui loading spinner icon"></i> Sending Email`);
-            $("#forgetPassword").css("opacity", "0.8");
-            $.get("/api/account/reset", function(data){
-                if (data.error !== undefined){
-                    $("#forgetPassword").html(`<a href="#" onclick="sendResetAccountEmail();">Forget Password</a>`);
-                    alert(data.error);
-                }else{
-                    window.location.href = "/web/reset.html"
-                }
-            });
-        }
 
 
         //Login system with the given username and password

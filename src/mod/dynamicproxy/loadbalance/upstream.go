@@ -13,7 +13,10 @@ import (
 
 // StartProxy create and start a HTTP proxy using dpcore
 // Example of webProxyEndpoint: https://example.com:443 or http://192.168.1.100:8080
-func (u *Upstream) StartProxy() error {
+// tlsServerName, if not empty, overrides the TLS SNI and certificate verification
+// hostname used when connecting to a HTTPS upstream. Pass an empty string to derive
+// it from the upstream address.
+func (u *Upstream) StartProxy(tlsServerName string) error {
 	//Filter the tailing slash if any
 	domain := u.OriginIpOrDomain
 	if len(domain) == 0 {
@@ -43,6 +46,7 @@ func (u *Upstream) StartProxy() error {
 		FlushInterval:           100 * time.Millisecond,
 		ResponseHeaderTimeout:   u.RespTimeout,
 		MaxConcurrentConnection: u.MaxConn,
+		UpstreamTLSServerName:   tlsServerName,
 	})
 
 	u.proxy = proxy

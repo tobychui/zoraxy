@@ -28,8 +28,11 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/redirection"
 	"imuslab.com/zoraxy/mod/forwardproxy"
 	"imuslab.com/zoraxy/mod/geodb"
+	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/info/logviewer"
+	"imuslab.com/zoraxy/mod/info/shellexec"
+	"imuslab.com/zoraxy/mod/info/usageinfo"
 	"imuslab.com/zoraxy/mod/mdns"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/pathrule"
@@ -158,6 +161,7 @@ func startupSequence() {
 		ExternalDataDir:              CONF_GEODB_PATH,
 		Logger:                       SystemWideLogger,
 		SlowLookupCacheClearInterval: GEODB_CACHE_CLEAR_INTERVAL * time.Minute,
+		ExternalGeoDBFolder:          CONF_GEODB_PATH,
 	})
 	if err != nil {
 		panic(err)
@@ -197,7 +201,8 @@ func startupSequence() {
 
 	//Create a statistic collector
 	statisticCollector, err = statistic.NewStatisticCollector(statistic.CollectorOption{
-		Database: sysdb,
+		Database:             sysdb,
+		MaxEntriesPerStatMap: *statsMaxEntriesPerMap,
 	})
 	if err != nil {
 		panic(err)
@@ -224,6 +229,15 @@ func startupSequence() {
 		SystemWideLogger.PrintAndLog("Network", "Failed to load network statistic info", err)
 		panic(err)
 	}
+
+	//Start the status page host resource monitors
+	//CPU / RAM usage is sampled once per second in the background so the
+	//dashboard API can return cached values without blocking
+	shellexec.SetDockerMode(*runningInDocker) //Docker images ship sh but not bash
+	usageinfo.StartBackgroundMonitor()
+	hardwareinfo.SetLogger(SystemWideLogger)
+	hardwareinfo.StartHostInfoCache()
+	initDashboardBandwidthTracker()
 
 	/*
 		Path Rules
@@ -302,6 +316,7 @@ func startupSequence() {
 	//Create TCP Proxy Manager
 	streamProxyManager, err = streamproxy.NewStreamProxy(&streamproxy.Options{
 		AccessControlHandler: accessController.DefaultAccessRule.AllowConnectionAccess,
+		AccessController:     accessController,
 		ConfigStore:          CONF_STREAM_PROXY,
 		Logger:               SystemWideLogger,
 	})
@@ -311,10 +326,6 @@ func startupSequence() {
 
 	//Create WoL MAC storage table
 	sysdb.NewTable("wolmac")
-
-	//Create an email sender if SMTP config exists
-	sysdb.NewTable("smtp")
-	EmailSender = loadSMTPConfig()
 
 	//Create an analytic loader
 	AnalyticLoader = analytic.NewDataLoader(sysdb, statisticCollector)
@@ -453,6 +464,11 @@ func ShutdownSeq() {
 		statisticCollector.Close()
 	}
 
+	SystemWideLogger.Println("Saving dashboard bandwidth counters")
+	if dashboardBandwidth != nil {
+		dashboardBandwidth.Close()
+	}
+
 	if mdnsTickerStop != nil {
 		SystemWideLogger.Println("Stopping mDNS Discoverer (might take a few minutes)")
 		// Stop the mdns service
@@ -475,6 +491,11 @@ func ShutdownSeq() {
 	if accessController != nil {
 		SystemWideLogger.Println("Closing Access Controller")
 		accessController.Close()
+	}
+
+	if geodbStore != nil {
+		SystemWideLogger.Println("Closing Geo-IP Database")
+		geodbStore.Close()
 	}
 
 	//Close the zorxauth router to save browser sessions

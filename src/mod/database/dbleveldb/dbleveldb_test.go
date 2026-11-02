@@ -127,8 +127,8 @@ func TestListTable(t *testing.T) {
 	}
 
 	expected := map[string]string{
-		"testTable/testKey1": "\"testValue1\"",
-		"testTable/testKey2": "\"testValue2\"",
+		"testKey1": "\"testValue1\"",
+		"testKey2": "\"testValue2\"",
 	}
 
 	for _, entry := range result {

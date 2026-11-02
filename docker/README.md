@@ -9,7 +9,7 @@
 
 If you are attempting to access your service from outside your network, make sure to forward ports 80 and 443 to the Zoraxy host to allow web traffic. If you know how to do this, great! If not, find the manufacturer of your router and search on how to do that. There are too many to be listed here. Read more about it from [whatismyip](https://www.whatismyip.com/port-forwarding/).
 
-In the examples below, make sure to update `/path/to/zoraxy/config/`. If a path is not provided, a Docker volume will be created at the location but it is recommended to store the data at a defined host location or a named Docker volume.
+In the examples below, make sure to update `/path/to/zoraxy/config/`. If a path is not provided, an anonymous Docker volume will be created instead to prevent data loss, but it is recommended to store the data at a defined host location or a named Docker volume.
 
 Once setup, access the webui at `http://<host-ip>:8000` to configure Zoraxy. Change the port in the URL if you changed the management port.
 
@@ -22,6 +22,7 @@ docker run -d \
   --add-host=host.docker.internal:host-gateway \
   -p 80:80 \
   -p 443:443 \
+  -p 443:443/udp \
   -p 8000:8000 \
   -v /path/to/zoraxy/config/:/opt/zoraxy/config/ \
   -v /path/to/zoraxy/plugin/:/opt/zoraxy/plugin/ \
@@ -42,6 +43,7 @@ services:
     ports:
       - 80:80
       - 443:443
+      - 443:443/udp
       - 8000:8000
     volumes:
       - /path/to/zoraxy/config/:/opt/zoraxy/config/
@@ -60,6 +62,7 @@ services:
 |:-|:-|
 | `80` | HTTP traffic. |
 | `443` | HTTPS traffic. |
+| `443/udp` | HTTP/3 (QUIC). Only needed if HTTP/3 is enabled in Global Settings. |
 | `8000` | Management interface. Can be changed with the `PORT` env. |
 
 ### Volumes
@@ -87,7 +90,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 | `DOCKER` | `true` (Boolean) | Run Zoraxy in docker compatibility mode. |
 | `EARLYRENEW` | `30` (Integer) | Number of days to early renew a soon expiring certificate. |
 | `ENABLELOG` | `true` (Boolean) | Enable system wide logging, set to false for writing log to STDOUT only. |
-| `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, require 1GB extra memory (Not recommend for low end devices). |
+| `FASTGEOIP` | `false`  (Boolean) | Enable high speed geoip lookup, requires 1GB extra memory (Not recommend for low end devices). |
 | `MDNS` | `true` (Boolean) | Enable mDNS scanner and transponder. |
 | `MDNSNAME` | `''` (String) | mDNS name, leave empty to use default (zoraxy_{node-uuid}.local). |
 | `NOAUTH` | `false` (Boolean) | Disable authentication for management interface. |
@@ -108,6 +111,7 @@ Variables are the same as those in [Start Parameters](https://github.com/tobychu
 If you are running with ZeroTier, make sure to add the following flags to ensure ZeroTier functionality:
   
 `--cap_add NET_ADMIN` and `--device /dev/net/tun:/dev/net/tun`
+`--environment ZEROTIER="true"`
 
 Or for Docker Compose:
 ```
@@ -115,6 +119,8 @@ Or for Docker Compose:
     - NET_ADMIN
   devices:
     - /dev/net/tun:/dev/net/tun
+  environment:
+    ZEROTIER: "true"
 ```
 
 ### Plugins
@@ -129,5 +135,5 @@ To build the Docker image:
   - Copy the Zoraxy `src/` directory into the `docker/` (here) directory.
   - Run the build command with `docker build -t zoraxy_build .`
   - You can now use the image `zoraxy_build`
-    - If you wish to change the image name, then modify`zoraxy_build` in the previous step and then build again.
+    - If you wish to change the image tag name, then modify `zoraxy_build` in the previous step and then build again.
 

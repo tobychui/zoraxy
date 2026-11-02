@@ -257,10 +257,14 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 	defer connBackend.Close()
 
-	upgrader := w.Upgrader
-	if w.Upgrader == nil {
-		upgrader = DefaultUpgrader
+	//Use a copy of the upgrader for this connection. The upgrader might be
+	//a shared instance (e.g. DefaultUpgrader) across all proxy endpoints,
+	//so mutating it here will leak the settings of this proxy rule to others
+	baseUpgrader := w.Upgrader
+	if baseUpgrader == nil {
+		baseUpgrader = DefaultUpgrader
 	}
+	upgrader := *baseUpgrader
 
 	//Fixing issue #107 by bypassing request origin check
 	if w.Options.SkipOriginCheck {

@@ -10,20 +10,21 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
-	"imuslab.com/zoraxy/mod/netutils"
 )
 
 // Log HTTP request. Note that this must run in go routine to prevent any blocking
-// in reverse proxy router
-func (l *Logger) LogHTTPRequest(r *http.Request, reqclass string, statusCode int, downstreamHostname string, upstreamHostname string) {
+// in reverse proxy router.
+//
+// clientIP must be resolved by the caller (e.g. via the access rule / trusted proxy
+// aware resolver) instead of being derived here, so that untrusted proxy headers
+// (X-Forwarded-For, X-Real-IP, etc.) cannot be used to spoof the logged source IP.
+func (l *Logger) LogHTTPRequest(r *http.Request, reqclass string, statusCode int, downstreamHostname string, upstreamHostname string, clientIP string) {
 	go func() {
 		l.ValidateAndUpdateLogFilepath()
 		if l.logger == nil || l.file == nil {
 			//logger is not initiated. Do not log http request
 			return
 		}
-		clientIP := netutils.GetRequesterIP(r)
 		requestURI := r.RequestURI
 		statusCodeString := strconv.Itoa(statusCode)
 

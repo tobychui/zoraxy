@@ -67,7 +67,7 @@ func TestEventDeSerialization(t *testing.T) {
 					WhitelistEnabled: false,
 				},
 			},
-			expectedJson: `{"name":"accessRuleCreated","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"uuid":"` + uuid + `","data":{"id":"rule456","name":"New Access Rule","desc":"A dummy access rule","blacklist_enabled":true,"whitelist_enabled":false}}`,
+			expectedJson: `{"name":"accessRuleCreated","timestamp":` + fmt.Sprintf("%d", timestamp) + `,"uuid":"` + uuid + `","data":{"id":"rule456","name":"New Access Rule","desc":"A dummy access rule","blacklist_enabled":true,"whitelist_enabled":false,"trust_proxy_headers_only":false}}`,
 		},
 	}
 

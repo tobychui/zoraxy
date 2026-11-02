@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta content="width=device-width, initial-scale=1.0" name="viewport">
+		<meta content="Zoraxy Auth, SSO, ZorxAuth" name="keywords">
+		<meta content="Zoraxy Auth — built-in single sign-on for Zoraxy" name="description">
+		<meta name="author" content="tobychui">
+
+		<title>Zoraxy Auth | Zoraxy</title>
+		<meta name="description" content="Zoraxy Auth — built-in single sign-on for Zoraxy">
+
+		<meta property="og:url" content="https://zoraxy.aroz.org/">
+		<meta property="og:type" content="website">
+		<meta property="og:title" content="Zoraxy Auth">
+		<meta property="og:description" content="Zoraxy Auth — built-in single sign-on for Zoraxy">
+		<meta property="og:image" content="https://zoraxy.aroz.org/img/og.png">
+
+		<meta name="twitter:card" content="summary_large_image">
+		<meta property="twitter:domain" content="os.aroz.org">
+		<meta property="twitter:url" content="https://zoraxy.aroz.org/">
+		<meta name="twitter:title" content="Zoraxy Auth">
+		<meta name="twitter:description" content="Zoraxy Auth — built-in single sign-on for Zoraxy">
+		<meta name="twitter:image" content="https://zoraxy.aroz.org/img/og.png">
+
+		<!-- JavaScript Libs & styles (copied from index.html for visual parity) -->
+		<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+		<script src="dom-i18n.min.js"></script>
+		
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.js" integrity="sha512-gnoBksrDbaMnlE0rhhkcx3iwzvgBGz6mOEj4/Y5ZY09n55dYddx6+WYc72A55qEesV8VX2iMomteIwobeGK1BQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.3/semantic.min.css" integrity="sha512-3quBdRGJyLy79hzhDDcBzANW+mVqPctrGCfIPosHQtMKb3rKsCxfyslzwlz2wj1dT8A7UX+sEvDjaUv+WExQrA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+		<link href="favicon.png" rel="icon">
+		<link href="img/apple-touch-icon.png" rel="apple-touch-icon">
+
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100;300;400&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p&family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100;300;400&display=swap" rel="stylesheet">
+        <link href="main.css" rel="stylesheet">
+
+		<!-- AOS.js -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" integrity="sha512-A7AYk1fGKX6S2SsHywmPkrnzTZHrgiVT7GcQkLGDe2ev0aWb8zejytzS8wjo7PGEXKqJOrjQ4oORtnimIRZBtw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" integrity="sha512-1cK78a1o+ht2JcaW6g8OXYwqpev9+6GqOkz9xmBN9iUUhIndKtxwILGWYOSibOKjLsEdjyjZvYDq/cZwNeak0w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+        <style>
+            body{
+                background: #F8F9F7;
+            }
+
+            .ui.card, .ui.cards > .card{
+                background-color: transparent !important;
+                border: 1px solid rgba(0,0,0,0.1) !important;
+                padding: 1.4em;
+            }
+
+            .ui.primary.button{
+                background-color: #6cacff !important;
+                color: white !important;
+            }
+
+            .ui.primary.button:hover{
+                opacity: 0.9 !important;
+            }
+
+            #photo{
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
+
+            #photo img{
+                width: 70% !important; 
+                object-fit:cover; 
+                display:block;
+                border: 1px solid rgba(0,0,0,0.1);
+                border-radius: 1em;
+            }
+        </style>
+	</head>
+	<body>
+		<div id="backToTopBtn" class="ui big icon button" onclick="backToTop();">
+			 <i class="ui arrow up icon"></i>
+		</div>
+		<button id="rwdmenubtn" class="ui black big icon button"><i class="ui bars icon"></i></button>
+			<div id="mainmenu" class="ui segment">
+				<div class="ui container">
+						<div class="ui small stackable secondary menu">
+                            <div class="item">
+                                    <img class="ui tiny image" src="img/logo.png">
+                            </div>
+							<a class="item" href="index.html" i18n>
+								Home // 主頁 // Startseite
+							</a>
+                            <a class="right floated item">
+                                <div class="ui small selection dropdown">
+                                    <input type="hidden" id="language">
+                                    <div class="default text" style="color: #6cacff;"><i class="language icon"></i> Default</div>
+                                    <i class="dropdown icon"></i>
+                                    <div class="menu">
+                                            <div class="item" data-value="en">English</div>
+                                            <div class="item" data-value="zh">中文（正體）</div>
+                                            <div class="item" data-value="de">Deutsch</div>
+                                    </div>
+                                </div>
+                            </a>
+						</div>
+				</div>
+		</div>
+
+		<!-- Hero -->
+		<div class="ui basic segment" style="padding: 3rem 0;">
+			<div class="ui container">
+				<div class="ui stackable grid">
+							<div class="ten wide column">
+								<h1 style="font-weight:700;" i18n>Zoraxy Auth // Zoraxy Auth // Zoraxy Authentifizierung</h1>
+								<p class="sub header" i18n>Built-in single sign-on (SSO) for Zoraxy — manage users, policies and SSO integrations from the web UI. // 內建單一登入（SSO）功能 — 在網頁介面管理使用者、群組政策和 SSO 整合。 // Integrierte Single Sign-On (SSO) für Zoraxy — Benutzer, Richtlinien und SSO-Integrationen über die Weboberfläche verwalten.</p>
+                                <small i18n>Now integrated and ship with Zoraxy! // 現在已整合並隨 Zoraxy 發佈！ // Jetzt integriert und mit Zoraxy ausgeliefert!</small>
+								<div style="margin-top:1rem;">
+									<a class="ui primary button" href="index.html" i18n>Get Zoraxy // 取得 Zoraxy // Zoraxy erhalten</a>
+								</div>
+							</div>
+					<div class="six wide column" align="right">
+                        
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="ui container" style="padding-top: 2rem;">
+			<!-- Full width photo -->
+			<div id="photo" class="ui basic segment" style="padding: 0; margin-left: 50%; transform: translateX(-50%);">
+				<img src="./img/zorxauth/login.png" alt="Zoraxy Auth screenshot // Zoraxy Auth 截圖 // Zoraxy Auth Screenshot" >
+			</div>
+
+			<!-- Key features -->
+			<div id="features" class="ui basic segment">
+				<h2 i18n>Key Features // 主要功能 // Hauptfunktionen</h2>
+				<div class="ui four stackable basic cards">
+					<div class="card">
+                        <div class="image">
+                            <img src="img/zorxauth/group_policy.png" alt="Group-based Access Control screenshot // 基於群組的存取控制截圖 // Gruppenbasierte Zugriffskontrolle Screenshot">
+                        </div>
+						<div class="content">
+							<div class="header" i18n>Web UI Management // 網頁介面管理 // Web-UI-Verwaltung</div>
+							<div class="description" i18n>Create, edit and remove users; manage credentials and sessions from the web UI. // 建立、編輯與刪除使用者；在網頁介面管理帳戶與群組。 // Erstellen, Bearbeiten und Löschen von Benutzern; Verwaltung von Anmeldeinformationen und Sitzungen über Web-UI.</div>
+						</div>
+					</div>
+					<div class="card">
+						<div class="image">
+                            <img src="img/zorxauth/user-portal.png" alt="All Built into Zoraxy screenshot // 全部內建於 Zoraxy 截圖 // Alles in Zoraxy integriert Screenshot">
+                        </div>
+						<div class="content">
+							<div class="header" i18n>All Built into Zoraxy // 全部內建於 Zoraxy // Alles in Zoraxy integriert</div>
+							<div class="description" i18n>No additional setup required; everything is integrated within Zoraxy. // 無需額外設定；所有功能皆內建於 Zoraxy。 // Keine zusätzliche Einrichtung erforderlich; alles ist in Zoraxy integriert.</div>
+						</div>
+					</div>
+                    <div class="card">
+                        <div class="image">
+                            <img src="img/zorxauth/2FA.png" alt="2FA screenshot // 雙重驗證截圖 // Zwei-Faktor-Authentifizierung Screenshot">
+                        </div>
+						<div class="content">
+							<div class="header" i18n>2FA // 雙重驗證 // Zwei-Faktor-Authentifizierung</div>
+							<div class="description" i18n>Support TOTP 2FA with your preferred Authenticator App // 支援使用您偏好的驗證器應用程式進行 TOTP 雙重驗證 // Unterstützung von TOTP 2FA mit Ihrer bevorzugten Authenticator-App</div>
+						</div>
+					</div>
+                     <div class="card">
+                        <div class="image">
+                            <img src="img/zorxauth/passkey.png" alt="Passkey Login screenshot // 密鑰登入截圖 // Passkey-Anmeldung Screenshot">
+                        </div>
+						<div class="content">
+							<div class="header" i18n>Passkey Login // PassKey 登入 // Passkey-Anmeldung</div>
+							<div class="description" i18n>Login using passkeys for enhanced security and convenience. // 使用 PassKey 登入以增強安全性和便利性。 // Anmeldung mit Passkeys für erhöhte Sicherheit und Bequemlichkeit.</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Community -->
+			<div id="community" class="ui basic segment">
+				<h2 i18n>Join the Community // 加入社群 // Community beitreten</h2>
+				<div class="ui two column stackable grid">
+					<div class="column">
+						<div class="ui basic segment">
+							<h3><i class="purple discord icon"></i> Discord</h3>
+							<p i18n>Chat with the community on Discord for support and discussion. // 在 Discord 與社群聊天以取得支援與討論。 // Chatten Sie mit der Community auf Discord für Support und Diskussionen.</p>
+							<a class="ui purple button" href="https://discord.gg/Ejg8aXGhZk" target="_blank" i18n>Join Discord // 加入 Discord // Discord beitreten</a>
+						</div>
+						</div>
+						<div class="column">
+							<div class="ui basic segment">
+								<h3><i class="black github icon"></i> GitHub</h3>
+								<p i18n>Report issues, contribute code, or browse the source on GitHub. // 回報問題、貢獻程式碼或檢視原始碼於 GitHub。 // Probleme melden, Code beitragen oder den Quellcode auf GitHub durchsuchen.</p>
+								<a class="ui black button" href="https://github.com/tobychui/zoraxy" target="_blank" i18n>View on GitHub // 在 GitHub 查看 // Auf GitHub ansehen</a>
+							</div>
+						</div>
+					</div>
+				</div>
+            <br><br><br><br>
+		</div>
+
+        <!-- Footer -->
+        <div id="footer">
+            <div class="ui container">
+                <br><br>
+                <div class="ui stackable grid" style="height: 100%;">
+                    <div class="six wide column" style="height: 100%;">
+                        <a href="https://zoraxy.aroz.org"><img src="img/logo_white.png" class="ui small image"></a>
+                        <p><span style="font-weight: 300;">The Zoraxy Project</span><br>
+                            © Toby Chui</p>
+                        
+                        <div class="bottom-attach">
+                        <br><br>
+                            <div class="ui breadcrumb" style="margin-top: 0.4em;">
+                                <div class="section" i18n><a style="color: white;" href="https://zoraxy.aroz.org" target="_blank">zoraxy.aroz.org</a></div>
+                                <div class="divider"> / </div>
+                                <div class="section">2018 - <span class="year">now</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="three wide column">
+                        <div class="ui list">
+                            <div class="item title" i18n>Developer Tools 
+                                // 開發者工具
+                                // Entwicklerwerkzeuge
+                            </div>
+                            <div class="item"><a href="https://github.com/tobychui/zoraxy/wiki" target="_blank">Zoraxy Wiki</a></div>
+                            <div class="item"><a href="https://github.com/tobychui/zoraxy" target="_blank">Source Code</a></div>
+                            <div class="item"><a href="https://github.com/aroz-online/zoraxy-official-plugins" target="_blank">Offical Plugin List</a></div>
+                            <div class="item"><a href="https://zoraxy.aroz.org/plugins/html/" target="_blank">Plugin Development Guide</a></div>
+                            <div class="item"><a href="./nginx2zoraxy.html" target="_blank">Nginx to Zoraxy Converter</a></div>
+                        </div>
+                    </div>	
+                    <div class="three wide column">
+                        <div class="ui list">
+                            <div class="item title" i18n>Project Spin-offs 
+                                // 衍生開源計劃
+                                // Projekt-Ableger
+                            </div>
+                            <div class="item"><a href="https://os.aroz.org" target="_blank">ArozOS</a></div>
+                            <div class="item"><a href="./zorxauth.html">Zoraxy Auth</a></div>
+                        </div>
+                    </div>
+                    <div class="three wide column">
+                        <div class="ui list">
+                            <div class="item title" i18n>Related Links 
+                                // 相關連接
+                                // Verwandte Links
+                            </div>
+                            <div class="item"><a href="https://github.com/tobychui/zoraxy/wiki/Getting-Started" target="_blank" i18n>Getting Started</a></div>
+                            <div class="item"><a href="https://github.com/tobychui/zoraxy/releases" target="_blank">Zoraxy Release</a></div>
+                            <div class="item"><a href="https://hub.docker.com/r/zoraxydocker/zoraxy" target="_blank">Zoraxy Docker</a></div>
+                            <div class="item"><a href="https://imuslab.com" target="_blank">imuslab</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <br><br><br><br>
+        </div>
+
+
+		<script>
+				AOS.init();
+				$(".year").text(new Date().getFullYear());
+		</script>
+		<script src="main.js" defer></script>
+	</body>
+</html>
+

@@ -137,3 +137,26 @@ func writeWhitelistResponse(templateDirectory string, w http.ResponseWriter) {
 	}
 	w.Write(template)
 }
+
+// GetClientIPForEndpoint resolves the real client IP of a request using the
+// access rule bounded to the given proxy endpoint. Header supplied addresses
+// (X-Real-IP, CF-Connecting-IP, Fastly-Client-IP, X-Forwarded-For) are only
+// honored when the access rule opted in to trusting proxy headers
+func (router *Router) GetClientIPForEndpoint(r *http.Request, pe *ProxyEndpoint) string {
+	ruleID := "default"
+	if pe != nil && pe.AccessFilterUUID != "" {
+		ruleID = pe.AccessFilterUUID
+	}
+
+	if router.Option != nil && router.Option.AccessController != nil {
+		accessRule, err := router.Option.AccessController.GetAccessRuleByID(ruleID)
+		if err == nil {
+			if clientIP := accessRule.GetClientIP(r); clientIP != "" {
+				return clientIP
+			}
+		}
+	}
+
+	//Access rule not available. Fallback to the connection address only
+	return netutils.GetRequesterIPUntrusted(r)
+}

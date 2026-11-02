@@ -318,6 +318,28 @@
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
                                 <br>
+                                <div class="ui basic segment hostAdvancedSettingsWrapper" style="margin: 0.4em 0 0 0; padding: 0;">
+                                    <div class="ui hostDownstreamAdvancedSettings accordion">
+                                        <div class="title" style="color: inherit; padding: 0.4em 0;">
+                                            <i class="dropdown icon"></i>
+                                            Advanced Settings
+                                        </div>
+                                        <div class="content">
+                                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                <input type="checkbox" class="EnableConnectSupport">
+                                                <label>Enable HTTP CONNECT tunneling<br>
+                                                    <small>Allow CONNECT method only to this route's configured upstream. Leave disabled unless you specifically need forward-proxy tunneling.</small></label>
+                                            </div>
+                                            <br>
+                                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                <input type="checkbox" class="EnableUpgradeForwarding">
+                                                <label>Enable protocol upgrade forwarding<br>
+                                                    <small>Forward non-WebSocket Upgrade requests (e.g. Tailscale / Headscale TS2021) to the upstream as a raw tunnel. WebSocket is handled separately in the WebSocket tab.</small></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ui divider"></div>
                                 <div class="ui checkbox" style="margin-top: 0.4em;">
                                     <input type="checkbox" class="DisableLogging">
                                     <label>Disable Requests Logging<br>
@@ -361,6 +383,12 @@
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
                             <br>
+                            <b>Health-check URI <span style="opacity:0.6; font-weight:normal;">(optional)</span></b>
+                            <div class="ui small fluid input" style="margin-top: 0.4em;">
+                                <input type="text" class="UptimeMonitorURI" placeholder="/" autocomplete="off">
+                            </div>
+                            <small style="opacity:0.7;">Path appended to the upstream URL when the uptime monitor performs its check (e.g. <code>/identity</code> for Plex, <code>/healthz</code>). Leave empty to use <code>/</code>.</small>
+                            <br>
                             <div class="ui checkbox" style="margin-top: 0.4em;">
                                 <input type="checkbox" class="UseStickySession">
                                 <label>Use Sticky Session<br>
@@ -395,7 +423,7 @@
                                 <label>Enable WebSocket<br>
                                     <small>Allow WebSocket upgrade requests to be proxied to this endpoint</small></label>
                             </div>
-                            <br>
+                            <br><br>
                             <b>Connection Timeout</b>
                             <div class="ui small right labeled fluid input" style="margin-top: 0.8em;">
                                 <input type="number" class="WebsocketTimeout" value="0" min="0">
@@ -524,6 +552,7 @@
                             </div>
                             <br>
                             <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            <button class="ui basic compact small button editZorxAuthExceptionsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui purple shield alternate icon"></i> ZorxAuth Exceptions</button>
                             <div class="ui divider"></div>
                             <!-- Block Common Exploits -->
                             <label><b>Exploits Prevention</b></label>
@@ -573,7 +602,7 @@
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" onchange="handleToggleRateLimitInput();" class="RequireRateLimit" ${rateLimitCheckState}>
+                                <input type="checkbox" class="RequireRateLimit">
                                 <label>Require Rate Limit<br>
                                 <small>Check this to enable rate limit on this inbound hostname</small></label>
                             </div><br>
@@ -669,6 +698,7 @@
     var httpProxyList = []; //Proxy list of the current node
 
     $('#httprpEditModal .tabular.menu .item').tab();
+    $('.hostDownstreamAdvancedSettings.accordion').accordion();
 
     /* Renderers */
     function renderUpstreamList(subd){
@@ -745,7 +775,8 @@
     }
 
     /* List all proxy endpoints */
-    function listProxyEndpoints(){
+    function listProxyEndpoints(preserveFilters = true){
+        let selectedTag = preserveFilters ? ($("#tagFilterDropdown").dropdown('get value') || "") : "";
         $.get("/api/proxy/list?type=host", function(data){
             $("#httpProxyList").html(``);
             if (data.error !== undefined){
@@ -903,10 +934,12 @@
                     </tr>`);
                 });
                 populateTagFilterDropdown(data);
+                $("#tagFilterDropdown").dropdown('set selected', selectedTag);
             }
 
             resolveAccessRuleNameOnHostRPlist();
             initDetailView();
+            filterProxyList();
         });
     }
 
@@ -1012,17 +1045,6 @@
         //Show the HTTP Proxy Rule Editor Modal
         initHttpProxyRuleEditorModal(payload);
         return;
-    }
-
-    //handleToggleRateLimitInput will get trigger if the "require rate limit" checkbox
-    // is changed and toggle the disable state of the rate limit input field
-    function handleToggleRateLimitInput(){
-        let isRateLimitEnabled = $("#httpProxyList input.RequireRateLimit")[0].checked;
-        if (isRateLimitEnabled){
-            $("#httpProxyList input.RateLimit").parent().removeClass("disabled");
-        }else{
-            $("#httpProxyList input.RateLimit").parent().addClass("disabled");
-        }
     }
 
     function exitProxyInlineEdit(){
@@ -1142,11 +1164,14 @@
         let epttype = "host";
         let useStickySession =  $(editor).find(".UseStickySession")[0].checked;
         let DisableUptimeMonitor = !$(editor).find(".EnableUptimeMonitor")[0].checked;
+        let uptimeMonitorURI = $(editor).find(".UptimeMonitorURI").val().trim();
         let disableAutoFallback = false; //$(editor).find(".DisableAutoFallback")[0].checked;
         let authProviderType = $(editor).find(".authProviderPicker input[type='radio']:checked").val();
         let requireRateLimit = $(editor).find(".RequireRateLimit")[0].checked;
         let rateLimit = $(editor).find(".RateLimit").val();
         let bypassGlobalTLS = $(editor).find(".BypassGlobalTLS")[0].checked;
+        let enableConnectSupport = $(editor).find(".EnableConnectSupport")[0].checked;
+        let enableUpgradeForwarding = $(editor).find(".EnableUpgradeForwarding")[0].checked;
         let disableChunkedTransferEncoding = $(editor).find(".DisableChunkedTransferEncoding")[0].checked;
         let forceHTTP11 = $(editor).find(".ForceHTTP11")[0].checked;
         let disableWebSocket = !$(editor).find(".EnableWebSocket")[0].checked;
@@ -1184,8 +1209,11 @@
                 "rootname": uuid,
                 "ss":useStickySession,
                 "dutm": DisableUptimeMonitor,
+                "utmURI": uptimeMonitorURI,
                 "dAutoFallback": disableAutoFallback,
                 "bpgtls": bypassGlobalTLS,
+                "enableConnectSupport": enableConnectSupport,
+                "enableUpgradeForwarding": enableUpgradeForwarding,
                 "authprovider" :authProviderType,
                 "rate" :requireRateLimit,
                 "dChunkedEnc": disableChunkedTransferEncoding,
@@ -1257,6 +1285,14 @@
             ep: uuid
         }));
         showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
+    function editZorxAuthExceptions(uuid){
+        let payload = encodeURIComponent(JSON.stringify({
+            ept: "host",
+            ep: uuid
+        }));
+        showEditorSideWrapper("snippet/zorxAuthExceptionEditor.html?t=" + Date.now() + "#" + payload);
     }
 
 
@@ -1655,6 +1691,18 @@
             saveProxyInlineEdit(uuid);
         });
 
+        editor.find(".EnableConnectSupport").off('change');
+        editor.find(".EnableConnectSupport").prop("checked", subd.EnableConnectSupport || false);
+        editor.find(".EnableConnectSupport").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".EnableUpgradeForwarding").off('change');
+        editor.find(".EnableUpgradeForwarding").prop("checked", subd.EnableUpgradeForwarding || false);
+        editor.find(".EnableUpgradeForwarding").on("change", function() {
+            saveProxyInlineEdit(uuid);
+        });
+
         editor.find(".DisableLogging").off('change');
         editor.find(".DisableLogging").prop("checked", subd.DisableLogging);
         editor.find(".DisableLogging").on("change", function() {
@@ -1798,9 +1846,17 @@
             // Enable/disable the auto fallback option based on uptime monitor state
             var isUptimeMonitorEnabled = $(this).is(":checked");
             editor.find(".DisableAutoFallback").prop("disabled", !isUptimeMonitorEnabled);
+            editor.find(".UptimeMonitorURI").prop("disabled", !isUptimeMonitorEnabled);
             if (!isUptimeMonitorEnabled) {
                 editor.find(".DisableAutoFallback").prop("checked", false);
             }
+            saveProxyInlineEdit(uuid);
+        });
+
+        editor.find(".UptimeMonitorURI").off("change");
+        editor.find(".UptimeMonitorURI").val(subd.UptimeMonitorURI || "");
+        editor.find(".UptimeMonitorURI").prop("disabled", subd.DisableUptimeMonitor);
+        editor.find(".UptimeMonitorURI").on("change", function() {
             saveProxyInlineEdit(uuid);
         });
 
@@ -1940,7 +1996,13 @@
             saveProxyInlineEdit(uuid);
         });
 
-        //Rate limit
+        editor.find(".editZorxAuthExceptionsBtn").off("click").on("click", function(){
+            editZorxAuthExceptions(uuid);
+        });
+
+        // Rate limit: load with .val() so the shared modal shows each proxy's saved value (#1107)
+        editor.find(".RateLimit").off("change");
+        editor.find(".RequireRateLimit").off("change");
         if (subd.RequireRateLimit) {
             editor.find(".RequireRateLimit").prop("checked", true);
             editor.find(".RateLimit").parent().removeClass("disabled");
@@ -1950,16 +2012,22 @@
         }
 
         function rateLimitChangeEvent(){
-            let rateLimitValue = $(this).val();
-            if (rateLimitValue < 0 || isNaN(rateLimitValue)) {
-                msgbox("Rate limit must be >= 0", false);
-                $(this).val(subd.RateLimit); // Reset to previous valid value
+            let rateLimitValue = String($(this).val()).trim();
+            if (rateLimitValue === "") {
+                $(this).val(subd.RateLimit);
                 return;
             }
+            let parsed = parseInt(rateLimitValue, 10);
+            if (isNaN(parsed) || parsed < 0) {
+                msgbox("Rate limit must be >= 0", false);
+                $(this).val(subd.RateLimit);
+                return;
+            }
+            subd.RateLimit = parsed;
             saveProxyInlineEdit(uuid);
         }
 
-        editor.find(".RequireRateLimit").off("change").on("change", function() {
+        editor.find(".RequireRateLimit").on("change", function() {
             if ($(this).is(":checked")) {
                 editor.find(".RateLimit").parent().removeClass("disabled");
             } else {
@@ -1968,15 +2036,11 @@
 
             if (subd.RateLimit === 0) {
                 subd.RateLimit = 100; // Set default rate limit to 100 if uninitialized
-                $(this).val(subd.RateLimit);
-                editor.find(".RateLimit").off("change"); // Temporarily disable the change event handler
-                editor.find(".RateLimit").val(100); // Set the value to 100
-                editor.find(".RateLimit").on("change", rateLimitChangeEvent); // Re-enable the change event handler
+                editor.find(".RateLimit").val(100);
             }
             saveProxyInlineEdit(uuid);
         });
-        editor.find(".RateLimit").attr("value", subd.RateLimit);
-        editor.find(".RateLimit").off("change").on("change", rateLimitChangeEvent);
+        editor.find(".RateLimit").val(subd.RateLimit).on("change", rateLimitChangeEvent);
 
         // CAPTCHA Gating
         if (subd.RequireCaptcha) {
@@ -2206,7 +2270,7 @@
 
     // Initialize the proxy list on page load
     $(document).ready(function() {
-        listProxyEndpoints();
+        listProxyEndpoints(false);
 
         // Event listener for clicking on tags
         $(document).on('click', '.tag-select', function() {
@@ -2228,9 +2292,7 @@
             window.scrollTo(0, 0);
             $("body").css("overflow", "hidden");
         } else {
-            listProxyEndpoints();
-            //Reset the tag filter
-            $("#tagFilterDropdown").dropdown('set selected', "");
+            listProxyEndpoints(false);
         }
     }
         

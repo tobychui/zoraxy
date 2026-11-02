@@ -83,9 +83,17 @@ func (c *ProxyRelayInstance) accept(listener net.Listener) (net.Conn, error) {
 		return nil, err
 	}
 
-	// Check if connection in blacklist or whitelist
+	// Check if connection is allowed by access control policy
 	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
-		if !c.parent.Options.AccessControlHandler(conn) {
+		accessRule := c.getEffectiveAccessRule()
+		if accessRule != nil {
+			if !accessRule.AllowConnectionAccess(conn) {
+				time.Sleep(300 * time.Millisecond)
+				conn.Close()
+				c.LogMsg("[x] Connection from "+addr.IP.String()+" rejected by access control policy", nil)
+				return nil, errors.New("Connection from " + addr.IP.String() + " rejected by access control policy")
+			}
+		} else if !c.parent.Options.AccessControlHandler(conn) {
 			time.Sleep(300 * time.Millisecond)
 			conn.Close()
 			c.LogMsg("[x] Connection from "+addr.IP.String()+" rejected by access control policy", nil)

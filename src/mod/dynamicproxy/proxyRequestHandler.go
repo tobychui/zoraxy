@@ -14,7 +14,6 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
-	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/websocketproxy"
 )
@@ -114,14 +113,20 @@ func (router *Router) GetProxyEndpointFromHostname(hostname string) *ProxyEndpoi
 }
 
 // Rewrite URL rewrite the prefix part of a virtual directory URL with /
+// Only the path portion is normalized (collapsing duplicated slashes)
 func (router *Router) rewriteURL(rooturl string, requestURL string) string {
 	rewrittenURL := requestURL
 	rewrittenURL = strings.TrimPrefix(rewrittenURL, strings.TrimSuffix(rooturl, "/"))
 
-	if strings.Contains(rewrittenURL, "//") {
-		rewrittenURL = strings.ReplaceAll(rewrittenURL, "//", "/")
+	path, query, hasQuery := strings.Cut(rewrittenURL, "?") //Fixed #1216
+	if strings.Contains(path, "//") {
+		path = strings.ReplaceAll(path, "//", "/")
 	}
-	return rewrittenURL
+
+	if hasQuery {
+		return path + "?" + query
+	}
+	return path
 }
 
 // upstreamHostSwap check if this loopback to one of the proxy rule in the system. If yes, do a shortcut target swap
@@ -170,43 +175,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	/* WebSocket automatic proxy */
-	requestURL := r.URL.String()
 	if isWebSocketRequest(r) {
-		if target.DisableWebSocket {
-			http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
-			return
-		}
-		//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
-		r.Header.Set("Zr-Origin-Upgrade", "websocket")
-		wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
-		if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
-			//Append / to the end of the redirection endpoint if not exists
-			wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
-		}
-		if len(requestURL) > 0 && requestURL[:1] == "/" {
-			//Remove starting / from request URL if exists
-			requestURL = requestURL[1:]
-		}
-		u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
-		if selectedUpstream.RequireTLS {
-			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
-		}
-		h.Parent.logRequest(r, true, 101, "host-websocket", reqHostname, selectedUpstream.OriginIpOrDomain, target)
-
-		if target.HeaderRewriteRules == nil {
-			target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
-		}
-
-		wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
-			SkipTLSValidation:              selectedUpstream.SkipCertValidations,
-			SkipOriginCheck:                selectedUpstream.SkipWebSocketOriginCheck,
-			CopyAllHeaders:                 target.EnableWebsocketCustomHeaders,
-			UserDefinedHeaders:             target.HeaderRewriteRules.UserDefinedHeaders,
-			Logger:                         h.Parent.Option.Logger,
-			Timeout:                        target.WebsocketTimeout,
-			EnableTimeoutRefreshOnActivity: target.EnableTimeoutRefreshOnActivity,
-		})
-		wspHandler.ServeHTTP(w, r)
+		h.hostWebSocketRequest(w, r, target, selectedUpstream)
 		return
 	}
 
@@ -247,8 +217,11 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
+		AllowConnect:                   target.EnableConnectSupport,
+		AllowUpgrade:                   target.EnableUpgradeForwarding,
 		Version:                        target.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.Option.DevelopmentMode,
+		AltSvc:                         h.Parent.getAltSvcValue(),
 	})
 
 	//validate the error
@@ -269,6 +242,46 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	}
 
 	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname, target)
+}
+
+// hostWebSocketRequest proxies a host level WebSocket upgrade request via websocketproxy
+func (h *ProxyHandler) hostWebSocketRequest(w http.ResponseWriter, r *http.Request, target *ProxyEndpoint, selectedUpstream *loadbalance.Upstream) {
+	if target.DisableWebSocket {
+		http.Error(w, "WebSocket connections are disabled for this endpoint", http.StatusForbidden)
+		return
+	}
+	//Handle WebSocket request. Forward the custom Upgrade header and rewrite origin
+	r.Header.Set("Zr-Origin-Upgrade", "websocket")
+	requestURL := r.URL.String()
+	wsRedirectionEndpoint := selectedUpstream.OriginIpOrDomain
+	if wsRedirectionEndpoint[len(wsRedirectionEndpoint)-1:] != "/" {
+		//Append / to the end of the redirection endpoint if not exists
+		wsRedirectionEndpoint = wsRedirectionEndpoint + "/"
+	}
+	if len(requestURL) > 0 && requestURL[:1] == "/" {
+		//Remove starting / from request URL if exists
+		requestURL = requestURL[1:]
+	}
+	u, _ := url.Parse("ws://" + wsRedirectionEndpoint + requestURL)
+	if selectedUpstream.RequireTLS {
+		u, _ = url.Parse("wss://" + wsRedirectionEndpoint + requestURL)
+	}
+	h.Parent.logRequest(r, true, 101, "host-websocket", r.Host, selectedUpstream.OriginIpOrDomain, target)
+
+	if target.HeaderRewriteRules == nil {
+		target.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
+	}
+
+	wspHandler := websocketproxy.NewProxy(u, websocketproxy.Options{
+		SkipTLSValidation:              selectedUpstream.SkipCertValidations,
+		SkipOriginCheck:                selectedUpstream.SkipWebSocketOriginCheck,
+		CopyAllHeaders:                 target.EnableWebsocketCustomHeaders,
+		UserDefinedHeaders:             target.HeaderRewriteRules.UserDefinedHeaders,
+		Logger:                         h.Parent.Option.Logger,
+		Timeout:                        target.WebsocketTimeout,
+		EnableTimeoutRefreshOnActivity: target.EnableTimeoutRefreshOnActivity,
+	})
+	wspHandler.ServeHTTP(w, r)
 }
 
 // Handle vdir type request
@@ -294,7 +307,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			u, _ = url.Parse("wss://" + wsRedirectionEndpoint + r.URL.String())
 		}
 
-		if target.parent.HeaderRewriteRules != nil {
+		if target.parent.HeaderRewriteRules == nil {
 			target.parent.HeaderRewriteRules = GetDefaultHeaderRewriteRules()
 		}
 
@@ -342,6 +355,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ProxyDomain:                    target.Domain,
 		OriginalHost:                   reqHostname,
 		UseTLS:                         target.RequireTLS,
+		NoCache:                        target.parent.parent.Option.NoCache,
 		PathPrefix:                     target.MatchingPath,
 		UpstreamHeaders:                upstreamHeaders,
 		DownstreamHeaders:              downstreamHeaders,
@@ -349,8 +363,11 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		ForceHTTP11:                    target.parent.ForceHTTP11,
 		NoRemoveUserAgentHeader:        headerRewriteOptions.DisableUserAgentHeaderRemoval,
 		HostHeaderOverwrite:            headerRewriteOptions.RequestHostOverwrite,
+		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
+		AllowUpgrade:                   target.parent.EnableUpgradeForwarding,
 		Version:                        target.parent.parent.Option.HostVersion,
-		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
+		DevelopmentMode:                 target.parent.parent.Option.DevelopmentMode,
+		AltSvc:                         h.Parent.getAltSvcValue(),
 	})
 
 	var dnsError *net.DNSError
@@ -371,11 +388,16 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
 func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
+	// Resolve the client IP once via the trusted-proxy aware resolver so that
+	// untrusted proxy headers (X-Forwarded-For, X-Real-IP, etc.) cannot be used
+	// to spoof the IP recorded in the log file or the statistics collector.
+	clientIP := router.GetClientIPForEndpoint(r, endpoint)
+
 	// Notes: endpoint can be nil if the request has been handled before a host name can be resolved
 	// e.g. Redirection matching rule
 	if endpoint == nil || !endpoint.DisableLogging {
 		// log the http request to file
-		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname)
+		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname, clientIP)
 	}
 
 	if endpoint == nil || router.Option.StatisticCollector == nil {
@@ -387,15 +409,22 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 		// Collect statistic from request
 
 		go func() {
+			countryISOCode := ""
+			if router.Option.GeodbStore != nil {
+				if countryInfo, err := router.Option.GeodbStore.ResolveCountryCodeFromIP(clientIP); err == nil {
+					countryISOCode = countryInfo.CountryIsoCode
+				}
+			}
 			requestInfo := statistic.RequestInfo{
-				IpAddr:                        netutils.GetRequesterIP(r),
-				RequestOriginalCountryISOCode: router.Option.GeodbStore.GetRequesterCountryISOCode(r),
+				IpAddr:                        clientIP,
+				RequestOriginalCountryISOCode: countryISOCode,
 				Succ:                          succ,
 				StatusCode:                    statusCode,
 				ForwardType:                   forwardType,
+				RequestMethod:                 r.Method,
 				Referer:                       r.Referer(),
 				UserAgent:                     r.UserAgent(),
-				RequestURL:                    r.Host + r.RequestURI,
+				RequestURL:                    r.Host + r.URL.EscapedPath(),
 				Target:                        originalHostname,
 				Upstream:                      upstreamHostname,
 			}

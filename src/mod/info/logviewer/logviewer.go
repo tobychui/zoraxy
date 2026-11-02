@@ -465,9 +465,9 @@ func (v *Viewer) LoadLogSummary(filename string) (string, error) {
 			}
 
 			// Increment unique IPs (assuming IP is the first part of the line)
-			ipPart := strings.Split(line, "[client:")[1]
-			if ipPart != "" {
+			if _, ipPart, found := strings.Cut(line, "[client:"); found && ipPart != "" {
 				ip := strings.TrimSpace(strings.Split(ipPart, "]")[0])
+				ip = utils.SanitizeLogContent(ip)
 				if _, exists := summary.UniqueIPs[ip]; !exists {
 					summary.UniqueIPs[ip] = 0
 				}

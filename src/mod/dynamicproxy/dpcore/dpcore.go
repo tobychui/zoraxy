@@ -1,6 +1,7 @@
 package dpcore
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -14,6 +15,12 @@ import (
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
 	"imuslab.com/zoraxy/mod/dynamicproxy/permissionpolicy"
+)
+
+// Tunnel settings for generic HTTP protocol upgrades, see upgrade.go
+const (
+	upgradeTunnelTimeout           = 300 * time.Second //Deadline of an upgraded connection tunnel
+	upgradeTunnelRefreshOnActivity = true              //Treat the deadline as an idle timeout instead of a hard limit
 )
 
 // ReverseProxy is an HTTP Handler that takes an incoming request and
@@ -56,6 +63,13 @@ type ReverseProxy struct {
 
 	Verbal bool
 
+	// useRequestHostAsSNI tells ProxyHTTP to derive the upstream TLS SNI from the
+	// request host on a per-request basis instead of relying on the shared
+	// transport's fixed ServerName. It is enabled when the upstream is addressed
+	// by IP, where a fixed ServerName would be an IP literal that Go omits from
+	// the TLS ClientHello (crypto/tls, per RFC 6066). See NewDynamicProxyCore.
+	useRequestHostAsSNI bool
+
 	//Appended by Zoraxy project
 
 }
@@ -76,10 +90,15 @@ type ResponseRewriteRuleSet struct {
 	NoRemoveUserAgentHeader        bool   //Do not remove User-Agent header from server response (advanced usecase)
 	DisableChunkedTransferEncoding bool   //Disable chunked transfer encoding
 	ForceHTTP11                    bool   //Force use HTTP/1.1 for upstream connection
+	AllowConnect                   bool   //Allow HTTP CONNECT tunneling; when true the target is validated against ProxyDomain
+	AllowUpgrade                   bool   //Allow generic HTTP protocol upgrades (e.g. TS2021) to be forwarded to the upstream
 
 	/* System Information Payload */
 	DevelopmentMode bool   //Inject dev mode information to requests
 	Version         string //Version number of Zoraxy, use for X-Proxy-By
+
+	/* HTTP/3 (QUIC) */
+	AltSvc string //Alt-Svc header value to advertise HTTP/3 support; empty = no header
 }
 
 type DpcoreOptions struct {
@@ -88,6 +107,21 @@ type DpcoreOptions struct {
 	MaxConcurrentConnection int           //Maxmium concurrent requests to this server
 	ResponseHeaderTimeout   int64         //Timeout for response header, set to 0 for default
 	DevelopmentMode         bool          //Enable development mode for this proxy core
+	UpstreamTLSServerName   string        //Override the TLS SNI / cert verification hostname for HTTPS upstreams. Empty = derive from the upstream address
+}
+
+// sniServerName normalizes a host value into a usable TLS SNI ServerName.
+// It strips any port and returns "" if the result is empty or an IP literal,
+// which Go omits from the ClientHello anyway (crypto/tls hostnameInSNI, RFC 6066).
+func sniServerName(host string) string {
+	host = strings.TrimSpace(host)
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	if host == "" || net.ParseIP(host) != nil {
+		return ""
+	}
+	return host
 }
 
 func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOptions) *ReverseProxy {
@@ -101,21 +135,52 @@ func NewDynamicProxyCore(target *url.URL, prepender string, dpcOptions *DpcoreOp
 		} else {
 			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
 		}
-
 	}
 
-	// Create a new transport instance instead of modifying the shared DefaultTransport
 	thisTransporter := newBaseTransport(dpcOptions)
 
+	// Set the correct SNI for HTTPS backends at creation time.
+	// Each ReverseProxy instance targets one backend, so this is safe and avoids
+	// per-request transport cloning that defeats connection pooling.
+	useRequestHostAsSNI := false
+	if strings.EqualFold(target.Scheme, "https") {
+		// An admin configured SNI (see #1088 follow up, from the endpoint's
+		// "Overwrite Host Header" value) takes precedence over the upstream address.
+		// This allows an upstream to be addressed by a name that its certificate does
+		// not cover (e.g. a Docker service name) while keeping certificate
+		// verification enabled and verified against the configured hostname.
+		serverName := sniServerName(dpcOptions.UpstreamTLSServerName)
+		if serverName == "" {
+			serverName = target.Hostname()
+		}
+		cfg := &tls.Config{ServerName: serverName}
+		if dpcOptions.IgnoreTLSVerification {
+			cfg.InsecureSkipVerify = true
+		}
+		// A ServerName that is an IP literal is dropped from the TLS ClientHello
+		// by Go (crypto/tls hostnameInSNI, per RFC 6066), leaving the handshake
+		// with no SNI. That breaks SNI-routed HTTPS upstreams addressed by IP
+		// (e.g. a backend reachable only by IP but serving a cert for the proxied
+		// domain). In that case, leave the shared ServerName empty and derive the
+		// SNI from the request host per-request. This restores the pre-#1088
+		// behavior for IP upstreams only, so hostname upstreams keep the shared
+		// ServerName and their connection pooling.
+		if net.ParseIP(serverName) != nil {
+			cfg.ServerName = ""
+			useRequestHostAsSNI = true
+		}
+		thisTransporter.TLSClientConfig = cfg
+	}
+
 	return &ReverseProxy{
-		Director:      director,
-		Prepender:     prepender,
-		FlushInterval: dpcOptions.FlushInterval,
-		Verbal:        dpcOptions.DevelopmentMode,
-		Transport:     thisTransporter,
+		Director:            director,
+		Prepender:           prepender,
+		FlushInterval:       dpcOptions.FlushInterval,
+		Verbal:              dpcOptions.DevelopmentMode,
+		Transport:           thisTransporter,
+		useRequestHostAsSNI: useRequestHostAsSNI,
 	}
 }
-
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	apath, bpath := a.EscapedPath(), b.EscapedPath()
 	aslash, bslash := strings.HasSuffix(apath, "/"), strings.HasPrefix(bpath, "/")
@@ -141,7 +206,7 @@ func copyHeader(dst, src http.Header) {
 // Hop-by-hop headers. These are removed when sent to the backend.
 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
 var hopHeaders = []string{
-	//"Connection",
+	"Connection",
 	"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
 	"Keep-Alive",
 	"Proxy-Authenticate",
@@ -278,9 +343,33 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	outreq.Header = make(http.Header)
 	copyHeader(outreq.Header, req.Header)
 
+	// Capture the requested upgrade before the hop-by-hop removal strips it, see issue #1290
+	reqUpType := upgradeType(outreq.Header)
+	if reqUpType != "" {
+		if !isPrintableASCII(reqUpType) {
+			return http.StatusBadRequest, errors.New("client requested an invalid upgrade protocol")
+		}
+		if !rrr.AllowUpgrade {
+			http.Error(rw, "Protocol upgrades are not enabled for this endpoint", http.StatusForbidden)
+			return http.StatusForbidden, nil
+		}
+	}
+
 	// Remove hop-by-hop headers.
-	if !rrr.NoRemoveHopByHop {
-		removeHeaders(outreq.Header, rrr.NoCache)
+	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3, so
+	// they are always stripped from H3 requests even when hop-by-hop removal
+	// is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
+		removeHeaders(outreq.Header)
+	}
+
+	if rrr.NoCache {
+		setNoCacheHeader(outreq.Header)
+	}
+
+	// Restore the upgrade headers so the upstream still sees the upgrade request
+	if reqUpType != "" {
+		restoreUpgradeHeaders(outreq.Header, reqUpType)
 	}
 
 	// Add X-Forwarded-For Header.
@@ -297,48 +386,53 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		outreq.TransferEncoding = []string{"identity"}
 	}
 
+	// Fix for #1204 HTTP/2 to HTTP/1.1 translation for bodyless POST requests.
+	if outreq.ContentLength == -1 && outreq.Body != nil && outreq.Body != http.NoBody {
+		buf := make([]byte, 1)
+		n, err := outreq.Body.Read(buf)
+		switch {
+		case n == 0 && err == io.EOF:
+			// Body is confirmed empty, prevent chunked encoding downstream.
+			outreq.Body = http.NoBody
+			outreq.ContentLength = 0
+			outreq.GetBody = nil
+		case n > 0:
+			// Body has content; put the peeked byte back.
+			outreq.Body = io.NopCloser(io.MultiReader(bytes.NewReader(buf[:n]), outreq.Body))
+		}
+	}
+
 	// Fix for #997
-	// Only clone transport when configuration needs to change to preserve connection pooling
+	// Only clone transport when configuration needs to change to preserve connection pooling.
+	// Fix for #1088
+	// No per-request SNI cloning is needed because ServerName is set on the shared
+	// transport during NewDynamicProxyCore initialization.
 	needClone := false
 	var trc *http.Transport
 
 	if tr, ok := transport.(*http.Transport); ok {
-		// Check if we need to modify transport configuration
-		if rrr.ForceHTTP11 {
-			if !needClone {
-				//Proxy rule config changed. Clone a new transport instance
-				trc = tr.Clone()
-				needClone = true
-			}
+		// HTTP/2 has no upgrade mechanism, so an upgrade request must use HTTP/1.1 upstream
+		if rrr.ForceHTTP11 || reqUpType != "" {
+			trc = tr.Clone()
+			needClone = true
 			// Disable HTTP/2 by setting TLSNextProto to a non-nil empty map
 			trc.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
 			trc.ForceAttemptHTTP2 = false
 		}
 
-		// Fix for issue #821 - only clone if ServerName needs updating
-		if outreq.URL != nil && strings.EqualFold(outreq.URL.Scheme, "https") {
-			serverName := outreq.Host
-			if h, _, err := net.SplitHostPort(serverName); err == nil {
-				serverName = h
-			}
-
-			// Only clone if ServerName actually needs to be updated
-			currentServerName := ""
-			if tr.TLSClientConfig != nil {
-				currentServerName = tr.TLSClientConfig.ServerName
-			}
-
-			if currentServerName != serverName {
+		// For IP-addressed HTTPS upstreams the shared transport carries no SNI
+		// (see NewDynamicProxyCore). Derive it from the request host so the
+		// backend still receives a valid SNI and can present the right cert.
+		if p.useRequestHostAsSNI {
+			// Skip if empty or itself an IP (Go would omit an IP from the ClientHello).
+			if serverName := sniServerName(outreq.Host); serverName != "" {
 				if !needClone {
 					trc = tr.Clone()
 					needClone = true
 				}
-
-				var cfg *tls.Config
+				cfg := &tls.Config{}
 				if trc.TLSClientConfig != nil {
 					cfg = trc.TLSClientConfig.Clone()
-				} else {
-					cfg = &tls.Config{}
 				}
 				cfg.ServerName = serverName
 				trc.TLSClientConfig = cfg
@@ -359,9 +453,21 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		return http.StatusBadGateway, err
 	}
 
+	// An upgraded connection is a raw byte tunnel, not a response body to be rewritten
+	if res.StatusCode == http.StatusSwitchingProtocols {
+		return p.handleUpgradeResponse(rw, reqUpType, res)
+	}
+
 	// Remove hop-by-hop headers listed in the "Connection" header of the response
-	if !rrr.NoRemoveHopByHop {
-		removeHeaders(res.Header, rrr.NoCache)
+	// RFC 9114 §4.2 forbids connection-specific header fields in HTTP/3 responses;
+	// clients reject them. Always strip them for H3 requests even when hop-by-hop
+	// removal is disabled for this endpoint (the flag only applies to HTTP/1.1 upstreams).
+	if !rrr.NoRemoveHopByHop || req.ProtoMajor == 3 {
+		removeHeaders(res.Header)
+	}
+
+	if rrr.NoCache {
+		setNoCacheHeader(res.Header)
 	}
 
 	//Remove the User-Agent header if exists
@@ -443,6 +549,11 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		rw.Header().Add("Trailer", strings.Join(trailerKeys, ", "))
 	}
 
+	// Advertise HTTP/3 (QUIC) support via Alt-Svc header so browsers can upgrade
+	if rrr.AltSvc != "" {
+		rw.Header().Set("Alt-Svc", rrr.AltSvc)
+	}
+
 	rw.WriteHeader(res.StatusCode)
 	if len(res.Trailer) > 0 {
 		// Force chunking if we saw a response trailer.
@@ -464,7 +575,26 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	return res.StatusCode, nil
 }
 
-func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (int, error) {
+func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
+	// Validate the CONNECT target against the configured upstream before hijacking
+	// so that http.Error still works if validation fails.
+	connectTarget := req.URL.Host
+	if !strings.Contains(connectTarget, ":") {
+		connectTarget += ":443"
+	}
+	allowedHost := rrr.ProxyDomain
+	if !strings.Contains(allowedHost, ":") {
+		if rrr.UseTLS {
+			allowedHost += ":443"
+		} else {
+			allowedHost += ":80"
+		}
+	}
+	if connectTarget != allowedHost {
+		http.Error(rw, "Forbidden", http.StatusForbidden)
+		return http.StatusForbidden, errors.New("CONNECT to " + connectTarget + " denied: target must match the configured upstream")
+	}
+
 	hij, ok := rw.(http.Hijacker)
 	if !ok {
 		p.logf("http server does not support hijacker")
@@ -559,8 +689,11 @@ func (p *ReverseProxy) ProxyHTTPS(rw http.ResponseWriter, req *http.Request) (in
 
 func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request, rrr *ResponseRewriteRuleSet) (int, error) {
 	if req.Method == "CONNECT" {
-		return p.ProxyHTTPS(rw, req)
-	} else {
-		return p.ProxyHTTP(rw, req, rrr)
+		if !rrr.AllowConnect {
+			http.Error(rw, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return http.StatusMethodNotAllowed, nil
+		}
+		return p.ProxyHTTPS(rw, req, rrr)
 	}
+	return p.ProxyHTTP(rw, req, rrr)
 }

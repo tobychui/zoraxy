@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"runtime"
 	"sort"
 	"strconv"
 	"sync"
@@ -27,6 +28,8 @@ type DiscoveredHost struct {
 	HttpsPortDetected bool
 }
 
+const maxConcurrentPings = 64
+
 // Scan an IP range given the start and ending ip address
 func ScanIpRange(start, end string) ([]*DiscoveredHost, error) {
 	ipStart := net.ParseIP(start)
@@ -40,6 +43,10 @@ func ScanIpRange(start, end string) ([]*DiscoveredHost, error) {
 	}
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	// Limit concurrent pings; too many ICMP sockets at once causes
+	// replies to be dropped (especially on macOS)
+	pingLimiter := make(chan struct{}, maxConcurrentPings)
 	hosts := make([]*DiscoveredHost, 0)
 	for ip := ipStart; bytes.Compare(ip, ipEnd) <= 0; inc(ip) {
 		wg.Add(1)
@@ -47,17 +54,24 @@ func ScanIpRange(start, end string) ([]*DiscoveredHost, error) {
 		go func(thisIp string) {
 			defer wg.Done()
 			host := &DiscoveredHost{IP: thisIp}
-			if err := host.CheckPing(); err != nil {
+			pingLimiter <- struct{}{}
+			err := host.CheckPing()
+			<-pingLimiter
+			if err != nil {
 				// skip if the host is unreachable
 				host.Ping = -1
+				mu.Lock()
 				hosts = append(hosts, host)
+				mu.Unlock()
 				return
 			}
 
 			host.CheckHostname()
 			host.CheckPort("http", 80, &host.HttpPortDetected)
 			host.CheckPort("https", 443, &host.HttpsPortDetected)
+			mu.Lock()
 			hosts = append(hosts, host)
+			mu.Unlock()
 
 		}(thisIp)
 	}
@@ -97,21 +111,36 @@ func sortByIP(discovered []*DiscoveredHost) {
 }
 
 func (host *DiscoveredHost) CheckPing() error {
-	// ping the host and set the ping time in milliseconds
-	pinger, err := ping.NewPinger(host.IP)
+	// macOS does not allow raw ICMP sockets without root, but supports
+	// unprivileged (datagram) ICMP out of the box. Other platforms default
+	// to privileged mode and fall back to unprivileged if that fails.
+	privileged := runtime.GOOS != "darwin"
+	stats, err := pingHost(host.IP, privileged)
 	if err != nil {
-		return err
+		stats, err = pingHost(host.IP, !privileged)
+		if err != nil {
+			return err
+		}
 	}
-	pinger.Count = 4
-	pinger.Timeout = time.Second
-	pinger.SetPrivileged(true) // This line may help on some systems
-	pinger.Run()
-	stats := pinger.Statistics()
 	if stats.PacketsRecv == 0 {
 		return fmt.Errorf("host unreachable for %s", host.IP)
 	}
 	host.Ping = int(stats.AvgRtt.Milliseconds())
 	return nil
+}
+
+func pingHost(ip string, privileged bool) (*ping.Statistics, error) {
+	pinger, err := ping.NewPinger(ip)
+	if err != nil {
+		return nil, err
+	}
+	pinger.Count = 4
+	pinger.Timeout = time.Second
+	pinger.SetPrivileged(privileged)
+	if err := pinger.Run(); err != nil {
+		return nil, err
+	}
+	return pinger.Statistics(), nil
 }
 
 func (host *DiscoveredHost) CheckHostname() {

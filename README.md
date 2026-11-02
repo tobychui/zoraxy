@@ -241,6 +241,16 @@ Some section of Zoraxy are contributed by our amazing community and if you have 
 
 Thank you so much for your contributions!
 
+### Notes on Security Advisories
+
+Due to recent automated / AI generated advisories, we will no longer accept security advisories directly open on Github.
+
+If you spot a secuity issue and want to create a security advisories, please contact us via Discord and provide your Github username. Then we will assign you an advisory number for filling in your advisory title. For advisories that do not have a advisory number, we will close it immediately.
+
+**Updates 2026-06-26**
+
+Due to recent floods of AI generated security advisory, Private vulnerability reporting feature of this repo is temporary closed. If you have a critical issue to report, you can reach our maintainer on Discord. 
+
 ## Sponsor This Project
 
 If you like the project and want to support us, please consider a donation. You can use the links below

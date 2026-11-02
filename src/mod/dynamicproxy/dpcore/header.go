@@ -16,7 +16,7 @@ import (
 */
 
 // removeHeaders Remove hop-by-hop headers listed in the "Connection" header, Remove hop-by-hop headers.
-func removeHeaders(header http.Header, noCache bool) {
+func removeHeaders(header http.Header) {
 	// Remove hop-by-hop headers listed in the "Connection" header.
 	if c := header.Get("Connection"); c != "" {
 		for _, f := range strings.Split(c, ",") {
@@ -38,13 +38,12 @@ func removeHeaders(header http.Header, noCache bool) {
 		header.Set("Upgrade", header.Get("Zr-Origin-Upgrade"))
 		header.Del("Zr-Origin-Upgrade")
 	}
+}
 
-	//Disable cache if nocache is set
-	if noCache {
-		header.Del("Cache-Control")
-		header.Set("Cache-Control", "no-store")
-	}
-
+// setNoCacheHeader force set Cache-Control to no-store, independent of hop-by-hop removal
+func setNoCacheHeader(header http.Header) {
+	header.Del("Cache-Control")
+	header.Set("Cache-Control", "no-store")
 }
 
 // rewriteUserAgent rewrite the user agent based on incoming request

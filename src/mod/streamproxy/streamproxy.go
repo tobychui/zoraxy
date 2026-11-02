@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"imuslab.com/zoraxy/mod/access"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
 )
@@ -39,6 +40,7 @@ type ProxyRelayOptions struct {
 	UseUDP               bool
 	ProxyProtocolVersion ProxyProtocolVersion
 	EnableLogging        bool
+	AccessRuleUUID       string //The UUID of the access control rule, empty for default rule
 }
 
 // ProxyRuleUpdateConfig is used to update the proxy rule config
@@ -52,6 +54,7 @@ type ProxyRuleUpdateConfig struct {
 	ProxyProtocolVersion int    //Enable Proxy Protocol v1/v2, default to disabled
 	EnableLogging        bool   //Enable Logging TCP/UDP Message, default to true
 	NewTimeout           int    //New timeout for the connection, leave -1 for no change
+	NewAccessRuleUUID    string //New access rule UUID, leave empty for no change
 }
 
 type ProxyRelayInstance struct {
@@ -65,6 +68,7 @@ type ProxyRelayInstance struct {
 	UseTCP               bool                 //Enable TCP proxy
 	UseUDP               bool                 //Enable UDP proxy
 	ProxyProtocolVersion ProxyProtocolVersion //Proxy Protocol v1/v2
+	AccessRuleUUID       string               //The UUID of the access control rule, empty for default rule
 	EnableLogging        bool                 //Enable logging for ProxyInstance
 	Timeout              int                  //Timeout for connection in sec
 
@@ -80,8 +84,9 @@ type ProxyRelayInstance struct {
 type Options struct {
 	DefaultTimeout       int
 	AccessControlHandler func(net.Conn) bool
-	ConfigStore          string         //Folder to store the config files, will be created if not exists
-	Logger               *logger.Logger //Logger for the stream proxy
+	AccessController     *access.Controller //Access controller for per-instance access rules
+	ConfigStore          string             //Folder to store the config files, will be created if not exists
+	Logger               *logger.Logger     //Logger for the stream proxy
 }
 
 type Manager struct {
@@ -213,6 +218,7 @@ func (m *Manager) NewConfig(config *ProxyRelayOptions) string {
 		ProxyProtocolVersion:        config.ProxyProtocolVersion,
 		EnableLogging:               config.EnableLogging,
 		Timeout:                     config.Timeout,
+		AccessRuleUUID:              config.AccessRuleUUID,
 		tcpStopChan:                 nil,
 		udpStopChan:                 nil,
 		aTobAccumulatedByteTransfer: &aAcc,
@@ -283,6 +289,14 @@ func (m *Manager) EditConfig(newConfig *ProxyRuleUpdateConfig) error {
 	foundConfig.ProxyProtocolVersion = convertIntToProxyProtocolVersion(newConfig.ProxyProtocolVersion)
 	foundConfig.EnableLogging = newConfig.EnableLogging
 
+	if newConfig.NewAccessRuleUUID != "" {
+		// Validate that the access rule exists; if not, fall back to default
+		if m.Options.AccessController != nil && !m.Options.AccessController.AccessRuleExists(newConfig.NewAccessRuleUUID) {
+			return errors.New("access rule not found: " + newConfig.NewAccessRuleUUID)
+		}
+		foundConfig.AccessRuleUUID = newConfig.NewAccessRuleUUID
+	}
+
 	if newConfig.NewTimeout != -1 {
 		if newConfig.NewTimeout < 0 {
 			return errors.New("invalid timeout value given")
@@ -329,4 +343,23 @@ func (m *Manager) SaveConfigToDatabase() {
 			m.logf("Failed to save stream proxy config", err)
 		}
 	}
+}
+
+// getEffectiveAccessRule returns the access rule for this proxy instance.
+// If the configured rule UUID is empty or no longer exists, it falls back to
+// the default access rule. Returns nil if no AccessController is available.
+func (c *ProxyRelayInstance) getEffectiveAccessRule() *access.AccessRule {
+	if c.parent.Options.AccessController == nil {
+		return nil
+	}
+	rule, err := c.parent.Options.AccessController.GetAccessRuleByID(c.AccessRuleUUID)
+	if err != nil {
+		// Rule not found (deleted or empty UUID); fall back to default
+		c.parent.logf("Access rule \""+c.AccessRuleUUID+"\" not found for stream proxy "+c.Name+", falling back to default", nil)
+		rule, err = c.parent.Options.AccessController.GetAccessRuleByID("default")
+		if err != nil {
+			return nil
+		}
+	}
+	return rule
 }

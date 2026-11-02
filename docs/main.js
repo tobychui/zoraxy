@@ -55,7 +55,7 @@ $(window).on("resize", function(){
     Download
 */
 
-$('.menu .item').tab();
+$('#download .menu .item').tab();
 
 //Download webpack and binary at the same time
 function handleDownload(releasename){

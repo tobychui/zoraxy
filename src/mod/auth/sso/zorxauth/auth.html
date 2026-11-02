@@ -8,274 +8,566 @@
     <meta name="author" content="Zoraxy">
     <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="color-scheme" content="light dark">
     <title>Sign In - </title>
     <style>
+        :root {
+            --bg: #ffffff;
+            --bg-page: #ffffff;
+            --text: #101828;
+            --text-muted: #667085;
+            --text-label: #344054;
+            --border: #d0d5dd;
+            --border-soft: #eaecf0;
+            --field-bg: #ffffff;
+            --field-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+            --primary: #17203c;
+            --primary-hover: #232e50;
+            --accent: #6941c6;
+            --danger-bg: #fffbfa;
+            --danger-border: #fda29b;
+            --danger-text: #b42318;
+            --warning-text: #b54708;
+            --logo-arc: #1f2a44;
+            --logo-dot: #4a90d9;
+            --radius: 8px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #101018;
+                --bg-page: #101018;
+                --text: #f5f5f7;
+                --text-muted: #9497a8;
+                --text-label: #d6d8e1;
+                --border: #33344a;
+                --border-soft: #26273a;
+                --field-bg: #161722;
+                --field-shadow: none;
+                --primary: #5b4bd6;
+                --primary-hover: #6b5ce0;
+                --accent: #a78bfa;
+                --danger-bg: #2a1416;
+                --danger-border: #7a2a26;
+                --danger-text: #fda29b;
+                --warning-text: #fdb022;
+                --logo-arc: #e6e8f2;
+                --logo-dot: #a9d1f3;
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
+        html, body {
+            height: 100%;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f7fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-page);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .layout {
+            display: flex;
             min-height: 100vh;
+        }
+
+        /* ── Left: form pane ─────────────────────────────────────── */
+        .pane-form {
+            flex: 1 1 40%;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            padding: 32px;
+            position: relative;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--text);
+        }
+
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            display: block;
+            border-radius: 0.5em;
+        }
+
+        .pane-form-body {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 40px 0;
         }
-        
-        .container {
-            background: white;
-            border-radius: 12px;
-            max-width: 450px;
+
+        .content {
             width: 100%;
-            padding: 40px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            max-width: 360px;
         }
-        
-        .icon {
-            text-align: center;
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-        
+
         h1 {
-            color: #2d3748;
-            font-size: 28px;
-            margin-bottom: 12px;
+            font-size: 30px;
+            line-height: 38px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
             text-align: center;
+            color: var(--text);
         }
-        
+
         .subtitle {
-            color: #718096;
-            font-size: 16px;
+            margin-top: 12px;
+            font-size: 15px;
+            line-height: 22px;
+            color: var(--text-muted);
             text-align: center;
-            margin-bottom: 32px;
         }
-        
+
+        .subtitle b {
+            font-weight: 600;
+            color: var(--text-label);
+        }
+
+        /* ── Fields ──────────────────────────────────────────────── */
+        #loginForm {
+            margin-top: 32px;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
-        
+
         label {
             display: block;
-            color: #2d3748;
+            color: var(--text-label);
             font-size: 14px;
             font-weight: 500;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
-        
+
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--field-bg);
+            box-shadow: var(--field-shadow);
             font-size: 15px;
-            color: #2d3748;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+            color: var(--text);
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
-        
+
         input[type="text"]:focus,
         input[type="password"]:focus {
             outline: none;
-            border-color: #4299e1;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(105, 65, 198, 0.14);
         }
-        
+
         input[type="text"]::placeholder,
         input[type="password"]::placeholder {
-            color: #a0aec0;
+            color: var(--text-muted);
         }
-        
+
+        .form-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
         .checkbox-group {
             display: flex;
             align-items: center;
-            margin-bottom: 24px;
         }
-        
+
         input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             margin-right: 8px;
+            accent-color: var(--accent);
             cursor: pointer;
         }
-        
+
         .checkbox-label {
-            color: #4a5568;
+            color: var(--text-label);
             font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             user-select: none;
         }
-        
-        .btn-submit {
-            width: 100%;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #38a169 0%, #319795 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
+
+        .link {
+            font-size: 14px;
             font-weight: 600;
+            color: var(--accent);
+            text-decoration: none;
+            background: none;
+            border: none;
+            font-family: inherit;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            padding: 0;
         }
-        
-        .btn-submit:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+
+        .link:hover {
+            text-decoration: underline;
         }
-        
-        .btn-submit:active:not(:disabled) {
-            transform: translateY(0);
+
+        /* ── Buttons ─────────────────────────────────────────────── */
+        .btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 11px 18px;
+            border-radius: var(--radius);
+            border: 1px solid transparent;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
         }
-        
-        .btn-submit:disabled {
-            opacity: 0.6;
+
+        .btn:disabled {
+            opacity: 0.65;
             cursor: not-allowed;
         }
-        
+
+        .btn-submit {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: var(--field-shadow);
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--field-bg);
+            color: var(--text-label);
+            border-color: var(--border);
+            box-shadow: var(--field-shadow);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn svg {
+            flex: none;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            border-top: 1px solid var(--border-soft);
+        }
+
+        .divider span {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* ── Messages ────────────────────────────────────────────── */
         .error-message {
-            background: #fff5f5;
-            border-left: 4px solid #f56565;
-            padding: 12px 16px;
-            margin-bottom: 24px;
-            border-radius: 4px;
+            background: var(--danger-bg);
+            border: 1px solid var(--danger-border);
+            padding: 10px 14px;
+            margin: 24px 0 0;
+            border-radius: var(--radius);
             display: none;
         }
-        
+
         .error-message.show {
             display: block;
         }
-        
+
         .error-message p {
-            color: #c53030;
+            color: var(--danger-text);
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 20px;
         }
-        
+
         .info-box {
-            padding: 12px 16px;
-            border-radius: 4px;
-            margin-top: 24px;
+            margin-top: 32px;
+            text-align: center;
             display: none;
         }
-        
+
         .info-box.show {
             display: block;
         }
-        
-        .info-box.secure p {
-            color: #2c5282;
+
+        .info-box p {
             font-size: 13px;
-            line-height: 1.6;
+            line-height: 20px;
+            color: var(--text-muted);
         }
-        
+
         .info-box.warning p {
-            color: #9c4221;
-            font-size: 13px;
-            line-height: 1.6;
+            color: var(--warning-text);
         }
-        
+
         .spinner {
             display: inline-block;
             width: 16px;
             height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.35);
             border-radius: 50%;
-            border-top-color: white;
+            border-top-color: currentColor;
             animation: spin 0.8s linear infinite;
-            margin-left: 8px;
             vertical-align: middle;
         }
-        
+
+        .btn-secondary .spinner {
+            border-color: rgba(105, 65, 198, 0.25);
+            border-top-color: currentColor;
+        }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
-        @media (max-width: 640px) {
-            .container {
-                padding: 24px;
+
+        /* ── Right: artwork pane ─────────────────────────────────── */
+        .pane-art {
+            flex: 1 1 50%;
+            position: relative;
+            background: #0a0a1f url('{{wallpaper_src}}') center center / cover no-repeat;
+            overflow: hidden;
+            border-top-left-radius: 4em;
+            border-bottom-left-radius: 4em;
+        }
+
+        .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .watermark img {
+            width: 62%;
+            max-width: 320px;
+            /* filter: drop-shadow(0 0 26px rgba(139, 92, 246, 0.75)); */
+            opacity: 0.96;
+        }
+
+        .watermark span {
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.72);
+            text-shadow: 0 0 18px rgba(10, 10, 31, 0.9);
+        }
+
+        /* ── TOTP step ───────────────────────────────────────────── */
+        #totpStep .totp-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-soft);
+            box-shadow: var(--field-shadow);
+            color: var(--text-label);
+        }
+
+        #totpStep h1 {
+            font-size: 24px;
+            line-height: 32px;
+        }
+
+        #totpErrorMessage {
+            margin: 0 0 20px;
+        }
+
+        #totpCode {
+            letter-spacing: 8px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .totp-back {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .pane-art {
+                display: none;
             }
-            
+        }
+
+        @media (max-width: 480px) {
+            .pane-form {
+                padding: 24px 20px;
+            }
+
             h1 {
-                font-size: 24px;
-            }
-            
-            .icon {
-                font-size: 48px;
+                font-size: 26px;
+                line-height: 32px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="icon">🔐</div>
-        <h1>Welcome Back</h1>
-        <p class="subtitle">Sign in to continue to your application</p>
-        
-        <div class="error-message" id="errorMessage">
-            <p id="errorText"></p>
-        </div>
-        
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="username">Username or Email</label>
-                <input 
-                    type="text" 
-                    id="username" 
-                    name="username" 
-                    placeholder="Enter your username or email"
-                    required
-                    autocomplete="username"
-                    autofocus
-                >
+    <div class="layout">
+        <section class="pane-form">
+            <div class="brand">
+                {{brand_mark}}
+                <span>{{brand_text}}</span>
             </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    placeholder="Enter your password"
-                    required
-                    autocomplete="current-password"
-                >
+
+            <div class="pane-form-body">
+                <div class="content">
+                    <div id="loginHeader">
+                        <h1>Welcome back</h1>
+                        <p class="subtitle" id="loginSubtitle">Continue with a passkey or enter your details.</p>
+                    </div>
+
+                    <div class="error-message" id="errorMessage">
+                        <p id="errorText"></p>
+                    </div>
+
+                    <form id="loginForm">
+                        <button type="button" class="btn btn-secondary" id="passkeyBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 9.6-6.5"/><circle cx="17" cy="15" r="3"/><path d="M17 18v4l1.5-1.5L20 22"/></svg>
+                            <span>Sign in with a passkey</span>
+                        </button>
+
+                        <div class="divider"><span>or</span></div>
+
+                        <div class="form-group">
+                            <label for="username">Username or email</label>
+                            <input
+                                type="text"
+                                id="username"
+                                name="username"
+                                placeholder="Enter your username or email"
+                                required
+                                autocomplete="username"
+                                autofocus
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="current-password"
+                            >
+                        </div>
+
+                        <div class="form-options">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="rememberMe" name="rememberMe">
+                                <label for="rememberMe" class="checkbox-label">Remember me</label>
+                            </div>
+                            <button type="button" class="link" id="forgotLink">Forgot password?</button>
+                        </div>
+
+                        <button type="submit" class="btn btn-submit" id="submitBtn">
+                            Log in
+                        </button>
+                    </form>
+
+                    <div class="info-box" id="secureInfo">
+                        <p>🔒 Secured by Zoraxy Auth. This connection is encrypted end to end.</p>
+                    </div>
+
+                    <div class="info-box warning" id="warningInfo">
+                        <p>⚠️ You are connecting over plain HTTP. Your credentials may be visible to others — use HTTPS for secure authentication.</p>
+                    </div>
+
+                    <!-- TOTP step (hidden until 2FA is required) -->
+                    <div id="totpStep" style="display:none">
+                        <div class="totp-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </div>
+                        <h1>Two-factor authentication</h1>
+                        <p class="subtitle" style="margin-bottom:28px">Enter the 6-digit code from your authenticator app.</p>
+
+                        <div class="error-message" id="totpErrorMessage">
+                            <p id="totpErrorText"></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="totpCode">Authenticator code</label>
+                            <input type="text" id="totpCode" placeholder="000000" maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+                        </div>
+
+                        <button class="btn btn-submit" id="totpSubmitBtn">Verify</button>
+
+                        <p class="totp-back">
+                            <a href="#" id="totpBackLink" class="link">← Back to login</a>
+                        </p>
+                    </div>
+                </div>
             </div>
-            
-            <div class="checkbox-group">
-                <input type="checkbox" id="rememberMe" name="rememberMe">
-                <label for="rememberMe" class="checkbox-label">Remember me</label>
+        </section>
+
+        <aside class="pane-art" aria-hidden="true">
+            <div class="watermark">
+                {{watermark_icon}}
+                {{watermark_label}}
             </div>
-            
-            <button type="submit" class="btn-submit" id="submitBtn">
-                Sign In
-            </button>
-        </form>
-        
-        <div class="info-box secure" id="secureInfo">
-            <p>🔒 This is a secure authentication gateway powered by Zoraxy Auth. Your credentials are encrypted and protected.</p>
-        </div>
-        
-        <div class="info-box warning" id="warningInfo">
-            <p>⚠️ Warning: You are connecting over HTTP (unencrypted). Your credentials may be visible to others. Please use HTTPS for secure authentication.</p>
-        </div>
+        </aside>
     </div>
-    
+
     <script>
+        // Icon markup reused when the passkey button is restored after a failed attempt
+        const PASSKEY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 9.6-6.5"/><circle cx="17" cy="15" r="3"/><path d="M17 18v4l1.5-1.5L20 22"/></svg>';
+
         // Get redirect URL from query parameters
         const urlParams = new URLSearchParams(window.location.search);
         const redirectUrl = urlParams.get('redirect') || '/';
-        
-        
+
+
         // Show appropriate security info box based on connection protocol
         const isSecure = window.location.protocol === 'https:';
         const secureInfo = document.getElementById('secureInfo');
         const warningInfo = document.getElementById('warningInfo');
-        
+
         if (isSecure) {
             secureInfo.classList.add('show');
         } else {
@@ -285,35 +577,140 @@
         const submitBtn = document.getElementById('submitBtn');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
-        
+
         function showError(message) {
             errorText.textContent = message;
             errorMessage.classList.add('show');
         }
-        
+
         function hideError() {
             errorMessage.classList.remove('show');
         }
-        
+
         function setLoading(isLoading) {
             if (isLoading) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = 'Signing In<span class="spinner"></span>';
+                submitBtn.innerHTML = 'Logging in <span class="spinner"></span>';
             } else {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign In';
+                submitBtn.textContent = 'Log in';
             }
         }
-        
+
+        // Helper: redirect to the target site after a successful auth response
+        function handleSuccessResponse(data) {
+            if (data.redirectTarget && !data.sessionSetURL) {
+                // Direct login (no SSO session-set needed): go straight to the target
+                window.location.href = data.redirectTarget;
+                return true;
+            }
+            if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
+                return false;
+            }
+            const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
+            const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
+            window.location.href = finalRedirectURL;
+            return true;
+        }
+
+        // ── TOTP step ──────────────────────────────────────────────
+        let pendingTotpToken = null;
+
+        function showTotpStep(token) {
+            pendingTotpToken = token;
+            loginForm.style.display = 'none';
+            secureInfo.classList.remove('show');
+            warningInfo.classList.remove('show');
+            document.getElementById('loginHeader').style.display = 'none';
+            document.getElementById('totpStep').style.display = 'block';
+            document.getElementById('totpCode').value = '';
+            document.getElementById('totpErrorMessage').classList.remove('show');
+            document.getElementById('totpCode').focus();
+        }
+
+        function hideTotpStep() {
+            pendingTotpToken = null;
+            document.getElementById('totpStep').style.display = 'none';
+            document.getElementById('loginHeader').style.display = '';
+            loginForm.style.display = 'block';
+            if (isSecure) {
+                secureInfo.classList.add('show');
+            } else {
+                warningInfo.classList.add('show');
+            }
+        }
+
+        document.getElementById('totpBackLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            hideTotpStep();
+        });
+
+        document.getElementById('totpSubmitBtn').addEventListener('click', async function() {
+            const btn     = document.getElementById('totpSubmitBtn');
+            const errEl   = document.getElementById('totpErrorMessage');
+            const errText = document.getElementById('totpErrorText');
+
+            errEl.classList.remove('show');
+            const code = document.getElementById('totpCode').value.trim();
+            if (code.length !== 6) {
+                errText.textContent = 'Please enter the 6-digit code from your authenticator app.';
+                errEl.classList.add('show');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying <span class="spinner"></span>';
+
+            try {
+                const response = await fetch('/totp-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        totp_token: pendingTotpToken,
+                        totp_code:  code
+                    })
+                });
+
+                let data = null;
+                try { data = await response.json(); } catch { data = null; }
+
+                if (response.ok && data && data.success) {
+                    if (!handleSuccessResponse(data)) {
+                        errText.textContent = 'Invalid response from server. Please try again.';
+                        errEl.classList.add('show');
+                        btn.disabled = false;
+                        btn.textContent = 'Verify';
+                    }
+                    return;
+                }
+
+                errText.textContent = (data && data.error) || 'Invalid code. Please try again.';
+                errEl.classList.add('show');
+            } catch (error) {
+                console.error('TOTP verify error:', error);
+                errText.textContent = 'An error occurred. Please try again.';
+                errEl.classList.add('show');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Verify';
+        });
+
+        // Allow Enter key on the TOTP input
+        document.getElementById('totpCode').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('totpSubmitBtn').click();
+        });
+
+        // ── Login form ─────────────────────────────────────────────
         loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             hideError();
             setLoading(true);
-            
+
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
-            
+
             try {
                 const response = await fetch('/login', {
                     method: 'POST',
@@ -335,17 +732,21 @@
                     data = null;
                 }
 
-                if (response.ok && data && data.success) {
-                    if (!data.sessionId || !data.redirectTarget || !data.sessionSetURL) {
-                        showError('Invalid login response from server. Please try again.');
+                if (response.ok && data) {
+                    // 2FA required: switch to TOTP step
+                    if (data.require_totp && data.totp_token) {
                         setLoading(false);
+                        showTotpStep(data.totp_token);
                         return;
                     }
 
-                    const rememberMeFlag = data.rememberMe === true ? 'true' : 'false';
-                    const finalRedirectURL = `${data.sessionSetURL}?session_id=${encodeURIComponent(data.sessionId)}&redirect=${encodeURIComponent(data.redirectTarget)}&remember_me=${encodeURIComponent(rememberMeFlag)}`;
-                    window.location.href = finalRedirectURL;
-                    return;
+                    if (data.success) {
+                        if (!handleSuccessResponse(data)) {
+                            showError('Invalid login response from server. Please try again.');
+                            setLoading(false);
+                        }
+                        return;
+                    }
                 }
 
                 showError((data && data.error) || 'Invalid username or password. Please try again.');
@@ -357,13 +758,111 @@
             }
         });
 
-        // Update the site title based on the redirect parameter
+        // Update the site title and subtitle based on the redirect parameter
         const redirectHostname = redirectUrl ? new URL(redirectUrl, window.location.origin).hostname : null;
         document.title = redirectHostname ? `Sign In - ${redirectHostname}` : 'Sign In Required';
-        
+        if (redirectHostname && redirectHostname !== window.location.hostname) {
+            document.getElementById('loginSubtitle').innerHTML =
+                'Sign in to continue to <b></b>';
+            document.querySelector('#loginSubtitle b').textContent = redirectHostname;
+        }
+
         // Clear error when user starts typing
         document.getElementById('username').addEventListener('input', hideError);
         document.getElementById('password').addEventListener('input', hideError);
+
+        // Password resets are handled by the Zoraxy administrator, not self-service
+        document.getElementById('forgotLink').addEventListener('click', function() {
+            showError('Password resets are handled by your administrator. Please contact them to regain access.');
+        });
+
+        // ── Passkey helpers ────────────────────────────────────────
+        function bufferToBase64url(buf) {
+            const bytes = new Uint8Array(buf);
+            let str = '';
+            bytes.forEach(b => str += String.fromCharCode(b));
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+        function base64urlToBuffer(b64url) {
+            const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+            const bin = atob(b64);
+            return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
+        }
+        function encodeAssertionCredential(cred) {
+            return {
+                id: cred.id,
+                rawId: bufferToBase64url(cred.rawId),
+                type: cred.type,
+                response: {
+                    clientDataJSON:    bufferToBase64url(cred.response.clientDataJSON),
+                    authenticatorData: bufferToBase64url(cred.response.authenticatorData),
+                    signature:         bufferToBase64url(cred.response.signature),
+                    userHandle:        cred.response.userHandle ? bufferToBase64url(cred.response.userHandle) : null
+                }
+            };
+        }
+
+        // ── Passkey login ──────────────────────────────────────────
+        document.getElementById('passkeyBtn').addEventListener('click', async function() {
+            const btn = document.getElementById('passkeyBtn');
+            hideError();
+
+            if (!window.PublicKeyCredential) {
+                showError('Your browser does not support passkeys.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span><span>Authenticating…</span>';
+
+            try {
+                // Step 1 – get challenge
+                const resp1 = await fetch('/passkey/auth/begin', {
+                    method: 'POST',
+                    body: new URLSearchParams({ redirect: redirectUrl })
+                });
+                const json1 = await resp1.json();
+                if (!resp1.ok || !json1.token) throw new Error(json1.error || 'Could not start passkey login.');
+
+                const token   = json1.token;
+                const options = json1.options;
+
+                // Decode binary fields from base64url
+                options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+                if (options.publicKey.allowCredentials) {
+                    options.publicKey.allowCredentials = options.publicKey.allowCredentials.map(c => ({
+                        ...c, id: base64urlToBuffer(c.id)
+                    }));
+                }
+
+                // Step 2 – platform ceremony
+                const cred = await navigator.credentials.get({ publicKey: options.publicKey });
+
+                // Step 3 – send assertion
+                const resp2 = await fetch('/passkey/auth/complete?token=' + encodeURIComponent(token), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(encodeAssertionCredential(cred))
+                });
+                const json2 = await resp2.json();
+                if (json2.success) {
+                    if (!handleSuccessResponse(json2)) {
+                        showError('Invalid response from server. Please try again.');
+                    }
+                } else {
+                    showError(json2.error || 'Passkey authentication failed.');
+                }
+            } catch (e) {
+                if (e && e.name === 'NotAllowedError') {
+                    showError('Passkey authentication was cancelled.');
+                } else {
+                    showError(e.message || 'Passkey authentication failed.');
+                }
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = PASSKEY_ICON + '<span>Sign in with a passkey</span>';
+        });
     </script>
 </body>
 </html>

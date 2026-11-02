@@ -8,7 +8,8 @@ import (
 
 // HandleRoute handles the request to the plugin
 // return true if the request is handled by the plugin
-func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []string) bool {
+// clientIP must be the trusted-proxy resolved client IP, not re-derived from raw request headers
+func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []string, clientIP string) bool {
 	if len(tags) == 0 {
 		return false
 	}
@@ -50,7 +51,7 @@ func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []str
 
 	//No static route handler found, check for dynamic route handler
 	for _, plugin := range dynamicRouteHandlers {
-		if plugin.HandleDynamicRoute(w, r) {
+		if plugin.HandleDynamicRoute(w, r, clientIP) {
 			return true
 		}
 	}

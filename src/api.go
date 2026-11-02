@@ -11,6 +11,7 @@ import (
 	"imuslab.com/zoraxy/mod/acme/acmewizard"
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/dynamicproxy/domainsniff"
+	"imuslab.com/zoraxy/mod/info/hardwareinfo"
 	"imuslab.com/zoraxy/mod/ipscan"
 	"imuslab.com/zoraxy/mod/netstat"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -37,6 +38,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/listTags", ReverseProxyListTags)
 	authRouter.HandleFunc("/api/proxy/detail", ReverseProxyListDetail)
 	authRouter.HandleFunc("/api/proxy/edit", ReverseProxyHandleEditEndpoint)
+	authRouter.HandleFunc("/api/proxy/setTags", ReverseProxyHandleSetTags)
 	authRouter.HandleFunc("/api/proxy/setAlias", ReverseProxyHandleAlias)
 	authRouter.HandleFunc("/api/proxy/setTlsConfig", ReverseProxyHandleSetTlsConfig)
 	authRouter.HandleFunc("/api/proxy/setHostname", ReverseProxyHandleSetHostname)
@@ -52,6 +54,8 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/requestIsProxied", HandleManagementProxyCheck)
 	authRouter.HandleFunc("/api/proxy/developmentMode", HandleDevelopmentModeChange)
 	authRouter.HandleFunc("/api/proxy/proxyProtocol", HandleProxyProtocolChange)
+	authRouter.HandleFunc("/api/proxy/quic", HandleQuicToggle)
+	authRouter.HandleFunc("/api/proxy/timeouts", HandleGlobalProxyTimeoutSettings)
 	/* Reverse proxy upstream (load balance) */
 	authRouter.HandleFunc("/api/proxy/upstream/list", ReverseProxyUpstreamList)
 	authRouter.HandleFunc("/api/proxy/upstream/add", ReverseProxyUpstreamAdd)
@@ -63,6 +67,7 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/vdir/add", ReverseProxyAddVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/del", ReverseProxyDeleteVdir)
 	authRouter.HandleFunc("/api/proxy/vdir/edit", ReverseProxyEditVdir)
+	authRouter.HandleFunc("/api/proxy/vdir/bulkForwardAuth", ReverseProxyBulkApplyVdirByForwardAuth)
 	/* Reverse proxy user-defined header */
 	authRouter.HandleFunc("/api/proxy/header/list", HandleCustomHeaderList)
 	authRouter.HandleFunc("/api/proxy/header/add", HandleCustomHeaderAdd)
@@ -77,6 +82,10 @@ func RegisterHTTPProxyAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/list", ListProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/add", AddProxyBasicAuthExceptionPaths)
 	authRouter.HandleFunc("/api/proxy/auth/exceptions/delete", RemoveProxyBasicAuthExceptionPaths)
+	/* ZorxAuth SSO per-endpoint exception rules */
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/list", ListProxyZorxAuthExceptionRules)
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/add", AddProxyZorxAuthExceptionRule)
+	authRouter.HandleFunc("/api/proxy/auth/zorxauth/exceptions/delete", RemoveProxyZorxAuthExceptionRule)
 }
 
 // Register the APIs for TLS / SSL certificate management functions
@@ -84,6 +93,7 @@ func RegisterTLSAPIs(authRouter *auth.RouterDef) {
 	//Global certificate settings
 	authRouter.HandleFunc("/api/cert/tls", handleToggleTLSProxy)
 	authRouter.HandleFunc("/api/cert/tlsMinVersion", handleSetTlsMinVersion)
+	authRouter.HandleFunc("/api/cert/tlsCipherProfile", handleSetTlsCipherProfile)
 	authRouter.HandleFunc("/api/cert/resolve", handleCertTryResolve)
 	authRouter.HandleFunc("/api/cert/setPreferredCertificate", handleSetDomainPreferredCertificate)
 
@@ -105,6 +115,12 @@ func RegisterAuthenticationHandlerAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/OAuth2", oauth2Router.HandleSetOAuth2Settings)
 	authRouter.HandleFunc("/api/sso/zorxauth/provider", zorxAuthRouter.HandleAuthProviderSettings)
 	authRouter.HandleFunc("/api/sso/zorxauth/gateway", zorxAuthRouter.HandleGatewaySettings)
+
+	// Login page branding customization
+	authRouter.HandleFunc("/api/sso/zorxauth/customization", zorxAuthRouter.HandleCustomizationSettings)
+	authRouter.HandleFunc("/api/sso/zorxauth/customization/upload", zorxAuthRouter.HandleCustomizationUpload)
+	authRouter.HandleFunc("/api/sso/zorxauth/customization/reset", zorxAuthRouter.HandleCustomizationReset)
+	authRouter.HandleFunc("/api/sso/zorxauth/customization/preview", zorxAuthRouter.HandleCustomizationPreview)
 }
 
 // Register ZorxAuth user management APIs separately from generic SSO provider settings routes
@@ -114,6 +130,7 @@ func RegisterZorxAuthUserManagementAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/sso/zorxauth/users/update", zorxAuthRouter.HandleUserUpdate)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/delete", zorxAuthRouter.HandleUserDelete)
 	authRouter.HandleFunc("/api/sso/zorxauth/users/logoutAll", zorxAuthRouter.HandleLogoutAllUsers)
+	authRouter.HandleFunc("/api/sso/zorxauth/users/disable2fa", zorxAuthRouter.HandleDisableUserTOTP)
 
 	// Group Policy management
 	authRouter.HandleFunc("/api/sso/zorxauth/grouppolicy/list", zorxAuthRouter.HandleGroupPolicyList)
@@ -179,11 +196,19 @@ func RegisterPathRuleAPIs(authRouter *auth.RouterDef) {
 func RegisterStatisticalAPIs(authRouter *auth.RouterDef) {
 	/* Traffic Summary */
 	authRouter.HandleFunc("/api/stats/summary", statisticCollector.HandleTodayStatLoad)
+	authRouter.HandleFunc("/api/stats/overview", HandleDashboardOverview)
 	authRouter.HandleFunc("/api/stats/trafficmap", HandleTrafficMapData)
 	authRouter.HandleFunc("/api/stats/countries", HandleCountryDistrSummary)
 	authRouter.HandleFunc("/api/stats/netstat", netstatBuffers.HandleGetNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/netstatgraph", netstatBuffers.HandleGetBufferedNetworkInterfaceStats)
 	authRouter.HandleFunc("/api/stats/listnic", netstat.HandleListNetworkInterfaces)
+	/* Host System Information */
+	authRouter.HandleFunc("/api/stats/system", HandleSystemResourceUsage)
+	authRouter.HandleFunc("/api/sysinfo/cpu", hardwareinfo.CachedGetCPUInfo)
+	authRouter.HandleFunc("/api/sysinfo/ram", hardwareinfo.CachedGetRamInfo)
+	authRouter.HandleFunc("/api/sysinfo/drives", hardwareinfo.CachedGetDriveStat)
+	authRouter.HandleFunc("/api/sysinfo/nic", hardwareinfo.CachedIfconfig)
+	authRouter.HandleFunc("/api/sysinfo/usb", hardwareinfo.CachedGetUSB)
 	/* Zoraxy Analytic */
 	authRouter.HandleFunc("/api/analytic/list", AnalyticLoader.HandleSummaryList)
 	authRouter.HandleFunc("/api/analytic/load", AnalyticLoader.HandleLoadTargetDaySummary)
@@ -260,10 +285,6 @@ func RegisterNetworkUtilsAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/tools/webssh", HandleCreateProxySession)
 	authRouter.HandleFunc("/api/tools/websshSupported", HandleWebSshSupportCheck)
 	authRouter.HandleFunc("/api/tools/wol", HandleWakeOnLan)
-	authRouter.HandleFunc("/api/tools/smtp/get", HandleSMTPGet)
-	authRouter.HandleFunc("/api/tools/smtp/set", HandleSMTPSet)
-	authRouter.HandleFunc("/api/tools/smtp/admin", HandleAdminEmailGet)
-	authRouter.HandleFunc("/api/tools/smtp/test", HandleTestEmailSend)
 	authRouter.HandleFunc("/api/tools/fwdproxy/enable", forwardProxy.HandleToogle)
 	authRouter.HandleFunc("/api/tools/fwdproxy/port", forwardProxy.HandlePort)
 }
@@ -285,6 +306,11 @@ func RegisterPluginAPIs(authRouter *auth.RouterDef) {
 	authRouter.HandleFunc("/api/plugins/store/resync", pluginManager.HandleResyncPluginList)
 	authRouter.HandleFunc("/api/plugins/store/install", pluginManager.HandleInstallPlugin)
 	authRouter.HandleFunc("/api/plugins/store/uninstall", pluginManager.HandleUninstallPlugin)
+	authRouter.HandleFunc("/api/plugins/store/checkUpdates", pluginManager.HandleCheckPluginUpdates)
+	authRouter.HandleFunc("/api/plugins/store/update", pluginManager.HandleUpdatePlugin)
+	authRouter.HandleFunc("/api/plugins/store/sources", pluginManager.HandleListStoreSources)
+	authRouter.HandleFunc("/api/plugins/store/sources/add", pluginManager.HandleAddStoreSource)
+	authRouter.HandleFunc("/api/plugins/store/sources/remove", pluginManager.HandleRemoveStoreSource)
 
 	// Developer options
 	authRouter.HandleFunc("/api/plugins/developer/enableAutoReload", pluginManager.HandleEnableHotReload)
@@ -301,6 +327,12 @@ func RegisterAuthAPIs(requireAuth bool, targetMux *http.ServeMux) {
 		} else {
 			utils.SendJSONResponse(w, "true")
 		}
+	})
+	targetMux.HandleFunc("/api/auth/authEnabled", func(w http.ResponseWriter, r *http.Request) {
+		//Report if the management interface authentication is enabled
+		//so the UI can hide auth related elements (e.g. logout button) in noauth mode
+		js, _ := json.Marshal(requireAuth)
+		utils.SendJSONResponse(w, string(js))
 	})
 	targetMux.HandleFunc("/api/auth/username", func(w http.ResponseWriter, r *http.Request) {
 		username, err := authAgent.GetUserName(w, r)
@@ -410,10 +442,6 @@ func initAPIs(targetMux *http.ServeMux) {
 	RegisterStaticWebServerAPIs(authRouter)
 	RegisterPluginAPIs(authRouter)
 
-	//Account Reset
-	targetMux.HandleFunc("/api/account/reset", HandleAdminAccountResetEmail)
-	targetMux.HandleFunc("/api/account/new", HandleNewPasswordSetup)
-
 	//Docker UX Optimizations
 	authRouter.HandleFunc("/api/docker/available", DockerUXOptimizer.HandleDockerAvailable)
 	authRouter.HandleFunc("/api/docker/containers", DockerUXOptimizer.HandleDockerContainersList)
@@ -422,6 +450,9 @@ func initAPIs(targetMux *http.ServeMux) {
 	targetMux.HandleFunc("/api/info/x", HandleZoraxyInfo)
 	authRouter.HandleFunc("/api/info/geoip", HandleGeoIpLookup)
 	authRouter.HandleFunc("/api/info/ipcheck", HandleIpAccessCheck)
+	authRouter.HandleFunc("/api/geodb/updateStatus", HandleGeoDBUpdateStatus)
+	authRouter.HandleFunc("/api/geodb/updateNow", HandleGeoDBUpdateNow)
+	authRouter.HandleFunc("/api/geodb/autoUpdate", HandleGeoDBAutoUpdate)
 	authRouter.HandleFunc("/api/conf/export", ExportConfigAsZip)
 	authRouter.HandleFunc("/api/conf/import", ImportConfigFromZip)
 	authRouter.HandleFunc("/api/log/list", LogViewer.HandleListLog)

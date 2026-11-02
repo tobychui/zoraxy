@@ -9,12 +9,14 @@ import (
 
 // Auto sniff of flush interval from header
 func (p *ReverseProxy) getFlushInterval(req *http.Request, res *http.Response) time.Duration {
-	contentType := req.Header.Get("Content-Type")
+	contentType := res.Header.Get("Content-Type")
 	if actualContentType, _, _ := mime.ParseMediaType(contentType); actualContentType == "text/event-stream" {
 		return -1
 	}
 
-	if req.ContentLength == -1 || p.isBidirectionalStream(req, res) {
+	//An unknown response length means the upstream is streaming, e.g. chunked
+	//transfer encoding. See issue #1231.
+	if res.ContentLength == -1 || p.isBidirectionalStream(req, res) {
 		return -1
 	}
 

@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Account settings for Zoraxy Auth.">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Account Settings - Zoraxy Auth</title>
+    <!-- Apply theme before first paint to avoid flash -->
+    <script>
+        (function () {
+            var s = localStorage.getItem('zorxauth-theme');
+            var t = s || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <style>
+        /* ── CSS variables ───────────────────────────────────────── */
+        :root {
+            --bg:                   #f7fafc;
+            --card-bg:              #ffffff;
+            --card-shadow:          0 1px 4px rgba(0,0,0,0.06);
+            --text-primary:         #1a202c;
+            --text-secondary:       #718096;
+            --text-label:           #4a5568;
+            --text-card-title:      #2d3748;
+            --border:               #e2e8f0;
+            --input-bg:             #fafafa;
+            --input-readonly-bg:    #f7fafc;
+            --input-readonly-color: #718096;
+            --btn-secondary-bg:     #edf2f7;
+            --btn-secondary-color:  #4a5568;
+            --status-border:        #edf2f7;
+            --secret-bg:            #f7fafc;
+            --secret-border:        #cbd5e0;
+            --secret-color:         #2d3748;
+            --alert-ok-bg:          #f0fff4;
+            --alert-ok-color:       #276749;
+            --alert-err-bg:         #fff5f5;
+            --alert-err-color:      #9b2c2c;
+            --badge-on-bg:          #c6f6d5;
+            --badge-on-color:       #276749;
+            --badge-off-bg:         #fed7d7;
+            --badge-off-color:      #9b2c2c;
+            --theme-btn-bg:         #edf2f7;
+            --theme-btn-color:      #4a5568;
+            --theme-btn-hover-bg:   #e2e8f0;
+        }
+
+        [data-theme="dark"] {
+            --bg:                   #111827;
+            --card-bg:              #1f2937;
+            --card-shadow:          0 1px 6px rgba(0,0,0,0.35);
+            --text-primary:         #f9fafb;
+            --text-secondary:       #9ca3af;
+            --text-label:           #d1d5db;
+            --text-card-title:      #f3f4f6;
+            --border:               #374151;
+            --input-bg:             #374151;
+            --input-readonly-bg:    #1f2937;
+            --input-readonly-color: #9ca3af;
+            --btn-secondary-bg:     #374151;
+            --btn-secondary-color:  #d1d5db;
+            --status-border:        #374151;
+            --secret-bg:            #374151;
+            --secret-border:        #4b5563;
+            --secret-color:         #e5e7eb;
+            --alert-ok-bg:          #064e3b;
+            --alert-ok-color:       #a7f3d0;
+            --alert-err-bg:         #450a0a;
+            --alert-err-color:      #fca5a5;
+            --badge-on-bg:          #064e3b;
+            --badge-on-color:       #6ee7b7;
+            --badge-off-bg:         #450a0a;
+            --badge-off-color:      #fca5a5;
+            --theme-btn-bg:         #374151;
+            --theme-btn-color:      #d1d5db;
+            --theme-btn-hover-bg:   #4b5563;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .page-wrapper {
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .page-header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .page-header .avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38a169 0%, #319795 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .page-header .user-meta h1 {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .page-header .user-meta p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-theme {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            background: var(--theme-btn-bg);
+            color: var(--theme-btn-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, border-color 0.15s;
+            flex-shrink: 0;
+        }
+
+        .btn-theme:hover { background: var(--theme-btn-hover-bg); }
+
+        .btn-logout {
+            padding: 8px 18px;
+            background: transparent;
+            border: 1.5px solid #e53e3e;
+            color: #e53e3e;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .btn-logout:hover {
+            background: #e53e3e;
+            color: white;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-card-title);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title svg { flex-shrink: 0; opacity: 0.75; }
+
+        /* Form elements */
+        .form-group { margin-bottom: 16px; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-label);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--input-bg);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #38a169;
+            box-shadow: 0 0 0 3px rgba(56,161,105,0.15);
+            background: var(--card-bg);
+        }
+
+        input[readonly] {
+            background: var(--input-readonly-bg);
+            color: var(--input-readonly-color);
+            cursor: default;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+        }
+
+        .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #38a169 0%, #319795 100%);
+            color: white;
+            width: 100%;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: white;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .btn-secondary {
+            background: var(--btn-secondary-bg);
+            color: var(--btn-secondary-color);
+        }
+
+        /* Alert banners */
+        .alert {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 14px;
+            display: none;
+            line-height: 1.5;
+        }
+        .alert.show { display: block; }
+        .alert-success { background: var(--alert-ok-bg);  color: var(--alert-ok-color);  border: 1px solid #38a169; }
+        .alert-error   { background: var(--alert-err-bg); color: var(--alert-err-color); border: 1px solid #e53e3e; }
+
+        /* 2FA status row */
+        .twofa-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--status-border);
+            margin-bottom: 16px;
+        }
+
+        .twofa-status .status-label {
+            font-size: 14px;
+            color: var(--text-label);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-enabled  { background: var(--badge-on-bg);  color: var(--badge-on-color); }
+        .badge-disabled { background: var(--badge-off-bg); color: var(--badge-off-color); }
+
+        /* QR section */
+        #qrSection {
+            display: none;
+            margin-top: 16px;
+        }
+
+        #qrSection.show { display: block; }
+
+        .qr-instruction {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .qr-image-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        #qrImage {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+            background: white; /* always white so QR code is readable */
+            width: 216px;
+            height: 216px;
+        }
+
+        .secret-box {
+            background: var(--secret-bg);
+            border: 1.5px dashed var(--secret-border);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: var(--secret-color);
+            word-break: break-all;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        /* Disable 2FA inline panel */
+        #disable2faSection {
+            display: none;
+            margin-top: 12px;
+        }
+        #disable2faSection.show { display: block; }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.7s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <div class="avatar" id="avatarInitial" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="white" stroke="none" aria-hidden="true"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+            </div>
+            <div class="user-meta">
+                <h1 id="displayUsername">Loading…</h1>
+                <p id="displayEmail"></p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-theme" id="themeToggleBtn" aria-label="Switch to dark mode" title="Switch to dark mode"></button>
+            <button class="btn-logout" id="logoutBtn">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="card">
+        <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Account Information
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="infoUsername" readonly>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="infoEmail" readonly>
+        </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card">
+        <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
+            Change Password
+        </div>
+        <div class="alert alert-success" id="pwSuccess">Password changed successfully.</div>
+        <div class="alert alert-error"   id="pwError"></div>
+        <div class="form-group">
+            <label for="currentPw">Current Password</label>
+            <input type="password" id="currentPw" placeholder="Enter your current password" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+            <label for="newPw">New Password</label>
+            <input type="password" id="newPw" placeholder="At least 8 characters" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label for="confirmPw">Confirm New Password</label>
+            <input type="password" id="confirmPw" placeholder="Repeat new password" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" id="changePwBtn">Change Password</button>
+    </div>
+
+    <!-- Two-Factor Authentication -->
+    <div class="card">
+        <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Two-Factor Authentication (2FA)
+        </div>
+
+        <div class="twofa-status">
+            <span class="status-label">Status</span>
+            <span class="badge badge-disabled" id="twofaBadge">Disabled</span>
+        </div>
+
+        <!-- Enable 2FA flow -->
+        <div id="enable2faPanel">
+            <button class="btn btn-primary" id="setup2faBtn" style="margin-top:0">Enable 2FA</button>
+
+            <!-- QR code + verify step -->
+            <div id="qrSection">
+                <p class="qr-instruction">
+                    Scan the QR code below with your authenticator app (e.g. Microsoft Authenticator, Google Authenticator, Authy). Then enter the 6-digit code it shows to confirm setup.
+                </p>
+                <div class="qr-image-wrap">
+                    <img id="qrImage" alt="QR Code" src="">
+                </div>
+                <p style="font-size:12px;color:var(--text-secondary);text-align:center;margin-bottom:8px">
+                    Can't scan? Enter the secret manually:
+                </p>
+                <div class="secret-box" id="secretBox"></div>
+                <div class="form-group">
+                    <label for="totpEnableCode">Verification Code</label>
+                    <input type="text" id="totpEnableCode" placeholder="6-digit code from your app" maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+                </div>
+                <div class="alert alert-error" id="enableTotpError"></div>
+                <button class="btn btn-primary" id="confirmEnableBtn">Confirm &amp; Enable 2FA</button>
+            </div>
+        </div>
+
+        <!-- Disable 2FA flow -->
+        <div id="disable2faPanel" style="display:none">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+                2FA is active. To disable it, enter the current code from your authenticator app.
+            </p>
+            <button class="btn btn-secondary btn-danger" id="showDisableBtn">Disable 2FA…</button>
+            <div id="disable2faSection">
+                <div class="form-group" style="margin-top:14px">
+                    <label for="totpDisableCode">Current TOTP Code</label>
+                    <input type="text" id="totpDisableCode" placeholder="6-digit code" maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+                </div>
+                <div class="alert alert-error" id="disableTotpError"></div>
+                <button class="btn btn-danger" id="confirmDisableBtn">Confirm Disable</button>
+            </div>
+        </div>
+    </div><!-- /2fa card -->
+
+    <!-- ── Passkeys card ──────────────────────────────────────── -->
+    <div class="card">
+        <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="17" r="3"/><path d="M14 10.5A4.5 4.5 0 1 1 21 14h-1l-1 1-1-1-1 1-1-1-1 1-1-1-1 1h-1v-1.5"/></svg>
+            Passkeys
+        </div>
+
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+            Passkeys let you sign in with biometrics (Touch ID, Face ID) or a hardware key—no password needed.
+        </p>
+
+        <!-- Registered passkeys list -->
+        <div id="passkeyList" style="margin-bottom:14px"></div>
+
+        <!-- Add passkey flow -->
+        <div id="addPasskeyPanel">
+            <div class="form-group" style="margin-bottom:8px">
+                <label for="passkeyName">Passkey name (optional)</label>
+                <input type="text" id="passkeyName" placeholder="e.g. MacBook Touch ID" maxlength="64" autocomplete="off">
+            </div>
+            <button class="btn btn-primary" id="addPasskeyBtn">Add a Passkey</button>
+        </div>
+        <div class="alert alert-error"   id="passkeyError"></div>
+        <div class="alert alert-success" id="passkeySuccess"></div>
+    </div>
+
+</div><!-- /page-wrapper -->
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── Theme ───────────────────────────────────────────────────── */
+    const SVG_MOON = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    const SVG_SUN  = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+
+    const themeBtn = document.getElementById('themeToggleBtn');
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+            themeBtn.innerHTML = SVG_SUN;
+            themeBtn.setAttribute('aria-label', 'Switch to light mode');
+            themeBtn.setAttribute('title', 'Switch to light mode');
+        } else {
+            themeBtn.innerHTML = SVG_MOON;
+            themeBtn.setAttribute('aria-label', 'Switch to dark mode');
+            themeBtn.setAttribute('title', 'Switch to dark mode');
+        }
+    }
+
+    function toggleTheme() {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('zorxauth-theme', next);
+        applyTheme(next);
+    }
+
+    // Sync button icon with the theme that was applied in <head>
+    applyTheme(document.documentElement.getAttribute('data-theme') || 'light');
+    themeBtn.addEventListener('click', toggleTheme);
+
+    // Follow system changes unless the user has made an explicit choice
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+        if (!localStorage.getItem('zorxauth-theme')) {
+            applyTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+
+    /* ── helpers ─────────────────────────────────────────────────── */
+    function showAlert(el, msg) { el.textContent = msg; el.classList.add('show'); }
+    function hideAlert(el) { el.textContent = ''; el.classList.remove('show'); }
+
+    async function apiPost(path, body) {
+        const resp = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(body)
+        });
+        let data;
+        try { data = await resp.json(); } catch { data = {}; }
+        return { ok: resp.ok, data };
+    }
+
+    async function apiGet(path) {
+        const resp = await fetch(path);
+        let data;
+        try { data = await resp.json(); } catch { data = {}; }
+        return { ok: resp.ok, data };
+    }
+
+    /* ── load user info ──────────────────────────────────────────── */
+    async function loadInfo() {
+        const { ok, data } = await apiGet('/user/api/info');
+        if (!ok) { document.getElementById('displayUsername').textContent = 'Error'; return; }
+
+        const username     = data.username     || '';
+        const email        = data.email        || '';
+        const has2fa       = !!data.enable2fa;
+
+        document.getElementById('displayUsername').textContent = username || '—';
+        // Replace SVG placeholder with initial letter once username is known
+        const avatarEl = document.getElementById('avatarInitial');
+        avatarEl.textContent = username ? username[0].toUpperCase() : '';
+        if (!username) avatarEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="white" stroke="none" aria-hidden="true"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>';
+        document.getElementById('displayEmail').textContent    = email || 'No email set';
+        document.getElementById('infoUsername').value          = username;
+        document.getElementById('infoEmail').value             = email;
+
+        applyTwofaState(has2fa);
+    }
+
+    function applyTwofaState(enabled) {
+        const badge          = document.getElementById('twofaBadge');
+        const enablePanel    = document.getElementById('enable2faPanel');
+        const disablePanel   = document.getElementById('disable2faPanel');
+
+        if (enabled) {
+            badge.textContent = 'Enabled';
+            badge.className   = 'badge badge-enabled';
+            enablePanel.style.display  = 'none';
+            disablePanel.style.display = 'block';
+        } else {
+            badge.textContent = 'Disabled';
+            badge.className   = 'badge badge-disabled';
+            enablePanel.style.display  = 'block';
+            disablePanel.style.display = 'none';
+            document.getElementById('qrSection').classList.remove('show');
+        }
+    }
+
+    /* ── logout ──────────────────────────────────────────────────── */
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await fetch('/logout', { method: 'POST' });
+        window.location.href = '/';
+    });
+
+    /* ── change password ─────────────────────────────────────────── */
+    document.getElementById('changePwBtn').addEventListener('click', async () => {
+        const btn  = document.getElementById('changePwBtn');
+        const errEl  = document.getElementById('pwError');
+        const okEl   = document.getElementById('pwSuccess');
+        hideAlert(errEl); hideAlert(okEl);
+
+        const current  = document.getElementById('currentPw').value;
+        const newPw    = document.getElementById('newPw').value;
+        const confirm  = document.getElementById('confirmPw').value;
+
+        if (!current || !newPw || !confirm) { showAlert(errEl, 'Please fill in all fields.'); return; }
+        if (newPw !== confirm)              { showAlert(errEl, 'New passwords do not match.'); return; }
+        if (newPw.length < 8)              { showAlert(errEl, 'New password must be at least 8 characters.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = 'Saving…<span class="spinner"></span>';
+
+        const { ok, data } = await apiPost('/user/api/change-password', {
+            current_password: current,
+            new_password:     newPw
+        });
+
+        btn.disabled = false;
+        btn.textContent = 'Change Password';
+
+        if (ok) {
+            showAlert(okEl, 'Password changed successfully.');
+            document.getElementById('currentPw').value = '';
+            document.getElementById('newPw').value     = '';
+            document.getElementById('confirmPw').value = '';
+        } else {
+            showAlert(errEl, (data && data.error) || 'Failed to change password.');
+        }
+    });
+
+    /* ── enable 2FA – step 1: request setup ─────────────────────── */
+    document.getElementById('setup2faBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('setup2faBtn');
+        btn.disabled = true;
+        btn.innerHTML = 'Generating…<span class="spinner"></span>';
+
+        const { ok, data } = await apiPost('/user/api/2fa/setup', {});
+
+        btn.disabled = false;
+        btn.textContent = 'Enable 2FA';
+
+        if (!ok || !data.qr_image) {
+            alert((data && data.error) || 'Failed to start 2FA setup. Please try again.');
+            return;
+        }
+
+        document.getElementById('qrImage').src   = data.qr_image;
+        document.getElementById('secretBox').textContent = data.secret || '';
+        document.getElementById('totpEnableCode').value  = '';
+        hideAlert(document.getElementById('enableTotpError'));
+        document.getElementById('qrSection').classList.add('show');
+    });
+
+    /* ── enable 2FA – step 2: confirm code ──────────────────────── */
+    document.getElementById('confirmEnableBtn').addEventListener('click', async () => {
+        const btn    = document.getElementById('confirmEnableBtn');
+        const errEl  = document.getElementById('enableTotpError');
+        hideAlert(errEl);
+
+        const code = document.getElementById('totpEnableCode').value.trim();
+        if (code.length !== 6) { showAlert(errEl, 'Please enter the 6-digit code from your app.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = 'Verifying…<span class="spinner"></span>';
+
+        const { ok, data } = await apiPost('/user/api/2fa/enable', { totp_code: code });
+
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Enable 2FA';
+
+        if (ok) {
+            applyTwofaState(true);
+        } else {
+            showAlert(errEl, (data && data.error) || 'Invalid code. Please try again.');
+        }
+    });
+
+    /* ── disable 2FA – show form ─────────────────────────────────── */
+    document.getElementById('showDisableBtn').addEventListener('click', () => {
+        const section = document.getElementById('disable2faSection');
+        section.classList.toggle('show');
+        document.getElementById('totpDisableCode').value = '';
+        hideAlert(document.getElementById('disableTotpError'));
+    });
+
+    /* ── disable 2FA – confirm ───────────────────────────────────── */
+    document.getElementById('confirmDisableBtn').addEventListener('click', async () => {
+        const btn   = document.getElementById('confirmDisableBtn');
+        const errEl = document.getElementById('disableTotpError');
+        hideAlert(errEl);
+
+        const code = document.getElementById('totpDisableCode').value.trim();
+        if (code.length !== 6) { showAlert(errEl, 'Please enter the 6-digit code from your app.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = 'Disabling…<span class="spinner"></span>';
+
+        const { ok, data } = await apiPost('/user/api/2fa/disable', { totp_code: code });
+
+        btn.disabled = false;
+        btn.textContent = 'Confirm Disable';
+
+        if (ok) {
+            applyTwofaState(false);
+        } else {
+            showAlert(errEl, (data && data.error) || 'Invalid code. Please try again.');
+        }
+    });
+
+    /* ── WebAuthn helpers ────────────────────────────────────────── */
+    function bufferToBase64url(buf) {
+        const bytes = new Uint8Array(buf);
+        let str = '';
+        bytes.forEach(b => str += String.fromCharCode(b));
+        return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+    function base64urlToBuffer(b64url) {
+        const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+        const bin = atob(b64);
+        return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
+    }
+    function encodeRegistrationCredential(cred) {
+        return {
+            id: cred.id,
+            rawId: bufferToBase64url(cred.rawId),
+            type: cred.type,
+            response: {
+                clientDataJSON:    bufferToBase64url(cred.response.clientDataJSON),
+                attestationObject: bufferToBase64url(cred.response.attestationObject),
+                transports: cred.response.getTransports ? cred.response.getTransports() : []
+            }
+        };
+    }
+
+    /* ── passkey management ──────────────────────────────────────── */
+    const passkeyListEl  = document.getElementById('passkeyList');
+    const passkeyErrEl   = document.getElementById('passkeyError');
+    const passkeyOkEl    = document.getElementById('passkeySuccess');
+
+    function transportIcon(transports) {
+        if (!transports || transports.length === 0) return '';
+        const t = transports[0];
+        if (t === 'internal')                    return '💻';
+        if (t === 'usb')                         return '🔑';
+        if (t === 'nfc')                         return '📡';
+        if (t === 'ble' || t === 'hybrid')       return '📱';
+        return '🔐';
+    }
+
+    function formatDate(unix) {
+        if (!unix) return '—';
+        return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    async function loadPasskeys() {
+        const { ok, data } = await apiGet('/user/api/passkey/list');
+        passkeyListEl.innerHTML = '';
+        if (!ok || !Array.isArray(data) || data.length === 0) {
+            passkeyListEl.innerHTML = '<p style="font-size:13px;color:var(--text-secondary)">No passkeys registered yet.</p>';
+            return;
+        }
+        const table = document.createElement('table');
+        table.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px';
+        data.forEach(pk => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border)';
+            tr.innerHTML = `
+                <td style="padding:8px 4px;width:28px;font-size:18px">${transportIcon(pk.transports)}</td>
+                <td style="padding:8px 4px;flex:1">
+                    <strong>${escHtml(pk.name)}</strong><br>
+                    <span style="color:var(--text-secondary)">Added ${formatDate(pk.createdAt)} · Used ${formatDate(pk.lastUsedAt)}</span>
+                    ${pk.backedUp ? '<span style="color:var(--text-secondary);margin-left:6px">☁ synced</span>' : ''}
+                </td>
+                <td style="padding:8px 4px;text-align:right">
+                    <button class="btn btn-secondary btn-danger" style="padding:4px 10px;font-size:12px" data-pkid="${escHtml(pk.id)}">Remove</button>
+                </td>`;
+            tr.querySelector('button').addEventListener('click', () => removePasskey(pk.id, pk.name));
+            table.appendChild(tr);
+        });
+        passkeyListEl.appendChild(table);
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function removePasskey(id, name) {
+        if (!confirm(`Remove passkey "${name}"?`)) return;
+        hideAlert(passkeyErrEl); hideAlert(passkeyOkEl);
+        const { ok, data } = await apiPost('/user/api/passkey/remove', { id });
+        if (ok) {
+            showAlert(passkeyOkEl, 'Passkey removed.');
+            loadPasskeys();
+        } else {
+            showAlert(passkeyErrEl, (data && data.error) || 'Failed to remove passkey.');
+        }
+    }
+
+    document.getElementById('addPasskeyBtn').addEventListener('click', async () => {
+        hideAlert(passkeyErrEl); hideAlert(passkeyOkEl);
+        const btn  = document.getElementById('addPasskeyBtn');
+        const name = document.getElementById('passkeyName').value.trim();
+
+        if (!window.PublicKeyCredential) {
+            showAlert(passkeyErrEl, 'Your browser does not support passkeys.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = 'Registering…<span class="spinner"></span>';
+
+        try {
+            // Step 1 – get challenge
+            const resp1 = await fetch('/user/api/passkey/register/begin', { method: 'POST' });
+            const json1 = await resp1.json();
+            if (!resp1.ok || !json1.token) throw new Error(json1.error || 'Failed to start passkey registration.');
+
+            const token   = json1.token;
+            const options = json1.options;
+
+            // Decode binary fields from base64url
+            options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+            options.publicKey.user.id   = base64urlToBuffer(options.publicKey.user.id);
+            if (options.publicKey.excludeCredentials) {
+                options.publicKey.excludeCredentials = options.publicKey.excludeCredentials.map(c => ({
+                    ...c, id: base64urlToBuffer(c.id)
+                }));
+            }
+
+            // Step 2 – platform ceremony
+            const cred = await navigator.credentials.create({ publicKey: options.publicKey });
+
+            // Step 3 – send attestation
+            const url2 = '/user/api/passkey/register/complete?token=' + encodeURIComponent(token)
+                       + (name ? '&name=' + encodeURIComponent(name) : '');
+            const resp2 = await fetch(url2, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(encodeRegistrationCredential(cred))
+            });
+            const json2 = await resp2.json();
+            if (!resp2.ok) throw new Error(json2.error || 'Failed to complete passkey registration.');
+
+            showAlert(passkeyOkEl, 'Passkey registered successfully!');
+            document.getElementById('passkeyName').value = '';
+            loadPasskeys();
+        } catch (e) {
+            if (e && e.name === 'NotAllowedError') {
+                showAlert(passkeyErrEl, 'Passkey registration was cancelled.');
+            } else {
+                showAlert(passkeyErrEl, e.message || 'Passkey registration failed.');
+            }
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Add a Passkey';
+    });
+
+    /* ── init ────────────────────────────────────────────────────── */
+    loadPasskeys();
+    loadInfo();
+})();
+</script>
+</body>
+</html>

@@ -2,6 +2,8 @@ package plugins
 
 import (
 	"testing"
+
+	"imuslab.com/zoraxy/mod/database"
 )
 
 func TestUpdateDownloadablePluginList(t *testing.T) {
@@ -9,10 +11,13 @@ func TestUpdateDownloadablePluginList(t *testing.T) {
 		Options: &ManagerOptions{
 			DownloadablePluginCache: []*DownloadablePlugin{},
 			PluginStoreURLs:         []string{},
+			Database: &database.Database{
+				Backend: &fakeBackend{},
+			},
 		},
 	}
 
-	//Inject a mock URL for testing
+	// Inject a mock URL for testing
 	mockManager.Options.PluginStoreURLs = []string{"https://raw.githubusercontent.com/aroz-online/zoraxy-official-plugins/refs/heads/main/directories/index2.json"}
 
 	err := mockManager.UpdateDownloadablePluginList()
@@ -50,3 +55,39 @@ func TestGetPluginListFromURL(t *testing.T) {
 		t.Logf("Plugin: %+v", plugin)
 	}
 }
+
+type fakeBackend struct{}
+
+func (f *fakeBackend) NewTable(tableName string) error {
+	return nil
+}
+
+func (f *fakeBackend) TableExists(tableName string) bool {
+	return false
+}
+
+func (f *fakeBackend) DropTable(tableName string) error {
+	return nil
+}
+
+func (f *fakeBackend) Write(tableName string, key string, value any) error {
+	return nil
+}
+
+func (f *fakeBackend) Read(tableName string, key string, assignee any) error {
+	return nil
+}
+
+func (f *fakeBackend) KeyExists(tableName string, key string) bool {
+	return false
+}
+
+func (f *fakeBackend) Delete(tableName string, key string) error {
+	return nil
+}
+
+func (f *fakeBackend) ListTable(tableName string) ([][][]byte, error) {
+	return [][][]byte{}, nil
+}
+
+func (f *fakeBackend) Close() {}

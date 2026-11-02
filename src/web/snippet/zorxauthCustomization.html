@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<!-- Notes: This should be opened in its original path -->
+		<meta charset="utf-8">
+		<meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+		<link rel="stylesheet" href="../script/semantic/semantic.min.css">
+		<script src="../script/jquery-3.6.0.min.js"></script>
+		<script src="../script/semantic/semantic.min.js"></script>
+		<script src="../script/utils.js"></script>
+		<style>
+			.assetCard {
+				display: flex;
+				gap: 1.2em;
+				align-items: flex-start;
+			}
+			.assetPreview {
+				flex: none;
+				width: 150px;
+				border-radius: 6px;
+				border: 1px solid rgba(128,128,128,0.3);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				overflow: hidden;
+			}
+			.assetPreview img {
+				max-width: 100%;
+				max-height: 100%;
+				display: block;
+			}
+			/* Wallpaper and watermark are designed for a dark canvas */
+			.assetPreview.onDark {
+				background: #14122e;
+			}
+			.assetPreview.brandmark {
+				height: 150px;
+				padding: 22px;
+			}
+			.assetPreview.watermark {
+				height: 76px;
+				padding: 10px;
+			}
+			.assetPreview.wallpaper {
+				height: 200px;
+				padding: 0;
+			}
+			.assetPreview.wallpaper img {
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+			}
+			.assetMeta {
+				flex: 1;
+				min-width: 0;
+			}
+			.assetMeta .sizeHint {
+				opacity: 0.75;
+				font-size: 0.9em;
+			}
+			.assetActions {
+				margin-top: 0.8em;
+			}
+			/* Scaling tool */
+			#scaleEditorFrame {
+				position: relative;
+				margin: 0 auto;
+				background: #14122e;
+				background-image:
+					linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.06) 75%),
+					linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.06) 75%);
+				background-size: 18px 18px;
+				background-position: 0 0, 9px 9px;
+				border-radius: 4px;
+				overflow: hidden;
+				cursor: grab;
+				touch-action: none;
+			}
+			#scaleEditorFrame.dragging {
+				cursor: grabbing;
+			}
+			#scaleEditorCanvas {
+				display: block;
+				width: 100%;
+				height: 100%;
+			}
+			.editorHint {
+				opacity: 0.75;
+				font-size: 0.9em;
+			}
+		</style>
+	</head>
+	<body>
+		<link rel="stylesheet" href="../darktheme.css">
+		<script src="../script/darktheme.js"></script>
+		<br>
+		<div class="ui container">
+			<h3 class="ui header">Zoraxy Auth - Login Page Customization</h3>
+			<p>Replace the resources used by the Zoraxy Auth login page with your own. Anything you do not customize keeps using the built-in default that ships with Zoraxy.</p>
+
+			<!-- Text settings -->
+			<div class="ui segment">
+				<h4 class="ui header" style="margin-bottom: 1em;">Text &amp; Visibility</h4>
+				<form class="ui form" id="brandingTextForm" onsubmit="return false;">
+					<div class="field">
+						<label>Brand Text</label>
+						<input type="text" id="brandText" maxlength="48" placeholder="Zoraxy Auth" autocomplete="off">
+						<small>Shown next to the brand mark at the top left corner of the login page. Leave empty to restore the default.</small>
+					</div>
+					<div class="field">
+						<label>Watermark Text</label>
+						<input type="text" id="watermarkText" maxlength="48" placeholder="Authentication Gateway" autocomplete="off">
+						<small>Shown under the watermark icon on the panel art. Leave empty to restore the default.</small>
+					</div>
+					<div class="ui divider"></div>
+					<div class="field">
+						<div class="ui toggle checkbox">
+							<input type="checkbox" id="hideWatermarkText">
+							<label>Disable Watermark Text<br><small>Hide the text under the watermark icon on the login page panel art.</small></label>
+						</div>
+					</div>
+					<div class="field">
+						<div class="ui toggle checkbox">
+							<input type="checkbox" id="hideWatermarkIcon">
+							<label>Disable Watermark Icon<br><small>Hide the watermark logo on the login page panel art, leaving the artwork on its own.</small></label>
+						</div>
+					</div>
+					<button class="ui basic button" onclick="saveBrandingText();"><i class="green check icon"></i> Apply Text &amp; Visibility</button>
+				</form>
+			</div>
+
+			<!-- Image resources -->
+			<div id="assetList"></div>
+
+			<div class="ui basic message">
+				<h4>How customization works</h4>
+				<ul>
+					<li>Uploaded resources are stored under <code>./conf/sso/zorxauth/branding/</code>. Removing a file there restores the built-in default.</li>
+					<li>Raster images (PNG / JPG / WEBP) <b>must keep the same width to height ratio</b> as the resource they replace. Use the built-in scaling tool to fit any image into the correct frame.</li>
+					<li>SVG files are uploaded as-is because vector artwork scales to any size on its own.</li>
+					<li>Changes apply to new login page loads immediately, no gateway restart is needed.</li>
+				</ul>
+			</div>
+
+			<button class="ui basic red button" onclick="resetAllCustomization();" style="margin-bottom: 1em;">
+				<i class="red undo icon"></i> Reset All to Default
+			</button>
+
+			<br><br>
+		</div>
+
+		<!-- Scaling tool -->
+		<div class="ui modal" id="scaleEditorModal">
+			<div class="header">Scale &amp; Position Image</div>
+			<div class="content">
+				<p class="editorHint" id="scaleEditorHint"></p>
+				<div id="scaleEditorFrame">
+					<canvas id="scaleEditorCanvas"></canvas>
+				</div>
+				<div class="ui form" style="margin-top: 1.2em;">
+					<div class="field">
+						<label>Zoom (<span id="scaleEditorZoomLabel">100</span>%)</label>
+						<input type="range" id="scaleEditorZoom" min="10" max="400" value="100" style="width: 100%;">
+					</div>
+					<p class="editorHint">Drag the image inside the frame to reposition it. The frame is locked to the aspect ratio of the resource you are replacing, and the result is exported at the recommended resolution.</p>
+				</div>
+			</div>
+			<div class="actions">
+				<button class="ui basic button" onclick="resetScaleEditor();"><i class="undo icon"></i> Reset</button>
+				<button class="ui basic button" onclick="closeScaleEditor();">Cancel</button>
+				<button class="ui basic green button" id="scaleEditorApplyBtn" onclick="applyScaleEditor();"><i class="check icon"></i> Apply &amp; Upload</button>
+			</div>
+		</div>
+
+		<input type="file" id="assetFileInput" accept=".svg,.png,.jpg,.jpeg,.webp" style="display: none;">
+
+		<script>
+			let brandingConfig = null;
+			let pendingAssetKey = null;
+
+			$(document).ready(function(){
+				$('.ui.checkbox').checkbox();
+				loadCustomization();
+			});
+
+			/* ---- Load current customization ---- */
+			function loadCustomization(){
+				$.get('/api/sso/zorxauth/customization', function(data){
+					if (data.error !== undefined){
+						notify(data.error, false);
+						return;
+					}
+					brandingConfig = data;
+					$('#brandText').val(data.brandText);
+					$('#watermarkText').val(data.watermarkText);
+					$('#hideWatermarkText').prop('checked', data.hideWatermarkText === true);
+					$('#hideWatermarkIcon').prop('checked', data.hideWatermarkIcon === true);
+					renderAssetList();
+				});
+			}
+
+			function renderAssetList(){
+				let list = $('#assetList');
+				list.empty();
+
+				brandingConfig.assets.forEach(function(asset){
+					let ratio = simplifyRatio(asset.width, asset.height);
+					let statusLabel = asset.customized
+						? '<span class="ui mini green label">Customized</span>'
+						: '<span class="ui mini label">Default</span>';
+					//The watermark icon can be switched off entirely from the Text & Visibility section
+					if (asset.key === 'watermark' && brandingConfig.hideWatermarkIcon){
+						statusLabel += ' <span class="ui mini yellow label">Hidden</span>';
+					}
+					let onDark = (asset.key === 'watermark' || asset.key === 'wallpaper') ? ' onDark' : '';
+					let resetBtn = asset.customized
+						? `<button class="ui basic mini button" onclick="resetAsset('${asset.key}');"><i class="red undo icon"></i> Restore Default</button>`
+						: '';
+
+					list.append(`<div class="ui segment">
+						<h4 class="ui header" style="margin-bottom: 1em;">${escapeHtml(asset.label)} ${statusLabel}</h4>
+						<div class="assetCard">
+							<div class="assetPreview ${asset.key}${onDark}">
+								<img src="${previewURL(asset.key)}" alt="">
+							</div>
+							<div class="assetMeta">
+								<p>${escapeHtml(asset.description)}</p>
+								<p class="sizeHint">
+									<i class="info circle icon"></i>
+									Recommended resolution: <b>${asset.width} &times; ${asset.height} px</b> (${ratio} aspect ratio).
+									SVG, PNG, JPG or WEBP, up to 8 MB.
+								</p>
+								<div class="assetActions">
+									<button class="ui basic mini button" onclick="pickAssetFile('${asset.key}');">
+										<i class="green upload icon"></i> Upload Replacement
+									</button>
+									${resetBtn}
+								</div>
+							</div>
+						</div>
+					</div>`);
+				});
+			}
+
+			function previewURL(assetKey){
+				return '/api/sso/zorxauth/customization/preview?asset=' + encodeURIComponent(assetKey) + '&t=' + Date.now();
+			}
+
+			function getAssetSpec(assetKey){
+				return brandingConfig.assets.find(function(a){ return a.key === assetKey; });
+			}
+
+			/* ---- Text settings ---- */
+			function saveBrandingText(){
+				$.cjax({
+					url: '/api/sso/zorxauth/customization',
+					method: 'POST',
+					data: {
+						brandText: $('#brandText').val(),
+						watermarkText: $('#watermarkText').val(),
+						hideWatermarkText: $('#hideWatermarkText').is(':checked'),
+						hideWatermarkIcon: $('#hideWatermarkIcon').is(':checked')
+					},
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Login page text updated');
+						loadCustomization();
+					}
+				});
+			}
+
+			/* ---- File picking ---- */
+			function pickAssetFile(assetKey){
+				pendingAssetKey = assetKey;
+				let input = $('#assetFileInput')[0];
+				input.value = '';
+				input.click();
+			}
+
+			$('#assetFileInput').on('change', function(){
+				let file = this.files[0];
+				if (!file){
+					return;
+				}
+
+				let ext = file.name.split('.').pop().toLowerCase();
+				if (['svg','png','jpg','jpeg','webp'].indexOf(ext) === -1){
+					notify('Unsupported file type. Use SVG, PNG, JPG or WEBP.', false);
+					return;
+				}
+
+				if (file.size > 8 * 1024 * 1024){
+					notify('File is larger than the 8 MB limit', false);
+					return;
+				}
+
+				if (ext === 'svg'){
+					//Vector artwork already scales to any size, upload it untouched
+					uploadAsset(pendingAssetKey, file, file.name);
+					return;
+				}
+
+				openScaleEditor(pendingAssetKey, file);
+			});
+
+			/* ---- Scaling tool ---- */
+			let editorState = {
+				assetKey: null,
+				image: null,
+				frameWidth: 0,
+				frameHeight: 0,
+				baseScale: 1,   //Scale that fits the whole image inside the frame
+				zoom: 1,        //User zoom multiplier on top of baseScale
+				offsetX: 0,     //Pan offset in frame pixels
+				offsetY: 0
+			};
+
+			function openScaleEditor(assetKey, file){
+				let spec = getAssetSpec(assetKey);
+				let image = new Image();
+
+				image.onload = function(){
+					//Frame is locked to the aspect ratio of the resource being replaced
+					let frameWidth, frameHeight;
+					if (spec.height > spec.width){
+						//Portrait resources (wallpaper) are driven by height so they stay in view
+						frameHeight = 340;
+						frameWidth = Math.round(frameHeight * spec.width / spec.height);
+					}else{
+						frameWidth = Math.min(460, Math.max(240, spec.width));
+						frameHeight = Math.round(frameWidth * spec.height / spec.width);
+					}
+
+					editorState.assetKey = assetKey;
+					editorState.image = image;
+					editorState.frameWidth = frameWidth;
+					editorState.frameHeight = frameHeight;
+
+					$('#scaleEditorFrame').css({ width: frameWidth + 'px', height: frameHeight + 'px' });
+					let canvas = $('#scaleEditorCanvas')[0];
+					canvas.width = frameWidth;
+					canvas.height = frameHeight;
+
+					$('#scaleEditorHint').html('Replacing <b>' + escapeHtml(spec.label) + '</b>. Output resolution: <b>' +
+						spec.width + ' &times; ' + spec.height + ' px</b>. Source image: ' + image.width + ' &times; ' + image.height + ' px.');
+
+					resetScaleEditor();
+					$('#scaleEditorModal').modal({ closable: false }).modal('show');
+				};
+
+				image.onerror = function(){
+					notify('Could not read the selected image', false);
+				};
+
+				image.src = URL.createObjectURL(file);
+			}
+
+			function resetScaleEditor(){
+				let st = editorState;
+				if (!st.image){
+					return;
+				}
+				//Default to "contain" so the whole image is visible inside the frame
+				st.baseScale = Math.min(st.frameWidth / st.image.width, st.frameHeight / st.image.height);
+				st.zoom = 1;
+				st.offsetX = 0;
+				st.offsetY = 0;
+				$('#scaleEditorZoom').val(100);
+				$('#scaleEditorZoomLabel').text('100');
+				drawScaleEditor();
+			}
+
+			function drawScaleEditor(){
+				let st = editorState;
+				let canvas = $('#scaleEditorCanvas')[0];
+				if (!canvas || !st.image){
+					return;
+				}
+				let ctx = canvas.getContext('2d');
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				drawImageWithTransform(ctx, 1);
+			}
+
+			// Draws the source image onto ctx using the current transform.
+			// factor scales the frame space up to the export resolution.
+			function drawImageWithTransform(ctx, factor){
+				let st = editorState;
+				let drawWidth = st.image.width * st.baseScale * st.zoom * factor;
+				let drawHeight = st.image.height * st.baseScale * st.zoom * factor;
+				let centerX = (st.frameWidth * factor) / 2 + st.offsetX * factor;
+				let centerY = (st.frameHeight * factor) / 2 + st.offsetY * factor;
+				ctx.imageSmoothingEnabled = true;
+				ctx.imageSmoothingQuality = 'high';
+				ctx.drawImage(st.image, centerX - drawWidth / 2, centerY - drawHeight / 2, drawWidth, drawHeight);
+			}
+
+			$('#scaleEditorZoom').on('input', function(){
+				editorState.zoom = parseInt($(this).val(), 10) / 100;
+				$('#scaleEditorZoomLabel').text($(this).val());
+				drawScaleEditor();
+			});
+
+			/* Drag to pan */
+			(function(){
+				let dragging = false;
+				let lastX = 0;
+				let lastY = 0;
+				let frame = $('#scaleEditorFrame');
+
+				frame.on('pointerdown', function(e){
+					if (!editorState.image){
+						return;
+					}
+					dragging = true;
+					lastX = e.originalEvent.clientX;
+					lastY = e.originalEvent.clientY;
+					frame.addClass('dragging');
+					this.setPointerCapture(e.originalEvent.pointerId);
+				});
+
+				frame.on('pointermove', function(e){
+					if (!dragging){
+						return;
+					}
+					let ev = e.originalEvent;
+					editorState.offsetX += ev.clientX - lastX;
+					editorState.offsetY += ev.clientY - lastY;
+					lastX = ev.clientX;
+					lastY = ev.clientY;
+					drawScaleEditor();
+				});
+
+				frame.on('pointerup pointercancel', function(e){
+					dragging = false;
+					frame.removeClass('dragging');
+				});
+			})();
+
+			function closeScaleEditor(){
+				$('#scaleEditorModal').modal('hide');
+				if (editorState.image && editorState.image.src.startsWith('blob:')){
+					URL.revokeObjectURL(editorState.image.src);
+				}
+				editorState.image = null;
+			}
+
+			function applyScaleEditor(){
+				let st = editorState;
+				let spec = getAssetSpec(st.assetKey);
+				if (!st.image){
+					return;
+				}
+
+				//Render at the recommended resolution using the same transform as the preview
+				let output = document.createElement('canvas');
+				output.width = spec.width;
+				output.height = spec.height;
+				let ctx = output.getContext('2d');
+				drawImageWithTransform(ctx, spec.width / st.frameWidth);
+
+				let assetKey = st.assetKey;
+				$('#scaleEditorApplyBtn').addClass('loading disabled');
+				output.toBlob(function(blob){
+					$('#scaleEditorApplyBtn').removeClass('loading disabled');
+					if (!blob){
+						notify('Failed to render the scaled image', false);
+						return;
+					}
+					closeScaleEditor();
+					uploadAsset(assetKey, blob, assetKey + '.png');
+				}, 'image/png');
+			}
+
+			/* ---- Upload and reset ---- */
+			function uploadAsset(assetKey, fileOrBlob, filename){
+				let formData = new FormData();
+				formData.append('asset', assetKey);
+				formData.append('file', fileOrBlob, filename);
+
+				$.cjax({
+					url: '/api/sso/zorxauth/customization/upload',
+					method: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Resource updated');
+						loadCustomization();
+					},
+					error: function(xhr){
+						notify('Upload failed: ' + xhr.responseText, false);
+					}
+				});
+			}
+
+			function resetAsset(assetKey){
+				if (!confirm('Restore this resource back to the Zoraxy default? The uploaded file will be deleted.')){
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/customization/reset',
+					method: 'POST',
+					data: { asset: assetKey },
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Resource restored to default');
+						loadCustomization();
+					}
+				});
+			}
+
+			function resetAllCustomization(){
+				if (!confirm('Reset all login page customization back to the Zoraxy defaults? All uploaded resources will be deleted.')){
+					return;
+				}
+
+				$.cjax({
+					url: '/api/sso/zorxauth/customization/reset',
+					method: 'POST',
+					data: { asset: 'all' },
+					success: function(data){
+						if (data.error !== undefined){
+							notify(data.error, false);
+							return;
+						}
+						notify('Login page customization reset');
+						loadCustomization();
+					}
+				});
+			}
+
+			/* ---- Helpers ---- */
+			function simplifyRatio(width, height){
+				let gcd = function(a, b){ return b === 0 ? a : gcd(b, a % b); };
+				let divisor = gcd(width, height);
+				return (width / divisor) + ':' + (height / divisor);
+			}
+
+			function notify(message, isSuccess = true){
+				if (parent !== undefined && parent.msgbox !== undefined){
+					parent.msgbox(message, isSuccess);
+				}else{
+					alert(message);
+				}
+			}
+
+			function escapeHtml(value){
+				return $('<div>').text(value === undefined || value === null ? '' : value).html();
+			}
+		</script>
+	</body>
+</html>

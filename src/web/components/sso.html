@@ -28,7 +28,7 @@
             <div class="field">
                 <label for="forwardAuthAddress">Address</label>
                 <input type="text" id="forwardAuthAddress" name="forwardAuthAddress" placeholder="Enter Forward Auth Address">
-                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth</small>
+                <small>The full remote address or URL of the authorization servers forward auth endpoint. <strong>Example:</strong> http://127.0.0.1:9091/authz/forward-auth<br><b>Using Authentik in single-application (per-app) mode?</b> You also need to set <b>Ignored Paths</b> under Advanced Options below, and add a matching Virtual Directory on each protected host, see the note on that field.</small>
             </div>
             <div class="ui basic segment advanceoptions" style="margin-top:0.6em;">
                 <div class="ui advancedSSOForwardAuthOptions accordion">
@@ -85,6 +85,44 @@
                         <div class="ui checkbox">
                             <input type="checkbox" id="forwardAuthRequestUseXOriginalHeaders" name="forwardAuthRequestUseXOriginalHeaders" value="Use X-Original-* Headers">
                             <label for="forwardAuthRequestUseXOriginalHeaders">Use X-Original-* Headers<br><small>This is used for implementations which do not use the X-Forwarded-* headers. In addition if the authorization server responds with a 401 and Location header the status will be changed to 302.</small></label>
+                        </div>
+                        <div class="field" style="margin-top: 1em;">
+                            <label for="forwardAuthIgnoredPaths">Ignored Paths</label>
+                            <input type="text" id="forwardAuthIgnoredPaths" name="forwardAuthIgnoredPaths" placeholder="/outpost.goauthentik.io">
+                            <small>
+                                Comma-separated list of request path prefixes that are <b>excluded from Forward Auth</b>. Matching is normalized (path traversal and prefix-boundary tricks are rejected). <br>
+                                <strong>Authentik (single application):</strong> set this to <code>/outpost.goauthentik.io</code> and add a Virtual Directory for the same path pointing to your outpost, so the login callback can complete.
+                            </small>
+                            <div class="ui visible warning message" style="margin-top: 0.5em;">
+                                <i class="exclamation triangle icon"></i>
+                                <b>No authentication is performed on these paths.</b> Every request whose path starts with one of these prefixes bypasses Forward Auth entirely and is served with no auth check — only list paths you intentionally want public.
+                            </div>
+                        </div>
+                        <div class="field" style="margin-top: 1em;">
+                            <label>Callback Virtual Directory (bulk apply)</label>
+                            <small>
+                                In single-application mode the auth callback path also needs a Virtual Directory on each protected host to route it to the outpost. These buttons manage that directory across all hosts based on their Forward Auth state; a directory with different settings is never touched. <br>
+                                <strong>Add</strong> creates it on every host using Forward Auth. <strong>Remove</strong> deletes it from every host that does not (cleanup).
+                            </small>
+                            <div class="two fields" style="margin-top: 0.5em;">
+                                <div class="field">
+                                    <input type="text" id="bulkVdirPath" placeholder="/outpost.goauthentik.io">
+                                    <small>Matching path (defaults to your first Ignored Path)</small>
+                                </div>
+                                <div class="field">
+                                    <input type="text" id="bulkVdirTarget" placeholder="10.0.0.6:9000/outpost.goauthentik.io">
+                                    <small>Outpost target (host:port and path)</small>
+                                </div>
+                            </div>
+                            <div class="ui checkbox" style="margin-bottom: 0.6em;">
+                                <input type="checkbox" id="bulkVdirReqTLS">
+                                <label>Outpost requires TLS (https)</label>
+                            </div>
+                            <div>
+                                <button class="ui basic small button" type="button" id="bulkVdirAddBtn"><i class="green add icon"></i> Add to Forward Auth hosts</button>
+                                <button class="ui basic small button" type="button" id="bulkVdirRemoveBtn"><i class="red minus icon"></i> Remove from non-Forward Auth hosts</button>
+                            </div>
+                            <div id="bulkVdirResult" style="margin-top: 0.6em;"></div>
                         </div>
                     </div>
                 </div>
@@ -148,8 +186,8 @@
             </div>
 
             <div class="field">
-                <label for="oauth2UserInfoURL">User Info URL</label>
-                <input type="text" id="oauth2UserInfoURL" name="oauth2UserInfoURL" placeholder="Enter User Info URL">
+                <label for="oauth2UserInfoUrl">User Info URL</label>
+                <input type="text" id="oauth2UserInfoUrl" name="oauth2UserInfoUrl" placeholder="Enter User Info URL">
                 <small>URL used by the OAuth2 provider to validate generated token. Optional if Well-Known url is configured.</small>
             </div>
 
@@ -287,6 +325,11 @@
                                 <input type="checkbox" id="zorxAuthUseExpotentialBackoff" name="useExpotentialBackoff">
                                 <label>Use Exponential Backoff<br><small>Increase delay between failed authentication attempts exponentially</small></label>
                             </div>
+                            <div class="ui divider"></div>
+                            <b>Login Page Appearance</b>
+                            <br><br>
+                            <p><small>Replace the logo, wording and panel artwork on the Zoraxy Auth login page with your own resources.</small></p>
+                            <button class="ui basic button" type="button" onclick="openZorxAuthCustomization();"><i class="ui purple paint brush icon"></i> Customization</button>
                         </div>
                     </div>
                 </div>
@@ -323,6 +366,10 @@
 
     function openZorxAuthUserEditor(){
         showSideWrapper('snippet/zorxauthUserEditor.html?t=' + Date.now());
+    }
+
+    function openZorxAuthCustomization(){
+        showSideWrapper('snippet/zorxauthCustomization.html?t=' + Date.now());
     }
 
     /*
@@ -370,6 +417,11 @@
                 } else {
                     $("#forwardAuthRequestUseXOriginalHeaders").parent().checkbox("set unchecked");
                 }
+                if (data.ignoredPaths != null) {
+                    $('#forwardAuthIgnoredPaths').val(data.ignoredPaths.join(","));
+                } else {
+                    $('#forwardAuthIgnoredPaths').val("");
+                }
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
@@ -391,6 +443,7 @@
         const requestExcludedCookies = $('#forwardAuthRequestExcludedCookies').val();
         const requestIncludeBody = $('#forwardAuthRequestIncludeBody').is(':checked');
         const useXOriginalHeaders = $('#forwardAuthRequestUseXOriginalHeaders').is(':checked');
+        const ignoredPaths = $('#forwardAuthIgnoredPaths').val();
 
         console.log(`Updating Forward Auth settings. Address: ${address}. Response Headers: ${responseHeaders}. Response Client Headers: ${responseClientHeaders}. Request Headers: ${requestHeaders}. Request Included Cookies: ${requestIncludedCookies}. Request Excluded Cookies: ${requestExcludedCookies}. Request Include Body: ${requestIncludeBody}. Use X-Original-* Headers: ${useXOriginalHeaders}.`);
 
@@ -406,6 +459,7 @@
                 requestExcludedCookies: requestExcludedCookies,
                 requestIncludeBody: requestIncludeBody,
                 useXOriginalHeaders: useXOriginalHeaders,
+                ignoredPaths: ignoredPaths,
             },
             success: function(data) {
                 if (data.error !== undefined) {
@@ -420,6 +474,63 @@
             }
         });
     });
+
+    /* Bulk-apply / remove the auth callback virtual directory across hosts by Forward Auth state */
+    function bulkApplyForwardAuthVdir(action) {
+        var path = $('#bulkVdirPath').val().trim();
+        if (path == "") {
+            //Default to the first configured Ignored Path for convenience
+            path = ($('#forwardAuthIgnoredPaths').val() || "").split(',')[0].trim();
+        }
+        var target = $('#bulkVdirTarget').val().trim();
+        if (path == "") { msgbox("Please enter the matching path", false); return; }
+        if (target == "") { msgbox("Please enter the outpost target", false); return; }
+
+        $('#bulkVdirResult').html('<i class="notched circle loading icon"></i> Working...');
+        $.cjax({
+            url: '/api/proxy/vdir/bulkForwardAuth',
+            method: 'POST',
+            data: {
+                action: action,
+                path: path,
+                domain: target,
+                reqTLS: $('#bulkVdirReqTLS').is(':checked'),
+                skipValid: false
+            },
+            success: function(data) {
+                if (data.error !== undefined) {
+                    $('#bulkVdirResult').html('');
+                    msgbox(data.error, false);
+                    return;
+                }
+                renderBulkVdirResult(data);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                $('#bulkVdirResult').html('');
+                msgbox('Bulk virtual directory update failed, check console', false);
+                console.error('Bulk vdir error:', textStatus, errorThrown);
+            }
+        });
+    }
+
+    function renderBulkVdirResult(data) {
+        function line(label, arr) {
+            if (!arr || arr.length == 0) { return ''; }
+            return '<div><b>' + label + ' (' + arr.length + '):</b> ' + arr.join(', ') + '</div>';
+        }
+        var html = '';
+        html += line('Created', data.created);
+        html += line('Removed', data.removed);
+        html += line('Already up to date', data.skipped);
+        html += line('Conflicts (left untouched)', data.conflicts);
+        html += line('Failed', data.failed);
+        if (html == '') { html = 'No matching hosts.'; }
+        $('#bulkVdirResult').html('<div class="ui small message">' + html + '</div>');
+        msgbox('Bulk virtual directory ' + data.action + ' complete', true);
+    }
+
+    $('#bulkVdirAddBtn').on('click', function(){ bulkApplyForwardAuthVdir('add'); });
+    $('#bulkVdirRemoveBtn').on('click', function(){ bulkApplyForwardAuthVdir('remove'); });
 
     $( "#forwardAuthClear" ).on( "click", function( event ) {
         event.preventDefault();
@@ -483,7 +594,7 @@
         }
 
         if ($('#oauth2WellKnownUrl').val().length === 0) {
-            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoURL').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
+            if ($('#oauth2ServerUrl').val().length === 0 || $('#oauth2TokenUrl').val().length === 0 || $('#oauth2UserInfoUrl').val().length === 0 || $('#oauth2Scopes').val().length === 0) {
                 msgbox("You must specify either the Well Known URL or configure the Authorization URL, Token URL, User Info URL, and Scopes.", false);
 
                 return;
@@ -595,7 +706,15 @@
     $("#zorxAuthSettings").on("submit", function(event) {
         event.preventDefault();
 
-        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val();
+        const ssoRedirectURL = $('#zorxAuthSSORedirectURL').val().trim();
+        if (!ssoRedirectURL) {
+            msgbox('SSO Redirect URL is required', false);
+            return;
+        }
+        if (!/^https?:\/\//i.test(ssoRedirectURL)) {
+            msgbox('SSO Redirect URL must include the protocol (e.g. https://auth.example.com)', false);
+            return;
+        }
         const ssoSessionSetURL = $('#zorxAuthSSOSessionSetURL').val();
         const cookieName = $('#zorxAuthCookieName').val() || 'zr_xauth_session';
         const cookieDuration = parseInt($('#zorxAuthCookieDuration').val()) || 3600;

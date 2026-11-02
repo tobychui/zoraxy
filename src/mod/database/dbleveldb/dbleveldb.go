@@ -103,8 +103,7 @@ func (d *DB) Write(tableName string, key string, value interface{}) error {
 	if err != nil {
 		return err
 	}
-	d.batch.Put([]byte(filepath.ToSlash(filepath.Join(tableName, key))), data)
-	return nil
+	return d.db.Put([]byte(filepath.ToSlash(filepath.Join(tableName, key))), data, nil)
 }
 
 func (d *DB) Read(tableName string, key string, assignee interface{}) error {
@@ -133,7 +132,11 @@ func (d *DB) ListTable(tableName string) ([][][]byte, error) {
 		key := iter.Key()
 		//The key contains the table name as prefix. Trim it before returning
 		value := iter.Value()
-		result = append(result, [][]byte{[]byte(strings.TrimPrefix(string(key), tableName+"/")), value})
+		// Copy key and value since LevelDB iterator reuses underlying buffers
+		keyCopy := []byte(strings.TrimPrefix(string(key), tableName+"/"))
+		valueCopy := make([]byte, len(value))
+		copy(valueCopy, value)
+		result = append(result, [][]byte{keyCopy, valueCopy})
 	}
 
 	err := iter.Error()

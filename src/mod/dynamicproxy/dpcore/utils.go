@@ -54,7 +54,15 @@ func replaceLocationHost(urlString string, rrr *ResponseRewriteRuleSet, useTLS b
 		return urlString, nil
 	}
 
-	u.Host = rrr.OriginalHost
+	// Handle case where OriginalHost contains a path component (e.g., "proxy.example.com/blog")
+	// In this case, the path component must be prepended to the URL path rather than
+	// set as part of the host (which would cause URL encoding to escape the slash as %2F)
+	if idx := strings.IndexByte(rrr.OriginalHost, '/'); idx != -1 {
+		u.Host = rrr.OriginalHost[:idx]
+		u.Path = rrr.OriginalHost[idx:] + u.Path
+	} else {
+		u.Host = rrr.OriginalHost
+	}
 
 	if strings.Contains(rrr.ProxyDomain, "/") {
 		//The proxy domain itself seems contain subpath.

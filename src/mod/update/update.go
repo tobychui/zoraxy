@@ -25,22 +25,22 @@ func RunConfigUpdate(fromVersion int, toVersion int) {
 	proxyDir := updateutil.ConfigPath("proxy")
 	isFirstTimeInit, _ := isFirstTimeInitialize(proxyDir)
 	if isFirstTimeInit {
-		//Create version file and exit
+		// Create version file and exit
 		os.MkdirAll(updateutil.ConfigPath(), 0775)
 		os.WriteFile(versionFile, []byte(strconv.Itoa(toVersion)), 0775)
 		return
 	}
 	if fromVersion == 0 {
-		//Run auto previous version detection
+		// Run auto previous version detection
 		fromVersion = 307
 		if utils.FileExists(versionFile) {
-			//Read the version file
+			// Read the version file
 			previousVersionText, err := os.ReadFile(versionFile)
 			if err != nil {
 				panic("Unable to read version file at " + versionFile)
 			}
 
-			//Convert the version to int
+			// Convert the version to int
 			versionInt, err := strconv.Atoi(strings.TrimSpace(string(previousVersionText)))
 			if err != nil {
 				panic("Unable to read version file at " + versionFile)
@@ -50,19 +50,22 @@ func RunConfigUpdate(fromVersion int, toVersion int) {
 		}
 
 		if fromVersion == toVersion {
-			//No need to update
+			// No need to update, but check if v3.3.5 rc1→rc2 migration is needed
+			if toVersion == 335 {
+				runUpdateRoutineWithVersion(335, 335)
+			}
 			return
 		}
 	}
 
-	//Do iterate update
+	// Do iterate update
 	for i := fromVersion; i < toVersion; i++ {
 		oldVersion := i
 		newVersion := i + 1
 		fmt.Println("Updating from v", oldVersion, " to v", newVersion)
 		runUpdateRoutineWithVersion(oldVersion, newVersion)
-		//Write the updated version to file
-		os.WriteFile(versionFile, []byte(strconv.Itoa(newVersion)), 0775)
+		// Write the updated version to file
+		os.WriteFile(versionFile, []byte(strconv.Itoa(newVersion)), 0o775)
 	}
 	fmt.Println("Update completed")
 }

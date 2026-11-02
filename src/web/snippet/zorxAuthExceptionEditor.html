@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Notes: This should be opened in its original path -->
+        <meta charset="utf-8">
+        <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+        <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+        <script src="../script/jquery-3.6.0.min.js"></script>
+        <script src="../script/semantic/semantic.min.js"></script>
+        <script src="../script/utils.js"></script>
+    </head>
+    <body>
+        <link rel="stylesheet" href="../darktheme.css">
+        <script src="../script/darktheme.js"></script>
+        <br>
+        <div class="ui container">
+            <h3 class="ui header">Zoraxy Auth - Exception Rules</h3>
+            <p>Exclude specific <b>paths</b> or <b>IP / CIDR</b> ranges from Zoraxy Auth SSO authentication. Requests matching any rule below will bypass authentication entirely.</p>
+
+            <!-- Exception Rules Table -->
+            <table class="ui basic very compact unstackable celled table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Pattern / CIDR</th>
+                        <th>Regex</th>
+                        <th>Trust Proxy</th>
+                        <th>Remove</th>
+                    </tr>
+                </thead>
+                <tbody id="zorxAuthExceptionRulesList">
+                    <tr>
+                        <td colspan="5"><i class="ui green circle check icon"></i> No Exception Rule</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Add New Rule -->
+            <div class="ui form" style="margin-top: 1em;">
+                <div class="fields">
+                    <div class="field">
+                        <label>Exception Type</label>
+                        <select class="ui fluid dropdown" id="zorxExceptionTypeDropdown">
+                            <option value="path">Path</option>
+                            <option value="ip">IP / CIDR</option>
+                        </select>
+                    </div>
+
+                    <!-- Path fields -->
+                    <div class="field" id="zorxPathField">
+                        <label>Path Pattern</label>
+                        <input type="text" id="zorxPathPattern" placeholder="/api/public/" autocomplete="off">
+                        <small>Path prefix (e.g. <code>/api/public/</code>) or regex (e.g. <code>^/api/.*$</code>).</small>
+                    </div>
+                    <div class="field" id="zorxRegexField" style="padding-top: 1.6em;">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="zorxIsRegex">
+                            <label>Use Regex</label>
+                        </div>
+                        <br><small>When checked, the pattern is treated as a Go regular expression.</small>
+                    </div>
+
+                    <!-- IP / CIDR field (hidden by default) -->
+                    <div class="field" id="zorxIPField" style="display: none;">
+                        <label>IP / CIDR</label>
+                        <input type="text" id="zorxIPPattern" placeholder="192.168.1.0/24" autocomplete="off">
+                        <small>IP address, CIDR block (e.g. <code>10.0.0.0/8</code>), or wildcard (e.g. <code>192.168.1.*</code>).</small>
+                    </div>
+                    <div class="field" id="zorxTrustProxyField" style="display: none; padding-top: 1.6em;">
+                        <div class="ui checkbox">
+                            <input type="checkbox" id="zorxTrustProxy">
+                            <label>Trust Proxy Headers</label>
+                        </div>
+                        <br><small>Read client IP from <code>X-Real-Ip</code>, <code>X-Forwarded-For</code>, etc.</small>
+                    </div>
+                </div>
+
+                <!-- Trust proxy security warning (shown when trust proxy is enabled) -->
+                <div id="zorxTrustProxyWarning" class="ui yellow message" style="display: none; margin-top: 0.4em;">
+                    <i class="exclamation triangle icon"></i>
+                    <b>Security Warning</b><br>
+                    Enabling <em>Trust Proxy Headers</em> allows Zoraxy to read the client IP from HTTP headers that any client can forge. Only enable this when Zoraxy sits <b>behind a trusted reverse proxy</b> (e.g. Cloudflare, Nginx).
+                </div>
+
+                <button class="ui basic button" onclick="addZorxAuthExceptionRule();" style="margin-top: 0.6em;">
+                    <i class="yellow add icon"></i> Add Exception Rule
+                </button>
+            </div>
+
+            <!-- Help text -->
+            <div class="ui basic message" style="margin-top: 1.4em;">
+                <h4>How exception rules work</h4>
+                <ul>
+                    <li><b>Path prefix:</b> Any request whose path begins with the given prefix bypasses Zoraxy Auth. The prefix <b>must start with a slash</b> (<code>/</code>).</li>
+                    <li><b>Path regex:</b> Any request whose path matches the Go regular expression bypasses Zoraxy Auth (e.g. <code>^/api/.*$</code>).</li>
+                    <li><b>IP / CIDR:</b> Requests from the matching IP address, CIDR block or wildcard bypass Zoraxy Auth.</li>
+                </ul>
+            </div>
+
+            <br><br>
+        </div>
+
+        <script>
+            let editingEndpoint = {};
+
+            if (window.location.hash.length > 1) {
+                try {
+                    let payloadHash = JSON.parse(decodeURIComponent(window.location.hash.substr(1)));
+                    editingEndpoint = payloadHash;
+                } catch (ex) {
+                    console.log("Unable to load endpoint data from hash", ex);
+                }
+            }
+
+            // Initialise dropdowns
+            $('#zorxExceptionTypeDropdown').dropdown({
+                onChange: function(value) {
+                    if (value === 'ip') {
+                        $('#zorxPathField').hide();
+                        $('#zorxRegexField').hide();
+                        $('#zorxIPField').show();
+                        $('#zorxTrustProxyField').show();
+                    } else {
+                        $('#zorxPathField').show();
+                        $('#zorxRegexField').show();
+                        $('#zorxIPField').hide();
+                        $('#zorxTrustProxyField').hide();
+                        $('#zorxTrustProxy').prop('checked', false);
+                        $('#zorxTrustProxyWarning').hide();
+                    }
+                }
+            });
+            $('#zorxExceptionTypeDropdown').dropdown('set selected', 'path');
+
+            // Show/hide the security warning when trust proxy checkbox changes
+            $('#zorxTrustProxy').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#zorxTrustProxyWarning').show();
+                } else {
+                    $('#zorxTrustProxyWarning').hide();
+                }
+            });
+
+            /* ---- Load existing rules ---- */
+            function loadExceptionRules() {
+                if (!editingEndpoint.ep) return;
+                $.get('/api/proxy/auth/zorxauth/exceptions/list?ep=' + encodeURIComponent(editingEndpoint.ep), function(data) {
+                    if (data.error != undefined) {
+                        parent.msgbox(data.error, false, 5000);
+                        return;
+                    }
+                    renderExceptionRules(data);
+                });
+            }
+
+            function renderExceptionRules(rules) {
+                let tbody = $('#zorxAuthExceptionRulesList');
+                tbody.empty();
+                if (!rules || rules.length === 0) {
+                    tbody.html('<tr><td colspan="5"><i class="ui green circle check icon"></i> No Exception Rule</td></tr>');
+                    return;
+                }
+                rules.forEach(function(rule) {
+                    let typeLabel = rule.RuleType === 0 ? 'Path' : 'IP / CIDR';
+                    let pattern   = rule.RuleType === 0 ? escapeHtml(rule.PathPattern) : escapeHtml(rule.CIDR);
+                    let isRegex   = rule.RuleType === 0 ? (rule.IsRegex ? '<i class="green check icon"></i>' : '<i class="grey times icon"></i>') : '<span style="color:#aaa;">N/A</span>';
+                    let trustProxy = rule.RuleType === 1
+                        ? (rule.UseTrustedProxy
+                            ? '<span class="ui yellow label" title="Reads IP from proxy headers">Enabled</span>'
+                            : '<span class="ui green label">Disabled</span>')
+                        : '<span style="color:#aaa;">N/A</span>';
+
+                    let removeBtn = '';
+                    if (rule.RuleType === 0) {
+                        removeBtn = `<button class="ui red basic mini circular icon button"
+                            onclick="removeZorxAuthExceptionRule(this);"
+                            data-type="0"
+                            data-pattern="${escapeAttr(rule.PathPattern)}"
+                            data-isregex="${rule.IsRegex ? 'true' : 'false'}">
+                            <i class="red times icon"></i></button>`;
+                    } else {
+                        removeBtn = `<button class="ui red basic mini circular icon button"
+                            onclick="removeZorxAuthExceptionRule(this);"
+                            data-type="1"
+                            data-cidr="${escapeAttr(rule.CIDR)}">
+                            <i class="red times icon"></i></button>`;
+                    }
+
+                    tbody.append(`<tr>
+                        <td>${typeLabel}</td>
+                        <td><code>${pattern}</code></td>
+                        <td>${isRegex}</td>
+                        <td>${trustProxy}</td>
+                        <td>${removeBtn}</td>
+                    </tr>`);
+                });
+            }
+
+            /* ---- Add a rule ---- */
+            function addZorxAuthExceptionRule() {
+                let exType = $('#zorxExceptionTypeDropdown').val();
+                if (exType === 'path') {
+                    let pattern = $('#zorxPathPattern').val().trim();
+                    let isRegex = $('#zorxIsRegex').is(':checked');
+                    if (!pattern) {
+                        parent.msgbox("Path pattern cannot be empty", false, 5000);
+                        return;
+                    }
+                    $.cjax({
+                        url: '/api/proxy/auth/zorxauth/exceptions/add',
+                        method: 'POST',
+                        data: {
+                            ep: editingEndpoint.ep,
+                            type: 0,
+                            pattern: pattern,
+                            isRegex: isRegex
+                        },
+                        success: function(data) {
+                            if (data.error) {
+                                parent.msgbox(data.error, false, 5000);
+                            } else {
+                                $('#zorxPathPattern').val('');
+                                $('#zorxIsRegex').prop('checked', false);
+                                parent.msgbox("Exception rule added", true);
+                                loadExceptionRules();
+                            }
+                        }
+                    });
+                } else {
+                    let cidr = $('#zorxIPPattern').val().trim();
+                    let trustProxy = $('#zorxTrustProxy').is(':checked');
+                    if (!cidr) {
+                        parent.msgbox("IP / CIDR cannot be empty", false, 5000);
+                        return;
+                    }
+                    $.cjax({
+                        url: '/api/proxy/auth/zorxauth/exceptions/add',
+                        method: 'POST',
+                        data: {
+                            ep: editingEndpoint.ep,
+                            type: 1,
+                            cidr: cidr,
+                            trustproxy: trustProxy
+                        },
+                        success: function(data) {
+                            if (data.error) {
+                                parent.msgbox(data.error, false, 5000);
+                            } else {
+                                $('#zorxIPPattern').val('');
+                                $('#zorxTrustProxy').prop('checked', false);
+                                $('#zorxTrustProxyWarning').hide();
+                                parent.msgbox("Exception rule added", true);
+                                loadExceptionRules();
+                            }
+                        }
+                    });
+                }
+            }
+
+            /* ---- Remove a rule ---- */
+            function removeZorxAuthExceptionRule(btn) {
+                let ruleType = parseInt($(btn).attr('data-type'));
+                let reqData = { ep: editingEndpoint.ep, type: ruleType };
+                if (ruleType === 0) {
+                    reqData.pattern = $(btn).attr('data-pattern');
+                    reqData.isRegex = $(btn).attr('data-isregex');
+                } else {
+                    reqData.cidr = $(btn).attr('data-cidr');
+                }
+                $.cjax({
+                    url: '/api/proxy/auth/zorxauth/exceptions/delete',
+                    method: 'POST',
+                    data: reqData,
+                    success: function(data) {
+                        if (data.error) {
+                            parent.msgbox(data.error, false, 5000);
+                        } else {
+                            parent.msgbox("Exception rule removed", true);
+                            loadExceptionRules();
+                        }
+                    }
+                });
+            }
+
+            /* ---- Utility ---- */
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            function escapeAttr(str) {
+                if (!str) return '';
+                return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
+
+            // Load on page ready
+            loadExceptionRules();
+        </script>
+    </body>
+</html>

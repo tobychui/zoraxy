@@ -23,7 +23,7 @@ import (
 func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint, error) {
 	for _, thisOrigin := range endpoint.ActiveOrigins {
 		//Create the proxy routing handler
-		err := thisOrigin.StartProxy()
+		err := thisOrigin.StartProxy(endpoint.upstreamTLSServerName())
 		if err != nil {
 			log.Println("Unable to setup upstream " + thisOrigin.OriginIpOrDomain + ": " + err.Error())
 			continue
@@ -62,6 +62,7 @@ func (router *Router) PrepareProxyRoute(endpoint *ProxyEndpoint) (*ProxyEndpoint
 		proxy := dpcore.NewDynamicProxyCore(path, vdir.MatchingPath, &dpcore.DpcoreOptions{
 			IgnoreTLSVerification: vdir.SkipCertValidations,
 			FlushInterval:         500 * time.Millisecond,
+			UpstreamTLSServerName: endpoint.upstreamTLSServerName(),
 		})
 		vdir.proxy = proxy
 		vdir.parent = endpoint

@@ -81,20 +81,9 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reqTLSStr, err := utils.PostPara(r, "reqTLS")
-	if err != nil {
-		//Assume false
-		reqTLSStr = "false"
-	}
-	reqTLS := (reqTLSStr == "true")
-
-	skipValidStr, err := utils.PostPara(r, "skipValid")
-	if err != nil {
-		//Assume false
-		skipValidStr = "false"
-	}
-
-	skipValid := (skipValidStr == "true")
+	//Assume false if not given
+	reqTLS, _ := utils.PostBool(r, "reqTLS")
+	skipValid, _ := utils.PostBool(r, "skipValid")
 
 	//Load the target proxy endpoint from runtime
 	var targetProxyEndpoint *dynamicproxy.ProxyEndpoint
@@ -222,20 +211,9 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reqTLSStr, err := utils.PostPara(r, "reqTLS")
-	if err != nil {
-		//Assume false
-		reqTLSStr = "false"
-	}
-	reqTLS := (reqTLSStr == "true")
-
-	skipValidStr, err := utils.PostPara(r, "skipValid")
-	if err != nil {
-		//Assume false
-		skipValidStr = "false"
-	}
-
-	skipValid := (skipValidStr == "true")
+	//Assume false if not given
+	reqTLS, _ := utils.PostBool(r, "reqTLS")
+	skipValid, _ := utils.PostBool(r, "skipValid")
 
 	var targetEndpoint *dynamicproxy.ProxyEndpoint
 	if eptype == "root" {
@@ -289,4 +267,118 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 	UpdateUptimeMonitorTargets()
 
 	utils.SendOK(w)
+}
+
+// ReverseProxyBulkApplyVdirByForwardAuth bulk-manages a virtual directory across hosts based on
+// their Forward Auth state, so the auth callback directory (e.g. Authentik's
+// /outpost.goauthentik.io) can be set up or torn down without per-host manual work.
+//
+//	action=add    -> create the directory on every host that USES Forward Auth
+//	action=remove -> remove the directory from every host that does NOT use Forward Auth
+//
+// Existing directories are only skipped (add) or removed when their target matches the spec
+// exactly; a directory at the same path with different settings is reported as a conflict and
+// left untouched, so nothing is silently overwritten or deleted.
+func ReverseProxyBulkApplyVdirByForwardAuth(w http.ResponseWriter, r *http.Request) {
+	action, err := utils.PostPara(r, "action")
+	if err != nil || (action != "add" && action != "remove") {
+		utils.SendErrorResponse(w, "invalid action, expected 'add' or 'remove'")
+		return
+	}
+
+	matchingPath, err := utils.PostPara(r, "path")
+	if err != nil || strings.TrimSpace(matchingPath) == "" {
+		utils.SendErrorResponse(w, "matching path not defined")
+		return
+	}
+	if !strings.HasPrefix(matchingPath, "/") {
+		matchingPath = "/" + matchingPath
+	}
+
+	domain, err := utils.PostPara(r, "domain")
+	if err != nil || strings.TrimSpace(domain) == "" {
+		utils.SendErrorResponse(w, "target domain not defined")
+		return
+	}
+
+	reqTLS, _ := utils.PostBool(r, "reqTLS")
+	skipValid, _ := utils.PostBool(r, "skipValid")
+
+	ensurePresent := (action == "add")
+
+	// Collect the target host endpoints first so we don't mutate the map while ranging it.
+	// "add" applies to hosts using Forward Auth; "remove" applies to all other hosts.
+	targets := []*dynamicproxy.ProxyEndpoint{}
+	dynamicProxyRouter.ProxyEndpoints.Range(func(key, value interface{}) bool {
+		ep, ok := value.(*dynamicproxy.ProxyEndpoint)
+		if !ok {
+			return true
+		}
+		usesForwardAuth := ep.AuthenticationProvider != nil &&
+			ep.AuthenticationProvider.AuthMethod == dynamicproxy.AuthMethodForward
+		if usesForwardAuth == ensurePresent {
+			targets = append(targets, ep)
+		}
+		return true
+	})
+
+	created := []string{}
+	removed := []string{}
+	skipped := []string{}
+	conflicts := []string{}
+	failed := []string{}
+
+	for _, ep := range targets {
+		existing := ep.GetVirtualDirectoryRuleByMatchingPath(matchingPath)
+		switch dynamicproxy.ClassifyBulkVdir(ensurePresent, existing, domain, reqTLS, skipValid) {
+		case dynamicproxy.BulkVdirCreate:
+			newVdir := dynamicproxy.VirtualDirectoryEndpoint{
+				MatchingPath:        matchingPath,
+				Domain:              domain,
+				RequireTLS:          reqTLS,
+				SkipCertValidations: skipValid,
+			}
+			activatedProxyEndpoint, addErr := ep.AddVirtualDirectoryRule(&newVdir)
+			if addErr != nil {
+				failed = append(failed, ep.RootOrMatchingDomain)
+				continue
+			}
+			SaveReverseProxyConfig(activatedProxyEndpoint)
+			created = append(created, ep.RootOrMatchingDomain)
+		case dynamicproxy.BulkVdirRemove:
+			// Re-fetch right before deletion: if the vdir was edited concurrently and
+			// no longer points at the SSO endpoint, treat it as a conflict instead.
+			current := ep.GetVirtualDirectoryRuleByMatchingPath(matchingPath)
+			if current == nil || !current.HasSameTarget(domain, reqTLS, skipValid) {
+				conflicts = append(conflicts, ep.RootOrMatchingDomain)
+				continue
+			}
+			if removeErr := ep.RemoveVirtualDirectoryRuleByMatchingPath(matchingPath); removeErr != nil {
+				failed = append(failed, ep.RootOrMatchingDomain)
+				continue
+			}
+			SaveReverseProxyConfig(ep)
+			removed = append(removed, ep.RootOrMatchingDomain)
+		case dynamicproxy.BulkVdirSkip:
+			skipped = append(skipped, ep.RootOrMatchingDomain)
+		case dynamicproxy.BulkVdirConflict:
+			conflicts = append(conflicts, ep.RootOrMatchingDomain)
+		case dynamicproxy.BulkVdirNoop:
+			// Nothing to do on this host
+		}
+	}
+
+	if len(created) > 0 || len(removed) > 0 {
+		UpdateUptimeMonitorTargets()
+	}
+
+	js, _ := json.Marshal(map[string]interface{}{
+		"action":    action,
+		"created":   created,
+		"removed":   removed,
+		"skipped":   skipped,
+		"conflicts": conflicts,
+		"failed":    failed,
+	})
+	utils.SendJSONResponse(w, string(js))
 }
