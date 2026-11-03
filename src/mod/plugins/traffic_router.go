@@ -7,11 +7,12 @@ import (
 )
 
 // HandleRoute handles the request to the plugin
-// return true if the request is handled by the plugin
+// return true if the request is handled by the plugin; denial is set when a
+// dynamic capture sniffer rejected the request (Zoraxy already answered it)
 // clientIP must be the trusted-proxy resolved client IP, not re-derived from raw request headers
-func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []string, clientIP string) bool {
+func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []string, clientIP string) (bool, *Denial) {
 	if len(tags) == 0 {
-		return false
+		return false, nil
 	}
 
 	//For each tag, check if the request path matches the static capture path                    //Wait group for the goroutines
@@ -46,14 +47,14 @@ func (m *Manager) HandleRoute(w http.ResponseWriter, r *http.Request, tags []str
 	if len(staticRoutehandlers) > 0 {
 		//Handle the request
 		staticRoutehandlers[0].HandleStaticRoute(w, r, longestPrefixAcrossAlltags)
-		return true
+		return true, nil
 	}
 
 	//No static route handler found, check for dynamic route handler
 	for _, plugin := range dynamicRouteHandlers {
-		if plugin.HandleDynamicRoute(w, r, clientIP) {
-			return true
+		if handled, denial := plugin.HandleDynamicRoute(w, r, clientIP); handled {
+			return true, denial
 		}
 	}
-	return false
+	return false, nil
 }

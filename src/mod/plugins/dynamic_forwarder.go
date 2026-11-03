@@ -40,10 +40,49 @@ func (p *Plugin) AcceptDynamicRoute() bool {
 	return p.Spec.DynamicCaptureSniff != "" && p.Spec.DynamicCaptureIngress != ""
 }
 
-func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clientIP string) bool {
+// Denial is a request a dynamic capture sniffer rejected (286). Zoraxy has
+// already answered the client; the router only records it in the log.
+type Denial struct {
+	Status int
+	Plugin string // ID of the plugin that denied the request, as a short token
+	Reason string // short token from X-Zoraxy-Deny-Reason, may be empty
+}
+
+// maxDenyReasonLen caps the plugin-chosen reason that ends up in the access log.
+const maxDenyReasonLen = 64
+
+// sanitizeDenyReason turns the plugin's reason into a short single-line token:
+// letters, digits, '.', '_' and '-' are kept, every other run becomes one '-'.
+func sanitizeDenyReason(reason string) string {
+	var b strings.Builder
+	dash := false
+	for _, c := range reason {
+		ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-'
+		if ok {
+			b.WriteRune(c)
+			dash = false
+		} else if !dash && b.Len() > 0 {
+			b.WriteByte('-')
+			dash = true
+		}
+		if b.Len() >= maxDenyReasonLen {
+			break
+		}
+	}
+	out := b.String()
+	if len(out) > maxDenyReasonLen {
+		out = out[:maxDenyReasonLen]
+	}
+	return strings.TrimRight(out, "-")
+}
+
+// HandleDynamicRoute asks the plugin's sniff endpoint about the request.
+// handled is true when the plugin took the request or denied it; denial is
+// set only for a deny, so the caller can log it.
+func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clientIP string) (handled bool, denial *Denial) {
 	//Make sure p.Spec.DynamicCaptureSniff and p.Spec.DynamicCaptureIngress are not empty and start with /
 	if !p.AcceptDynamicRoute() {
-		return false
+		return false, nil
 	}
 
 	//Make sure the paths start with / and do not end with /
@@ -60,7 +99,7 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 	sniffURL, err := url.Parse("http://127.0.0.1:" + strconv.Itoa(p.AssignedPort) + p.Spec.DynamicCaptureSniff + "/")
 	if err != nil {
 		//Error when parsing the sniff URL, let the next plugin handle the request
-		return false
+		return false, nil
 	}
 
 	// Create an instance of CustomRequest with the original request's data
@@ -70,7 +109,7 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 	jsonData, err := json.Marshal(forwardReq)
 	if err != nil {
 		// Error when encoding the request, let the next plugin handle the request
-		return false
+		return false, nil
 	}
 
 	//Generate a unique request ID
@@ -79,7 +118,7 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 	req, err := http.NewRequest("POST", sniffURL.String(), bytes.NewBuffer(jsonData))
 	if err != nil {
 		// Error when creating the request, let the next plugin handle the request
-		return false
+		return false, nil
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Zoraxy-RequestID", uniqueRequestID)
@@ -88,13 +127,27 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 	resp, err := client.Do(req)
 	if err != nil {
 		// Error when sending the request, let the next plugin handle the request
-		return false
+		return false, nil
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == int(zoraxy_plugin.ControlStatusCode_DENY) {
+		// Plugin asked Zoraxy to reject this request. Answer the client directly
+		// and do not forward the request anywhere.
+		status := http.StatusForbidden
+		if v, err := strconv.Atoi(resp.Header.Get("X-Zoraxy-Deny-Status")); err == nil && v >= 400 && v <= 599 {
+			status = v
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.WriteHeader(status)
+		w.Write([]byte(http.StatusText(status)))
+		return true, &Denial{Status: status, Plugin: sanitizeDenyReason(p.Spec.ID), Reason: sanitizeDenyReason(resp.Header.Get("X-Zoraxy-Deny-Reason"))}
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		// Sniff endpoint did not return OK, let the next plugin handle the request
-		return false
+		return false, nil
 	}
 
 	p.dynamicRouteProxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
@@ -108,5 +161,5 @@ func (p *Plugin) HandleDynamicRoute(w http.ResponseWriter, r *http.Request, clie
 			{"X-Zoraxy-RequestID", uniqueRequestID},
 		},
 	})
-	return true
+	return true, nil
 }
