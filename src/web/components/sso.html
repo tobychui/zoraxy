@@ -156,7 +156,7 @@
                 <label for="oauth2CodeChallengeMethod">Code Challenge Method</label>
 
                 <div class="ui selection dropdown" id="oauth2CodeChallengeMethod">
-                    <input type="hidden" name="oauth2CodeChallengeMethod">
+                    <input type="hidden" name="oauth2CodeChallengeMethod" value="plain">
                     <i class="dropdown icon"></i>
                     <div class="default text">Plain</div>
                     <div class="menu">
@@ -579,7 +579,9 @@
                 $('#oauth2Scopes').val(data.oauth2Scopes);
                 $('#oauth2DefaultAllowedGroups').val(data.oauth2DefaultAllowedGroups || '');
                 $('#oauth2ConfigurationCacheTime').val(data.oauth2ConfigurationCacheTime);
-                $('[data-value="'+data.oauth2CodeChallengeMethod+'"]').click();
+                const challengeMethod = ['plain', 'PKCE', 'PKCE_S256'].includes(data.oauth2CodeChallengeMethod)
+                    ? data.oauth2CodeChallengeMethod : 'plain';
+                $('#oauth2CodeChallengeMethod').dropdown('set selected', challengeMethod);
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error('Error fetching SSO settings:', textStatus, errorThrown);
@@ -608,6 +610,9 @@
         }
 
         $('#oauth2DefaultAllowedGroups').val([...new Set($('#oauth2DefaultAllowedGroups').val().split(',').map(x => x.trim()).filter(Boolean))].join(', '));
+        if (!$('#oauth2CodeChallengeMethod input[name="oauth2CodeChallengeMethod"]').val()) {
+            $('#oauth2CodeChallengeMethod').dropdown('set selected', 'plain');
+        }
 
         $.cjax({
             url: '/api/sso/OAuth2',
