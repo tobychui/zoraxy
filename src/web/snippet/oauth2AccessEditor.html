@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <link rel="stylesheet" href="../script/semantic/semantic.min.css">
+    <script src="../script/jquery-3.6.0.min.js"></script>
+    <script src="../script/semantic/semantic.min.js"></script>
+    <script src="../script/utils.js"></script>
+</head>
+<body>
+<link rel="stylesheet" href="../darktheme.css">
+<script src="../script/darktheme.js"></script>
+<br>
+<div class="ui container ui form">
+    <h3 class="ui header"><i class="green user circle icon"></i> OAuth2 Access <small id="epname"></small></h3>
+    <div class="field">
+        <label>Allowed Groups</label>
+        <input type="text" id="allowedGroups" autocomplete="off" placeholder="Any authenticated user">
+        <small>Comma-separated group names. Leave empty to inherit the global OAuth2 default. A member of any listed group can access this site.</small>
+    </div>
+    <button type="button" class="ui basic button" id="saveGroups"><i class="green check icon"></i> Save Allowed Groups</button>
+    <div class="ui divider"></div>
+    <h3 class="ui header">Authentication Exclusion</h3>
+    <p>Exclude specified path prefixes or IP/CIDR ranges from OAuth2 authentication. Excluded requests are not assigned an OAuth2 identity.</p>
+    <table class="ui basic very compact unstackable celled table">
+        <thead><tr><th>Exception Type</th><th>Path Prefix / CIDR</th><th>Case Matching</th><th>Trust Proxy</th><th>Remove</th></tr></thead>
+        <tbody id="exclusionPaths"><tr><td colspan="5">No Exclusion Rule</td></tr></tbody>
+    </table>
+    <div class="fields" style="margin-bottom: .5em">
+        <div class="field">
+            <select class="ui dropdown" id="exceptionTypeDropdown">
+                <option value="path">Path Prefix</option>
+                <option value="ip">IP / CIDR</option>
+            </select>
+        </div>
+        <div class="field" id="exclusionPathField"><input id="newExclusionPath" type="text" placeholder="/public/api/"></div>
+        <div class="field" id="exclusionIPField" style="display: none"><input id="newExclusionIP" type="text" placeholder="192.168.1.0/24"></div>
+    </div>
+    <div class="field" id="caseSensitiveField">
+        <div class="ui checkbox">
+            <input type="checkbox" id="newExclusionCaseSensitive" checked>
+            <label>Case sensitive</label>
+        </div>
+    </div>
+    <div class="field" id="trustedProxyField" style="display: none">
+        <div class="ui checkbox">
+            <input type="checkbox" id="newExclusionTrustProxy">
+            <label>Trust proxy headers (X-Real-IP, CF-Connecting-IP, X-Forwarded-For)</label>
+        </div>
+        <div class="ui yellow message">
+            <i class="exclamation triangle icon"></i>
+            <b>Security Warning:</b> Only enable this when Zoraxy is behind a trusted proxy that removes spoofed client IP headers.
+        </div>
+    </div>
+    <button type="button" class="ui basic button" id="addException"><i class="yellow plus icon"></i> Add Exception</button>
+
+    <div class="ui divider"></div>
+    <div class="ui accordion" id="oauth2Advanced">
+        <div class="title"><i class="dropdown icon"></i> <b>Advanced Options</b></div>
+        <div class="content">
+            <div class="field"><div class="ui toggle checkbox">
+                <input type="checkbox" id="forwardUserInfo">
+                <label>Forward User Information
+                    <br><small>Pass verified identity claims as Remote-* headers to HTTP backends.</small>
+                </label>
+            </div></div>
+            <div class="field"><div class="ui toggle checkbox">
+                <input type="checkbox" id="removeUntrusted" checked>
+                <label>Remove Untrusted Identity Headers
+                    <br><small>Always required when forwarding verified user information.</small>
+                </label>
+            </div></div>
+            <div class="field"><div class="ui toggle checkbox">
+                <input type="checkbox" id="forwardWebSocket">
+                <label>Forward Identity to WebSocket Connections
+                    <br><small>Also forward verified identity headers in WebSocket upgrade handshakes.</small>
+                </label>
+            </div></div>
+            <div class="field">
+                <label>Forwarded Claims</label>
+                <div class="grouped fields" id="forwardedClaims">
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="sub" checked><label>User ID (sub)</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="preferred_username" checked><label>Username</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="name" checked><label>Display Name</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="email" checked><label>Email</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="groups" checked><label>Groups</label></div></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="field"><div class="ui toggle checkbox">
+                <input type="checkbox" id="removeTokenCookie" checked>
+                <label>Remove OAuth2 Token Cookie
+                    <br><small>Remove z-token from requests sent to upstream HTTP and WebSocket services.</small>
+                </label>
+            </div></div>
+            <div id="tokenWarning" class="ui negative message" style="display: none">
+                <i class="exclamation triangle icon"></i>
+                <b>Security Warning:</b> Disabling token removal exposes the raw OAuth2 access token to the backend. Only do this if you know what you are doing and the application explicitly needs the token.
+            </div>
+            <button type="button" class="ui basic button" id="saveAdvanced"><i class="green check icon"></i> Apply Advanced Options</button>
+        </div>
+    </div>
+    <br><br><br>
+</div>
+<script>
+    const config = { ep: "" };
+    const allowedClaims = ["sub", "preferred_username", "name", "email", "groups"];
+    const defaultClaims = allowedClaims.slice();
+    let saved = null;
+    try {
+        const payload = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+        config.ep = payload.ep;
+        $("#epname").text(payload.ep);
+    } catch (e) {
+        parent.msgbox("Invalid proxy endpoint", false, 5000);
+    }
+
+    $("#oauth2Advanced").accordion();
+    $("#exceptionTypeDropdown").dropdown({
+        onChange: function(value) {
+            const ip = value === "ip";
+            $("#exclusionIPField, #trustedProxyField").toggle(ip);
+            $("#exclusionPathField, #caseSensitiveField").toggle(!ip);
+        }
+    });
+    $("#exceptionTypeDropdown").dropdown("set selected", "path");
+
+    const normalize = value => [...new Set(value.split(",").map(x => x.trim()).filter(Boolean))].join(", ");
+
+    function updateAdvancedStates() {
+        const enabled = $("#forwardUserInfo").is(":checked");
+        if (enabled) $("#removeUntrusted").prop("checked", true);
+        $("#removeUntrusted").prop("disabled", enabled);
+        $("#forwardWebSocket").prop("disabled", !enabled);
+        $("#forwardedClaims input").prop("disabled", !enabled);
+        $("#tokenWarning").toggle(!$("#removeTokenCookie").is(":checked"));
+    }
+
+    function showErrors(text) {
+        parent.msgbox(text, false, 5000);
+    }
+
+    function renderExceptions() {
+        const body = $("#exclusionPaths").empty();
+        if (!saved.exceptionRules.length) {
+            body.append($("<tr>").append($("<td>").attr("colspan", 5).text("No Exclusion Rule")));
+            return;
+        }
+        saved.exceptionRules.forEach((rule, index) => {
+            const path = rule.RuleType === 0;
+            const row = $("<tr>");
+            row.append($("<td>").text(path ? "Path Prefix" : "IP / CIDR"));
+            row.append($("<td>").text(path ? rule.PathPrefix : rule.CIDR));
+            row.append($("<td>").text(path ? (rule.CaseInsensitive ? "Insensitive" : "Sensitive") : "N/A"));
+            row.append($("<td>").text(path ? "N/A" : (rule.UseTrustedProxy ? "Yes" : "No")));
+            const remove = $("<button>", {type: "button", class: "ui red basic mini circular icon button"}).html('<i class="red times icon"></i>');
+            remove.on("click", () => {
+                saved.exceptionRules.splice(index, 1);
+                persist();
+            });
+            row.append($("<td>").append(remove));
+            body.append(row);
+        });
+    }
+
+    function restoreUI() {
+        $("#allowedGroups").val(saved.allowedGroups || "");
+        $("#forwardUserInfo").prop("checked", saved.forwardUserInfo);
+        $("#removeUntrusted").prop("checked", saved.removeUntrustedIdentityHeaders);
+        $("#forwardWebSocket").prop("checked", saved.forwardWebSocketIdentity);
+        $("#removeTokenCookie").prop("checked", saved.removeTokenCookie);
+        $("#forwardedClaims input").each(function() {
+            $(this).prop("checked", (saved.forwardedClaims || defaultClaims).includes($(this).val()));
+        });
+        updateAdvancedStates();
+        renderExceptions();
+    }
+
+    function load() {
+        if (!config.ep) return;
+        $.cjax({
+            url: "/api/proxy/auth/oauth2/settings",
+            method: "GET",
+            data: {ep: config.ep},
+            success: function(data) {
+                if (data.error) return showErrors(data.error);
+                saved = data;
+                restoreUI();
+            },
+            error: () => showErrors("Could not load OAuth2 access settings")
+        });
+        $.cjax({
+            url: "/api/sso/OAuth2",
+            method: "GET",
+            success: function(data) {
+                const normalized = normalize(data.oauth2DefaultAllowedGroups || "");
+                $("#allowedGroups").attr("placeholder", normalized || "Any authenticated user");
+            }
+        });
+    }
+
+    function persist() {
+        if (!saved) return;
+        $.cjax({
+            url: "/api/proxy/auth/oauth2/settings",
+            method: "POST",
+            data: {ep: config.ep, settings: JSON.stringify(saved)},
+            success: function(data) {
+                if (data.error) return showErrors(data.error);
+                parent.msgbox("OAuth2 access settings updated", true);
+                load();
+            },
+            error: () => showErrors("Could not save OAuth2 access settings")
+        });
+    }
+
+    $("#saveGroups").on("click", function() {
+        if (!saved) return;
+        saved.allowedGroups = normalize($("#allowedGroups").val());
+        $("#allowedGroups").val(saved.allowedGroups);
+        persist();
+    });
+
+    $("#addException").on("click", function() {
+        if (!saved) return;
+        const ip = $("#exceptionTypeDropdown").val() === "ip";
+        let rule;
+        if (ip) {
+            const cidr = $("#newExclusionIP").val().trim();
+            if (!cidr) return showErrors("IP or CIDR cannot be empty");
+            rule = {RuleType: 1, CIDR: cidr, UseTrustedProxy: $("#newExclusionTrustProxy").is(":checked")};
+        } else {
+            let prefix = $("#newExclusionPath").val().trim();
+            if (!prefix) return showErrors("Path prefix cannot be empty");
+            if (!prefix.startsWith("/")) prefix = "/" + prefix;
+            rule = {RuleType: 0, PathPrefix: prefix, CaseInsensitive: !$("#newExclusionCaseSensitive").is(":checked")};
+        }
+        const key = ip ? "CIDR" : "PathPrefix";
+        if (saved.exceptionRules.some(x => x.RuleType === rule.RuleType && x[key] === rule[key])) {
+            return showErrors("This authentication exclusion already exists");
+        }
+        saved.exceptionRules.push(rule);
+        persist();
+        $("#newExclusionPath, #newExclusionIP").val("");
+    });
+
+    $("#forwardUserInfo, #removeTokenCookie").on("change", updateAdvancedStates);
+    $("#saveAdvanced").on("click", function() {
+        if (!saved) return;
+        saved.forwardUserInfo = $("#forwardUserInfo").is(":checked");
+        saved.removeUntrustedIdentityHeaders = $("#removeUntrusted").is(":checked") || saved.forwardUserInfo;
+        saved.forwardWebSocketIdentity = saved.forwardUserInfo && $("#forwardWebSocket").is(":checked");
+        saved.removeTokenCookie = $("#removeTokenCookie").is(":checked");
+        saved.forwardedClaims = $("#forwardedClaims input:checked").map(function(){return $(this).val()}).get();
+        persist();
+    });
+    load();
+</script>
+</body>
+</html>

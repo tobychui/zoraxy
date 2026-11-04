@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 
 	"imuslab.com/zoraxy/mod/auth"
 	"imuslab.com/zoraxy/mod/netutils"
@@ -55,7 +56,7 @@ func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *htt
 			return true
 		}
 	case AuthMethodOauth2:
-		err := h.handleOAuth2Auth(w, r)
+		err := h.handleOAuth2Auth(w, r, sep)
 		if err != nil {
 			if sep.shouldLogRequest(false) {
 				clientIP := h.Parent.GetClientIPForEndpoint(r, sep)
@@ -90,8 +91,13 @@ func basicAuthExceptionMatched(pe *ProxyEndpoint, r *http.Request) bool {
 	if pe == nil || pe.AuthenticationProvider == nil {
 		return false
 	}
+	return authExceptionMatched(pe.AuthenticationProvider.BasicAuthExceptionRules, r)
+}
+
+// authExceptionMatched is shared by Basic Auth and OAuth2, including CIDR safety rules.
+func authExceptionMatched(rules []*BasicAuthExceptionRule, r *http.Request) bool {
 	requestTarget := pathmatch.RequestTarget(r)
-	for _, exceptionRule := range pe.AuthenticationProvider.BasicAuthExceptionRules {
+	for _, exceptionRule := range rules {
 		if exceptionRule == nil {
 			continue
 		}
@@ -186,8 +192,26 @@ func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request)
 }
 
 /* OAuth2 Auth */
-func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
-	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r)
+func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) error {
+	provider := sep.AuthenticationProvider
+	forwardIdentity := !provider.OAuth2DisableIdentityForwarding
+	if forwardIdentity || !provider.OAuth2AllowUntrustedIdentityHeaders {
+		oauth2.StripIdentityHeaders(r.Header)
+	}
+
+	// The OAuth2 callback must always reach the auth handler.
+	if r.URL.Path != "/internal/oauth2" && authExceptionMatched(provider.OAuth2ExceptionRules, r) {
+		oauth2.StripOAuth2Cookies(r, !provider.OAuth2DisableTokenCookieRemoval)
+		return nil
+	}
+
+	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r, &oauth2.AccessPolicy{
+		AllowedGroups:            provider.OAuth2AllowedGroups,
+		ForwardUserInfo:          forwardIdentity,
+		ForwardWebSocketIdentity: provider.OAuth2ForwardWebSocketIdentity,
+		ForwardedClaims:          provider.OAuth2ForwardedClaims,
+		RemoveTokenCookie:        !provider.OAuth2DisableTokenCookieRemoval,
+	})
 }
 
 /* ZorxAuth */

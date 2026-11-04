@@ -2,6 +2,7 @@ package oauth2
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,7 @@ type OAuth2RouterOptions struct {
 	OAuth2WellKnownUrl           string //The well-known url for OAuth 2.0 server
 	OAuth2UserInfoUrl            string //The URL of the OAuth 2.0 user info endpoint
 	OAuth2Scopes                 string //The scopes for OAuth 2.0 Application
+	OAuth2DefaultAllowedGroups   string //Comma-separated groups required by default for OAuth2 routes
 	OAuth2CodeChallengeMethod    string //The authorization code challenge method
 	OAuth2ConfigurationCacheTime *time.Duration
 	Logger                       *logger.Logger
@@ -70,6 +72,7 @@ func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 	options.Database.Read("oauth2", "oauth2UserInfoUrl", &options.OAuth2UserInfoUrl)
 	options.Database.Read("oauth2", "oauth2CodeChallengeMethod", &options.OAuth2CodeChallengeMethod)
 	options.Database.Read("oauth2", "oauth2Scopes", &options.OAuth2Scopes)
+	options.Database.Read("oauth2", "oauth2DefaultAllowedGroups", &options.OAuth2DefaultAllowedGroups)
 	options.Database.Read("oauth2", "oauth2ConfigurationCacheTime", &options.OAuth2ConfigurationCacheTime)
 
 	ar := &OAuth2Router{
@@ -112,6 +115,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsGET(w http.ResponseWriter, r *http
 		"oauth2TokenUrl":               ar.options.OAuth2TokenURL,
 		"oauth2UserInfoUrl":            ar.options.OAuth2UserInfoUrl,
 		"oauth2Scopes":                 ar.options.OAuth2Scopes,
+		"oauth2DefaultAllowedGroups":   ar.options.OAuth2DefaultAllowedGroups,
 		"oauth2ClientSecret":           ar.options.OAuth2ClientSecret,
 		"oauth2ClientId":               ar.options.OAuth2ClientId,
 		"oauth2CodeChallengeMethod":    ar.options.OAuth2CodeChallengeMethod,
@@ -179,6 +183,10 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 		oauth2Scopes, _ = utils.PostPara(r, "oauth2Scopes")
 	}
 
+	// Allowed groups are configured globally but routes can override them.
+	defaultAllowedGroups, _ := utils.PostPara(r, "oauth2DefaultAllowedGroups")
+	defaultAllowedGroups = strings.Join(SplitAllowedGroups(defaultAllowedGroups), ",")
+
 	//Write changes to runtime
 	ar.options.OAuth2WellKnownUrl = oauth2WellKnownUrl
 	ar.options.OAuth2ServerURL = oauth2ServerUrl
@@ -187,6 +195,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	ar.options.OAuth2ClientId = oauth2ClientId
 	ar.options.OAuth2ClientSecret = oauth2ClientSecret
 	ar.options.OAuth2Scopes = oauth2Scopes
+	ar.options.OAuth2DefaultAllowedGroups = defaultAllowedGroups
 	ar.options.OAuth2CodeChallengeMethod = oauth2CodeChallengeMethod
 	ar.options.OAuth2ConfigurationCacheTime = oauth2ConfigurationCacheTime
 
@@ -198,6 +207,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	ar.options.Database.Write("oauth2", "oauth2ClientId", oauth2ClientId)
 	ar.options.Database.Write("oauth2", "oauth2ClientSecret", oauth2ClientSecret)
 	ar.options.Database.Write("oauth2", "oauth2Scopes", oauth2Scopes)
+	ar.options.Database.Write("oauth2", "oauth2DefaultAllowedGroups", defaultAllowedGroups)
 	ar.options.Database.Write("oauth2", "oauth2CodeChallengeMethod", oauth2CodeChallengeMethod)
 	ar.options.Database.Write("oauth2", "oauth2ConfigurationCacheTime", oauth2ConfigurationCacheTime)
 
@@ -215,6 +225,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.OAuth2ClientId = ""
 	ar.options.OAuth2ClientSecret = ""
 	ar.options.OAuth2Scopes = ""
+	ar.options.OAuth2DefaultAllowedGroups = ""
 	ar.options.OAuth2CodeChallengeMethod = ""
 
 	ar.options.Database.Delete("oauth2", "oauth2WellKnownUrl")
@@ -224,6 +235,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.Database.Delete("oauth2", "oauth2ClientId")
 	ar.options.Database.Delete("oauth2", "oauth2ClientSecret")
 	ar.options.Database.Delete("oauth2", "oauth2Scopes")
+	ar.options.Database.Delete("oauth2", "oauth2DefaultAllowedGroups")
 	ar.options.Database.Delete("oauth2", "oauth2CodeChallengeMethod")
 	ar.options.Database.Delete("oauth2", "oauth2ConfigurationCacheTime")
 
@@ -245,9 +257,7 @@ func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2
 			ar.options.Logger.PrintAndLog("OAuth2Router", fmt.Sprintf("Failed to decode ([%d] %s)", resp.StatusCode, resp.Status), err)
 			return nil, err
 		}
-		if len(config.Scopes) == 0 {
-			config.Scopes = oidcDiscoveryDocument.ScopesSupported
-		}
+		// Discovery describes supported scopes, not a scope request. Never request all of them implicitly.
 
 		if config.Endpoint.AuthURL == "" {
 			config.Endpoint.AuthURL = oidcDiscoveryDocument.AuthorizationEndpoint
@@ -276,7 +286,7 @@ func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error
 		},
 	}
 	if ar.options.OAuth2Scopes != "" {
-		config.Scopes = strings.Split(ar.options.OAuth2Scopes, ",")
+		config.Scopes = strings.FieldsFunc(ar.options.OAuth2Scopes, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
 	}
 	if ar.options.OAuth2WellKnownUrl != "" && (config.Endpoint.AuthURL == "" || config.Endpoint.TokenURL == "" ||
 		ar.options.OAuth2UserInfoUrl == "") {
@@ -288,16 +298,20 @@ func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error
 // HandleOAuth2Auth is the internal handler for OAuth authentication
 // Set useHTTPS to true if your OAuth server is using HTTPS
 // Set OAuthURL to the URL of the OAuth server, e.g. OAuth.example.com
-func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request) error {
+func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request, policy *AccessPolicy) error {
+	if policy == nil {
+		policy = &AccessPolicy{ForwardUserInfo: true, RemoveTokenCookie: true}
+	}
 	const callbackPrefix = "/internal/oauth2"
 	const tokenCookie = "z-token"
 	const verifierCookie = "z-verifier"
+	const stateCookie = "z-oauth-state"
+	const returnCookie = "z-oauth-return"
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
 
-	reqUrl := scheme + "://" + r.Host + r.RequestURI
 	oauthConfigCache, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(r.Host, func() *oauth2.Config {
 		oauthConfig, err := ar.newOAuth2Conf(scheme + "://" + r.Host + callbackPrefix)
 		if err != nil {
@@ -321,7 +335,20 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
-	if r.Method == http.MethodGet && strings.HasPrefix(r.RequestURI, callbackPrefix) && code != "" && state != "" {
+	if r.URL.Path == callbackPrefix {
+		validState, stateErr := r.Cookie(stateCookie)
+		originalReturn, returnErr := r.Cookie(returnCookie)
+		if r.Method != http.MethodGet || code == "" || state == "" || stateErr != nil ||
+			returnErr != nil || subtle.ConstantTimeCompare([]byte(state), []byte(validState.Value)) != 1 {
+			http.Error(w, "Invalid OAuth2 callback state", http.StatusUnauthorized)
+			return errors.New("invalid callback state")
+		}
+		originalPath, decodeErr := url.QueryUnescape(originalReturn.Value)
+		if decodeErr != nil || !strings.HasPrefix(originalPath, "/") || strings.HasPrefix(originalPath, "//") ||
+			strings.ContainsAny(originalPath, "\r\n") || strings.HasPrefix(originalPath, callbackPrefix) {
+			http.Error(w, "Invalid OAuth2 return path", http.StatusUnauthorized)
+			return errors.New("invalid return path")
+		}
 		ctx := context.Background()
 		var authCodeOptions []oauth2.AuthCodeOption
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
@@ -349,7 +376,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		if cookieExpiry.IsZero() || cookieExpiry.Before(time.Now()) {
 			cookieExpiry = time.Now().Add(time.Hour)
 		}
-		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry}
+		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry, HttpOnly: true}
 		if scheme == "https" {
 			cookie.Secure = true
 			cookie.SameSite = http.SameSiteLaxMode
@@ -357,7 +384,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		w.Header().Add("Set-Cookie", cookie.String())
 
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
-			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1)}
+			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1), HttpOnly: true}
 			if scheme == "https" {
 				cookie.Secure = true
 				cookie.SameSite = http.SameSiteLaxMode
@@ -365,17 +392,11 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 			w.Header().Add("Set-Cookie", cookie.String())
 		}
 
-		//Fix for #695
-		location := strings.TrimPrefix(state, "/internal/")
-		//Check if the location starts with http:// or https://. if yes, this is full URL
-		decodedLocation, err := url.PathUnescape(location)
-		if err == nil && (strings.HasPrefix(decodedLocation, "http://") || strings.HasPrefix(decodedLocation, "https://")) {
-			//Redirect to the full URL
-			http.Redirect(w, r, decodedLocation, http.StatusTemporaryRedirect)
-		} else {
-			//Redirect to a relative path
-			http.Redirect(w, r, state, http.StatusTemporaryRedirect)
+		// State and return destination are short-lived and bound to this host.
+		for _, name := range []string{stateCookie, returnCookie} {
+			http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
 		}
+		http.Redirect(w, r, originalPath, http.StatusSeeOther)
 
 		return errors.New("authorized")
 	}
@@ -385,27 +406,43 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 		if cookie.Value == "" {
 			unauthorized = true
 		} else {
-			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+			defer cancel()
 			client := oauthConfig.Client(ctx, &oauth2.Token{AccessToken: cookie.Value})
-			req, err := client.Get(ar.options.OAuth2UserInfoUrl)
-			if err != nil {
-				ar.options.Logger.PrintAndLog("OAuth2", "Failed to get user info", err)
+			identity, fetchErr := FetchIdentity(ctx, client, ar.options.OAuth2UserInfoUrl)
+			if fetchErr != nil {
+				ar.options.Logger.PrintAndLog("OAuth2", "Failed to validate user info", fetchErr)
 				unauthorized = true
-			}
-			defer req.Body.Close()
-			if req.StatusCode != http.StatusOK {
-				ar.options.Logger.PrintAndLog("OAuth2", "Failed to get user info", err)
-				unauthorized = true
+			} else {
+				allowedGroups := policy.AllowedGroups
+				if len(allowedGroups) == 0 {
+					allowedGroups = SplitAllowedGroups(ar.options.OAuth2DefaultAllowedGroups)
+				}
+				if !GroupsAllowed(identity.Groups, allowedGroups) {
+					http.Error(w, "403 - Access denied: insufficient group permissions", http.StatusForbidden)
+					return errors.New("forbidden")
+				}
+				isWebSocket := strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
+				if policy.ForwardUserInfo && (!isWebSocket || policy.ForwardWebSocketIdentity) {
+					SetIdentityHeaders(r.Header, identity, policy.ForwardedClaims)
+				}
+				StripOAuth2Cookies(r, policy.RemoveTokenCookie)
 			}
 		}
 	} else {
 		unauthorized = true
 	}
 	if unauthorized {
-		state := url.QueryEscape(reqUrl)
-		var url string
+		state := oauth2.GenerateVerifier()
+		originalPath := r.URL.RequestURI()
+		if originalPath == "" || len(originalPath) > 4096 || !strings.HasPrefix(originalPath, "/") || strings.HasPrefix(originalPath, "//") {
+			originalPath = "/"
+		}
+		http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: state, Path: "/", Expires: time.Now().Add(10*time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
+		http.SetCookie(w, &http.Cookie{Name: returnCookie, Value: url.QueryEscape(originalPath), Path: "/", Expires: time.Now().Add(10*time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
+		var authURL string
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
-			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1)}
+			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1), HttpOnly: true}
 			if scheme == "https" {
 				cookie.Secure = true
 				cookie.SameSite = http.SameSiteLaxMode
@@ -414,15 +451,15 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request)
 			w.Header().Add("Set-Cookie", cookie.String())
 
 			if ar.options.OAuth2CodeChallengeMethod == "PKCE" {
-				url = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", cookie.Value))
+				authURL = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", cookie.Value))
 			} else {
-				url = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(cookie.Value))
+				authURL = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(cookie.Value))
 			}
 		} else {
-			url = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+			authURL = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
 		}
 
-		http.Redirect(w, r, url, http.StatusFound)
+		http.Redirect(w, r, authURL, http.StatusFound)
 
 		return errors.New("unauthorized")
 	}

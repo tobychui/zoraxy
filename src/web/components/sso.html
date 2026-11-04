@@ -198,6 +198,12 @@
             </div>
 
             <div class="field">
+                <label for="oauth2DefaultAllowedGroups">Default Allowed Groups</label>
+                <input type="text" id="oauth2DefaultAllowedGroups" name="oauth2DefaultAllowedGroups" placeholder="Any authenticated user">
+                <small>Comma-separated OIDC groups. Empty allows any authenticated user unless the route specifies groups.</small>
+            </div>
+
+            <div class="field">
                 <label for="oauth2ConfigurationCacheTime">Configuration cache time</label>
                 <input type="text" id="oauth2ConfigurationCacheTime" name="oauth2ConfigurationCacheTime" placeholder="Enter Configuration Cache Time">
                 <small>Time to cache OAuth2 configuration before refresh. Accepts Go time.Duration format (e.g. 1m, 10m, 1h). Defaults to 60s.</small>
@@ -572,6 +578,7 @@
                 $('#oauth2ClientId').val(data.oauth2ClientId);
                 $('#oauth2ClientSecret').val(data.oauth2ClientSecret);
                 $('#oauth2Scopes').val(data.oauth2Scopes);
+                $('#oauth2DefaultAllowedGroups').val(data.oauth2DefaultAllowedGroups || '');
                 $('#oauth2ConfigurationCacheTime').val(data.oauth2ConfigurationCacheTime);
                 $('[data-value="'+data.oauth2CodeChallengeMethod+'"]').click();
             },
@@ -600,6 +607,8 @@
                 return;
             }
         }
+
+        $('#oauth2DefaultAllowedGroups').val([...new Set($('#oauth2DefaultAllowedGroups').val().split(',').map(x => x.trim()).filter(Boolean))].join(', '));
 
         $.cjax({
             url: '/api/sso/OAuth2',

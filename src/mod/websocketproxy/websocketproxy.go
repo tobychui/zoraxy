@@ -234,6 +234,17 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	if w.Options.ForwardIdentityHeaders {
+		for _, key := range []string{"Remote-Subject", "Remote-User", "Remote-Name", "Remote-Email", "Remote-Groups"} {
+			if values := req.Header.Values(key); len(values) > 0 {
+				requestHeader.Del(key)
+				for _, value := range values {
+					requestHeader.Add(key, value)
+				}
+			}
+		}
+	}
+
 	// Connect to the backend URL, also pass the headers we get from the requst
 	// together with the Forwarded headers we prepared above.
 	// TODO: support multiplexing on the same backend connection instead of
