@@ -63,6 +63,7 @@ type Options struct {
 	SkipTLSValidation              bool                         //Skip backend TLS validation
 	SkipOriginCheck                bool                         //Skip origin check
 	CopyAllHeaders                 bool                         //Copy all headers from incoming request to backend request
+	ForwardIdentityHeaders         bool                         //Forward verified user information to WebSocket backends
 	UserDefinedHeaders             []*rewrite.UserDefinedHeader //User defined headers
 	Logger                         *logger.Logger               //Logger, can be nil
 	Timeout                        int64                        //Connection timeout in seconds, 0 means default (300 seconds)
