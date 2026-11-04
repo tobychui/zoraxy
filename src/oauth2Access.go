@@ -18,7 +18,7 @@ type oauth2RouteSettings struct {
     RemoveUntrustedIdentityHeaders bool                              `json:"removeUntrustedIdentityHeaders"`
     ForwardWebSocketIdentity      bool                               `json:"forwardWebSocketIdentity"`
     RemoveTokenCookie             bool                               `json:"removeTokenCookie"`
-    ForwardedClaims               []string                           `json:"forwardedClaims"`
+    ForwardedScopes               string                             `json:"forwardedScopes"`
 }
 
 // HandleProxyOAuth2Settings edits only the OAuth2 configuration for one host.
@@ -43,9 +43,9 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
     }
     provider := proxy.AuthenticationProvider
     if r.Method == http.MethodGet {
-        claims := provider.OAuth2ForwardedClaims
-        if claims == nil {
-            claims = oauthaccess.DefaultClaims()
+        scopes := provider.OAuth2ForwardedScopes
+        if scopes == nil {
+            scopes = oauthaccess.ScopesForClaims(provider.OAuth2ForwardedClaims)
         }
         rules := provider.OAuth2ExceptionRules
         if rules == nil {
@@ -56,9 +56,9 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
             ExceptionRules: rules,
             ForwardUserInfo: !provider.OAuth2DisableIdentityForwarding,
             RemoveUntrustedIdentityHeaders: !provider.OAuth2AllowUntrustedIdentityHeaders || !provider.OAuth2DisableIdentityForwarding,
-            ForwardWebSocketIdentity: provider.OAuth2ForwardWebSocketIdentity,
+            ForwardWebSocketIdentity: provider.OAuth2ForwardWebSocketIdentity == nil || *provider.OAuth2ForwardWebSocketIdentity,
             RemoveTokenCookie: !provider.OAuth2DisableTokenCookieRemoval,
-            ForwardedClaims: claims,
+            ForwardedScopes: strings.Join(scopes, ", "),
         }
         data, _ := json.Marshal(response)
         utils.SendJSONResponse(w, string(data))
@@ -104,28 +104,19 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
             return
         }
     }
-    claims := make([]string, 0, len(input.ForwardedClaims))
-    seen := map[string]bool{}
-    for _, claim := range input.ForwardedClaims {
-        switch claim {
-        case "sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups":
-            if !seen[claim] {
-                claims = append(claims, claim)
-                seen[claim] = true
-            }
-        default:
-            utils.SendErrorResponse(w, "Unsupported forwarded claim")
-            return
-        }
+    scopes, err := oauthaccess.ParseForwardedScopes(input.ForwardedScopes)
+    if err != nil {
+        utils.SendErrorResponse(w, err.Error())
+        return
     }
 
     provider.OAuth2AllowedGroups = oauthaccess.SplitAllowedGroups(input.AllowedGroups)
     provider.OAuth2ExceptionRules = input.ExceptionRules
     provider.OAuth2DisableIdentityForwarding = !input.ForwardUserInfo
     provider.OAuth2AllowUntrustedIdentityHeaders = !input.RemoveUntrustedIdentityHeaders && !input.ForwardUserInfo
-    provider.OAuth2ForwardWebSocketIdentity = input.ForwardUserInfo && input.ForwardWebSocketIdentity
+    provider.OAuth2ForwardWebSocketIdentity = &input.ForwardWebSocketIdentity
     provider.OAuth2DisableTokenCookieRemoval = !input.RemoveTokenCookie
-    provider.OAuth2ForwardedClaims = claims
+    provider.OAuth2ForwardedScopes = scopes
     proxy.UpdateToRuntime()
     SaveReverseProxyConfig(proxy)
     utils.SendOK(w)

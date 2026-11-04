@@ -277,7 +277,7 @@ func (h *ProxyHandler) hostWebSocketRequest(w http.ResponseWriter, r *http.Reque
 		SkipTLSValidation:              selectedUpstream.SkipCertValidations,
 		SkipOriginCheck:                selectedUpstream.SkipWebSocketOriginCheck,
 		CopyAllHeaders:                 target.EnableWebsocketCustomHeaders,
-		ForwardIdentityHeaders: target.AuthenticationProvider != nil && target.AuthenticationProvider.AuthMethod == AuthMethodOauth2 && !target.AuthenticationProvider.OAuth2DisableIdentityForwarding && target.AuthenticationProvider.OAuth2ForwardWebSocketIdentity,
+		ForwardIdentityHeaders: target.AuthenticationProvider != nil && target.AuthenticationProvider.AuthMethod == AuthMethodOauth2 && !target.AuthenticationProvider.OAuth2DisableIdentityForwarding && (target.AuthenticationProvider.OAuth2ForwardWebSocketIdentity == nil || *target.AuthenticationProvider.OAuth2ForwardWebSocketIdentity),
 		UserDefinedHeaders:             target.HeaderRewriteRules.UserDefinedHeaders,
 		Logger:                         h.Parent.Option.Logger,
 		Timeout:                        target.WebsocketTimeout,
@@ -326,7 +326,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			SkipTLSValidation:              target.SkipCertValidations,
 			SkipOriginCheck:                true,                                       //You should not use websocket via virtual directory. But keep this to true for compatibility
 			CopyAllHeaders:                 target.parent.EnableWebsocketCustomHeaders, //Left this as default to prevent nginx user setting / as vdir
-			ForwardIdentityHeaders: target.parent.AuthenticationProvider != nil && target.parent.AuthenticationProvider.AuthMethod == AuthMethodOauth2 && !target.parent.AuthenticationProvider.OAuth2DisableIdentityForwarding && target.parent.AuthenticationProvider.OAuth2ForwardWebSocketIdentity,
+			ForwardIdentityHeaders: target.parent.AuthenticationProvider != nil && target.parent.AuthenticationProvider.AuthMethod == AuthMethodOauth2 && !target.parent.AuthenticationProvider.OAuth2DisableIdentityForwarding && (target.parent.AuthenticationProvider.OAuth2ForwardWebSocketIdentity == nil || *target.parent.AuthenticationProvider.OAuth2ForwardWebSocketIdentity),
 			UserDefinedHeaders:             target.parent.HeaderRewriteRules.UserDefinedHeaders,
 			Logger:                         h.Parent.Option.Logger,
 			Timeout:                        target.parent.WebsocketTimeout,

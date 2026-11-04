@@ -89,3 +89,58 @@ func TestIdentityHeadersAndCookieRemoval(t *testing.T) {
         t.Fatalf("wrong cookie filtering: %q", req.Header.Get("Cookie"))
     }
 }
+
+func TestForwardedScopesParsing(t *testing.T) {
+    scopes, err := ParseForwardedScopes("openid, profile  email,groups,profile")
+    if err != nil {
+        t.Fatal(err)
+    }
+    expectedScopes := []string{"openid", "profile", "email", "groups"}
+    if !reflect.DeepEqual(scopes, expectedScopes) {
+        t.Fatalf("scopes=%v, want %v", scopes, expectedScopes)
+    }
+    if _, err := ParseForwardedScopes("profile, unknown_scope"); err == nil {
+        t.Fatal("unsupported forwarding scope must be rejected")
+    }
+    empty, err := ParseForwardedScopes("")
+    if err != nil || empty == nil || len(empty) != 0 {
+        t.Fatalf("empty list must be an explicit, non-nil list: %v, %v", empty, err)
+    }
+}
+
+func TestClaimsForScopes(t *testing.T) {
+    claims := ClaimsForScopes([]string{"openid", "profile"})
+    expected := []string{"sub", "preferred_username", "name", "display_name", "nickname", "picture"}
+    if !reflect.DeepEqual(claims, expected) {
+        t.Fatalf("claims=%v, want %v", claims, expected)
+    }
+    if len(ClaimsForScopes([]string{})) != 0 {
+        t.Fatal("empty scopes must not forward any claim")
+    }
+}
+
+func TestScopesForLegacyClaims(t *testing.T) {
+    scopes := ScopesForClaims([]string{"sub", "name", "groups"})
+    want := []string{"openid", "profile", "groups"}
+    if !reflect.DeepEqual(scopes, want) {
+        t.Fatalf("scopes=%v, want %v", scopes, want)
+    }
+    if len(ScopesForClaims(nil)) != 4 {
+        t.Fatal("legacy default should represent the standard forwarding scopes")
+    }
+}
+
+func TestScopeRestrictedHeaders(t *testing.T) {
+    header := http.Header{}
+    identity := &Identity{
+        Subject: "123", PreferredUsername: "test", Name: "Person",
+        Email: "test@example.com", Groups: []string{"admins"},
+    }
+    SetIdentityHeaders(header, identity, ClaimsForScopes([]string{"openid", "email"}))
+    if header.Get("Remote-Subject") != "123" || header.Get("Remote-Email") != "test@example.com" {
+        t.Fatal("expected claims missing")
+    }
+    if header.Get("Remote-User") != "" || header.Get("Remote-Groups") != "" {
+        t.Fatal("forwarded claims leaked across scope selection")
+    }
+}

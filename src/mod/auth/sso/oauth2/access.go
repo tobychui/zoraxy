@@ -20,6 +20,84 @@ var IdentityHeaderNames = []string{
 
 var DefaultForwardedClaims = []string{"sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups"}
 
+var DefaultForwardedScopes = []string{"openid", "profile", "email", "groups"}
+
+// ParseForwardedScopes accepts scope names as a comma- or space-separated list.
+// These scopes only filter forwarded UserInfo claims, not OAuth authorization requests.
+func ParseForwardedScopes(value string) ([]string, error) {
+    scopes := []string{}
+    seen := make(map[string]bool)
+    for _, scope := range strings.FieldsFunc(value, func(r rune) bool {
+        return r == ',' || r == ' ' || r == '\t' || r == '\n'
+    }) {
+        switch scope {
+        case "openid", "profile", "email", "groups":
+            if !seen[scope] {
+                scopes = append(scopes, scope)
+                seen[scope] = true
+            }
+        default:
+            return nil, fmt.Errorf("unsupported forwarded scope %q (supported: openid, profile, email, groups)", scope)
+        }
+    }
+    return scopes, nil
+}
+
+// ClaimsForScopes maps the selected standard/commonly used OIDC scopes to the
+// UserInfo fields Zoraxy understands. An empty selection means no identity headers.
+func ClaimsForScopes(scopes []string) []string {
+    claims := []string{}
+    seen := make(map[string]bool)
+    add := func(names ...string) {
+        for _, name := range names {
+            if !seen[name] {
+                seen[name] = true
+                claims = append(claims, name)
+            }
+        }
+    }
+    for _, scope := range scopes {
+        switch scope {
+        case "openid":
+            add("sub")
+        case "profile":
+            add("preferred_username", "name", "display_name", "nickname", "picture")
+        case "email":
+            add("email")
+        case "groups":
+            add("groups")
+        }
+    }
+    return claims
+}
+
+// ScopesForClaims represents older checkbox-based choices as the closest
+// available scope selection for the editor without modifying stored settings.
+func ScopesForClaims(claims []string) []string {
+    if claims == nil {
+        return append([]string{}, DefaultForwardedScopes...)
+    }
+    present := make(map[string]bool)
+    for _, claim := range claims {
+        present[claim] = true
+    }
+    result := []string{}
+    if present["sub"] {
+        result = append(result, "openid")
+    }
+    if present["preferred_username"] || present["name"] || present["display_name"] || present["nickname"] || present["picture"] {
+        result = append(result, "profile")
+    }
+    if present["email"] {
+        result = append(result, "email")
+    }
+    if present["groups"] {
+        result = append(result, "groups")
+    }
+    return result
+}
+
+
 // AccessPolicy is provided by each protected proxy endpoint.
 type AccessPolicy struct {
     AllowedGroups            []string

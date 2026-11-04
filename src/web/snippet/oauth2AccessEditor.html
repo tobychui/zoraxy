@@ -50,7 +50,7 @@
         </div>
         <div class="ui yellow message">
             <i class="exclamation triangle icon"></i>
-            <b>Security Warning:</b> Only enable this when Zoraxy is behind a trusted proxy that removes spoofed client IP headers.
+            Only enable this when Zoraxy is behind a trusted proxy that removes spoofed client IP headers.
         </div>
     </div>
     <button type="button" class="ui basic button" id="addException"><i class="yellow plus icon"></i> Add Exception</button>
@@ -59,58 +59,60 @@
     <div class="ui accordion" id="oauth2Advanced">
         <div class="title"><i class="dropdown icon"></i> <b>Advanced Options</b></div>
         <div class="content">
-            <div class="field"><div class="ui toggle checkbox">
-                <input type="checkbox" id="forwardUserInfo">
-                <label>Forward User Information
-                    <br><small>Pass verified identity claims as Remote-* headers to HTTP backends.</small>
-                </label>
-            </div></div>
-            <div class="field"><div class="ui toggle checkbox">
-                <input type="checkbox" id="removeUntrusted" checked>
-                <label>Remove Untrusted Identity Headers
-                    <br><small>Always required when forwarding verified user information.</small>
-                </label>
-            </div></div>
-            <div class="field"><div class="ui toggle checkbox">
-                <input type="checkbox" id="forwardWebSocket">
-                <label>Forward Identity to WebSocket Connections
-                    <br><small>Also forward verified identity headers in WebSocket upgrade handshakes.</small>
-                </label>
-            </div></div>
             <div class="field">
-                <label>Forwarded Claims</label>
-                <div class="grouped fields" id="forwardedClaims">
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="sub" checked><label>User ID (sub)</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="preferred_username" checked><label>Username</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="name" checked><label>Name</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="display_name" checked><label>Display Name</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="nickname" checked><label>Nickname (if supported)</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="picture" checked><label>Profile Picture URL</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="email" checked><label>Email</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="groups" checked><label>Groups</label></div></div>
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="forwardUserInfo" checked>
+                    <label>Forward User Information
+                        <br><small>Forward verified OAuth2 identity information to the upstream service using Remote-* headers.</small>
+                    </label>
                 </div>
             </div>
-            <div class="ui divider"></div>
-            <div class="field"><div class="ui toggle checkbox">
-                <input type="checkbox" id="removeTokenCookie" checked>
-                <label>Remove OAuth2 Token Cookie
-                    <br><small>Remove z-token from requests sent to upstream HTTP and WebSocket services.</small>
-                </label>
-            </div></div>
-            <div id="tokenWarning" class="ui negative message" style="display: none">
-                <i class="exclamation triangle icon"></i>
-                <b>Security Warning:</b> Disabling token removal exposes the raw OAuth2 access token to the backend. Only do this if you know what you are doing and the application explicitly needs the token.
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="forwardWebSocket" checked>
+                    <label>Forward Identity to WebSocket Connections
+                        <br><small>Include verified identity headers in WebSocket upgrade requests. Requires Forward User Information.</small>
+                    </label>
+                </div>
             </div>
-            <button type="button" class="ui basic button" id="saveAdvanced"><i class="green check icon"></i> Apply Advanced Options</button>
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="removeUntrusted" checked>
+                    <label>Remove Untrusted Identity Headers
+                        <br><small>Remove client-supplied identity headers. Always enabled when forwarding verified user information.</small>
+                    </label>
+                </div>
+            </div>
+            <div class="field">
+                <label for="forwardedScopes">Forwarded Scopes</label>
+                <input type="text" id="forwardedScopes" placeholder="openid, profile, email, groups" autocomplete="off">
+                <small>Comma-separated scopes controlling which verified claims are forwarded: openid, profile, email, groups. Scopes requested at login are configured globally. Saves when you leave this field.</small>
+            </div>
+            <div class="ui divider"></div>
+            <div class="field">
+                <div class="ui toggle checkbox">
+                    <input type="checkbox" id="removeTokenCookie" checked>
+                    <label>Remove OAuth2 Token Cookie
+                        <br><small>Remove z-token from requests sent to upstream HTTP and WebSocket services.</small>
+                    </label>
+                </div>
+            </div>
+            <div id="tokenWarning" class="ui yellow message" style="display: none">
+                <i class="exclamation triangle icon"></i>
+                Disabling this option forwards the raw OAuth2 access token to the upstream service. Only disable it if the service explicitly needs this token.
+            </div>
+            <small>Advanced settings are saved automatically.</small>
         </div>
     </div>
     <br><br><br>
 </div>
 <script>
-    const config = { ep: "" };
-    const allowedClaims = ["sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups"];
-    const defaultClaims = allowedClaims.slice();
+    const config = {ep: ""};
+    const supportedScopes = ["openid", "profile", "email", "groups"];
     let saved = null;
+    let saving = false;
+    let queuedSave = null;
+
     try {
         const payload = JSON.parse(decodeURIComponent(location.hash.slice(1)));
         config.ep = payload.ep;
@@ -130,18 +132,18 @@
     $("#exceptionTypeDropdown").dropdown("set selected", "path");
 
     const normalize = value => [...new Set(value.split(",").map(x => x.trim()).filter(Boolean))].join(", ");
+    const normalizeScopes = value => [...new Set(value.split(/[\s,]+/).map(x => x.trim()).filter(Boolean))];
+
+    function showErrors(message) {
+        parent.msgbox(message, false, 5000);
+    }
 
     function updateAdvancedStates() {
         const enabled = $("#forwardUserInfo").is(":checked");
         if (enabled) $("#removeUntrusted").prop("checked", true);
         $("#removeUntrusted").prop("disabled", enabled);
-        $("#forwardWebSocket").prop("disabled", !enabled);
-        $("#forwardedClaims input").prop("disabled", !enabled);
+        $("#forwardWebSocket, #forwardedScopes").prop("disabled", !enabled);
         $("#tokenWarning").toggle(!$("#removeTokenCookie").is(":checked"));
-    }
-
-    function showErrors(text) {
-        parent.msgbox(text, false, 5000);
     }
 
     function renderExceptions() {
@@ -160,7 +162,8 @@
             const remove = $("<button>", {type: "button", class: "ui red basic mini circular icon button"}).html('<i class="red times icon"></i>');
             remove.on("click", () => {
                 saved.exceptionRules.splice(index, 1);
-                persist();
+                renderExceptions();
+                persist(true);
             });
             row.append($("<td>").append(remove));
             body.append(row);
@@ -170,12 +173,10 @@
     function restoreUI() {
         $("#allowedGroups").val(saved.allowedGroups || "");
         $("#forwardUserInfo").prop("checked", saved.forwardUserInfo);
-        $("#removeUntrusted").prop("checked", saved.removeUntrustedIdentityHeaders);
         $("#forwardWebSocket").prop("checked", saved.forwardWebSocketIdentity);
+        $("#removeUntrusted").prop("checked", saved.removeUntrustedIdentityHeaders);
         $("#removeTokenCookie").prop("checked", saved.removeTokenCookie);
-        $("#forwardedClaims input").each(function() {
-            $(this).prop("checked", (saved.forwardedClaims || defaultClaims).includes($(this).val()));
-        });
+        $("#forwardedScopes").val(saved.forwardedScopes ?? supportedScopes.join(", "));
         updateAdvancedStates();
         renderExceptions();
     }
@@ -203,18 +204,37 @@
         });
     }
 
-    function persist() {
+    // Send updates one at a time, keeping only the newest queued state.
+    // This prevents quick successive toggles from overwriting each other.
+    function persist(notify = false) {
         if (!saved) return;
+        queuedSave = {
+            json: JSON.stringify(saved),
+            notify: notify || (queuedSave && queuedSave.notify) || false
+        };
+        flushSaves();
+    }
+
+    function flushSaves() {
+        if (saving || !queuedSave) return;
+        const update = queuedSave;
+        queuedSave = null;
+        saving = true;
         $.cjax({
             url: "/api/proxy/auth/oauth2/settings",
             method: "POST",
-            data: {ep: config.ep, settings: JSON.stringify(saved)},
+            data: {ep: config.ep, settings: update.json},
             success: function(data) {
                 if (data.error) return showErrors(data.error);
-                parent.msgbox("OAuth2 access settings updated", true);
-                load();
+                if (update.notify && !queuedSave) {
+                    parent.msgbox("OAuth2 access settings updated", true);
+                }
             },
-            error: () => showErrors("Could not save OAuth2 access settings")
+            error: () => showErrors("Could not save OAuth2 access settings"),
+            complete: function() {
+                saving = false;
+                flushSaves();
+            }
         });
     }
 
@@ -222,7 +242,7 @@
         if (!saved) return;
         saved.allowedGroups = normalize($("#allowedGroups").val());
         $("#allowedGroups").val(saved.allowedGroups);
-        persist();
+        persist(true);
     });
 
     $("#addException").on("click", function() {
@@ -244,21 +264,41 @@
             return showErrors("This authentication exclusion already exists");
         }
         saved.exceptionRules.push(rule);
-        persist();
+        renderExceptions();
+        persist(true);
         $("#newExclusionPath, #newExclusionIP").val("");
     });
 
-    $("#forwardUserInfo, #removeTokenCookie").on("change", updateAdvancedStates);
-    $("#saveAdvanced").on("click", function() {
+    $("#forwardUserInfo, #forwardWebSocket, #removeUntrusted, #removeTokenCookie").on("change", function() {
         if (!saved) return;
+        updateAdvancedStates();
         saved.forwardUserInfo = $("#forwardUserInfo").is(":checked");
+        saved.forwardWebSocketIdentity = $("#forwardWebSocket").is(":checked");
         saved.removeUntrustedIdentityHeaders = $("#removeUntrusted").is(":checked") || saved.forwardUserInfo;
-        saved.forwardWebSocketIdentity = saved.forwardUserInfo && $("#forwardWebSocket").is(":checked");
         saved.removeTokenCookie = $("#removeTokenCookie").is(":checked");
-        saved.forwardedClaims = $("#forwardedClaims input:checked").map(function(){return $(this).val()}).get();
         persist();
     });
+
+    $("#forwardedScopes").on("change", function() {
+        if (!saved) return;
+        const scopes = normalizeScopes($(this).val());
+        const unsupported = scopes.filter(scope => !supportedScopes.includes(scope));
+        if (unsupported.length) {
+            showErrors("Unsupported forwarded scope: " + unsupported.join(", ") + ". Supported: " + supportedScopes.join(", "));
+            return;
+        }
+        saved.forwardedScopes = scopes.join(", ");
+        $(this).val(saved.forwardedScopes);
+        persist();
+    }).on("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            $(this).blur();
+        }
+    });
+
     load();
 </script>
+
 </body>
 </html>

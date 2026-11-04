@@ -148,6 +148,11 @@
                 <small>Secret key of the OAuth2 application</small>
             </div>
             <div class="field">
+                <label for="oauth2DefaultAllowedGroups">Default Allowed Groups</label>
+                <input type="text" id="oauth2DefaultAllowedGroups" name="oauth2DefaultAllowedGroups" placeholder="Any authenticated user">
+                <small>Comma-separated OIDC group names. Empty allows any authenticated user unless a proxy rule specifies its own allowed groups.</small>
+            </div>
+            <div class="field">
                 <label for="oauth2CodeChallengeMethod">Code Challenge Method</label>
 
                 <div class="ui selection dropdown" id="oauth2CodeChallengeMethod">
@@ -195,12 +200,6 @@
                 <label for="oauth2Scopes">Scopes</label>
                 <input type="text" id="oauth2Scopes" name="oauth2Scopes" placeholder="Enter Scopes">
                 <small>Scopes required by the OAuth2 provider to retrieve information about the authenticated user. Refer to your OAuth2 provider documentation for more information about this. Optional if Well-Known url is configured.</small>
-            </div>
-
-            <div class="field">
-                <label for="oauth2DefaultAllowedGroups">Default Allowed Groups</label>
-                <input type="text" id="oauth2DefaultAllowedGroups" name="oauth2DefaultAllowedGroups" placeholder="Any authenticated user">
-                <small>Comma-separated OIDC groups. Empty allows any authenticated user unless the route specifies groups.</small>
             </div>
 
             <div class="field">

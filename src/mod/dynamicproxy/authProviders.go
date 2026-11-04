@@ -205,11 +205,17 @@ func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request, 
 		return nil
 	}
 
+	claims := provider.OAuth2ForwardedClaims
+	if provider.OAuth2ForwardedScopes != nil {
+		claims = oauth2.ClaimsForScopes(provider.OAuth2ForwardedScopes)
+	}
+	forwardWebSocketIdentity := provider.OAuth2ForwardWebSocketIdentity == nil || *provider.OAuth2ForwardWebSocketIdentity
+
 	return h.Parent.Option.OAuth2Router.HandleOAuth2Auth(w, r, &oauth2.AccessPolicy{
 		AllowedGroups:            provider.OAuth2AllowedGroups,
 		ForwardUserInfo:          forwardIdentity,
-		ForwardWebSocketIdentity: provider.OAuth2ForwardWebSocketIdentity,
-		ForwardedClaims:          provider.OAuth2ForwardedClaims,
+		ForwardWebSocketIdentity: forwardWebSocketIdentity,
+		ForwardedClaims:          claims,
 		RemoveTokenCookie:        !provider.OAuth2DisableTokenCookieRemoval,
 	})
 }
