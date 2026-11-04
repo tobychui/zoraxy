@@ -86,22 +86,21 @@
             <div class="field">
                 <label for="forwardedScopes">Forwarded Scopes</label>
                 <input type="text" id="forwardedScopes" placeholder="openid, profile, email, groups" autocomplete="off">
-                <small>Comma-separated scopes controlling which verified claims are forwarded: openid, profile, email, groups. Scopes requested at login are configured globally. Saves when you leave this field.</small>
+                <small>Comma-separated scopes controlling which verified claims are forwarded: openid, profile, email, groups.</small>
             </div>
             <div class="ui divider"></div>
             <div class="field">
                 <div class="ui toggle checkbox">
-                    <input type="checkbox" id="removeTokenCookie" checked>
-                    <label>Remove OAuth2 Token Cookie
-                        <br><small>Remove z-token from requests sent to upstream HTTP and WebSocket services.</small>
+                    <input type="checkbox" id="includeTokenCookie">
+                    <label>Include OAuth2 Token Cookie
+                        <br><small>Forward z-token to upstream HTTP and WebSocket services.</small>
                     </label>
                 </div>
             </div>
             <div id="tokenWarning" class="ui yellow message" style="display: none">
                 <i class="exclamation triangle icon"></i>
-                Disabling this option forwards the raw OAuth2 access token to the upstream service. Only disable it if the service explicitly needs this token.
+                Enabling this option forwards the raw OAuth2 access token to the upstream service. Only enable it if the application explicitly needs this token.
             </div>
-            <small>Advanced settings are saved automatically.</small>
         </div>
     </div>
     <br><br><br>
@@ -143,7 +142,7 @@
         if (enabled) $("#removeUntrusted").prop("checked", true);
         $("#removeUntrusted").prop("disabled", enabled);
         $("#forwardWebSocket, #forwardedScopes").prop("disabled", !enabled);
-        $("#tokenWarning").toggle(!$("#removeTokenCookie").is(":checked"));
+        $("#tokenWarning").toggle($("#includeTokenCookie").is(":checked"));
     }
 
     function renderExceptions() {
@@ -175,7 +174,7 @@
         $("#forwardUserInfo").prop("checked", saved.forwardUserInfo);
         $("#forwardWebSocket").prop("checked", saved.forwardWebSocketIdentity);
         $("#removeUntrusted").prop("checked", saved.removeUntrustedIdentityHeaders);
-        $("#removeTokenCookie").prop("checked", saved.removeTokenCookie);
+        $("#includeTokenCookie").prop("checked", saved.includeTokenCookie);
         $("#forwardedScopes").val(saved.forwardedScopes ?? supportedScopes.join(", "));
         updateAdvancedStates();
         renderExceptions();
@@ -269,13 +268,13 @@
         $("#newExclusionPath, #newExclusionIP").val("");
     });
 
-    $("#forwardUserInfo, #forwardWebSocket, #removeUntrusted, #removeTokenCookie").on("change", function() {
+    $("#forwardUserInfo, #forwardWebSocket, #removeUntrusted, #includeTokenCookie").on("change", function() {
         if (!saved) return;
         updateAdvancedStates();
         saved.forwardUserInfo = $("#forwardUserInfo").is(":checked");
         saved.forwardWebSocketIdentity = $("#forwardWebSocket").is(":checked");
         saved.removeUntrustedIdentityHeaders = $("#removeUntrusted").is(":checked") || saved.forwardUserInfo;
-        saved.removeTokenCookie = $("#removeTokenCookie").is(":checked");
+        saved.includeTokenCookie = $("#includeTokenCookie").is(":checked");
         persist();
     });
 

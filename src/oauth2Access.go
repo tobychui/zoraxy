@@ -17,7 +17,7 @@ type oauth2RouteSettings struct {
     ForwardUserInfo               bool                               `json:"forwardUserInfo"`
     RemoveUntrustedIdentityHeaders bool                              `json:"removeUntrustedIdentityHeaders"`
     ForwardWebSocketIdentity      bool                               `json:"forwardWebSocketIdentity"`
-    RemoveTokenCookie             bool                               `json:"removeTokenCookie"`
+    IncludeTokenCookie            bool                               `json:"includeTokenCookie"`
     ForwardedScopes               string                             `json:"forwardedScopes"`
 }
 
@@ -57,7 +57,7 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
             ForwardUserInfo: !provider.OAuth2DisableIdentityForwarding,
             RemoveUntrustedIdentityHeaders: !provider.OAuth2AllowUntrustedIdentityHeaders || !provider.OAuth2DisableIdentityForwarding,
             ForwardWebSocketIdentity: provider.OAuth2ForwardWebSocketIdentity == nil || *provider.OAuth2ForwardWebSocketIdentity,
-            RemoveTokenCookie: !provider.OAuth2DisableTokenCookieRemoval,
+            IncludeTokenCookie: provider.OAuth2DisableTokenCookieRemoval,
             ForwardedScopes: strings.Join(scopes, ", "),
         }
         data, _ := json.Marshal(response)
@@ -115,7 +115,7 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
     provider.OAuth2DisableIdentityForwarding = !input.ForwardUserInfo
     provider.OAuth2AllowUntrustedIdentityHeaders = !input.RemoveUntrustedIdentityHeaders && !input.ForwardUserInfo
     provider.OAuth2ForwardWebSocketIdentity = &input.ForwardWebSocketIdentity
-    provider.OAuth2DisableTokenCookieRemoval = !input.RemoveTokenCookie
+    provider.OAuth2DisableTokenCookieRemoval = input.IncludeTokenCookie
     provider.OAuth2ForwardedScopes = scopes
     proxy.UpdateToRuntime()
     SaveReverseProxyConfig(proxy)
