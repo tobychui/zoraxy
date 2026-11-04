@@ -141,7 +141,7 @@ func StripOAuth2Cookies(r *http.Request, removeToken bool) {
     cookies := r.Cookies()
     kept := make([]string, 0, len(cookies))
     for _, cookie := range cookies {
-        if cookie.Name == "z-verifier" || cookie.Name == "z-oauth-state" || cookie.Name == "z-oauth-return" ||
+        if cookie.Name == "z-verifier" || cookie.Name == "z-oauth-state" || cookie.Name == "z-oauth-return" || cookie.Name == "z-oidc-nonce" ||
            (removeToken && cookie.Name == "z-token") {
             continue
         }

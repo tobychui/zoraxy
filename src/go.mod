@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/armon/go-radix v1.0.0
+	github.com/coreos/go-oidc/v3 v3.20.0
 	github.com/c0va23/go-proxyprotocol v0.9.1
 	github.com/go-acme/lego/v5 v5.6.0
 	github.com/go-ping/ping v1.1.0

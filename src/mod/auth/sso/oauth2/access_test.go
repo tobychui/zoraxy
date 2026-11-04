@@ -76,7 +76,7 @@ func TestIdentityHeadersAndCookieRemoval(t *testing.T) {
     req := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
     req.Header.Set("Remote-User", "fake-admin")
     req.Header.Set("X-Auth-Request-User", "fake-admin")
-    req.Header.Set("Cookie", "z-token=secret; application_session=abc; z-verifier=secret2")
+    req.Header.Set("Cookie", "z-token=secret; application_session=abc; z-verifier=secret2; z-oidc-nonce=challenge")
     StripIdentityHeaders(req.Header)
     if req.Header.Get("Remote-User") != "" || req.Header.Get("X-Auth-Request-User") != "" {
         t.Fatal("untrusted identity headers not removed")

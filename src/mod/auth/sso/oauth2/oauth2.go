@@ -307,6 +307,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 	const verifierCookie = "z-verifier"
 	const stateCookie = "z-oauth-state"
 	const returnCookie = "z-oauth-return"
+	const nonceCookie = "z-oidc-nonce"
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
@@ -349,7 +350,8 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 			http.Error(w, "Invalid OAuth2 return path", http.StatusUnauthorized)
 			return errors.New("invalid return path")
 		}
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		defer cancel()
 		var authCodeOptions []oauth2.AuthCodeOption
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
 			verifierCookie, err := r.Cookie(verifierCookie)
@@ -370,6 +372,21 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 			ar.options.Logger.PrintAndLog("OAuth2", "Invalid token", err)
 			w.WriteHeader(401)
 			return errors.New("unauthorized")
+		}
+
+		// OIDC requires a verified ID token, bound to the login nonce, and
+		// a matching UserInfo subject before accepting the access token.
+		if hasOAuth2Scope(oauthConfig.Scopes, "openid") {
+			loginNonce, nonceErr := r.Cookie(nonceCookie)
+			if nonceErr != nil || loginNonce.Value == "" {
+				http.Error(w, "Missing OIDC login nonce", http.StatusUnauthorized)
+				return errors.New("missing OIDC login nonce")
+			}
+			if err := verifyOIDCLogin(ctx, oauthConfig, token, ar.options.OAuth2WellKnownUrl, ar.options.OAuth2UserInfoUrl, loginNonce.Value); err != nil {
+				ar.options.Logger.PrintAndLog("OAuth2", "OIDC login verification failed", err)
+				http.Error(w, "OIDC login verification failed", http.StatusUnauthorized)
+				return errors.New("OIDC login verification failed")
+			}
 		}
 
 		cookieExpiry := token.Expiry
@@ -393,7 +410,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		}
 
 		// State and return destination are short-lived and bound to this host.
-		for _, name := range []string{stateCookie, returnCookie} {
+		for _, name := range []string{stateCookie, returnCookie, nonceCookie} {
 			http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
 		}
 		http.Redirect(w, r, originalPath, http.StatusSeeOther)
@@ -440,6 +457,16 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		}
 		http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: state, Path: "/", Expires: time.Now().Add(10*time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
 		http.SetCookie(w, &http.Cookie{Name: returnCookie, Value: url.QueryEscape(originalPath), Path: "/", Expires: time.Now().Add(10*time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
+		// A unique nonce prevents ID token replay and binds claims to this login.
+		authOptions := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
+		if hasOAuth2Scope(oauthConfig.Scopes, "openid") {
+			nonce := oauth2.GenerateVerifier()
+			http.SetCookie(w, &http.Cookie{
+				Name: nonceCookie, Value: nonce, Path: "/", MaxAge: 600,
+				HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode,
+			})
+			authOptions = append(authOptions, oauth2.SetAuthURLParam("nonce", nonce))
+		}
 		var authURL string
 		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
 			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1), HttpOnly: true}
@@ -451,12 +478,12 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 			w.Header().Add("Set-Cookie", cookie.String())
 
 			if ar.options.OAuth2CodeChallengeMethod == "PKCE" {
-				authURL = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", cookie.Value))
+				authURL = oauthConfig.AuthCodeURL(state, append(authOptions, oauth2.SetAuthURLParam("code_challenge", cookie.Value))...)
 			} else {
-				authURL = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(cookie.Value))
+				authURL = oauthConfig.AuthCodeURL(state, append(authOptions, oauth2.S256ChallengeOption(cookie.Value))...)
 			}
 		} else {
-			authURL = oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+			authURL = oauthConfig.AuthCodeURL(state, authOptions...)
 		}
 
 		http.Redirect(w, r, authURL, http.StatusFound)
