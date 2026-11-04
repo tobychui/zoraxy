@@ -40,7 +40,7 @@
     <div class="field" id="caseSensitiveField">
         <div class="ui checkbox">
             <input type="checkbox" id="newExclusionCaseSensitive" checked>
-            <label>Case sensitive</label>
+            <label for="newExclusionCaseSensitive">Case sensitive</label>
         </div>
     </div>
     <div class="field" id="trustedProxyField" style="display: none">
@@ -121,6 +121,7 @@
     }
 
     $("#oauth2Advanced").accordion();
+    $("#caseSensitiveField .ui.checkbox, #trustedProxyField .ui.checkbox").checkbox();
     $("#exceptionTypeDropdown").dropdown({
         onChange: function(value) {
             const ip = value === "ip";
