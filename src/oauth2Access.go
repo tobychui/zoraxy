@@ -108,7 +108,7 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
     seen := map[string]bool{}
     for _, claim := range input.ForwardedClaims {
         switch claim {
-        case "sub", "preferred_username", "name", "email", "groups":
+        case "sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups":
             if !seen[claim] {
                 claims = append(claims, claim)
                 seen[claim] = true

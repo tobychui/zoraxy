@@ -40,7 +40,7 @@ func TestFetchIdentity(t *testing.T) {
             t.Errorf("userinfo request lacks bearer token")
         }
         w.Header().Set("Content-Type", "application/json")
-        w.Write([]byte(`{"sub":"abc","preferred_username":"gabe","groups":["admins","dev"]}`))
+        w.Write([]byte(`{"sub":"abc","preferred_username":"gabe","name":"Gabriel","display_name":"Gabe","picture":"https://example.com/avatar.png","groups":["admins","dev"]}`))
     }))
     defer srv.Close()
     client := &http.Client{Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
@@ -51,7 +51,7 @@ func TestFetchIdentity(t *testing.T) {
     if err != nil {
         t.Fatal(err)
     }
-    if user.Subject != "abc" || !GroupsAllowed(user.Groups, []string{"dev"}) {
+    if user.Subject != "abc" || user.Picture != "https://example.com/avatar.png" || user.DisplayName != "Gabe" || !GroupsAllowed(user.Groups, []string{"dev"}) {
         t.Fatalf("unexpected identity %+v", user)
     }
 }

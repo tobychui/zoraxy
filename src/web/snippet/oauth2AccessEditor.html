@@ -82,7 +82,10 @@
                 <div class="grouped fields" id="forwardedClaims">
                     <div class="field"><div class="ui checkbox"><input type="checkbox" value="sub" checked><label>User ID (sub)</label></div></div>
                     <div class="field"><div class="ui checkbox"><input type="checkbox" value="preferred_username" checked><label>Username</label></div></div>
-                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="name" checked><label>Display Name</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="name" checked><label>Name</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="display_name" checked><label>Display Name</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="nickname" checked><label>Nickname (if supported)</label></div></div>
+                    <div class="field"><div class="ui checkbox"><input type="checkbox" value="picture" checked><label>Profile Picture URL</label></div></div>
                     <div class="field"><div class="ui checkbox"><input type="checkbox" value="email" checked><label>Email</label></div></div>
                     <div class="field"><div class="ui checkbox"><input type="checkbox" value="groups" checked><label>Groups</label></div></div>
                 </div>
@@ -105,7 +108,7 @@
 </div>
 <script>
     const config = { ep: "" };
-    const allowedClaims = ["sub", "preferred_username", "name", "email", "groups"];
+    const allowedClaims = ["sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups"];
     const defaultClaims = allowedClaims.slice();
     let saved = null;
     try {

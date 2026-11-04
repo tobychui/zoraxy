@@ -11,14 +11,14 @@ import (
 )
 
 var IdentityHeaderNames = []string{
-    "Remote-Subject", "Remote-User", "Remote-Name", "Remote-Email", "Remote-Groups",
+    "Remote-Subject", "Remote-User", "Remote-Name", "Remote-Display-Name", "Remote-Nickname", "Remote-Picture", "Remote-Email", "Remote-Groups",
     "X-Remote-User", "X-Remote-Name", "X-Remote-Email", "X-Remote-Groups",
     "X-Auth-Request-User", "X-Auth-Request-Email", "X-Auth-Request-Groups",
     "X-Auth-Request-Preferred-Username", "X-Forwarded-User", "X-Forwarded-Email",
     "X-Forwarded-Groups", "X-Authenticated-User", "X-Authenticated-Email",
 }
 
-var DefaultForwardedClaims = []string{"sub", "preferred_username", "name", "email", "groups"}
+var DefaultForwardedClaims = []string{"sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups"}
 
 // AccessPolicy is provided by each protected proxy endpoint.
 type AccessPolicy struct {
@@ -33,6 +33,9 @@ type Identity struct {
     Subject           string
     PreferredUsername string
     Name              string
+    DisplayName       string
+    Nickname          string
+    Picture           string
     Email             string
     Groups            []string
 }
@@ -85,6 +88,9 @@ func FetchIdentity(ctx context.Context, client *http.Client, endpoint string) (*
         Subject           string          `json:"sub"`
         PreferredUsername string          `json:"preferred_username"`
         Name              string          `json:"name"`
+        DisplayName       string          `json:"display_name"`
+        Nickname          string          `json:"nickname"`
+        Picture           string          `json:"picture"`
         Email             string          `json:"email"`
         Groups            json.RawMessage `json:"groups"`
     }
@@ -96,7 +102,7 @@ func FetchIdentity(ctx context.Context, client *http.Client, endpoint string) (*
     }
     identity := &Identity{
         Subject: claims.Subject, PreferredUsername: claims.PreferredUsername,
-        Name: claims.Name, Email: claims.Email,
+        Name: claims.Name, DisplayName: claims.DisplayName, Nickname: claims.Nickname, Picture: claims.Picture, Email: claims.Email,
     }
     if len(claims.Groups) > 0 && string(claims.Groups) != "null" {
         if err := json.Unmarshal(claims.Groups, &identity.Groups); err != nil {
@@ -163,6 +169,9 @@ func SetIdentityHeaders(headers http.Header, user *Identity, selected []string) 
         {"sub", "Remote-Subject", user.Subject},
         {"preferred_username", "Remote-User", user.PreferredUsername},
         {"name", "Remote-Name", user.Name},
+        {"display_name", "Remote-Display-Name", user.DisplayName},
+        {"nickname", "Remote-Nickname", user.Nickname},
+        {"picture", "Remote-Picture", user.Picture},
         {"email", "Remote-Email", user.Email},
         {"groups", "Remote-Groups", strings.Join(user.Groups, ",")},
     }
