@@ -63,7 +63,7 @@
                 <div class="ui toggle checkbox">
                     <input type="checkbox" id="forwardUserInfo" checked>
                     <label>Forward User Information
-                        <br><small>Forward verified OAuth2 identity information to the upstream service using Remote-* headers.</small>
+                        <br><small>Forward the complete OIDC UserInfo JSON and individual identity claims in Remote-* headers.</small>
                     </label>
                 </div>
             </div>
@@ -82,11 +82,6 @@
                         <br><small>Remove client-supplied identity headers. Always enabled when forwarding verified user information.</small>
                     </label>
                 </div>
-            </div>
-            <div class="field">
-                <label for="forwardedScopes">Forwarded Scopes</label>
-                <input type="text" id="forwardedScopes" placeholder="openid, profile, email, groups" autocomplete="off">
-                <small>Comma-separated scopes controlling which verified claims are forwarded: openid, profile, email, groups.</small>
             </div>
             <div class="ui divider"></div>
             <div class="field">
@@ -107,7 +102,6 @@
 </div>
 <script>
     const config = {ep: ""};
-    const supportedScopes = ["openid", "profile", "email", "groups"];
     let saved = null;
     let saving = false;
     let queuedSave = null;
@@ -132,7 +126,6 @@
     $("#exceptionTypeDropdown").dropdown("set selected", "path");
 
     const normalize = value => [...new Set(value.split(",").map(x => x.trim()).filter(Boolean))].join(", ");
-    const normalizeScopes = value => [...new Set(value.split(/[\s,]+/).map(x => x.trim()).filter(Boolean))];
 
     function showErrors(message) {
         parent.msgbox(message, false, 5000);
@@ -142,7 +135,7 @@
         const enabled = $("#forwardUserInfo").is(":checked");
         if (enabled) $("#removeUntrusted").prop("checked", true);
         $("#removeUntrusted").prop("disabled", enabled);
-        $("#forwardWebSocket, #forwardedScopes").prop("disabled", !enabled);
+        $("#forwardWebSocket").prop("disabled", !enabled);
         $("#tokenWarning").toggle($("#includeTokenCookie").is(":checked"));
     }
 
@@ -176,7 +169,6 @@
         $("#forwardWebSocket").prop("checked", saved.forwardWebSocketIdentity);
         $("#removeUntrusted").prop("checked", saved.removeUntrustedIdentityHeaders);
         $("#includeTokenCookie").prop("checked", saved.includeTokenCookie);
-        $("#forwardedScopes").val(saved.forwardedScopes ?? supportedScopes.join(", "));
         updateAdvancedStates();
         renderExceptions();
     }
@@ -277,24 +269,6 @@
         saved.removeUntrustedIdentityHeaders = $("#removeUntrusted").is(":checked") || saved.forwardUserInfo;
         saved.includeTokenCookie = $("#includeTokenCookie").is(":checked");
         persist();
-    });
-
-    $("#forwardedScopes").on("change", function() {
-        if (!saved) return;
-        const scopes = normalizeScopes($(this).val());
-        const unsupported = scopes.filter(scope => !supportedScopes.includes(scope));
-        if (unsupported.length) {
-            showErrors("Unsupported forwarded scope: " + unsupported.join(", ") + ". Supported: " + supportedScopes.join(", "));
-            return;
-        }
-        saved.forwardedScopes = scopes.join(", ");
-        $(this).val(saved.forwardedScopes);
-        persist();
-    }).on("keydown", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            $(this).blur();
-        }
     });
 
     load();

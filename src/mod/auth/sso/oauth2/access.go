@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+    "bytes"
     "context"
     "encoding/json"
     "errors"
@@ -11,99 +12,18 @@ import (
 )
 
 var IdentityHeaderNames = []string{
-    "Remote-Subject", "Remote-User", "Remote-Name", "Remote-Display-Name", "Remote-Nickname", "Remote-Picture", "Remote-Email", "Remote-Groups",
+    "Remote-Subject", "Remote-User", "Remote-Name", "Remote-Display-Name", "Remote-Nickname", "Remote-Picture", "Remote-Email", "Remote-Groups", "Remote-OIDC-UserInfo",
     "X-Remote-User", "X-Remote-Name", "X-Remote-Email", "X-Remote-Groups",
     "X-Auth-Request-User", "X-Auth-Request-Email", "X-Auth-Request-Groups",
     "X-Auth-Request-Preferred-Username", "X-Forwarded-User", "X-Forwarded-Email",
     "X-Forwarded-Groups", "X-Authenticated-User", "X-Authenticated-Email",
 }
 
-var DefaultForwardedClaims = []string{"sub", "preferred_username", "name", "display_name", "nickname", "picture", "email", "groups"}
-
-var DefaultForwardedScopes = []string{"openid", "profile", "email", "groups"}
-
-// ParseForwardedScopes accepts scope names as a comma- or space-separated list.
-// These scopes only filter forwarded UserInfo claims, not OAuth authorization requests.
-func ParseForwardedScopes(value string) ([]string, error) {
-    scopes := []string{}
-    seen := make(map[string]bool)
-    for _, scope := range strings.FieldsFunc(value, func(r rune) bool {
-        return r == ',' || r == ' ' || r == '\t' || r == '\n'
-    }) {
-        switch scope {
-        case "openid", "profile", "email", "groups":
-            if !seen[scope] {
-                scopes = append(scopes, scope)
-                seen[scope] = true
-            }
-        default:
-            return nil, fmt.Errorf("unsupported forwarded scope %q (supported: openid, profile, email, groups)", scope)
-        }
-    }
-    return scopes, nil
-}
-
-// ClaimsForScopes maps the selected standard/commonly used OIDC scopes to the
-// UserInfo fields Zoraxy understands. An empty selection means no identity headers.
-func ClaimsForScopes(scopes []string) []string {
-    claims := []string{}
-    seen := make(map[string]bool)
-    add := func(names ...string) {
-        for _, name := range names {
-            if !seen[name] {
-                seen[name] = true
-                claims = append(claims, name)
-            }
-        }
-    }
-    for _, scope := range scopes {
-        switch scope {
-        case "openid":
-            add("sub")
-        case "profile":
-            add("preferred_username", "name", "display_name", "nickname", "picture")
-        case "email":
-            add("email")
-        case "groups":
-            add("groups")
-        }
-    }
-    return claims
-}
-
-// ScopesForClaims represents older checkbox-based choices as the closest
-// available scope selection for the editor without modifying stored settings.
-func ScopesForClaims(claims []string) []string {
-    if claims == nil {
-        return append([]string{}, DefaultForwardedScopes...)
-    }
-    present := make(map[string]bool)
-    for _, claim := range claims {
-        present[claim] = true
-    }
-    result := []string{}
-    if present["sub"] {
-        result = append(result, "openid")
-    }
-    if present["preferred_username"] || present["name"] || present["display_name"] || present["nickname"] || present["picture"] {
-        result = append(result, "profile")
-    }
-    if present["email"] {
-        result = append(result, "email")
-    }
-    if present["groups"] {
-        result = append(result, "groups")
-    }
-    return result
-}
-
-
 // AccessPolicy is provided by each protected proxy endpoint.
 type AccessPolicy struct {
     AllowedGroups            []string
     ForwardUserInfo          bool
     ForwardWebSocketIdentity bool
-    ForwardedClaims          []string // nil: forward all available claims
     RemoveTokenCookie        bool
 }
 
@@ -116,6 +36,7 @@ type Identity struct {
     Picture           string
     Email             string
     Groups            []string
+    UserInfo          json.RawMessage
 }
 
 // SplitAllowedGroups normalizes comma-separated group identifiers without changing case.
@@ -172,7 +93,18 @@ func FetchIdentity(ctx context.Context, client *http.Client, endpoint string) (*
         Email             string          `json:"email"`
         Groups            json.RawMessage `json:"groups"`
     }
-    if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&claims); err != nil {
+    raw, err := io.ReadAll(io.LimitReader(resp.Body, (1<<20)+1))
+    if err != nil {
+        return nil, fmt.Errorf("reading userinfo response: %w", err)
+    }
+    if len(raw) > 1<<20 {
+        return nil, errors.New("userinfo response exceeds 1 MiB")
+    }
+    var compact bytes.Buffer
+    if err := json.Compact(&compact, raw); err != nil {
+        return nil, fmt.Errorf("invalid userinfo response: %w", err)
+    }
+    if err := json.Unmarshal(compact.Bytes(), &claims); err != nil {
         return nil, fmt.Errorf("invalid userinfo response: %w", err)
     }
     if strings.TrimSpace(claims.Subject) == "" {
@@ -181,6 +113,7 @@ func FetchIdentity(ctx context.Context, client *http.Client, endpoint string) (*
     identity := &Identity{
         Subject: claims.Subject, PreferredUsername: claims.PreferredUsername,
         Name: claims.Name, DisplayName: claims.DisplayName, Nickname: claims.Nickname, Picture: claims.Picture, Email: claims.Email,
+        UserInfo: append(json.RawMessage(nil), compact.Bytes()...),
     }
     if len(claims.Groups) > 0 && string(claims.Groups) != "null" {
         if err := json.Unmarshal(claims.Groups, &identity.Groups); err != nil {
@@ -220,18 +153,6 @@ func StripOAuth2Cookies(r *http.Request, removeToken bool) {
     }
 }
 
-func claimSelected(claim string, selected []string) bool {
-    if selected == nil {
-        return true
-    }
-    for _, item := range selected {
-        if item == claim {
-            return true
-        }
-    }
-    return false
-}
-
 func cleanHeaderValue(input string) string {
     return strings.Map(func(r rune) rune {
         if r < 32 || r == 127 {
@@ -241,25 +162,25 @@ func cleanHeaderValue(input string) string {
     }, input)
 }
 
-// SetIdentityHeaders only forwards claims actually returned by the identity provider.
-func SetIdentityHeaders(headers http.Header, user *Identity, selected []string) {
-    values := []struct{ claim, header, value string }{
-        {"sub", "Remote-Subject", user.Subject},
-        {"preferred_username", "Remote-User", user.PreferredUsername},
-        {"name", "Remote-Name", user.Name},
-        {"display_name", "Remote-Display-Name", user.DisplayName},
-        {"nickname", "Remote-Nickname", user.Nickname},
-        {"picture", "Remote-Picture", user.Picture},
-        {"email", "Remote-Email", user.Email},
-        {"groups", "Remote-Groups", strings.Join(user.Groups, ",")},
+// SetIdentityHeaders forwards the complete verified UserInfo JSON plus familiar identity headers.
+func SetIdentityHeaders(headers http.Header, user *Identity) {
+    if len(user.UserInfo) > 0 {
+        headers.Set("Remote-OIDC-UserInfo", string(user.UserInfo))
+    }
+    values := []struct{ header, value string }{
+        {"Remote-Subject", user.Subject},
+        {"Remote-User", user.PreferredUsername},
+        {"Remote-Name", user.Name},
+        {"Remote-Display-Name", user.DisplayName},
+        {"Remote-Nickname", user.Nickname},
+        {"Remote-Picture", user.Picture},
+        {"Remote-Email", user.Email},
+        {"Remote-Groups", strings.Join(user.Groups, ",")},
     }
     for _, item := range values {
-        if claimSelected(item.claim, selected) && item.value != "" {
+        if item.value != "" {
             headers.Set(item.header, cleanHeaderValue(item.value))
         }
     }
 }
 
-func DefaultClaims() []string {
-    return append([]string(nil), DefaultForwardedClaims...)
-}

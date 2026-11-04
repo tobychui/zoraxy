@@ -2,6 +2,7 @@ package oauth2
 
 import (
     "context"
+    "encoding/json"
     "net/http"
     "net/http/httptest"
     "reflect"
@@ -80,7 +81,7 @@ func TestIdentityHeadersAndCookieRemoval(t *testing.T) {
     if req.Header.Get("Remote-User") != "" || req.Header.Get("X-Auth-Request-User") != "" {
         t.Fatal("untrusted identity headers not removed")
     }
-    SetIdentityHeaders(req.Header, &Identity{Subject:"abc", PreferredUsername:"gabe", Groups: []string{"dev"}}, []string{"sub", "preferred_username", "groups"})
+    SetIdentityHeaders(req.Header, &Identity{Subject:"abc", PreferredUsername:"gabe", Groups: []string{"dev"}})
     if req.Header.Get("Remote-User") != "gabe" || req.Header.Get("Remote-Groups") != "dev" {
         t.Fatal("verified identity headers not inserted")
     }
@@ -90,57 +91,36 @@ func TestIdentityHeadersAndCookieRemoval(t *testing.T) {
     }
 }
 
-func TestForwardedScopesParsing(t *testing.T) {
-    scopes, err := ParseForwardedScopes("openid, profile  email,groups,profile")
+func TestFullUserInfoAndIdentityHeaders(t *testing.T) {
+    payload := `{"sub":"user-123","preferred_username":"gabe","name":"Gabriel","email":"gabe@example.com","email_verified":true,"given_name":"Gabriel","groups":["admins","developers"],"custom_claim":{"role":"owner","quota":42}}`
+    srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "application/json")
+        w.Write([]byte(payload))
+    }))
+    defer srv.Close()
+    identity, err := FetchIdentity(context.Background(), srv.Client(), srv.URL)
     if err != nil {
         t.Fatal(err)
     }
-    expectedScopes := []string{"openid", "profile", "email", "groups"}
-    if !reflect.DeepEqual(scopes, expectedScopes) {
-        t.Fatalf("scopes=%v, want %v", scopes, expectedScopes)
+    headers := http.Header{}
+    headers.Set("Remote-OIDC-UserInfo", `{"sub":"spoofed"}`)
+    headers.Set("Remote-User", "attacker")
+    StripIdentityHeaders(headers)
+    if headers.Get("Remote-OIDC-UserInfo") != "" || headers.Get("Remote-User") != "" {
+        t.Fatal("untrusted headers were not removed")
     }
-    if _, err := ParseForwardedScopes("profile, unknown_scope"); err == nil {
-        t.Fatal("unsupported forwarding scope must be rejected")
+    SetIdentityHeaders(headers, identity)
+    if headers.Get("Remote-User") != "gabe" || headers.Get("Remote-Email") != "gabe@example.com" {
+        t.Fatal("expected standard Remote-* identity headers")
     }
-    empty, err := ParseForwardedScopes("")
-    if err != nil || empty == nil || len(empty) != 0 {
-        t.Fatalf("empty list must be an explicit, non-nil list: %v, %v", empty, err)
+    var actual, expected map[string]json.RawMessage
+    if err := json.Unmarshal([]byte(headers.Get("Remote-OIDC-UserInfo")), &actual); err != nil {
+        t.Fatalf("invalid forwarded UserInfo: %v", err)
     }
-}
-
-func TestClaimsForScopes(t *testing.T) {
-    claims := ClaimsForScopes([]string{"openid", "profile"})
-    expected := []string{"sub", "preferred_username", "name", "display_name", "nickname", "picture"}
-    if !reflect.DeepEqual(claims, expected) {
-        t.Fatalf("claims=%v, want %v", claims, expected)
+    if err := json.Unmarshal([]byte(payload), &expected); err != nil {
+        t.Fatal(err)
     }
-    if len(ClaimsForScopes([]string{})) != 0 {
-        t.Fatal("empty scopes must not forward any claim")
-    }
-}
-
-func TestScopesForLegacyClaims(t *testing.T) {
-    scopes := ScopesForClaims([]string{"sub", "name", "groups"})
-    want := []string{"openid", "profile", "groups"}
-    if !reflect.DeepEqual(scopes, want) {
-        t.Fatalf("scopes=%v, want %v", scopes, want)
-    }
-    if len(ScopesForClaims(nil)) != 4 {
-        t.Fatal("legacy default should represent the standard forwarding scopes")
-    }
-}
-
-func TestScopeRestrictedHeaders(t *testing.T) {
-    header := http.Header{}
-    identity := &Identity{
-        Subject: "123", PreferredUsername: "test", Name: "Person",
-        Email: "test@example.com", Groups: []string{"admins"},
-    }
-    SetIdentityHeaders(header, identity, ClaimsForScopes([]string{"openid", "email"}))
-    if header.Get("Remote-Subject") != "123" || header.Get("Remote-Email") != "test@example.com" {
-        t.Fatal("expected claims missing")
-    }
-    if header.Get("Remote-User") != "" || header.Get("Remote-Groups") != "" {
-        t.Fatal("forwarded claims leaked across scope selection")
+    if !reflect.DeepEqual(actual, expected) {
+        t.Fatalf("complete UserInfo was not forwarded: got %s", headers.Get("Remote-OIDC-UserInfo"))
     }
 }

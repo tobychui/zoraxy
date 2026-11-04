@@ -236,7 +236,7 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if w.Options.ForwardIdentityHeaders {
-		for _, key := range []string{"Remote-Subject", "Remote-User", "Remote-Name", "Remote-Display-Name", "Remote-Nickname", "Remote-Picture", "Remote-Email", "Remote-Groups"} {
+		for _, key := range []string{"Remote-Subject", "Remote-User", "Remote-Name", "Remote-Display-Name", "Remote-Nickname", "Remote-Picture", "Remote-Email", "Remote-Groups", "Remote-OIDC-UserInfo"} {
 			if values := req.Header.Values(key); len(values) > 0 {
 				requestHeader.Del(key)
 				for _, value := range values {

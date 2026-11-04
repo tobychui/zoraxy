@@ -424,7 +424,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 				}
 				isWebSocket := strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
 				if policy.ForwardUserInfo && (!isWebSocket || policy.ForwardWebSocketIdentity) {
-					SetIdentityHeaders(r.Header, identity, policy.ForwardedClaims)
+					SetIdentityHeaders(r.Header, identity)
 				}
 				StripOAuth2Cookies(r, policy.RemoveTokenCookie)
 			}

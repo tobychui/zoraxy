@@ -228,8 +228,6 @@ type AuthenticationProvider struct {
 	OAuth2DisableIdentityForwarding     bool                      //Default false: forward verified identity headers to HTTP origins
 	OAuth2AllowUntrustedIdentityHeaders bool                      //Only effective when identity forwarding is disabled
 	OAuth2ForwardWebSocketIdentity      *bool                     //Nil defaults to enabled; false explicitly disables WebSocket identity forwarding
-	OAuth2ForwardedClaims              []string                  //Legacy per-claim selections; retained for existing configurations
-	OAuth2ForwardedScopes              []string                  //Per-proxy forwarding filter; nil inherits default scopes, empty forwards none
 	OAuth2DisableTokenCookieRemoval     bool                      //Opt-in to passing the OAuth2 access token cookie upstream
 
 	/* Forward Auth Settings */

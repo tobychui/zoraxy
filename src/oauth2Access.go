@@ -18,7 +18,6 @@ type oauth2RouteSettings struct {
     RemoveUntrustedIdentityHeaders bool                              `json:"removeUntrustedIdentityHeaders"`
     ForwardWebSocketIdentity      bool                               `json:"forwardWebSocketIdentity"`
     IncludeTokenCookie            bool                               `json:"includeTokenCookie"`
-    ForwardedScopes               string                             `json:"forwardedScopes"`
 }
 
 // HandleProxyOAuth2Settings edits only the OAuth2 configuration for one host.
@@ -43,10 +42,6 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
     }
     provider := proxy.AuthenticationProvider
     if r.Method == http.MethodGet {
-        scopes := provider.OAuth2ForwardedScopes
-        if scopes == nil {
-            scopes = oauthaccess.ScopesForClaims(provider.OAuth2ForwardedClaims)
-        }
         rules := provider.OAuth2ExceptionRules
         if rules == nil {
             rules = []*dynamicproxy.BasicAuthExceptionRule{}
@@ -58,7 +53,6 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
             RemoveUntrustedIdentityHeaders: !provider.OAuth2AllowUntrustedIdentityHeaders || !provider.OAuth2DisableIdentityForwarding,
             ForwardWebSocketIdentity: provider.OAuth2ForwardWebSocketIdentity == nil || *provider.OAuth2ForwardWebSocketIdentity,
             IncludeTokenCookie: provider.OAuth2DisableTokenCookieRemoval,
-            ForwardedScopes: strings.Join(scopes, ", "),
         }
         data, _ := json.Marshal(response)
         utils.SendJSONResponse(w, string(data))
@@ -104,19 +98,12 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
             return
         }
     }
-    scopes, err := oauthaccess.ParseForwardedScopes(input.ForwardedScopes)
-    if err != nil {
-        utils.SendErrorResponse(w, err.Error())
-        return
-    }
-
     provider.OAuth2AllowedGroups = oauthaccess.SplitAllowedGroups(input.AllowedGroups)
     provider.OAuth2ExceptionRules = input.ExceptionRules
     provider.OAuth2DisableIdentityForwarding = !input.ForwardUserInfo
     provider.OAuth2AllowUntrustedIdentityHeaders = !input.RemoveUntrustedIdentityHeaders && !input.ForwardUserInfo
     provider.OAuth2ForwardWebSocketIdentity = &input.ForwardWebSocketIdentity
     provider.OAuth2DisableTokenCookieRemoval = input.IncludeTokenCookie
-    provider.OAuth2ForwardedScopes = scopes
     proxy.UpdateToRuntime()
     SaveReverseProxyConfig(proxy)
     utils.SendOK(w)
