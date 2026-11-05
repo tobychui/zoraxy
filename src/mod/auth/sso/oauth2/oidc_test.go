@@ -32,15 +32,15 @@ func TestVerifyOIDCLogin(t *testing.T) {
 		switch r.URL.Path {
 		case "/.well-known/openid-configuration":
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"issuer": srv.URL,
-				"jwks_uri": srv.URL + "/jwks",
+				"issuer":                                srv.URL,
+				"jwks_uri":                              srv.URL + "/jwks",
 				"id_token_signing_alg_values_supported": []string{"RS256"},
 			})
 		case "/jwks":
 			n := base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes())
 			e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.PublicKey.E)).Bytes())
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"keys": []interface{}{map[string]string{"kty":"RSA","kid":"test-key","alg":"RS256","use":"sig","n":n,"e":e}},
+				"keys": []interface{}{map[string]string{"kty": "RSA", "kid": "test-key", "alg": "RS256", "use": "sig", "n": n, "e": e}},
 			})
 		case "/userinfo":
 			if r.Header.Get("Authorization") != "Bearer test-access-token" {
@@ -56,10 +56,10 @@ func TestVerifyOIDCLogin(t *testing.T) {
 
 	signIDToken := func(sub, tokenNonce, audience string, expiry time.Time) string {
 		t.Helper()
-		header, _ := json.Marshal(map[string]string{"alg":"RS256","typ":"JWT","kid":"test-key"})
+		header, _ := json.Marshal(map[string]string{"alg": "RS256", "typ": "JWT", "kid": "test-key"})
 		claims, _ := json.Marshal(map[string]interface{}{
-			"iss":srv.URL, "sub":sub, "aud":audience, "exp":expiry.Unix(),
-			"iat":time.Now().Add(-time.Minute).Unix(), "nonce":tokenNonce,
+			"iss": srv.URL, "sub": sub, "aud": audience, "exp": expiry.Unix(),
+			"iat": time.Now().Add(-time.Minute).Unix(), "nonce": tokenNonce,
 		})
 		payload := base64.RawURLEncoding.EncodeToString(header) + "." + base64.RawURLEncoding.EncodeToString(claims)
 		h := sha256.Sum256([]byte(payload))
@@ -70,11 +70,11 @@ func TestVerifyOIDCLogin(t *testing.T) {
 		return payload + "." + base64.RawURLEncoding.EncodeToString(signature)
 	}
 	conf := &oauth2.Config{ClientID: clientID}
-	tests := []struct{
-		name string
+	tests := []struct {
+		name                                      string
 		subject, nonce, audience, userInfoSubject string
-		expiry time.Time
-		wantError string
+		expiry                                    time.Time
+		wantError                                 string
 	}{
 		{"valid", subject, nonce, clientID, subject, time.Now().Add(time.Hour), ""},
 		{"different-subject", subject, nonce, clientID, "other-user", time.Now().Add(time.Hour), "subjects differ"},
@@ -86,7 +86,7 @@ func TestVerifyOIDCLogin(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			userInfoSubject = tc.userInfoSubject
 			jwt := signIDToken(tc.subject, tc.nonce, tc.audience, tc.expiry)
-			accessToken := (&oauth2.Token{AccessToken: "test-access-token"}).WithExtra(map[string]interface{}{"id_token":jwt})
+			accessToken := (&oauth2.Token{AccessToken: "test-access-token"}).WithExtra(map[string]interface{}{"id_token": jwt})
 			err := verifyOIDCLogin(context.Background(), conf, accessToken, srv.URL+"/.well-known/openid-configuration", srv.URL+"/userinfo", nonce)
 			if tc.wantError == "" && err != nil {
 				t.Fatalf("unexpected verification failure: %v", err)
@@ -103,10 +103,19 @@ func TestVerifyOIDCLogin(t *testing.T) {
 }
 
 func TestHasOAuth2Scope(t *testing.T) {
-	if !hasOAuth2Scope([]string{"openid","profile","email"}, "openid") {
+	if !hasOAuth2Scope([]string{"openid", "profile", "email"}, "openid") {
 		t.Fatal("openid scope not recognized")
 	}
-	if hasOAuth2Scope([]string{"profile","email"}, "openid") {
+	if hasOAuth2Scope([]string{"profile", "email"}, "openid") {
 		t.Fatal("ordinary OAuth2 login should not require OIDC")
+	}
+}
+
+func TestOIDCConfigurationRequiresDiscovery(t *testing.T) {
+	if isOIDCConfiguration([]string{"openid"}, "") {
+		t.Fatal("manual OAuth2 configuration cannot perform verified OIDC without discovery metadata")
+	}
+	if !isOIDCConfiguration([]string{"openid"}, "https://issuer.example/.well-known/openid-configuration") {
+		t.Fatal("discovery-based openid configuration should enable OIDC verification")
 	}
 }

@@ -46,7 +46,7 @@
     <div class="field" id="trustedProxyField" style="display: none">
         <div class="ui checkbox">
             <input type="checkbox" id="newExclusionTrustProxy">
-            <label>Trust proxy headers (X-Real-IP, CF-Connecting-IP, X-Forwarded-For)</label>
+            <label for="newExclusionTrustProxy">Trust proxy headers (X-Real-IP, CF-Connecting-IP, X-Forwarded-For)</label>
         </div>
         <div class="ui yellow message">
             <i class="exclamation triangle icon"></i>
@@ -62,7 +62,7 @@
             <div class="field">
                 <div class="ui toggle checkbox">
                     <input type="checkbox" id="forwardUserInfo" checked>
-                    <label>Forward User Information
+                    <label for="forwardUserInfo">Forward User Information
                         <br><small>Forward the complete OIDC UserInfo JSON and individual identity claims in Remote-* headers.</small>
                     </label>
                 </div>
@@ -70,7 +70,7 @@
             <div class="field">
                 <div class="ui toggle checkbox">
                     <input type="checkbox" id="forwardWebSocket" checked>
-                    <label>Forward Identity to WebSocket Connections
+                    <label for="forwardWebSocket">Forward Identity to WebSocket Connections
                         <br><small>Include verified identity headers in WebSocket upgrade requests. Requires Forward User Information.</small>
                     </label>
                 </div>
@@ -78,7 +78,7 @@
             <div class="field">
                 <div class="ui toggle checkbox">
                     <input type="checkbox" id="removeUntrusted" checked>
-                    <label>Remove Untrusted Identity Headers
+                    <label for="removeUntrusted">Remove Untrusted Identity Headers
                         <br><small>Remove client-supplied identity headers. Always enabled when forwarding verified user information.</small>
                     </label>
                 </div>
@@ -87,7 +87,7 @@
             <div class="field">
                 <div class="ui toggle checkbox">
                     <input type="checkbox" id="includeTokenCookie">
-                    <label>Include OAuth2 Token Cookie
+                    <label for="includeTokenCookie">Include OAuth2 Token Cookie
                         <br><small>Forward z-token to upstream HTTP and WebSocket services.</small>
                     </label>
                 </div>
@@ -103,6 +103,7 @@
 <script>
     const config = {ep: ""};
     let saved = null;
+    let confirmed = null;
     let saving = false;
     let queuedSave = null;
 
@@ -115,7 +116,7 @@
     }
 
     $("#oauth2Advanced").accordion();
-    $("#caseSensitiveField .ui.checkbox, #trustedProxyField .ui.checkbox").checkbox();
+    $("#caseSensitiveField .ui.checkbox, #trustedProxyField .ui.checkbox, #oauth2Advanced .ui.checkbox").checkbox();
     $("#exceptionTypeDropdown").dropdown({
         onChange: function(value) {
             const ip = value === "ip";
@@ -126,6 +127,7 @@
     $("#exceptionTypeDropdown").dropdown("set selected", "path");
 
     const normalize = value => [...new Set(value.split(",").map(x => x.trim()).filter(Boolean))].join(", ");
+    const cloneSettings = value => JSON.parse(JSON.stringify(value));
 
     function showErrors(message) {
         parent.msgbox(message, false, 5000);
@@ -181,7 +183,8 @@
             data: {ep: config.ep},
             success: function(data) {
                 if (data.error) return showErrors(data.error);
-                saved = data;
+                confirmed = cloneSettings(data);
+                saved = cloneSettings(data);
                 restoreUI();
             },
             error: () => showErrors("Could not load OAuth2 access settings")
@@ -217,17 +220,30 @@
             method: "POST",
             data: {ep: config.ep, settings: update.json},
             success: function(data) {
-                if (data.error) return showErrors(data.error);
+                if (data.error) {
+                    rollbackFailedSave(data.error);
+                    return;
+                }
+                confirmed = cloneSettings(JSON.parse(update.json));
                 if (update.notify && !queuedSave) {
                     parent.msgbox("OAuth2 access settings updated", true);
                 }
             },
-            error: () => showErrors("Could not save OAuth2 access settings"),
+            error: () => rollbackFailedSave("Could not save OAuth2 access settings"),
             complete: function() {
                 saving = false;
                 flushSaves();
             }
         });
+    }
+
+    function rollbackFailedSave(message) {
+        queuedSave = null;
+        if (confirmed) {
+            saved = cloneSettings(confirmed);
+            restoreUI();
+        }
+        showErrors(message);
     }
 
     $("#saveGroups").on("click", function() {

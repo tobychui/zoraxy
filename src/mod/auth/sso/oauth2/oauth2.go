@@ -21,7 +21,10 @@ import (
 const (
 	// DefaultOAuth2ConfigCacheTime defines the default cache duration for OAuth2 configuration
 	DefaultOAuth2ConfigCacheTime = 60 * time.Second
+	maxOAuth2CookieSize          = 4096
 )
+
+var defaultOIDCScopes = []string{"openid", "profile", "email"}
 
 type OAuth2RouterOptions struct {
 	OAuth2ServerURL              string //The URL of the OAuth 2.0 server server
@@ -287,6 +290,10 @@ func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error
 	}
 	if ar.options.OAuth2Scopes != "" {
 		config.Scopes = strings.FieldsFunc(ar.options.OAuth2Scopes, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
+	} else if strings.TrimSpace(ar.options.OAuth2WellKnownUrl) != "" {
+		// Discovery lists what a provider supports; it does not define what this
+		// client should request. Use the conservative conventional OIDC set.
+		config.Scopes = append([]string(nil), defaultOIDCScopes...)
 	}
 	if ar.options.OAuth2WellKnownUrl != "" && (config.Endpoint.AuthURL == "" || config.Endpoint.TokenURL == "" ||
 		ar.options.OAuth2UserInfoUrl == "") {
@@ -294,6 +301,26 @@ func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error
 	}
 	return config, nil
 }
+
+func newOAuth2ReturnCookie(originalPath string, secure bool, expires time.Time) *http.Cookie {
+	if originalPath == "" || !strings.HasPrefix(originalPath, "/") || strings.HasPrefix(originalPath, "//") ||
+		strings.ContainsAny(originalPath, "\r\n") {
+		originalPath = "/"
+	}
+	build := func(value string) *http.Cookie {
+		return &http.Cookie{
+			Name: returnCookieName, Value: url.QueryEscape(value), Path: "/", Expires: expires,
+			HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
+		}
+	}
+	cookie := build(originalPath)
+	if len(cookie.String()) > maxOAuth2CookieSize {
+		cookie = build("/")
+	}
+	return cookie
+}
+
+const returnCookieName = "z-oauth-return"
 
 // HandleOAuth2Auth is the internal handler for OAuth authentication
 // Set useHTTPS to true if your OAuth server is using HTTPS
@@ -306,7 +333,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 	const tokenCookie = "z-token"
 	const verifierCookie = "z-verifier"
 	const stateCookie = "z-oauth-state"
-	const returnCookie = "z-oauth-return"
+	const returnCookie = returnCookieName
 	const nonceCookie = "z-oidc-nonce"
 	scheme := "http"
 	if r.TLS != nil {
@@ -333,6 +360,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		w.WriteHeader(500)
 		return errors.New("invalid OAuth2 configuration")
 	}
+	oidcEnabled := isOIDCConfiguration(oauthConfig.Scopes, ar.options.OAuth2WellKnownUrl)
 
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
@@ -376,7 +404,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 
 		// OIDC requires a verified ID token, bound to the login nonce, and
 		// a matching UserInfo subject before accepting the access token.
-		if hasOAuth2Scope(oauthConfig.Scopes, "openid") {
+		if oidcEnabled {
 			loginNonce, nonceErr := r.Cookie(nonceCookie)
 			if nonceErr != nil || loginNonce.Value == "" {
 				http.Error(w, "Missing OIDC login nonce", http.StatusUnauthorized)
@@ -426,7 +454,13 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 			ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 			defer cancel()
 			client := oauthConfig.Client(ctx, &oauth2.Token{AccessToken: cookie.Value})
-			identity, fetchErr := FetchIdentity(ctx, client, ar.options.OAuth2UserInfoUrl)
+			var identity *Identity
+			var fetchErr error
+			if oidcEnabled {
+				identity, fetchErr = FetchIdentity(ctx, client, ar.options.OAuth2UserInfoUrl)
+			} else {
+				identity, fetchErr = FetchOAuth2Identity(ctx, client, ar.options.OAuth2UserInfoUrl)
+			}
 			if fetchErr != nil {
 				ar.options.Logger.PrintAndLog("OAuth2", "Failed to validate user info", fetchErr)
 				unauthorized = true
@@ -452,14 +486,11 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 	if unauthorized {
 		state := oauth2.GenerateVerifier()
 		originalPath := r.URL.RequestURI()
-		if originalPath == "" || len(originalPath) > 4096 || !strings.HasPrefix(originalPath, "/") || strings.HasPrefix(originalPath, "//") {
-			originalPath = "/"
-		}
-		http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: state, Path: "/", Expires: time.Now().Add(10*time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
-		http.SetCookie(w, &http.Cookie{Name: returnCookie, Value: url.QueryEscape(originalPath), Path: "/", Expires: time.Now().Add(10*time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
+		http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: state, Path: "/", Expires: time.Now().Add(10 * time.Minute), HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
+		http.SetCookie(w, newOAuth2ReturnCookie(originalPath, scheme == "https", time.Now().Add(10*time.Minute)))
 		// A unique nonce prevents ID token replay and binds claims to this login.
 		authOptions := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
-		if hasOAuth2Scope(oauthConfig.Scopes, "openid") {
+		if oidcEnabled {
 			nonce := oauth2.GenerateVerifier()
 			http.SetCookie(w, &http.Cookie{
 				Name: nonceCookie, Value: nonce, Path: "/", MaxAge: 600,

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
-	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 
 	"imuslab.com/zoraxy/mod/auth"
+	"imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/netutils"
 	"imuslab.com/zoraxy/mod/pathmatch"
 )
@@ -105,9 +105,11 @@ func authExceptionMatched(rules []*BasicAuthExceptionRule, r *http.Request) bool
 		switch exceptionType {
 		case AuthExceptionType_Paths:
 			//Path matching is case sensitive unless the rule opts out of it
-			matched := pathmatch.RequestPathWithinPrefix(requestTarget, exceptionRule.PathPrefix)
-			if exceptionRule.CaseInsensitive {
+			matched := pathmatch.PrefixIsRoot(exceptionRule.PathPrefix)
+			if !matched && exceptionRule.CaseInsensitive {
 				matched = pathmatch.RequestPathWithinPrefixFold(requestTarget, exceptionRule.PathPrefix)
+			} else if !matched {
+				matched = pathmatch.RequestPathWithinPrefix(requestTarget, exceptionRule.PathPrefix)
 			}
 			if matched {
 				return true
@@ -212,7 +214,7 @@ func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request, 
 		ForwardUserInfo:          forwardIdentity,
 		ForwardWebSocketIdentity: forwardWebSocketIdentity,
 
-		RemoveTokenCookie:        !provider.OAuth2DisableTokenCookieRemoval,
+		RemoveTokenCookie: !provider.OAuth2DisableTokenCookieRemoval,
 	})
 }
 

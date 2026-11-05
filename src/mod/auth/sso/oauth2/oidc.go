@@ -23,6 +23,14 @@ func hasOAuth2Scope(scopes []string, requested string) bool {
 	return false
 }
 
+// isOIDCConfiguration distinguishes verified OIDC from legacy/manual OAuth2.
+// A scope named openid is not enough to verify ID tokens without discovery
+// metadata (issuer and JWKS URI), so manual configurations retain the ordinary
+// OAuth2 validation path for backward compatibility.
+func isOIDCConfiguration(scopes []string, wellKnownURL string) bool {
+	return strings.TrimSpace(wellKnownURL) != "" && hasOAuth2Scope(scopes, "openid")
+}
+
 // verifyOIDCLogin authenticates ID token claims before trusting the access
 // token. The access token remains in z-token and is used for fresh UserInfo
 // requests on every subsequent protected request.
@@ -70,7 +78,7 @@ func verifyOIDCLogin(ctx context.Context, config *oauth2.Config, token *oauth2.T
 		allowedAlgs = []string{"RS256"}
 	}
 	verifier := oidc.NewVerifier(metadata.Issuer, oidc.NewRemoteKeySet(ctx, metadata.JwksURI), &oidc.Config{
-		ClientID: config.ClientID,
+		ClientID:             config.ClientID,
 		SupportedSigningAlgs: allowedAlgs,
 	})
 	idToken, err := verifier.Verify(ctx, rawIDToken)
