@@ -183,4 +183,3 @@ func SetIdentityHeaders(headers http.Header, user *Identity) {
         }
     }
 }
-
