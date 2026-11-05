@@ -222,6 +222,14 @@ type AuthenticationProvider struct {
 	BasicAuthExceptionRules []*BasicAuthExceptionRule //Path to exclude in a basic auth enabled proxy target
 	BasicAuthGroupIDs       []string                  //Group IDs that are allowed to access this endpoint
 
+	/* OAuth2 Access Settings */
+	OAuth2AllowedGroups                  []string                  //Per-route allowed groups; empty inherits the global default
+	OAuth2ExceptionRules                []*BasicAuthExceptionRule //Paths and IPs that bypass OAuth2
+	OAuth2DisableIdentityForwarding     bool                      //Default false: forward verified identity headers to HTTP origins
+	OAuth2AllowUntrustedIdentityHeaders bool                      //Only effective when identity forwarding is disabled
+	OAuth2ForwardWebSocketIdentity      *bool                     //Nil defaults to enabled; false explicitly disables WebSocket identity forwarding
+	OAuth2DisableTokenCookieRemoval     bool                      //Opt-in to passing the OAuth2 access token cookie upstream
+
 	/* Forward Auth Settings */
 	ForwardAuthURL                    string   // Full URL of the Forward Auth endpoint. Example: https://auth.example.com/api/authz/forward-auth
 	ForwardAuthResponseHeaders        []string // List of headers to copy from the forward auth server response to the request.

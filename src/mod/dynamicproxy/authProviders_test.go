@@ -51,6 +51,9 @@ func TestBasicAuthExceptionMatchedPathPrefix(t *testing.T) {
 		{"encoded_traversal", pathRule("/public/", false), "/public/%2e%2e/admin/secret.txt", false},
 		{"unrelated_path", pathRule("/public/", false), "/admin", false},
 		{"empty_prefix", pathRule("   ", false), "/anything", false},
+		{"root_rule_root", pathRule("/", false), "/", true},
+		{"root_rule_subpath", pathRule("/", false), "/health", true},
+		{"root_rule_case_insensitive_subpath", pathRule("/", true), "/Health", true},
 
 		// Case matching is opt-in per rule and must not widen the prefix boundary.
 		{"case_sensitive_by_default", pathRule("/public/", false), "/Public/logo.png", false},

@@ -63,6 +63,7 @@ type Options struct {
 	SkipTLSValidation              bool                         //Skip backend TLS validation
 	SkipOriginCheck                bool                         //Skip origin check
 	CopyAllHeaders                 bool                         //Copy all headers from incoming request to backend request
+	ForwardIdentityHeaders         bool                         //Forward verified user information to WebSocket backends
 	UserDefinedHeaders             []*rewrite.UserDefinedHeader //User defined headers
 	Logger                         *logger.Logger               //Logger, can be nil
 	Timeout                        int64                        //Connection timeout in seconds, 0 means default (300 seconds)
@@ -231,6 +232,17 @@ func (w *WebsocketProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// forwarding to the remote server.
 		if w.Director != nil {
 			w.Director(req, requestHeader)
+		}
+	}
+
+	if w.Options.ForwardIdentityHeaders {
+		for _, key := range []string{"Remote-Subject", "Remote-User", "Remote-Name", "Remote-Display-Name", "Remote-Nickname", "Remote-Picture", "Remote-Email", "Remote-Groups", "Remote-OIDC-UserInfo"} {
+			if values := req.Header.Values(key); len(values) > 0 {
+				requestHeader.Del(key)
+				for _, value := range values {
+					requestHeader.Add(key, value)
+				}
+			}
 		}
 	}
 

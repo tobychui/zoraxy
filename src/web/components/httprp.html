@@ -635,6 +635,7 @@
                             </div>
                             <br>
                             <button class="ui basic compact small button editBasicAuthCredentialsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui blue user circle icon"></i> Basic Auth Credentials</button>
+                            <button class="ui basic compact small button editOAuth2AccessBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui green user circle icon"></i> OAuth2 Access</button>
                             <button class="ui basic compact small button editZorxAuthExceptionsBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="ui purple shield alternate icon"></i> ZorxAuth Exceptions</button>
                             <div class="ui divider"></div>
                             <!-- Block Common Exploits -->
@@ -1443,6 +1444,11 @@
         showEditorSideWrapper("snippet/basicAuthEditor.html?t=" + Date.now() + "#" + payload);
     }
 
+    function editOAuth2Access(uuid){
+        let payload = encodeURIComponent(JSON.stringify({ept: "host", ep: uuid}));
+        showEditorSideWrapper("snippet/oauth2AccessEditor.html?t=" + Date.now() + "#" + payload);
+    }
+
     function editZorxAuthExceptions(uuid){
         let payload = encodeURIComponent(JSON.stringify({
             ept: "host",
@@ -2159,6 +2165,10 @@
 
         editor.find(".editBasicAuthCredentialsBtn").off("click").on("click", function(){
             editBasicAuthCredentials(uuid);
+        });
+
+        editor.find(".editOAuth2AccessBtn").off("click").on("click", function(){
+            editOAuth2Access(uuid);
         });
 
         editor.find(".editZorxAuthExceptionsBtn").off("click").on("click", function(){
