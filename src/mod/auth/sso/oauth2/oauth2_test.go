@@ -8,13 +8,13 @@ import (
 )
 
 func TestNewOAuth2ConfUsesConservativeDiscoveryScopes(t *testing.T) {
-	router := &OAuth2Router{options: &OAuth2RouterOptions{
+	options := &OAuth2RouterOptions{
 		OAuth2WellKnownUrl: "https://issuer.example/.well-known/openid-configuration",
 		OAuth2ServerURL:    "https://issuer.example/authorize",
 		OAuth2TokenURL:     "https://issuer.example/token",
 		OAuth2UserInfoUrl:  "https://issuer.example/userinfo",
-	}}
-	config, err := router.newOAuth2Conf("https://app.example/internal/oauth2")
+	}
+	config, err := newOAuth2Conf("https://app.example/internal/oauth2", options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,8 +22,8 @@ func TestNewOAuth2ConfUsesConservativeDiscoveryScopes(t *testing.T) {
 		t.Fatalf("got scopes %v, want %v", config.Scopes, defaultOIDCScopes)
 	}
 
-	router.options.OAuth2Scopes = "openid custom"
-	config, err = router.newOAuth2Conf("https://app.example/internal/oauth2")
+	options.OAuth2Scopes = "openid custom"
+	config, err = newOAuth2Conf("https://app.example/internal/oauth2", options)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 	"imuslab.com/zoraxy/mod/utils"
@@ -61,8 +62,10 @@ type OIDCDiscoveryDocument struct {
 
 type OAuth2Router struct {
 	// Protect settings, discovery updates, and configuration cache invalidation.
-	settingsMu sync.RWMutex
-	options    *OAuth2RouterOptions
+	settingsMu         sync.RWMutex
+	settingsGeneration uint64
+	configLoads        singleflight.Group
+	options            *OAuth2RouterOptions
 }
 
 // NewOAuth2Router creates a new OAuth2Router object
@@ -222,6 +225,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	ar.options.Database.Write("oauth2", "oauth2ConfigurationCacheTime", oauth2ConfigurationCacheTime)
 
 	// Flush caches
+	ar.settingsGeneration++
 	ar.options.OAuth2ConfigCache.DeleteAll()
 
 	utils.SendOK(w)
@@ -250,13 +254,15 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.Database.Delete("oauth2", "oauth2DefaultAllowedGroups")
 	ar.options.Database.Delete("oauth2", "oauth2CodeChallengeMethod")
 	ar.options.Database.Delete("oauth2", "oauth2ConfigurationCacheTime")
+	ar.settingsGeneration++
 	ar.options.OAuth2ConfigCache.DeleteAll()
 
 	utils.SendOK(w)
 }
 
-func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2.Config, error) {
-	req, err := http.NewRequest("GET", ar.options.OAuth2WellKnownUrl, nil)
+// options is a request-owned snapshot; discovery must never mutate live settings.
+func fetchOAuth2Configuration(config *oauth2.Config, options *OAuth2RouterOptions) (*oauth2.Config, error) {
+	req, err := http.NewRequest("GET", options.OAuth2WellKnownUrl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +273,7 @@ func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2
 		defer resp.Body.Close()
 		oidcDiscoveryDocument := OIDCDiscoveryDocument{}
 		if err := json.NewDecoder(resp.Body).Decode(&oidcDiscoveryDocument); err != nil {
-			ar.options.Logger.PrintAndLog("OAuth2Router", fmt.Sprintf("Failed to decode ([%d] %s)", resp.StatusCode, resp.Status), err)
+			options.Logger.PrintAndLog("OAuth2Router", fmt.Sprintf("Failed to decode ([%d] %s)", resp.StatusCode, resp.Status), err)
 			return nil, err
 		}
 		// Discovery describes supported scopes, not a scope request. Never request all of them implicitly.
@@ -280,36 +286,35 @@ func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2
 			config.Endpoint.TokenURL = oidcDiscoveryDocument.TokenEndpoint
 		}
 
-		if ar.options.OAuth2UserInfoUrl == "" {
-			ar.options.OAuth2UserInfoUrl = oidcDiscoveryDocument.UserinfoEndpoint
+		if options.OAuth2UserInfoUrl == "" {
+			options.OAuth2UserInfoUrl = oidcDiscoveryDocument.UserinfoEndpoint
 		}
 
 	}
 	return config, nil
 }
 
-// Caller holds settingsMu when the router is serving requests: discovery may
-// populate the UserInfo URL as well as the cached OAuth2 configuration.
-func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error) {
+// Build from a private settings snapshot, without holding settings or cache locks.
+func newOAuth2Conf(redirectUrl string, options *OAuth2RouterOptions) (*oauth2.Config, error) {
 	config := &oauth2.Config{
-		ClientID:     ar.options.OAuth2ClientId,
-		ClientSecret: ar.options.OAuth2ClientSecret,
+		ClientID:     options.OAuth2ClientId,
+		ClientSecret: options.OAuth2ClientSecret,
 		RedirectURL:  redirectUrl,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  ar.options.OAuth2ServerURL,
-			TokenURL: ar.options.OAuth2TokenURL,
+			AuthURL:  options.OAuth2ServerURL,
+			TokenURL: options.OAuth2TokenURL,
 		},
 	}
-	if ar.options.OAuth2Scopes != "" {
-		config.Scopes = strings.FieldsFunc(ar.options.OAuth2Scopes, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
-	} else if strings.TrimSpace(ar.options.OAuth2WellKnownUrl) != "" {
+	if options.OAuth2Scopes != "" {
+		config.Scopes = strings.FieldsFunc(options.OAuth2Scopes, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' || r == '\n' })
+	} else if strings.TrimSpace(options.OAuth2WellKnownUrl) != "" {
 		// Discovery lists what a provider supports; it does not define what this
 		// client should request. Use the conservative conventional OIDC set.
 		config.Scopes = append([]string(nil), defaultOIDCScopes...)
 	}
-	if ar.options.OAuth2WellKnownUrl != "" && (config.Endpoint.AuthURL == "" || config.Endpoint.TokenURL == "" ||
-		ar.options.OAuth2UserInfoUrl == "") {
-		return ar.fetchOAuth2Configuration(config)
+	if options.OAuth2WellKnownUrl != "" && (config.Endpoint.AuthURL == "" || config.Endpoint.TokenURL == "" ||
+		options.OAuth2UserInfoUrl == "") {
+		return fetchOAuth2Configuration(config, options)
 	}
 	return config, nil
 }
@@ -334,21 +339,63 @@ func newOAuth2ReturnCookie(originalPath string, secure bool, expires time.Time) 
 
 const returnCookieName = "z-oauth-return"
 
-// requestConfiguration snapshots settings and their matching cached config before
-// authentication does network I/O. Settings updates cannot mix policy generations
-// within a request or race with discovery populating the UserInfo URL.
+type oauth2RequestConfiguration struct {
+	config  *oauth2.Config
+	options OAuth2RouterOptions
+}
+
+// requestConfiguration reads and publishes matching settings/config snapshots
+// under short locks. Slow discovery only holds up misses for the same host and
+// settings generation; it never holds either the settings or cache lock.
 func (ar *OAuth2Router) requestConfiguration(host, redirectURL string) (*oauth2.Config, OAuth2RouterOptions) {
-	ar.settingsMu.Lock()
-	defer ar.settingsMu.Unlock()
-	item, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(host, func() *oauth2.Config {
-		config, err := ar.newOAuth2Conf(redirectURL)
-		if err != nil {
-			ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
-			return nil
+	for {
+		ar.settingsMu.RLock()
+		options := *ar.options
+		generation := ar.settingsGeneration
+		item := options.OAuth2ConfigCache.Get(host)
+		ar.settingsMu.RUnlock()
+		if item != nil {
+			return item.Value(), options
 		}
-		return config
-	})
-	return item.Value(), *ar.options
+
+		// New settings must not wait for discovery started by an older generation.
+		key := fmt.Sprintf("%d:%s", generation, host)
+		result, _, _ := ar.configLoads.Do(key, func() (interface{}, error) {
+			// Another load or settings update may have completed before this flight.
+			ar.settingsMu.RLock()
+			if generation != ar.settingsGeneration {
+				ar.settingsMu.RUnlock()
+				return nil, nil
+			}
+			if item := ar.options.OAuth2ConfigCache.Get(host); item != nil {
+				cached := oauth2RequestConfiguration{item.Value(), *ar.options}
+				ar.settingsMu.RUnlock()
+				return cached, nil
+			}
+			ar.settingsMu.RUnlock()
+
+			config, err := newOAuth2Conf(redirectURL, &options)
+			if err != nil {
+				options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
+			}
+
+			ar.settingsMu.Lock()
+			defer ar.settingsMu.Unlock()
+			if generation == ar.settingsGeneration {
+				if ar.options.OAuth2UserInfoUrl == "" {
+					ar.options.OAuth2UserInfoUrl = options.OAuth2UserInfoUrl
+				}
+				ar.options.OAuth2ConfigCache.Set(host, config, ttlcache.DefaultTTL)
+				return oauth2RequestConfiguration{config, *ar.options}, nil
+			}
+			return nil, nil
+		})
+		if result != nil {
+			loaded := result.(oauth2RequestConfiguration)
+			return loaded.config, loaded.options
+		}
+		// Settings changed during discovery. Retry using the current generation.
+	}
 }
 
 // HandleOAuth2Auth is the internal handler for OAuth authentication
