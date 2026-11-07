@@ -36,7 +36,7 @@ and return a boolean indicate if the request is written to http.ResponseWriter
 */
 func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *http.Request, h *ProxyHandler, bypassAuth bool) bool {
 	requestHostname := r.Host
-	if sep.AuthenticationProvider.AuthMethod == AuthMethodOauth2 {
+	if sep.AuthenticationProvider != nil && sep.AuthenticationProvider.AuthMethod == AuthMethodOauth2 {
 		protectOAuth2IdentityHeaders(r, sep.AuthenticationProvider)
 		if bypassAuth {
 			oauth2.StripOAuth2Cookies(r, !sep.AuthenticationProvider.OAuth2DisableTokenCookieRemoval)

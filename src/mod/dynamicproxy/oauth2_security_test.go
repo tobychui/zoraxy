@@ -125,6 +125,37 @@ func TestServeHTTPMTLSBypassDoesNotForwardSpoofedIdentity(t *testing.T) {
 	}
 }
 
+func TestMTLSBypassWithNilAuthenticationProvider(t *testing.T) {
+	for _, config := range []string{`{}`, `{"AuthenticationProvider":null}`} {
+		t.Run(config, func(t *testing.T) {
+			var endpoint ProxyEndpoint
+			if err := json.Unmarshal([]byte(config), &endpoint); err != nil {
+				t.Fatal(err)
+			}
+			if endpoint.AuthenticationProvider != nil {
+				t.Fatal("test requires a missing or explicitly null provider")
+			}
+			r := httptest.NewRequest(http.MethodGet, "https://app.test/private", nil)
+			r.Header.Set("X-Client-Cert-Verified", "true")
+			w := httptest.NewRecorder()
+			// ServeHTTP passes bypassAuth only after verifying the certificate
+			// and checking the endpoint's mTLS bypass policy.
+			if handleAuthProviderRouting(&endpoint, w, r, nil, true) {
+				t.Fatal("verified mTLS bypass must allow proxying without an auth provider")
+			}
+			if w.Body.Len() != 0 || w.Code != http.StatusOK {
+				t.Fatal("authentication routing unexpectedly wrote a response")
+			}
+			if endpoint.AuthenticationProvider != nil {
+				t.Fatal("bypass must not mutate the endpoint's provider")
+			}
+			if r.Header.Get("X-Client-Cert-Verified") != "true" || oauth2.HasVerifiedIdentityHeaders(r) {
+				t.Fatal("mTLS bypass must preserve certificate evidence without creating an OAuth2 identity")
+			}
+		})
+	}
+}
+
 func TestOAuth2MTLSBypassProtectsIdentity(t *testing.T) {
 	for _, tc := range []struct {
 		name                                                      string
