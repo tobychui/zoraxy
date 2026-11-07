@@ -39,6 +39,16 @@ type Identity struct {
 	UserInfo          json.RawMessage
 }
 
+type verifiedIdentityHeadersKey struct{}
+
+// HasVerifiedIdentityHeaders is true only after this request's OAuth2 identity
+// was validated, authorized, and written to its headers. Incoming headers alone
+// (including on an authentication bypass) never establish a verified identity.
+func HasVerifiedIdentityHeaders(r *http.Request) bool {
+	verified, _ := r.Context().Value(verifiedIdentityHeadersKey{}).(bool)
+	return verified
+}
+
 // SplitAllowedGroups normalizes comma-separated group identifiers without changing case.
 func SplitAllowedGroups(input string) []string {
 	result := []string{}

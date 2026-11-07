@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -59,7 +60,9 @@ type OIDCDiscoveryDocument struct {
 }
 
 type OAuth2Router struct {
-	options *OAuth2RouterOptions
+	// Protect settings, discovery updates, and configuration cache invalidation.
+	settingsMu sync.RWMutex
+	options    *OAuth2RouterOptions
 }
 
 // NewOAuth2Router creates a new OAuth2Router object
@@ -111,6 +114,8 @@ func (ar *OAuth2Router) HandleSetOAuth2Settings(w http.ResponseWriter, r *http.R
 }
 
 func (ar *OAuth2Router) handleSetOAuthSettingsGET(w http.ResponseWriter, r *http.Request) {
+	ar.settingsMu.RLock()
+	defer ar.settingsMu.RUnlock()
 	//Return the current settings
 	js, _ := json.Marshal(map[string]interface{}{
 		"oauth2WellKnownUrl":           ar.options.OAuth2WellKnownUrl,
@@ -191,6 +196,8 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	defaultAllowedGroups = strings.Join(SplitAllowedGroups(defaultAllowedGroups), ",")
 
 	//Write changes to runtime
+	ar.settingsMu.Lock()
+	defer ar.settingsMu.Unlock()
 	ar.options.OAuth2WellKnownUrl = oauth2WellKnownUrl
 	ar.options.OAuth2ServerURL = oauth2ServerUrl
 	ar.options.OAuth2TokenURL = oauth2TokenURL
@@ -221,6 +228,8 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 }
 
 func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *http.Request) {
+	ar.settingsMu.Lock()
+	defer ar.settingsMu.Unlock()
 	ar.options.OAuth2WellKnownUrl = ""
 	ar.options.OAuth2ServerURL = ""
 	ar.options.OAuth2TokenURL = ""
@@ -241,6 +250,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.Database.Delete("oauth2", "oauth2DefaultAllowedGroups")
 	ar.options.Database.Delete("oauth2", "oauth2CodeChallengeMethod")
 	ar.options.Database.Delete("oauth2", "oauth2ConfigurationCacheTime")
+	ar.options.OAuth2ConfigCache.DeleteAll()
 
 	utils.SendOK(w)
 }
@@ -250,7 +260,7 @@ func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{}
+	client := &http.Client{Timeout: 15 * time.Second}
 	if resp, err := client.Do(req); err != nil {
 		return nil, err
 	} else {
@@ -278,6 +288,8 @@ func (ar *OAuth2Router) fetchOAuth2Configuration(config *oauth2.Config) (*oauth2
 	return config, nil
 }
 
+// Caller holds settingsMu when the router is serving requests: discovery may
+// populate the UserInfo URL as well as the cached OAuth2 configuration.
 func (ar *OAuth2Router) newOAuth2Conf(redirectUrl string) (*oauth2.Config, error) {
 	config := &oauth2.Config{
 		ClientID:     ar.options.OAuth2ClientId,
@@ -322,6 +334,23 @@ func newOAuth2ReturnCookie(originalPath string, secure bool, expires time.Time) 
 
 const returnCookieName = "z-oauth-return"
 
+// requestConfiguration snapshots settings and their matching cached config before
+// authentication does network I/O. Settings updates cannot mix policy generations
+// within a request or race with discovery populating the UserInfo URL.
+func (ar *OAuth2Router) requestConfiguration(host, redirectURL string) (*oauth2.Config, OAuth2RouterOptions) {
+	ar.settingsMu.Lock()
+	defer ar.settingsMu.Unlock()
+	item, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(host, func() *oauth2.Config {
+		config, err := ar.newOAuth2Conf(redirectURL)
+		if err != nil {
+			ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
+			return nil
+		}
+		return config
+	})
+	return item.Value(), *ar.options
+}
+
 // HandleOAuth2Auth is the internal handler for OAuth authentication
 // Set useHTTPS to true if your OAuth server is using HTTPS
 // Set OAuthURL to the URL of the OAuth server, e.g. OAuth.example.com
@@ -340,27 +369,18 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		scheme = "https"
 	}
 
-	oauthConfigCache, _ := ar.options.OAuth2ConfigCache.GetOrSetFunc(r.Host, func() *oauth2.Config {
-		oauthConfig, err := ar.newOAuth2Conf(scheme + "://" + r.Host + callbackPrefix)
-		if err != nil {
-			ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to fetch OIDC configuration:", err)
-			return nil
-		}
-		return oauthConfig
-	})
-
-	oauthConfig := oauthConfigCache.Value()
+	oauthConfig, options := ar.requestConfiguration(r.Host, scheme+"://"+r.Host+callbackPrefix)
 	if oauthConfig == nil {
 		w.WriteHeader(500)
 		return errors.New("failed to fetch OIDC configuration")
 	}
 
-	if oauthConfig.Endpoint.AuthURL == "" || oauthConfig.Endpoint.TokenURL == "" || ar.options.OAuth2UserInfoUrl == "" {
-		ar.options.Logger.PrintAndLog("OAuth2Router", "Invalid OAuth2 configuration", nil)
+	if oauthConfig.Endpoint.AuthURL == "" || oauthConfig.Endpoint.TokenURL == "" || options.OAuth2UserInfoUrl == "" {
+		options.Logger.PrintAndLog("OAuth2Router", "Invalid OAuth2 configuration", nil)
 		w.WriteHeader(500)
 		return errors.New("invalid OAuth2 configuration")
 	}
-	oidcEnabled := isOIDCConfiguration(oauthConfig.Scopes, ar.options.OAuth2WellKnownUrl)
+	oidcEnabled := isOIDCConfiguration(oauthConfig.Scopes, options.OAuth2WellKnownUrl)
 
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
@@ -381,10 +401,10 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 		defer cancel()
 		var authCodeOptions []oauth2.AuthCodeOption
-		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
+		if options.OAuth2CodeChallengeMethod == "PKCE" || options.OAuth2CodeChallengeMethod == "PKCE_S256" {
 			verifierCookie, err := r.Cookie(verifierCookie)
 			if err != nil || verifierCookie.Value == "" {
-				ar.options.Logger.PrintAndLog("OAuth2Router", "Read OAuth2 verifier cookie failed", err)
+				options.Logger.PrintAndLog("OAuth2Router", "Read OAuth2 verifier cookie failed", err)
 				w.WriteHeader(401)
 				return errors.New("unauthorized")
 			}
@@ -392,12 +412,12 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		}
 		token, err := oauthConfig.Exchange(ctx, code, authCodeOptions...)
 		if err != nil {
-			ar.options.Logger.PrintAndLog("OAuth2", "Token exchange failed", err)
+			options.Logger.PrintAndLog("OAuth2", "Token exchange failed", err)
 			w.WriteHeader(401)
 			return errors.New("unauthorized")
 		}
 		if !token.Valid() {
-			ar.options.Logger.PrintAndLog("OAuth2", "Invalid token", err)
+			options.Logger.PrintAndLog("OAuth2", "Invalid token", err)
 			w.WriteHeader(401)
 			return errors.New("unauthorized")
 		}
@@ -410,8 +430,8 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 				http.Error(w, "Missing OIDC login nonce", http.StatusUnauthorized)
 				return errors.New("missing OIDC login nonce")
 			}
-			if err := verifyOIDCLogin(ctx, oauthConfig, token, ar.options.OAuth2WellKnownUrl, ar.options.OAuth2UserInfoUrl, loginNonce.Value); err != nil {
-				ar.options.Logger.PrintAndLog("OAuth2", "OIDC login verification failed", err)
+			if err := verifyOIDCLogin(ctx, oauthConfig, token, options.OAuth2WellKnownUrl, options.OAuth2UserInfoUrl, loginNonce.Value); err != nil {
+				options.Logger.PrintAndLog("OAuth2", "OIDC login verification failed", err)
 				http.Error(w, "OIDC login verification failed", http.StatusUnauthorized)
 				return errors.New("OIDC login verification failed")
 			}
@@ -428,7 +448,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		}
 		w.Header().Add("Set-Cookie", cookie.String())
 
-		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
+		if options.OAuth2CodeChallengeMethod == "PKCE" || options.OAuth2CodeChallengeMethod == "PKCE_S256" {
 			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1), HttpOnly: true}
 			if scheme == "https" {
 				cookie.Secure = true
@@ -457,17 +477,17 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 			var identity *Identity
 			var fetchErr error
 			if oidcEnabled {
-				identity, fetchErr = FetchIdentity(ctx, client, ar.options.OAuth2UserInfoUrl)
+				identity, fetchErr = FetchIdentity(ctx, client, options.OAuth2UserInfoUrl)
 			} else {
-				identity, fetchErr = FetchOAuth2Identity(ctx, client, ar.options.OAuth2UserInfoUrl)
+				identity, fetchErr = FetchOAuth2Identity(ctx, client, options.OAuth2UserInfoUrl)
 			}
 			if fetchErr != nil {
-				ar.options.Logger.PrintAndLog("OAuth2", "Failed to validate user info", fetchErr)
+				options.Logger.PrintAndLog("OAuth2", "Failed to validate user info", fetchErr)
 				unauthorized = true
 			} else {
 				allowedGroups := policy.AllowedGroups
 				if len(allowedGroups) == 0 {
-					allowedGroups = SplitAllowedGroups(ar.options.OAuth2DefaultAllowedGroups)
+					allowedGroups = SplitAllowedGroups(options.OAuth2DefaultAllowedGroups)
 				}
 				if !GroupsAllowed(identity.Groups, allowedGroups) {
 					http.Error(w, "403 - Access denied: insufficient group permissions", http.StatusForbidden)
@@ -476,6 +496,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 				isWebSocket := strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
 				if policy.ForwardUserInfo && (!isWebSocket || policy.ForwardWebSocketIdentity) {
 					SetIdentityHeaders(r.Header, identity)
+					*r = *r.WithContext(context.WithValue(r.Context(), verifiedIdentityHeadersKey{}, true))
 				}
 				StripOAuth2Cookies(r, policy.RemoveTokenCookie)
 			}
@@ -499,7 +520,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 			authOptions = append(authOptions, oauth2.SetAuthURLParam("nonce", nonce))
 		}
 		var authURL string
-		if ar.options.OAuth2CodeChallengeMethod == "PKCE" || ar.options.OAuth2CodeChallengeMethod == "PKCE_S256" {
+		if options.OAuth2CodeChallengeMethod == "PKCE" || options.OAuth2CodeChallengeMethod == "PKCE_S256" {
 			cookie := http.Cookie{Name: verifierCookie, Value: oauth2.GenerateVerifier(), Path: "/", Expires: time.Now().Add(time.Hour * 1), HttpOnly: true}
 			if scheme == "https" {
 				cookie.Secure = true
@@ -508,7 +529,7 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 
 			w.Header().Add("Set-Cookie", cookie.String())
 
-			if ar.options.OAuth2CodeChallengeMethod == "PKCE" {
+			if options.OAuth2CodeChallengeMethod == "PKCE" {
 				authURL = oauthConfig.AuthCodeURL(state, append(authOptions, oauth2.SetAuthURLParam("code_challenge", cookie.Value))...)
 			} else {
 				authURL = oauthConfig.AuthCodeURL(state, append(authOptions, oauth2.S256ChallengeOption(cookie.Value))...)

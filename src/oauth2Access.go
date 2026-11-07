@@ -32,7 +32,6 @@ func updateProxyOAuth2Settings(proxy *dynamicproxy.ProxyEndpoint, input oauth2Ro
 		return errors.New("invalid OAuth2 settings update")
 	}
 
-	replacement := *proxy
 	provider := proxy.AuthenticationProvider
 	if provider == nil {
 		provider = dynamicproxy.GetDefaultAuthenticationProvider()
@@ -55,14 +54,14 @@ func updateProxyOAuth2Settings(proxy *dynamicproxy.ProxyEndpoint, input oauth2Ro
 	providerReplacement.OAuth2AllowUntrustedIdentityHeaders = !input.RemoveUntrustedIdentityHeaders && !input.ForwardUserInfo
 	providerReplacement.OAuth2ForwardWebSocketIdentity = &forwardWebSocketIdentity
 	providerReplacement.OAuth2DisableTokenCookieRemoval = input.IncludeTokenCookie
-	replacement.AuthenticationProvider = &providerReplacement
+	replacement := proxy.CloneWithAuthenticationProvider(&providerReplacement)
 
 	// Persist first. A failed write must not create a runtime-only policy that
 	// silently disappears on restart.
-	if err := save(&replacement); err != nil {
+	if err := save(replacement); err != nil {
 		return err
 	}
-	publish(&replacement)
+	publish(replacement)
 	return nil
 }
 

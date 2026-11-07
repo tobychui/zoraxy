@@ -116,12 +116,10 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		//Validate auth (basic auth or SSO auth)
 		//A verified client certificate can replace the login if the host is set up that way
-		if !(mtlsVerified && mtlsPol.BypassAuth) {
-			respWritten := handleAuthProviderRouting(sep, w, r, h)
-			if respWritten {
-				//Request handled by subroute
-				return
-			}
+		// Route header protection also applies when mTLS replaces the login.
+		if handleAuthProviderRouting(sep, w, r, h, mtlsVerified && mtlsPol.BypassAuth) {
+			//Request handled by subroute
+			return
 		}
 
 		//Plugin routing
