@@ -74,17 +74,7 @@ type OAuth2Router struct {
 func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 	options.Database.NewTable("oauth2")
 
-	//Read settings from database, if exists
-	options.Database.Read("oauth2", "oauth2WellKnownUrl", &options.OAuth2WellKnownUrl)
-	options.Database.Read("oauth2", "oauth2ServerUrl", &options.OAuth2ServerURL)
-	options.Database.Read("oauth2", "oauth2TokenUrl", &options.OAuth2TokenURL)
-	options.Database.Read("oauth2", "oauth2ClientId", &options.OAuth2ClientId)
-	options.Database.Read("oauth2", "oauth2ClientSecret", &options.OAuth2ClientSecret)
-	options.Database.Read("oauth2", "oauth2UserInfoUrl", &options.OAuth2UserInfoUrl)
-	options.Database.Read("oauth2", "oauth2CodeChallengeMethod", &options.OAuth2CodeChallengeMethod)
-	options.Database.Read("oauth2", "oauth2Scopes", &options.OAuth2Scopes)
-	options.Database.Read("oauth2", "oauth2DefaultAllowedGroups", &options.OAuth2DefaultAllowedGroups)
-	options.Database.Read("oauth2", "oauth2ConfigurationCacheTime", &options.OAuth2ConfigurationCacheTime)
+	loadOAuth2Settings(options)
 
 	ar := &OAuth2Router{
 		options: options,
@@ -204,36 +194,25 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 	defaultAllowedGroups, _ := utils.PostPara(r, "oauth2DefaultAllowedGroups")
 	defaultAllowedGroups = strings.Join(SplitAllowedGroups(defaultAllowedGroups), ",")
 
-	//Write changes to runtime
 	ar.settingsMu.Lock()
 	defer ar.settingsMu.Unlock()
-	ar.options.OAuth2WellKnownUrl = oauth2WellKnownUrl
-	ar.options.OAuth2ServerURL = oauth2ServerUrl
-	ar.options.OAuth2TokenURL = oauth2TokenURL
-	ar.options.OAuth2UserInfoUrl = oauth2UserInfoUrl
-	ar.options.OAuth2ClientId = oauth2ClientId
-	ar.options.OAuth2ClientSecret = oauth2ClientSecret
-	ar.options.OAuth2Scopes = oauth2Scopes
-	ar.options.OAuth2DefaultAllowedGroups = defaultAllowedGroups
-	ar.options.OAuth2CodeChallengeMethod = oauth2CodeChallengeMethod
-	ar.options.OAuth2ConfigurationCacheTime = oauth2ConfigurationCacheTime
-
-	//Write changes to database
-	ar.options.Database.Write("oauth2", "oauth2WellKnownUrl", oauth2WellKnownUrl)
-	ar.options.Database.Write("oauth2", "oauth2ServerUrl", oauth2ServerUrl)
-	ar.options.Database.Write("oauth2", "oauth2TokenUrl", oauth2TokenURL)
-	ar.options.Database.Write("oauth2", "oauth2UserInfoUrl", oauth2UserInfoUrl)
-	ar.options.Database.Write("oauth2", "oauth2ClientId", oauth2ClientId)
-	ar.options.Database.Write("oauth2", "oauth2ClientSecret", oauth2ClientSecret)
-	ar.options.Database.Write("oauth2", "oauth2Scopes", oauth2Scopes)
-	ar.options.Database.Write("oauth2", "oauth2DefaultAllowedGroups", defaultAllowedGroups)
-	ar.options.Database.Write("oauth2", "oauth2CodeChallengeMethod", oauth2CodeChallengeMethod)
-	ar.options.Database.Write("oauth2", "oauth2ConfigurationCacheTime", oauth2ConfigurationCacheTime)
-
-	// Flush caches
-	ar.settingsGeneration++
-	ar.sessions.DeleteAll()
-	ar.options.OAuth2ConfigCache.DeleteAll()
+	settings := persistedOAuth2Settings{
+		OAuth2WellKnownUrl:           oauth2WellKnownUrl,
+		OAuth2ServerURL:              oauth2ServerUrl,
+		OAuth2TokenURL:               oauth2TokenURL,
+		OAuth2UserInfoUrl:            oauth2UserInfoUrl,
+		OAuth2ClientId:               oauth2ClientId,
+		OAuth2ClientSecret:           oauth2ClientSecret,
+		OAuth2Scopes:                 oauth2Scopes,
+		OAuth2DefaultAllowedGroups:   defaultAllowedGroups,
+		OAuth2CodeChallengeMethod:    oauth2CodeChallengeMethod,
+		OAuth2ConfigurationCacheTime: oauth2ConfigurationCacheTime,
+	}
+	if err := ar.saveOAuth2Settings(settings); err != nil {
+		ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to save OAuth2 settings", err)
+		utils.SendErrorResponse(w, "Failed to save OAuth2 settings")
+		return
+	}
 
 	utils.SendOK(w)
 }
@@ -241,29 +220,14 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *http.Request) {
 	ar.settingsMu.Lock()
 	defer ar.settingsMu.Unlock()
-	ar.options.OAuth2WellKnownUrl = ""
-	ar.options.OAuth2ServerURL = ""
-	ar.options.OAuth2TokenURL = ""
-	ar.options.OAuth2UserInfoUrl = ""
-	ar.options.OAuth2ClientId = ""
-	ar.options.OAuth2ClientSecret = ""
-	ar.options.OAuth2Scopes = ""
-	ar.options.OAuth2DefaultAllowedGroups = ""
-	ar.options.OAuth2CodeChallengeMethod = ""
-
-	ar.options.Database.Delete("oauth2", "oauth2WellKnownUrl")
-	ar.options.Database.Delete("oauth2", "oauth2ServerUrl")
-	ar.options.Database.Delete("oauth2", "oauth2TokenUrl")
-	ar.options.Database.Delete("oauth2", "oauth2UserInfoUrl")
-	ar.options.Database.Delete("oauth2", "oauth2ClientId")
-	ar.options.Database.Delete("oauth2", "oauth2ClientSecret")
-	ar.options.Database.Delete("oauth2", "oauth2Scopes")
-	ar.options.Database.Delete("oauth2", "oauth2DefaultAllowedGroups")
-	ar.options.Database.Delete("oauth2", "oauth2CodeChallengeMethod")
-	ar.options.Database.Delete("oauth2", "oauth2ConfigurationCacheTime")
-	ar.settingsGeneration++
-	ar.sessions.DeleteAll()
-	ar.options.OAuth2ConfigCache.DeleteAll()
+	cacheTime := DefaultOAuth2ConfigCacheTime
+	// Persist an empty record rather than deleting it, so legacy keys cannot
+	// resurrect the previous provider or group policy after a restart.
+	if err := ar.saveOAuth2Settings(persistedOAuth2Settings{OAuth2ConfigurationCacheTime: &cacheTime}); err != nil {
+		ar.options.Logger.PrintAndLog("OAuth2Router", "Failed to reset OAuth2 settings", err)
+		utils.SendErrorResponse(w, "Failed to reset OAuth2 settings")
+		return
+	}
 
 	utils.SendOK(w)
 }
