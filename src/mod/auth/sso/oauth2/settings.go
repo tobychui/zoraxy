@@ -1,6 +1,11 @@
 package oauth2
 
-import "time"
+import (
+	"errors"
+	"time"
+
+	"imuslab.com/zoraxy/mod/database/dbinc"
+)
 
 // Keep policy and provider settings in one database value, so a failed write
 // cannot commit only part of an administrative change.
@@ -33,28 +38,42 @@ func (settings persistedOAuth2Settings) apply(options *OAuth2RouterOptions) {
 }
 
 func loadOAuth2Settings(options *OAuth2RouterOptions) {
-	if options.Database.KeyExists("oauth2", oauth2SettingsKey) {
-		var settings persistedOAuth2Settings
-		if err := options.Database.Read("oauth2", oauth2SettingsKey, &settings); err != nil {
-			// Do not fall back to an older, potentially broader legacy policy.
-			options.Logger.PrintAndLog("OAuth2Router", "Failed to load OAuth2 settings", err)
-			settings = persistedOAuth2Settings{}
-		}
+	var settings persistedOAuth2Settings
+	err := options.Database.Read("oauth2", oauth2SettingsKey, &settings)
+	if err == nil {
 		settings.apply(options)
 		return
 	}
-
-	// Legacy installations migrate on their next successful settings save.
-	options.Database.Read("oauth2", "oauth2WellKnownUrl", &options.OAuth2WellKnownUrl)
-	options.Database.Read("oauth2", "oauth2ServerUrl", &options.OAuth2ServerURL)
-	options.Database.Read("oauth2", "oauth2TokenUrl", &options.OAuth2TokenURL)
-	options.Database.Read("oauth2", "oauth2ClientId", &options.OAuth2ClientId)
-	options.Database.Read("oauth2", "oauth2ClientSecret", &options.OAuth2ClientSecret)
-	options.Database.Read("oauth2", "oauth2UserInfoUrl", &options.OAuth2UserInfoUrl)
-	options.Database.Read("oauth2", "oauth2CodeChallengeMethod", &options.OAuth2CodeChallengeMethod)
-	options.Database.Read("oauth2", "oauth2Scopes", &options.OAuth2Scopes)
-	options.Database.Read("oauth2", "oauth2DefaultAllowedGroups", &options.OAuth2DefaultAllowedGroups)
-	options.Database.Read("oauth2", "oauth2ConfigurationCacheTime", &options.OAuth2ConfigurationCacheTime)
+	failClosed := func(err error) {
+		options.Logger.PrintAndLog("OAuth2Router", "Failed to load OAuth2 settings", err)
+		(persistedOAuth2Settings{}).apply(options)
+	}
+	if !errors.Is(err, dbinc.ErrNotFound) {
+		failClosed(err)
+		return
+	}
+	// Only confirmed absence permits legacy migration. Missing individual legacy
+	// keys are allowed, but a corrupt or unreadable policy must not become empty.
+	for _, entry := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"oauth2WellKnownUrl", &options.OAuth2WellKnownUrl},
+		{"oauth2ServerUrl", &options.OAuth2ServerURL},
+		{"oauth2TokenUrl", &options.OAuth2TokenURL},
+		{"oauth2ClientId", &options.OAuth2ClientId},
+		{"oauth2ClientSecret", &options.OAuth2ClientSecret},
+		{"oauth2UserInfoUrl", &options.OAuth2UserInfoUrl},
+		{"oauth2CodeChallengeMethod", &options.OAuth2CodeChallengeMethod},
+		{"oauth2Scopes", &options.OAuth2Scopes},
+		{"oauth2DefaultAllowedGroups", &options.OAuth2DefaultAllowedGroups},
+		{"oauth2ConfigurationCacheTime", &options.OAuth2ConfigurationCacheTime},
+	} {
+		if err := options.Database.Read("oauth2", entry.key, entry.target); err != nil && !errors.Is(err, dbinc.ErrNotFound) {
+			failClosed(err)
+			return
+		}
+	}
 }
 
 // Caller holds settingsMu through persistence, publication and invalidation.

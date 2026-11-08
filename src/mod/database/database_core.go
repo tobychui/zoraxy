@@ -1,5 +1,5 @@
-//go:build !mipsle && !riscv64
-// +build !mipsle,!riscv64
+//go:build !mipsle && !riscv64 && !fsdb
+// +build !mipsle,!riscv64,!fsdb
 
 package database
 

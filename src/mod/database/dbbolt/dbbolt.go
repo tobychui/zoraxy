@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	bolt "go.etcd.io/bbolt"
+	"imuslab.com/zoraxy/mod/database/dbinc"
 )
 
 /*
@@ -102,13 +103,17 @@ func (d *Database) Write(tableName string, key string, value interface{}) error 
 }
 
 func (d *Database) Read(tableName string, key string, assignee interface{}) error {
-	err := d.Db.(*bolt.DB).View(func(tx *bolt.Tx) error {
+	return d.Db.(*bolt.DB).View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(tableName))
+		if b == nil {
+			return dbinc.ErrNotFound
+		}
 		v := b.Get([]byte(key))
-		json.Unmarshal(v, &assignee)
-		return nil
+		if v == nil {
+			return dbinc.ErrNotFound
+		}
+		return json.Unmarshal(v, assignee)
 	})
-	return err
 }
 
 func (d *Database) KeyExists(tableName string, key string) bool {

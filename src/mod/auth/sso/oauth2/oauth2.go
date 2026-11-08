@@ -266,6 +266,12 @@ func fetchOAuth2Configuration(config *oauth2.Config, options *OAuth2RouterOption
 		}
 
 	}
+	// Validate after merging discovery with explicit overrides. A valid JSON
+	// document can still be incomplete and must remain eligible for retry.
+	if strings.TrimSpace(config.Endpoint.AuthURL) == "" || strings.TrimSpace(config.Endpoint.TokenURL) == "" ||
+		strings.TrimSpace(options.OAuth2UserInfoUrl) == "" {
+		return nil, errors.New("OIDC discovery did not resolve all required endpoints")
+	}
 	return config, nil
 }
 

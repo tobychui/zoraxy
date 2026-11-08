@@ -2,6 +2,7 @@ package dbleveldb
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"path/filepath"
 	"strings"
@@ -108,6 +109,9 @@ func (d *DB) Write(tableName string, key string, value interface{}) error {
 
 func (d *DB) Read(tableName string, key string, assignee interface{}) error {
 	data, err := d.db.Get([]byte(filepath.ToSlash(filepath.Join(tableName, key))), nil)
+	if errors.Is(err, leveldb.ErrNotFound) {
+		return dbinc.ErrNotFound
+	}
 	if err != nil {
 		return err
 	}
