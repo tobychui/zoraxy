@@ -243,6 +243,9 @@ func fetchOAuth2Configuration(config *oauth2.Config, options *OAuth2RouterOption
 		return nil, err
 	} else {
 		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("OIDC discovery returned HTTP %d", resp.StatusCode)
+		}
 		oidcDiscoveryDocument := OIDCDiscoveryDocument{}
 		if err := json.NewDecoder(resp.Body).Decode(&oidcDiscoveryDocument); err != nil {
 			options.Logger.PrintAndLog("OAuth2Router", fmt.Sprintf("Failed to decode ([%d] %s)", resp.StatusCode, resp.Status), err)
@@ -362,6 +365,12 @@ func (ar *OAuth2Router) requestConfiguration(host, redirectURL string) (*oauth2.
 			ar.settingsMu.Lock()
 			defer ar.settingsMu.Unlock()
 			if generation == ar.settingsGeneration {
+				if err != nil {
+					// Share this failure with in-flight callers, but let the next
+					// request retry. Cache hits renew TTL, so caching nil could
+					// otherwise keep a recovered provider unavailable indefinitely.
+					return oauth2RequestConfiguration{nil, ar.snapshotOptions()}, nil
+				}
 				if ar.options.OAuth2UserInfoUrl == "" {
 					ar.options.OAuth2UserInfoUrl = options.OAuth2UserInfoUrl
 				}

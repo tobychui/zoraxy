@@ -190,3 +190,62 @@ func TestConcurrentDiscoveryMissesShareOneLoad(t *testing.T) {
 		t.Fatalf("concurrent cache misses made %d discovery calls, want 1", calls.Load())
 	}
 }
+
+func TestDiscoveryRecoversWithoutAnIdlePeriod(t *testing.T) {
+	for _, failure := range []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"invalid-json", http.StatusOK, "invalid discovery JSON"},
+		{"provider-unavailable", http.StatusServiceUnavailable, `{"error":"temporarily_unavailable"}`},
+	} {
+		t.Run(failure.name, func(t *testing.T) {
+			router := newSettingsTestRouter(t)
+			var recovered atomic.Bool
+			var calls atomic.Int32
+			discovery := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				if !recovered.Load() {
+					w.WriteHeader(failure.status)
+					_, _ = w.Write([]byte(failure.body))
+					return
+				}
+				_ = json.NewEncoder(w).Encode(OIDCDiscoveryDocument{
+					AuthorizationEndpoint: "https://issuer.test/authorize",
+					TokenEndpoint:         "https://issuer.test/token", UserinfoEndpoint: "https://issuer.test/userinfo",
+				})
+			}))
+			defer discovery.Close()
+			router.options.OAuth2WellKnownUrl = discovery.URL
+
+			// These requests run back to back, well inside the cache lifetime. Failed
+			// discovery must return an error without creating a renewable negative entry.
+			for range 3 {
+				w := httptest.NewRecorder()
+				err := router.HandleOAuth2Auth(w, httptest.NewRequest(http.MethodGet, "https://app.test/private", nil), nil)
+				if err == nil || w.Code != http.StatusInternalServerError {
+					t.Fatalf("discovery failure: status %d, error %v", w.Code, err)
+				}
+				if router.options.OAuth2ConfigCache.Get("app.test") != nil {
+					t.Fatal("failed discovery was cached")
+				}
+			}
+			if calls.Load() != 3 {
+				t.Fatalf("failed discovery was not retried: %d calls", calls.Load())
+			}
+
+			recovered.Store(true)
+			for range 10 {
+				w := httptest.NewRecorder()
+				_ = router.HandleOAuth2Auth(w, httptest.NewRequest(http.MethodGet, "https://app.test/private", nil), nil)
+				if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), "https://issuer.test/authorize?") {
+					t.Fatalf("recovered provider did not resume login: %d %s", w.Code, w.Header().Get("Location"))
+				}
+			}
+			if calls.Load() != 4 {
+				t.Fatalf("successful discovery was not cached: %d calls, want 4", calls.Load())
+			}
+		})
+	}
+}
