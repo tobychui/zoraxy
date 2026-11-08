@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -185,6 +186,7 @@ func TestOAuth2MTLSBypassProtectsIdentity(t *testing.T) {
 				r.Header.Set("X-Client-Cert-Verified", "true")
 				r.AddCookie(&http.Cookie{Name: "z-token", Value: "secret"})
 				r.AddCookie(&http.Cookie{Name: "z-oauth-state", Value: "state"})
+				r.AddCookie(&http.Cookie{Name: "z-oauth-session", Value: "session-secret"})
 				r.AddCookie(&http.Cookie{Name: "app-session", Value: "keep"})
 				// This is the auth routing entry point used by ServeHTTP after a
 				// verified mTLS certificate with BypassAuth enabled.
@@ -204,6 +206,9 @@ func TestOAuth2MTLSBypassProtectsIdentity(t *testing.T) {
 				}
 				if _, err := r.Cookie("z-oauth-state"); err == nil {
 					t.Error("OAuth2 state leaked to the upstream")
+				}
+				if _, err := r.Cookie("z-oauth-session"); err == nil {
+					t.Error("OAuth2 session leaked to the upstream")
 				}
 				if _, err := r.Cookie("app-session"); err != nil || r.Header.Get("X-Client-Cert-Verified") != "true" {
 					t.Error("unrelated cookies or certificate evidence were removed")
@@ -234,6 +239,11 @@ func TestOAuth2ReplacementRebindsVirtualDirectories(t *testing.T) {
 	// Obtain real request-scoped evidence through the OAuth2 handler, then check
 	// that the replacement vdir uses its new policy for WebSocket forwarding.
 	userInfo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/token" {
+			_, _ = w.Write([]byte(`{"access_token":"valid","token_type":"Bearer","expires_in":3600}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{"sub":"alice","preferred_username":"alice"}`))
 	}))
 	defer userInfo.Close()
@@ -245,7 +255,7 @@ func TestOAuth2ReplacementRebindsVirtualDirectories(t *testing.T) {
 	log, _ := logger.NewFmtLogger()
 	options := &oauth2.OAuth2RouterOptions{
 		Database: db, Logger: log, OAuth2ServerURL: "https://issuer.test/auth",
-		OAuth2TokenURL: "https://issuer.test/token", OAuth2UserInfoUrl: userInfo.URL, OAuth2Scopes: "profile",
+		OAuth2TokenURL: userInfo.URL + "/token", OAuth2UserInfoUrl: userInfo.URL, OAuth2Scopes: "profile",
 	}
 	authRouter := oauth2.NewOAuth2Router(options)
 	defer options.OAuth2ConfigCache.Stop()
@@ -253,7 +263,27 @@ func TestOAuth2ReplacementRebindsVirtualDirectories(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "https://app.test/app/ws", nil)
 	r.Header.Set("Upgrade", "websocket")
 	r.Header.Set("Remote-User", "spoofed")
-	r.AddCookie(&http.Cookie{Name: "z-token", Value: "valid"})
+	// Establish the session through a real authorization-code callback.
+	start := httptest.NewRecorder()
+	_ = authRouter.HandleOAuth2Auth(start, httptest.NewRequest(http.MethodGet, "https://app.test/app/ws", nil), nil)
+	authURL, err := url.Parse(start.Header().Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	callback := httptest.NewRequest(http.MethodGet, "https://app.test/internal/oauth2?code=valid&state="+url.QueryEscape(authURL.Query().Get("state")), nil)
+	for _, cookie := range start.Result().Cookies() {
+		callback.AddCookie(cookie)
+	}
+	login := httptest.NewRecorder()
+	_ = authRouter.HandleOAuth2Auth(login, callback, nil)
+	if login.Code != http.StatusSeeOther {
+		t.Fatalf("callback failed: %d %s", login.Code, login.Body.String())
+	}
+	for _, cookie := range login.Result().Cookies() {
+		if cookie.MaxAge >= 0 {
+			r.AddCookie(cookie)
+		}
+	}
 	if err := handler.handleOAuth2Auth(httptest.NewRecorder(), r, replacement); err != nil {
 		t.Fatal(err)
 	}

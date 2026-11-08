@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 
+	"golang.org/x/oauth2"
+
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/info/logger"
 )
@@ -58,10 +60,15 @@ func TestGlobalPolicyConcurrentSettingsAndAuthorization(t *testing.T) {
 		wg.Go(func() {
 			for range 60 {
 				r := httptest.NewRequest(http.MethodGet, "https://app.test/private", nil)
-				r.AddCookie(&http.Cookie{Name: "z-token", Value: "valid"})
+				_, options := router.requestConfiguration(r.Host, "https://app.test/internal/oauth2")
+				cookie, sessionErr := router.createSession(r, &oauth2.Token{AccessToken: "valid"}, "alice", options.settingsGeneration)
+				if sessionErr == nil {
+					r.AddCookie(cookie)
+				}
 				w := httptest.NewRecorder()
 				err := router.HandleOAuth2Auth(w, r, &AccessPolicy{ForwardUserInfo: true})
-				if w.Code != http.StatusOK && w.Code != http.StatusForbidden {
+				// A settings change also invalidates sessions and requires login.
+				if w.Code != http.StatusOK && w.Code != http.StatusForbidden && w.Code != http.StatusFound {
 					t.Errorf("unexpected authorization result: %d, %v", w.Code, err)
 				}
 				if HasVerifiedIdentityHeaders(r) != (err == nil) {
@@ -80,7 +87,12 @@ func TestGlobalPolicyConcurrentSettingsAndAuthorization(t *testing.T) {
 
 	// An explicit route policy still overrides the global default.
 	r := httptest.NewRequest(http.MethodGet, "https://app.test/private", nil)
-	r.AddCookie(&http.Cookie{Name: "z-token", Value: "valid"})
+	_, options := router.requestConfiguration(r.Host, "https://app.test/internal/oauth2")
+	cookie, err := router.createSession(r, &oauth2.Token{AccessToken: "valid"}, "alice", options.settingsGeneration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.AddCookie(cookie)
 	w := httptest.NewRecorder()
 	if err := router.HandleOAuth2Auth(w, r, &AccessPolicy{AllowedGroups: []string{"guests"}}); err == nil || w.Code != http.StatusForbidden {
 		t.Fatal("route group restrictions were not enforced")

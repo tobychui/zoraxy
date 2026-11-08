@@ -27,9 +27,15 @@ func TestVerifyOIDCLogin(t *testing.T) {
 	const clientID = "zoraxy-test-client"
 	const subject = "user-123"
 	var userInfoSubject = subject
+	var rawIDToken string
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/token":
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"access_token": "test-access-token", "token_type": "Bearer", "expires_in": 3600, "id_token": rawIDToken,
+			})
 		case "/.well-known/openid-configuration":
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"issuer":                                srv.URL,
@@ -81,23 +87,66 @@ func TestVerifyOIDCLogin(t *testing.T) {
 		{"wrong-nonce", subject, "different-nonce", clientID, subject, time.Now().Add(time.Hour), "nonce mismatch"},
 		{"wrong-audience", subject, nonce, "other-client", subject, time.Now().Add(time.Hour), "invalid OIDC ID token"},
 		{"expired", subject, nonce, clientID, subject, time.Now().Add(-time.Hour), "invalid OIDC ID token"},
+		{"bad-signature", subject, nonce, clientID, subject, time.Now().Add(time.Hour), "invalid OIDC ID token"},
+		{"missing-id-token", subject, nonce, clientID, subject, time.Now().Add(time.Hour), "missing id_token"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			userInfoSubject = tc.userInfoSubject
 			jwt := signIDToken(tc.subject, tc.nonce, tc.audience, tc.expiry)
+			if tc.name == "bad-signature" {
+				parts := strings.Split(jwt, ".")
+				parts[2] = base64.RawURLEncoding.EncodeToString(make([]byte, 256))
+				jwt = strings.Join(parts, ".")
+			} else if tc.name == "missing-id-token" {
+				jwt = ""
+			}
 			accessToken := (&oauth2.Token{AccessToken: "test-access-token"}).WithExtra(map[string]interface{}{"id_token": jwt})
-			err := verifyOIDCLogin(context.Background(), conf, accessToken, srv.URL+"/.well-known/openid-configuration", srv.URL+"/userinfo", nonce)
+			_, err := verifyOIDCLogin(context.Background(), conf, accessToken, srv.URL+"/.well-known/openid-configuration", srv.URL+"/userinfo", nonce)
 			if tc.wantError == "" && err != nil {
 				t.Fatalf("unexpected verification failure: %v", err)
 			}
 			if tc.wantError != "" && (err == nil || !strings.Contains(err.Error(), tc.wantError)) {
 				t.Fatalf("expected %q, got %v", tc.wantError, err)
 			}
+
+			// Exercise the public callback and cookie path, not just verification.
+			rawIDToken = jwt
+			router := newSettingsTestRouter(t)
+			router.options.OAuth2ClientId = clientID
+			router.options.OAuth2WellKnownUrl = srv.URL + "/.well-known/openid-configuration"
+			router.options.OAuth2ServerURL = srv.URL + "/authorize"
+			router.options.OAuth2TokenURL = srv.URL + "/token"
+			router.options.OAuth2UserInfoUrl = srv.URL + "/userinfo"
+			callback := httptest.NewRequest(http.MethodGet, "https://app.test/internal/oauth2?code=valid&state=state", nil)
+			callback.AddCookie(&http.Cookie{Name: "z-oauth-state", Value: "state"})
+			callback.AddCookie(&http.Cookie{Name: returnCookieName, Value: "%2Fprivate"})
+			callback.AddCookie(&http.Cookie{Name: "z-oidc-nonce", Value: nonce})
+			w := httptest.NewRecorder()
+			_ = router.HandleOAuth2Auth(w, callback, nil)
+			if tc.wantError != "" {
+				if w.Code != http.StatusUnauthorized || router.sessions.Len() != 0 {
+					t.Fatalf("failed verification created a session: %d", w.Code)
+				}
+				return
+			}
+			cookie := requireSessionCookie(t, w)
+			r := httptest.NewRequest(http.MethodGet, "https://app.test/private", nil)
+			r.AddCookie(cookie)
+			if err := router.HandleOAuth2Auth(httptest.NewRecorder(), r, nil); err != nil || !HasVerifiedIdentityHeaders(r) {
+				t.Fatalf("verified callback session failed: %v", err)
+			}
+			// Even a valid session must retain the verified OIDC subject.
+			userInfoSubject = "different-user"
+			r = httptest.NewRequest(http.MethodGet, "https://app.test/private", nil)
+			r.AddCookie(cookie)
+			if err := router.HandleOAuth2Auth(httptest.NewRecorder(), r, nil); err == nil || HasVerifiedIdentityHeaders(r) {
+				t.Fatal("session accepted a changed UserInfo subject")
+			}
 		})
 	}
 	missing := &oauth2.Token{AccessToken: "test-access-token"}
-	if err := verifyOIDCLogin(context.Background(), conf, missing, srv.URL+"/.well-known/openid-configuration", srv.URL+"/userinfo", nonce); err == nil {
+	if _, err := verifyOIDCLogin(context.Background(), conf, missing, srv.URL+"/.well-known/openid-configuration", srv.URL+"/userinfo", nonce); err == nil {
 		t.Fatal("missing ID token must fail")
 	}
 }

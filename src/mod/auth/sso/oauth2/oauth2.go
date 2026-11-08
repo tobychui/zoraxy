@@ -29,6 +29,7 @@ const (
 var defaultOIDCScopes = []string{"openid", "profile", "email"}
 
 type OAuth2RouterOptions struct {
+	settingsGeneration           uint64 // Internal snapshot version; never supplied by callers.
 	OAuth2ServerURL              string //The URL of the OAuth 2.0 server server
 	OAuth2TokenURL               string //The URL of the OAuth 2.0 token server
 	OAuth2ClientId               string //The client id for OAuth 2.0 Application
@@ -66,6 +67,7 @@ type OAuth2Router struct {
 	settingsGeneration uint64
 	configLoads        singleflight.Group
 	options            *OAuth2RouterOptions
+	sessions           *ttlcache.Cache[string, oauth2Session]
 }
 
 // NewOAuth2Router creates a new OAuth2Router object
@@ -86,6 +88,10 @@ func NewOAuth2Router(options *OAuth2RouterOptions) *OAuth2Router {
 
 	ar := &OAuth2Router{
 		options: options,
+		sessions: ttlcache.New[string, oauth2Session](
+			ttlcache.WithCapacity[string, oauth2Session](10000),
+			ttlcache.WithDisableTouchOnHit[string, oauth2Session](),
+		),
 	}
 
 	if options.OAuth2ConfigurationCacheTime == nil ||
@@ -226,6 +232,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsPOST(w http.ResponseWriter, r *htt
 
 	// Flush caches
 	ar.settingsGeneration++
+	ar.sessions.DeleteAll()
 	ar.options.OAuth2ConfigCache.DeleteAll()
 
 	utils.SendOK(w)
@@ -255,6 +262,7 @@ func (ar *OAuth2Router) handleSetOAuthSettingsDELETE(w http.ResponseWriter, r *h
 	ar.options.Database.Delete("oauth2", "oauth2CodeChallengeMethod")
 	ar.options.Database.Delete("oauth2", "oauth2ConfigurationCacheTime")
 	ar.settingsGeneration++
+	ar.sessions.DeleteAll()
 	ar.options.OAuth2ConfigCache.DeleteAll()
 
 	utils.SendOK(w)
@@ -344,13 +352,21 @@ type oauth2RequestConfiguration struct {
 	options OAuth2RouterOptions
 }
 
+// Called with settingsMu held so a request carries its configuration version
+// through provider calls and session creation/validation.
+func (ar *OAuth2Router) snapshotOptions() OAuth2RouterOptions {
+	options := *ar.options
+	options.settingsGeneration = ar.settingsGeneration
+	return options
+}
+
 // requestConfiguration reads and publishes matching settings/config snapshots
 // under short locks. Slow discovery only holds up misses for the same host and
 // settings generation; it never holds either the settings or cache lock.
 func (ar *OAuth2Router) requestConfiguration(host, redirectURL string) (*oauth2.Config, OAuth2RouterOptions) {
 	for {
 		ar.settingsMu.RLock()
-		options := *ar.options
+		options := ar.snapshotOptions()
 		generation := ar.settingsGeneration
 		item := options.OAuth2ConfigCache.Get(host)
 		ar.settingsMu.RUnlock()
@@ -368,7 +384,7 @@ func (ar *OAuth2Router) requestConfiguration(host, redirectURL string) (*oauth2.
 				return nil, nil
 			}
 			if item := ar.options.OAuth2ConfigCache.Get(host); item != nil {
-				cached := oauth2RequestConfiguration{item.Value(), *ar.options}
+				cached := oauth2RequestConfiguration{item.Value(), ar.snapshotOptions()}
 				ar.settingsMu.RUnlock()
 				return cached, nil
 			}
@@ -386,7 +402,7 @@ func (ar *OAuth2Router) requestConfiguration(host, redirectURL string) (*oauth2.
 					ar.options.OAuth2UserInfoUrl = options.OAuth2UserInfoUrl
 				}
 				ar.options.OAuth2ConfigCache.Set(host, config, ttlcache.DefaultTTL)
-				return oauth2RequestConfiguration{config, *ar.options}, nil
+				return oauth2RequestConfiguration{config, ar.snapshotOptions()}, nil
 			}
 			return nil, nil
 		})
@@ -471,29 +487,35 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 
 		// OIDC requires a verified ID token, bound to the login nonce, and
 		// a matching UserInfo subject before accepting the access token.
+		var identity *Identity
 		if oidcEnabled {
 			loginNonce, nonceErr := r.Cookie(nonceCookie)
 			if nonceErr != nil || loginNonce.Value == "" {
 				http.Error(w, "Missing OIDC login nonce", http.StatusUnauthorized)
 				return errors.New("missing OIDC login nonce")
 			}
-			if err := verifyOIDCLogin(ctx, oauthConfig, token, options.OAuth2WellKnownUrl, options.OAuth2UserInfoUrl, loginNonce.Value); err != nil {
+			identity, err = verifyOIDCLogin(ctx, oauthConfig, token, options.OAuth2WellKnownUrl, options.OAuth2UserInfoUrl, loginNonce.Value)
+			if err != nil {
 				options.Logger.PrintAndLog("OAuth2", "OIDC login verification failed", err)
 				http.Error(w, "OIDC login verification failed", http.StatusUnauthorized)
 				return errors.New("OIDC login verification failed")
 			}
+		} else {
+			identity, err = FetchOAuth2Identity(ctx, oauthConfig.Client(ctx, token), options.OAuth2UserInfoUrl)
+			if err != nil {
+				http.Error(w, "OAuth2 login verification failed", http.StatusUnauthorized)
+				return errors.New("OAuth2 login verification failed")
+			}
 		}
 
-		cookieExpiry := token.Expiry
-		if cookieExpiry.IsZero() || cookieExpiry.Before(time.Now()) {
-			cookieExpiry = time.Now().Add(time.Hour)
+		cookie, err := ar.createSession(r, token, identity.Subject, options.settingsGeneration)
+		if err != nil {
+			http.Error(w, "OAuth2 configuration changed; please sign in again", http.StatusUnauthorized)
+			return err
 		}
-		cookie := http.Cookie{Name: tokenCookie, Value: token.AccessToken, Path: "/", Expires: cookieExpiry, HttpOnly: true}
-		if scheme == "https" {
-			cookie.Secure = true
-			cookie.SameSite = http.SameSiteLaxMode
-		}
-		w.Header().Add("Set-Cookie", cookie.String())
+		http.SetCookie(w, cookie)
+		// Migrate old browser-held bearer tokens to server-side sessions.
+		http.SetCookie(w, &http.Cookie{Name: tokenCookie, Path: "/", MaxAge: -1, HttpOnly: true, Secure: scheme == "https", SameSite: http.SameSiteLaxMode})
 
 		if options.OAuth2CodeChallengeMethod == "PKCE" || options.OAuth2CodeChallengeMethod == "PKCE_S256" {
 			cookie := http.Cookie{Name: verifierCookie, Value: "", Path: "/", Expires: time.Now().Add(-time.Hour * 1), HttpOnly: true}
@@ -513,39 +535,40 @@ func (ar *OAuth2Router) HandleOAuth2Auth(w http.ResponseWriter, r *http.Request,
 		return errors.New("authorized")
 	}
 	unauthorized := false
-	cookie, err := r.Cookie(tokenCookie)
-	if err == nil {
-		if cookie.Value == "" {
+	session, validSession := ar.sessionForRequest(r, options.settingsGeneration)
+	if validSession {
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+		client := oauthConfig.Client(ctx, &oauth2.Token{AccessToken: session.accessToken, TokenType: session.tokenType})
+		var identity *Identity
+		var fetchErr error
+		if oidcEnabled {
+			identity, fetchErr = FetchIdentity(ctx, client, options.OAuth2UserInfoUrl)
+		} else {
+			identity, fetchErr = FetchOAuth2Identity(ctx, client, options.OAuth2UserInfoUrl)
+		}
+		_, stillValid := ar.sessionForRequest(r, options.settingsGeneration)
+		if fetchErr != nil || !stillValid || identity.Subject != session.subject {
+			options.Logger.PrintAndLog("OAuth2", "Failed to validate user info", fetchErr)
 			unauthorized = true
 		} else {
-			ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-			defer cancel()
-			client := oauthConfig.Client(ctx, &oauth2.Token{AccessToken: cookie.Value})
-			var identity *Identity
-			var fetchErr error
-			if oidcEnabled {
-				identity, fetchErr = FetchIdentity(ctx, client, options.OAuth2UserInfoUrl)
-			} else {
-				identity, fetchErr = FetchOAuth2Identity(ctx, client, options.OAuth2UserInfoUrl)
+			allowedGroups := policy.AllowedGroups
+			if len(allowedGroups) == 0 {
+				allowedGroups = SplitAllowedGroups(options.OAuth2DefaultAllowedGroups)
 			}
-			if fetchErr != nil {
-				options.Logger.PrintAndLog("OAuth2", "Failed to validate user info", fetchErr)
-				unauthorized = true
-			} else {
-				allowedGroups := policy.AllowedGroups
-				if len(allowedGroups) == 0 {
-					allowedGroups = SplitAllowedGroups(options.OAuth2DefaultAllowedGroups)
-				}
-				if !GroupsAllowed(identity.Groups, allowedGroups) {
-					http.Error(w, "403 - Access denied: insufficient group permissions", http.StatusForbidden)
-					return errors.New("forbidden")
-				}
-				isWebSocket := strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
-				if policy.ForwardUserInfo && (!isWebSocket || policy.ForwardWebSocketIdentity) {
-					SetIdentityHeaders(r.Header, identity)
-					*r = *r.WithContext(context.WithValue(r.Context(), verifiedIdentityHeadersKey{}, true))
-				}
-				StripOAuth2Cookies(r, policy.RemoveTokenCookie)
+			if !GroupsAllowed(identity.Groups, allowedGroups) {
+				http.Error(w, "403 - Access denied: insufficient group permissions", http.StatusForbidden)
+				return errors.New("forbidden")
+			}
+			isWebSocket := strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
+			if policy.ForwardUserInfo && (!isWebSocket || policy.ForwardWebSocketIdentity) {
+				SetIdentityHeaders(r.Header, identity)
+				*r = *r.WithContext(context.WithValue(r.Context(), verifiedIdentityHeadersKey{}, true))
+			}
+			// Never forward the session credential or a client-supplied token.
+			StripOAuth2Cookies(r, true)
+			if !policy.RemoveTokenCookie {
+				r.AddCookie(&http.Cookie{Name: tokenCookie, Value: session.accessToken})
 			}
 		}
 	} else {
