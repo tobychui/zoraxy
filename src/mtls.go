@@ -114,6 +114,9 @@ func handleMTLSRemoveCA(w http.ResponseWriter, r *http.Request) {
 // Set the mTLS policy of a proxy rule.
 // Parameters: ep, mode (off|optional|required), cas (JSON string array), bypassAuth (bool)
 func handleMTLSSetHostConfig(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	if r.Method != http.MethodPost {
 		utils.SendErrorResponse(w, "Method not supported")
 		return

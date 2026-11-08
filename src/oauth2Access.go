@@ -6,14 +6,11 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 
 	oauthaccess "imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/utils"
 )
-
-var oauth2RouteSettingsMu sync.Mutex
 
 type oauth2RouteSettings struct {
 	AllowedGroups                  string                                 `json:"allowedGroups"`
@@ -75,8 +72,8 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		// Serialize administrative writes so two editors cannot persist and
 		// publish replacements derived from the same stale endpoint snapshot.
-		oauth2RouteSettingsMu.Lock()
-		defer oauth2RouteSettingsMu.Unlock()
+		proxySettingsMu.Lock()
+		defer proxySettingsMu.Unlock()
 	}
 	ep := strings.TrimSpace(r.FormValue("ep"))
 	if ep == "" {

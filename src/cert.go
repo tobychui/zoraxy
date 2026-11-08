@@ -172,6 +172,9 @@ func handleCertTryResolve(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSetDomainPreferredCertificate(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	//Get the domain
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
