@@ -23,10 +23,12 @@ type replacementFileOps struct {
 	remove     func(string) error
 }
 
-func atomicWriteFile(path string, data []byte, mode os.FileMode) error {
+func atomicWriteFile(path string, data []byte) error {
+	var mode *os.FileMode
 	// Match WriteFile's treatment of an existing file's permissions.
 	if info, err := os.Stat(path); err == nil {
-		mode = info.Mode().Perm()
+		existingMode := info.Mode().Perm()
+		mode = &existingMode
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -41,7 +43,7 @@ func atomicWriteFile(path string, data []byte, mode os.FileMode) error {
 // old record. Never remove or truncate the destination before replacement.
 // Sync the contents before publishing, but do not claim power-loss durability:
 // the directory entry is not synced, and hardware/filesystem guarantees vary.
-func replaceFile(path string, data []byte, mode os.FileMode, ops replacementFileOps) error {
+func replaceFile(path string, data []byte, mode *os.FileMode, ops replacementFileOps) error {
 	file, err := ops.createTemp(filepath.Dir(path), ".db-write-*")
 	if err != nil {
 		return err
@@ -53,8 +55,13 @@ func replaceFile(path string, data []byte, mode os.FileMode, ops replacementFile
 		}
 		_ = ops.remove(file.Name())
 	}()
-	if err := file.Chmod(mode); err != nil {
-		return err
+	// New records keep CreateTemp's private 0600 permissions, filtered by the
+	// process umask. Chmod would bypass that mask. Only existing records need
+	// their previously established permissions restored (including mode 0000).
+	if mode != nil {
+		if err := file.Chmod(*mode); err != nil {
+			return err
+		}
 	}
 	n, err := file.Write(data)
 	if err != nil {

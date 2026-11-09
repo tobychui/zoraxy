@@ -100,7 +100,7 @@ func (d *Database) write(tableName string, key string, value interface{}) error 
 
 	key = strings.ReplaceAll(key, "/", "-SLASH_SIGN-")
 
-	return atomicWriteFile(filepath.Join(tablePath, key+".entry"), js, 0755)
+	return atomicWriteFile(filepath.Join(tablePath, key+".entry"), js)
 }
 
 func (d *Database) read(tableName string, key string, assignee interface{}) error {

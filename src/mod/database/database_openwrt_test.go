@@ -122,7 +122,8 @@ func TestFilesystemFailedReplacementPreservesPreviousRecord(t *testing.T) {
 				},
 				remove: os.Remove,
 			}
-			err = replaceFile(path, []byte(`{"oauth2ClientId":"changed","oauth2DefaultAllowedGroups":""}`), 0755, ops)
+			mode := os.FileMode(0755)
+			err = replaceFile(path, []byte(`{"oauth2ClientId":"changed","oauth2DefaultAllowedGroups":""}`), &mode, ops)
 			if !errors.Is(err, errReplacementTest) && !(failure == "short-write" && errors.Is(err, io.ErrShortWrite)) {
 				t.Fatalf("unexpected replacement result: %v", err)
 			}
