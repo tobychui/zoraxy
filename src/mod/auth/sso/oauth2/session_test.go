@@ -2,6 +2,7 @@ package oauth2
 
 import (
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -22,7 +23,7 @@ func requireSessionCookie(t *testing.T, w *httptest.ResponseRecorder) *http.Cook
 		if cookie.Name == "z-token" && cookie.MaxAge >= 0 {
 			t.Fatal("callback exposed the provider token to the browser")
 		}
-		if cookie.Name == sessionCookieName {
+		if isOAuth2SessionCookie(cookie.Name) {
 			session = cookie
 		}
 	}
@@ -94,7 +95,7 @@ func TestSuppliedBearerTokenCannotAuthenticate(t *testing.T) {
 			router.options.OAuth2Scopes = "openid"
 			router.options.OAuth2WellKnownUrl = provider.server.URL + "/discovery"
 		}
-		for _, name := range []string{"z-token", sessionCookieName} {
+		for _, name := range []string{"z-token", sessionCookieName, sessionCookieNameForRequest(httptest.NewRequest(http.MethodGet, "https://app.test/private", nil))} {
 			r := httptest.NewRequest(http.MethodGet, "https://app.test/private", nil)
 			r.AddCookie(&http.Cookie{Name: name, Value: "provider-token"})
 			w := httptest.NewRecorder()
@@ -125,7 +126,7 @@ func TestSessionIdentityGroupsAndUpstreamCookies(t *testing.T) {
 			if !HasVerifiedIdentityHeaders(r) || r.Header.Get("Remote-User") != "alice" {
 				t.Fatal("session did not establish verified identity")
 			}
-			if _, err := r.Cookie(sessionCookieName); err == nil {
+			if _, err := r.Cookie(cookie.Name); err == nil {
 				t.Fatal("session credential leaked upstream")
 			}
 			token, err := r.Cookie("z-token")
@@ -212,5 +213,100 @@ func TestSessionAbsoluteExpiryAndStaleCallback(t *testing.T) {
 	saveTestSettings(t, router, "https://issuer.test/userinfo", "admins")
 	if _, err := router.createSession(r, &xoauth2.Token{AccessToken: "token"}, "alice", 0); err == nil || router.sessions.Len() != 0 {
 		t.Fatal("callback from old settings created a session")
+	}
+}
+
+func TestSessionsCoexistAcrossListenerPorts(t *testing.T) {
+	for _, origins := range [][2]string{
+		{"https://app.test:8080", "https://app.test:8081"},
+		{"http://app.test:8080", "http://app.test:8081"},
+		{"https://app.test:8080", "http://app.test:8080"},
+		{"https://app.test", "https://app.test:8443"},
+		{"https://[::1]:8080", "https://[::1]:8081"},
+	} {
+		t.Run(origins[0], func(t *testing.T) {
+			router, _ := newSessionTestProvider(t)
+			jar, err := cookiejar.New(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			login := func(origin string) *http.Cookie {
+				t.Helper()
+				// Start a fresh authorization flow, retaining existing browser sessions
+				// for the callback so reauthentication also exercises session rotation.
+				start := httptest.NewRecorder()
+				_ = router.HandleOAuth2Auth(start, httptest.NewRequest(http.MethodGet, origin+"/private", nil), nil)
+				authURL, err := url.Parse(start.Header().Get("Location"))
+				if err != nil || start.Code != http.StatusFound {
+					t.Fatalf("login start failed: %d %v", start.Code, err)
+				}
+				target, _ := url.Parse(origin + "/internal/oauth2")
+				jar.SetCookies(target, start.Result().Cookies())
+				r := httptest.NewRequest(http.MethodGet, target.String()+"?code=valid&state="+url.QueryEscape(authURL.Query().Get("state")), nil)
+				for _, cookie := range jar.Cookies(target) {
+					r.AddCookie(cookie)
+				}
+				w := httptest.NewRecorder()
+				_ = router.HandleOAuth2Auth(w, r, nil)
+				if w.Code != http.StatusSeeOther {
+					t.Fatalf("login callback failed: %d %s", w.Code, w.Body.String())
+				}
+				jar.SetCookies(target, w.Result().Cookies())
+				for _, cookie := range w.Result().Cookies() {
+					if strings.HasPrefix(cookie.Name, sessionCookieName) {
+						return cookie
+					}
+				}
+				t.Fatal("missing session cookie")
+				return nil
+			}
+			authorized := func(origin string) {
+				t.Helper()
+				r := httptest.NewRequest(http.MethodGet, origin+"/private", nil)
+				for _, cookie := range jar.Cookies(r.URL) {
+					r.AddCookie(cookie)
+				}
+				w := httptest.NewRecorder()
+				if err := router.HandleOAuth2Auth(w, r, nil); err != nil || w.Code != http.StatusOK || !HasVerifiedIdentityHeaders(r) {
+					t.Fatalf("listener %s lost login: %d %v", origin, w.Code, err)
+				}
+				for _, cookie := range r.Cookies() {
+					if strings.HasPrefix(cookie.Name, sessionCookieName) {
+						t.Fatalf("session cookie leaked upstream: %s", cookie.Name)
+					}
+				}
+			}
+			first := login(origins[0])
+			authorized(origins[0])
+			second := login(origins[1])
+			authorized(origins[0])
+			authorized(origins[1])
+			if first.Name == second.Name {
+				t.Fatal("ports share a session cookie name")
+			}
+			login(origins[0])
+			authorized(origins[0])
+			authorized(origins[1])
+			// Reauthentication rotates only this listener's previous session.
+			if router.sessions.Get(first.Value) != nil {
+				t.Fatal("reauthentication retained the replaced session")
+			}
+			if router.sessions.Get(second.Value) == nil {
+				t.Fatal("reauthentication deleted the other listener's session")
+			}
+			// Renaming another listener's cookie must not make that session valid here.
+			r := httptest.NewRequest(http.MethodGet, origins[0]+"/private", nil)
+			r.AddCookie(&http.Cookie{Name: first.Name, Value: second.Value})
+			w := httptest.NewRecorder()
+			if err := router.HandleOAuth2Auth(w, r, nil); err == nil || w.Code != http.StatusFound {
+				t.Fatal("session port binding was bypassed")
+			}
+			// A forged cookie must not revoke another origin's session on login.
+			target, _ := url.Parse(origins[0])
+			jar.SetCookies(target, []*http.Cookie{{Name: first.Name, Value: second.Value, Path: "/"}})
+			login(origins[0])
+			authorized(origins[0])
+			authorized(origins[1])
+		})
 	}
 }
