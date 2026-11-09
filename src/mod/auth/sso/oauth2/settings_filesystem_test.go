@@ -3,16 +3,54 @@
 package oauth2
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"imuslab.com/zoraxy/mod/database"
 	"imuslab.com/zoraxy/mod/database/dbinc"
 	"imuslab.com/zoraxy/mod/info/logger"
 )
+
+func newSettingsTestRouter(t *testing.T) *OAuth2Router {
+	t.Helper()
+	return newFilesystemSettingsRouter(t)
+}
+
+// Force a real filesystem replacement failure; this backend does not use the
+// Database.Backend interface. Restore the record before checking saved policy.
+func failSettingsTestWrites(t *testing.T, router *OAuth2Router) func() {
+	t.Helper()
+	path := filepath.Join(router.options.Database.Db.(string), "oauth2", "settings.entry")
+	backup := path + ".backup"
+	err := os.Rename(path, backup)
+	existed := err == nil
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatal(err)
+	}
+	var once sync.Once
+	restore := func() {
+		once.Do(func() {
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				t.Fatal(err)
+			}
+			if existed {
+				if err := os.Rename(backup, path); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+	t.Cleanup(restore)
+	if err := os.Mkdir(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	return restore
+}
 
 func newFilesystemSettingsRouter(t *testing.T) *OAuth2Router {
 	t.Helper()

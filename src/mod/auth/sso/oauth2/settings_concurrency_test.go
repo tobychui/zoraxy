@@ -5,29 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
 	"golang.org/x/oauth2"
-
-	"imuslab.com/zoraxy/mod/database"
-	"imuslab.com/zoraxy/mod/info/logger"
 )
-
-func newSettingsTestRouter(t *testing.T) *OAuth2Router {
-	t.Helper()
-	db, err := database.NewDatabase(filepath.Join(t.TempDir(), "settings.db"), database.GetRecommendedBackendType())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(db.Close)
-	log, _ := logger.NewFmtLogger()
-	router := NewOAuth2Router(&OAuth2RouterOptions{Database: db, Logger: log})
-	t.Cleanup(router.options.OAuth2ConfigCache.Stop)
-	return router
-}
 
 func saveTestSettings(t *testing.T, router *OAuth2Router, userInfoURL, groups string) {
 	t.Helper()

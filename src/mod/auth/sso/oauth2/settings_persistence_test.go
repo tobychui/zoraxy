@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,19 +10,7 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
-	"imuslab.com/zoraxy/mod/database/dbinc"
 )
-
-type failingPolicyBackend struct {
-	dbinc.Backend
-}
-
-func (db failingPolicyBackend) Write(table, key string, value interface{}) error {
-	if table == "oauth2" && (key == oauth2SettingsKey || key == "oauth2DefaultAllowedGroups") {
-		return errors.New("injected policy persistence failure")
-	}
-	return db.Backend.Write(table, key, value)
-}
 
 func settingsRequest(groups string) *http.Request {
 	form := url.Values{
@@ -61,8 +48,7 @@ func TestGlobalSettingsPersistenceFailurePreservesPolicy(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				backend := router.options.Database.Backend
-				router.options.Database.Backend = failingPolicyBackend{backend}
+				restoreWrites := failSettingsTestWrites(t, router)
 				groups := "admins"
 				if initialGroups != "" {
 					groups = ""
@@ -73,7 +59,7 @@ func TestGlobalSettingsPersistenceFailurePreservesPolicy(t *testing.T) {
 				}
 				w := httptest.NewRecorder()
 				router.HandleSetOAuth2Settings(w, r)
-				router.options.Database.Backend = backend
+				restoreWrites()
 				if !strings.Contains(w.Body.String(), "error") {
 					t.Fatalf("failed write reported success: %s", w.Body.String())
 				}
@@ -112,11 +98,10 @@ func TestGlobalSettingsMigrateLegacyAndReset(t *testing.T) {
 	if router.options.OAuth2ClientId != "legacy-client" || router.options.OAuth2DefaultAllowedGroups != "legacy-admins" {
 		t.Fatal("legacy settings did not load")
 	}
-	backend := router.options.Database.Backend
-	router.options.Database.Backend = failingPolicyBackend{backend}
+	restoreWrites := failSettingsTestWrites(t, router)
 	w := httptest.NewRecorder()
 	router.HandleSetOAuth2Settings(w, settingsRequest("admins"))
-	router.options.Database.Backend = backend
+	restoreWrites()
 	if !strings.Contains(w.Body.String(), "error") || router.options.Database.KeyExists("oauth2", oauth2SettingsKey) {
 		t.Fatal("failed migration must report an error and leave legacy storage intact")
 	}
