@@ -1,5 +1,10 @@
 package dbinc
 
+import "errors"
+
+// ErrNotFound means the record is confirmed absent, not that a lookup failed.
+var ErrNotFound = errors.New("database record not found")
+
 /*
 	dbinc is the interface for all database backend
 */

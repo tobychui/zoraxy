@@ -1,5 +1,5 @@
-//go:build mipsle || riscv64
-// +build mipsle riscv64
+//go:build mipsle || riscv64 || fsdb
+// +build mipsle riscv64 fsdb
 
 package database
 
@@ -20,6 +20,7 @@ import (
 	For OpenWRT or RISCV platform, we will use the filesystem as the database backend
 	as boltdb or leveldb is not supported on these platforms, including boltDB and LevelDB
 	in conditional compilation will create a build error on these platforms
+	The fsdb build tag allows this same backend to be exercised on host architectures.
 */
 
 func newDatabase(dbfile string, backendType dbinc.BackendType) (*Database, error) {
@@ -99,19 +100,18 @@ func (d *Database) write(tableName string, key string, value interface{}) error 
 
 	key = strings.ReplaceAll(key, "/", "-SLASH_SIGN-")
 
-	return os.WriteFile(filepath.Join(tablePath, key+".entry"), js, 0755)
+	return atomicWriteFile(filepath.Join(tablePath, key+".entry"), js)
 }
 
 func (d *Database) read(tableName string, key string, assignee interface{}) error {
-	if !d.keyExists(tableName, key) {
-		return errors.New("key not exists")
-	}
-
 	key = strings.ReplaceAll(key, "/", "-SLASH_SIGN-")
 
 	tablePath := filepath.Join(d.Db.(string), filepath.Base(tableName))
 	entryPath := filepath.Join(tablePath, key+".entry")
 	content, err := os.ReadFile(entryPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return dbinc.ErrNotFound
+	}
 	if err != nil {
 		return err
 	}

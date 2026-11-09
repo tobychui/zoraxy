@@ -32,37 +32,37 @@ func isOIDCConfiguration(scopes []string, wellKnownURL string) bool {
 }
 
 // verifyOIDCLogin authenticates ID token claims before trusting the access
-// token. The access token remains in z-token and is used for fresh UserInfo
-// requests on every subsequent protected request.
-func verifyOIDCLogin(ctx context.Context, config *oauth2.Config, token *oauth2.Token, wellKnownURL, userInfoURL, expectedNonce string) error {
+// token. The verified identity is bound to a server-side session; subsequent
+// requests must present that session before fresh UserInfo validation.
+func verifyOIDCLogin(ctx context.Context, config *oauth2.Config, token *oauth2.Token, wellKnownURL, userInfoURL, expectedNonce string) (*Identity, error) {
 	if wellKnownURL == "" {
-		return errors.New("OIDC requires a configured discovery URL")
+		return nil, errors.New("OIDC requires a configured discovery URL")
 	}
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok || rawIDToken == "" {
-		return errors.New("OIDC token response is missing id_token")
+		return nil, errors.New("OIDC token response is missing id_token")
 	}
 	if expectedNonce == "" {
-		return errors.New("missing expected OIDC nonce")
+		return nil, errors.New("missing expected OIDC nonce")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, wellKnownURL, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("fetching OIDC discovery: %w", err)
+		return nil, fmt.Errorf("fetching OIDC discovery: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("OIDC discovery returned HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("OIDC discovery returned HTTP %d", resp.StatusCode)
 	}
 	var metadata OIDCDiscoveryDocument
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&metadata); err != nil {
-		return fmt.Errorf("invalid OIDC discovery: %w", err)
+		return nil, fmt.Errorf("invalid OIDC discovery: %w", err)
 	}
 	if strings.TrimSpace(metadata.Issuer) == "" || strings.TrimSpace(metadata.JwksURI) == "" {
-		return errors.New("OIDC discovery missing issuer or jwks_uri")
+		return nil, errors.New("OIDC discovery missing issuer or jwks_uri")
 	}
 
 	// Permit only asymmetric signature algorithms. An ID token signed using
@@ -83,23 +83,23 @@ func verifyOIDCLogin(ctx context.Context, config *oauth2.Config, token *oauth2.T
 	})
 	idToken, err := verifier.Verify(ctx, rawIDToken)
 	if err != nil {
-		return fmt.Errorf("invalid OIDC ID token: %w", err)
+		return nil, fmt.Errorf("invalid OIDC ID token: %w", err)
 	}
 	if subtle.ConstantTimeCompare([]byte(idToken.Nonce), []byte(expectedNonce)) != 1 {
-		return errors.New("OIDC ID token nonce mismatch")
+		return nil, errors.New("OIDC ID token nonce mismatch")
 	}
 	if idToken.AccessTokenHash != "" {
 		if err := idToken.VerifyAccessToken(token.AccessToken); err != nil {
-			return fmt.Errorf("OIDC access token binding failed: %w", err)
+			return nil, fmt.Errorf("OIDC access token binding failed: %w", err)
 		}
 	}
 
 	identity, err := FetchIdentity(ctx, config.Client(ctx, token), userInfoURL)
 	if err != nil {
-		return fmt.Errorf("OIDC UserInfo verification failed: %w", err)
+		return nil, fmt.Errorf("OIDC UserInfo verification failed: %w", err)
 	}
 	if subtle.ConstantTimeCompare([]byte(identity.Subject), []byte(idToken.Subject)) != 1 {
-		return errors.New("OIDC ID token and UserInfo subjects differ")
+		return nil, errors.New("OIDC ID token and UserInfo subjects differ")
 	}
-	return nil
+	return identity, nil
 }

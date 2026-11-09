@@ -34,6 +34,9 @@ func handleListAccessRules(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleAttachRuleToHost(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	ruleid, err := utils.PostPara(r, "id")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid rule name")
@@ -122,6 +125,9 @@ func handleCreateAccessRule(w http.ResponseWriter, r *http.Request) {
 // Handle removing an access rule. All proxy endpoint using this rule will be
 // set to use the default rule
 func handleRemoveAccessRule(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	ruleID, err := utils.PostPara(r, "id")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid rule id given")

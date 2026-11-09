@@ -39,6 +39,16 @@ type Identity struct {
 	UserInfo          json.RawMessage
 }
 
+type verifiedIdentityHeadersKey struct{}
+
+// HasVerifiedIdentityHeaders is true only after this request's OAuth2 identity
+// was validated, authorized, and written to its headers. Incoming headers alone
+// (including on an authentication bypass) never establish a verified identity.
+func HasVerifiedIdentityHeaders(r *http.Request) bool {
+	verified, _ := r.Context().Value(verifiedIdentityHeadersKey{}).(bool)
+	return verified
+}
+
 // SplitAllowedGroups normalizes comma-separated group identifiers without changing case.
 func SplitAllowedGroups(input string) []string {
 	result := []string{}
@@ -165,7 +175,7 @@ func StripOAuth2Cookies(r *http.Request, removeToken bool) {
 	cookies := r.Cookies()
 	kept := make([]string, 0, len(cookies))
 	for _, cookie := range cookies {
-		if cookie.Name == "z-verifier" || cookie.Name == "z-oauth-state" || cookie.Name == "z-oauth-return" || cookie.Name == "z-oidc-nonce" ||
+		if isOAuth2SessionCookie(cookie.Name) || cookie.Name == "z-verifier" || cookie.Name == "z-oauth-state" || cookie.Name == "z-oauth-return" || cookie.Name == "z-oidc-nonce" ||
 			(removeToken && cookie.Name == "z-token") {
 			continue
 		}

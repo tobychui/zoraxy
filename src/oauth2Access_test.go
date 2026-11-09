@@ -14,6 +14,7 @@ func TestUpdateProxyOAuth2SettingsPublishesImmutableReplacement(t *testing.T) {
 	originalRule := &dynamicproxy.BasicAuthExceptionRule{RuleType: dynamicproxy.AuthExceptionType_Paths, PathPrefix: "/old"}
 	original := &dynamicproxy.ProxyEndpoint{
 		RootOrMatchingDomain: "example.test",
+		VirtualDirectories:   []*dynamicproxy.VirtualDirectoryEndpoint{{MatchingPath: "/app", Domain: "backend.test"}},
 		AuthenticationProvider: &dynamicproxy.AuthenticationProvider{
 			AuthMethod:           dynamicproxy.AuthMethodOauth2,
 			OAuth2AllowedGroups:  []string{"old"},
@@ -45,6 +46,9 @@ func TestUpdateProxyOAuth2SettingsPublishesImmutableReplacement(t *testing.T) {
 	}
 	if original.AuthenticationProvider.OAuth2AllowedGroups[0] != "old" || original.AuthenticationProvider.OAuth2ExceptionRules[0] != originalRule {
 		t.Fatal("live endpoint was mutated while building replacement")
+	}
+	if published.VirtualDirectories[0] == original.VirtualDirectories[0] || published.VirtualDirectories[0].Domain != "backend.test" {
+		t.Fatal("OAuth2 settings update must clone virtual directories and preserve their targets")
 	}
 	provider := published.AuthenticationProvider
 	if strings.Join(provider.OAuth2AllowedGroups, ",") != "admins,developers" || provider.OAuth2ExceptionRules[0].PathPrefix != "/public" {

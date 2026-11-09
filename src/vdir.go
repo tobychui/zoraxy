@@ -79,6 +79,9 @@ func ReverseProxyListVdir(w http.ResponseWriter, r *http.Request) {
 
 // Add Virtual Directory to a host
 func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
 		utils.SendErrorResponse(w, "type not defined")
@@ -173,6 +176,9 @@ func ReverseProxyAddVdir(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyDeleteVdir(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
 		utils.SendErrorResponse(w, "type not defined")
@@ -229,6 +235,9 @@ func ReverseProxyDeleteVdir(w http.ResponseWriter, r *http.Request) {
 
 // Handle update of reverse proxy vdir rules
 func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
 		utils.SendErrorResponse(w, "type not defined")
@@ -331,6 +340,9 @@ func ReverseProxyEditVdir(w http.ResponseWriter, r *http.Request) {
 // exactly; a directory at the same path with different settings is reported as a conflict and
 // left untouched, so nothing is silently overwritten or deleted.
 func ReverseProxyBulkApplyVdirByForwardAuth(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	action, err := utils.PostPara(r, "action")
 	if err != nil || (action != "add" && action != "remove") {
 		utils.SendErrorResponse(w, "invalid action, expected 'add' or 'remove'")

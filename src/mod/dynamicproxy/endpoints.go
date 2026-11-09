@@ -346,6 +346,25 @@ func (ep *ProxyEndpoint) IsEnabled() bool {
 	return !ep.Disabled
 }
 
+// CloneWithAuthenticationProvider creates an endpoint for a policy replacement.
+// Virtual directory records must belong to the replacement too, while their
+// already prepared runtime proxies and unrelated endpoint resources stay shared.
+func (ep *ProxyEndpoint) CloneWithAuthenticationProvider(provider *AuthenticationProvider) *ProxyEndpoint {
+	replacement := *ep
+	replacement.AuthenticationProvider = provider
+	if ep.VirtualDirectories != nil {
+		replacement.VirtualDirectories = make([]*VirtualDirectoryEndpoint, len(ep.VirtualDirectories))
+		for i, vdir := range ep.VirtualDirectories {
+			if vdir != nil {
+				cloned := *vdir
+				cloned.parent = &replacement
+				replacement.VirtualDirectories[i] = &cloned
+			}
+		}
+	}
+	return &replacement
+}
+
 // Write changes to runtime without respawning the proxy handler
 // use prepare -> remove -> add if you change anything in the endpoint
 // that effects the proxy routing src / dest

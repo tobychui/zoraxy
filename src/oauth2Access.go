@@ -6,14 +6,11 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 
 	oauthaccess "imuslab.com/zoraxy/mod/auth/sso/oauth2"
 	"imuslab.com/zoraxy/mod/dynamicproxy"
 	"imuslab.com/zoraxy/mod/utils"
 )
-
-var oauth2RouteSettingsMu sync.Mutex
 
 type oauth2RouteSettings struct {
 	AllowedGroups                  string                                 `json:"allowedGroups"`
@@ -32,7 +29,6 @@ func updateProxyOAuth2Settings(proxy *dynamicproxy.ProxyEndpoint, input oauth2Ro
 		return errors.New("invalid OAuth2 settings update")
 	}
 
-	replacement := *proxy
 	provider := proxy.AuthenticationProvider
 	if provider == nil {
 		provider = dynamicproxy.GetDefaultAuthenticationProvider()
@@ -55,14 +51,14 @@ func updateProxyOAuth2Settings(proxy *dynamicproxy.ProxyEndpoint, input oauth2Ro
 	providerReplacement.OAuth2AllowUntrustedIdentityHeaders = !input.RemoveUntrustedIdentityHeaders && !input.ForwardUserInfo
 	providerReplacement.OAuth2ForwardWebSocketIdentity = &forwardWebSocketIdentity
 	providerReplacement.OAuth2DisableTokenCookieRemoval = input.IncludeTokenCookie
-	replacement.AuthenticationProvider = &providerReplacement
+	replacement := proxy.CloneWithAuthenticationProvider(&providerReplacement)
 
 	// Persist first. A failed write must not create a runtime-only policy that
 	// silently disappears on restart.
-	if err := save(&replacement); err != nil {
+	if err := save(replacement); err != nil {
 		return err
 	}
-	publish(&replacement)
+	publish(replacement)
 	return nil
 }
 
@@ -76,8 +72,8 @@ func HandleProxyOAuth2Settings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		// Serialize administrative writes so two editors cannot persist and
 		// publish replacements derived from the same stale endpoint snapshot.
-		oauth2RouteSettingsMu.Lock()
-		defer oauth2RouteSettingsMu.Unlock()
+		proxySettingsMu.Lock()
+		defer proxySettingsMu.Unlock()
 	}
 	ep := strings.TrimSpace(r.FormValue("ep"))
 	if ep == "" {

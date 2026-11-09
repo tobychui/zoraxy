@@ -62,6 +62,9 @@ func ReverseProxyUpstreamList(w http.ResponseWriter, r *http.Request) {
 
 // Add an upstream to a given proxy upstream endpoint
 func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	endpoint, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "endpoint not defined")
@@ -135,6 +138,9 @@ func ReverseProxyUpstreamAdd(w http.ResponseWriter, r *http.Request) {
 // pass in the whole new upstream origin json via "payload" POST variable
 // for missing fields, original value will be used instead
 func ReverseProxyUpstreamUpdate(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	endpoint, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "endpoint not defined")
@@ -206,6 +212,9 @@ func ReverseProxyUpstreamUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyUpstreamSetPriority(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	endpoint, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "endpoint not defined")
@@ -259,6 +268,9 @@ func ReverseProxyUpstreamSetPriority(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyUpstreamDelete(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	endpoint, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "endpoint not defined")

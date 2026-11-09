@@ -428,7 +428,7 @@ func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request
 
 	//Validate authentication using all configured auth methods (Basic, ForwardAuth, OAuth2, ZorxAuth)
 	proxyHandler := router.mux.(*ProxyHandler)
-	if handleAuthProviderRouting(sep, w, r, proxyHandler) {
+	if handleAuthProviderRouting(sep, w, r, proxyHandler, false) {
 		return
 	}
 

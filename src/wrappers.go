@@ -248,6 +248,9 @@ func HandleUptimeMonitorListing(w http.ResponseWriter, r *http.Request) {
 // Handle port change, if root router is using internal static web server
 // update the root router as well
 func HandleStaticWebServerPortChange(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	newPort, err := utils.PostInt(r, "port")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid port number given")

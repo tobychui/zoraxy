@@ -23,18 +23,28 @@ Central Authentication Provider Router
 This function will route the request to the correct authentication provider
 if the return value is true, do not continue to the next handler
 
-handleAuthProviderRouting takes in 4 parameters:
+handleAuthProviderRouting takes in 5 parameters:
 - sep: the ProxyEndpoint object
 - w: the http.ResponseWriter object
 - r: the http.Request object
 - h: the ProxyHandler object
+- bypassAuth: a verified mTLS certificate replaces login, but not header protection
 
 and return a boolean indicate if the request is written to http.ResponseWriter
 - true: the request is handled, do not write to http.ResponseWriter
 - false: the request is not handled (usually means auth ok), continue to the next handler
 */
-func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *http.Request, h *ProxyHandler) bool {
+func handleAuthProviderRouting(sep *ProxyEndpoint, w http.ResponseWriter, r *http.Request, h *ProxyHandler, bypassAuth bool) bool {
 	requestHostname := r.Host
+	if sep.AuthenticationProvider != nil && sep.AuthenticationProvider.AuthMethod == AuthMethodOauth2 {
+		protectOAuth2IdentityHeaders(r, sep.AuthenticationProvider)
+		if bypassAuth {
+			oauth2.StripOAuth2Cookies(r, !sep.AuthenticationProvider.OAuth2DisableTokenCookieRemoval)
+		}
+	}
+	if bypassAuth {
+		return false
+	}
 
 	switch sep.AuthenticationProvider.AuthMethod {
 	case AuthMethodBasic:
@@ -194,12 +204,23 @@ func (h *ProxyHandler) handleForwardAuth(w http.ResponseWriter, r *http.Request)
 }
 
 /* OAuth2 Auth */
+func protectOAuth2IdentityHeaders(r *http.Request, provider *AuthenticationProvider) {
+	if !provider.OAuth2DisableIdentityForwarding || !provider.OAuth2AllowUntrustedIdentityHeaders {
+		oauth2.StripIdentityHeaders(r.Header)
+	}
+}
+
+func shouldForwardOAuth2WebSocketIdentity(r *http.Request, provider *AuthenticationProvider) bool {
+	return provider != nil && provider.AuthMethod == AuthMethodOauth2 &&
+		!provider.OAuth2DisableIdentityForwarding &&
+		(provider.OAuth2ForwardWebSocketIdentity == nil || *provider.OAuth2ForwardWebSocketIdentity) &&
+		oauth2.HasVerifiedIdentityHeaders(r)
+}
+
 func (h *ProxyHandler) handleOAuth2Auth(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) error {
 	provider := sep.AuthenticationProvider
 	forwardIdentity := !provider.OAuth2DisableIdentityForwarding
-	if forwardIdentity || !provider.OAuth2AllowUntrustedIdentityHeaders {
-		oauth2.StripIdentityHeaders(r.Header)
-	}
+	protectOAuth2IdentityHeaders(r, provider)
 
 	// The OAuth2 callback must always reach the auth handler.
 	if r.URL.Path != "/internal/oauth2" && authExceptionMatched(provider.OAuth2ExceptionRules, r) {

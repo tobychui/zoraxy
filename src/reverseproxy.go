@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"imuslab.com/zoraxy/mod/auth"
@@ -27,6 +28,12 @@ const (
 	EXCEPTION_TYPE_PATH = 0x00
 	EXCEPTION_TYPE_IP   = 0x01
 )
+
+// proxySettingsMu serializes endpoint configuration writers, including bulk edits
+// and deletes. Hold it before loading any endpoint through persistence and runtime
+// publication; locking only the save would still allow stale snapshots to win.
+// Request-serving paths do not acquire this administrative lock.
+var proxySettingsMu sync.Mutex
 
 var (
 	dynamicProxyRouter      *dynamicproxy.Router
@@ -372,6 +379,9 @@ func parseUptimeAdvancedParams(r *http.Request) (string, int, int) {
 }
 
 func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	eptype, err := utils.PostPara(r, "type") //Support root and host
 	if err != nil {
 		utils.SendErrorResponse(w, "type not defined")
@@ -724,6 +734,9 @@ This endpoint do not handle basic auth credential update.
 The credential will be loaded from old config and reused
 */
 func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	rootNameOrMatchingDomain, err := utils.PostPara(r, "rootname")
 	if err != nil {
 		utils.SendErrorResponse(w, "Target proxy rule not defined")
@@ -915,6 +928,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 // ReverseProxyHandleSetTags handles updating only the tags of a proxy endpoint
 func ReverseProxyHandleSetTags(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	if r.Method != http.MethodPost {
 		utils.SendErrorResponse(w, "Method not supported")
 		return
@@ -959,6 +975,9 @@ func ReverseProxyHandleSetTags(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	rootNameOrMatchingDomain, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
@@ -1015,6 +1034,9 @@ func ReverseProxyHandleAlias(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyHandleSetTlsConfig(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	if r.Method != http.MethodPost {
 		utils.SendErrorResponse(w, "Method not supported")
 		return
@@ -1086,6 +1108,9 @@ func ReverseProxyHandleSetTlsConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReverseProxyHandleSetHostname(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	if r.Method != http.MethodPost {
 		utils.SendErrorResponse(w, "Method not supported")
 		return
@@ -1163,6 +1188,9 @@ func ReverseProxyHandleSetHostname(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteProxyEndpoint(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
@@ -1198,6 +1226,9 @@ on this endpoint by its username
 if request is POST, the handler will write the results to proxy config
 */
 func UpdateProxyBasicAuthCredentials(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	if r.Method == http.MethodGet {
 		ep, err := utils.GetPara(r, "ep")
 		if err != nil {
@@ -1328,6 +1359,9 @@ func ListProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
@@ -1458,6 +1492,9 @@ func AddProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveProxyBasicAuthExceptionPaths(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	// Delete a rule
 	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
@@ -1572,6 +1609,9 @@ func ListProxyZorxAuthExceptionRules(w http.ResponseWriter, r *http.Request) {
 
 // AddProxyZorxAuthExceptionRule adds a new ZorxAuth exception rule to a proxy endpoint.
 func AddProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
@@ -1691,6 +1731,9 @@ func AddProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
 
 // RemoveProxyZorxAuthExceptionRule removes a ZorxAuth exception rule from a proxy endpoint.
 func RemoveProxyZorxAuthExceptionRule(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid ep given")
@@ -1768,6 +1811,9 @@ func ReverseProxyStatus(w http.ResponseWriter, r *http.Request) {
 
 // Toggle a certain rule on and off
 func ReverseProxyToggleRuleSet(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	//No need to check for type as root cannot be turned off
 	ep, err := utils.PostPara(r, "ep")
 	if err != nil {
@@ -2233,6 +2279,9 @@ func HandleCustomHeaderList(w http.ResponseWriter, r *http.Request) {
 
 // Add a new header to the target endpoint
 func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	rewriteType, err := utils.PostPara(r, "type")
 	if err != nil {
 		utils.SendErrorResponse(w, "rewriteType not defined")
@@ -2312,6 +2361,9 @@ func HandleCustomHeaderAdd(w http.ResponseWriter, r *http.Request) {
 
 // Remove a header from the target endpoint
 func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		utils.SendErrorResponse(w, "domain or matching rule not defined")
@@ -2347,6 +2399,9 @@ func HandleCustomHeaderRemove(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleHostOverwrite(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		domain, err = utils.GetPara(r, "domain")
@@ -2419,6 +2474,9 @@ func HandleHostOverwrite(w http.ResponseWriter, r *http.Request) {
 // HandleHopByHop get and set the hop by hop remover state
 // note that it shows the DISABLE STATE of hop-by-hop remover, not the enable state
 func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		domain, err = utils.GetPara(r, "domain")
@@ -2493,6 +2551,9 @@ func HandleHopByHop(w http.ResponseWriter, r *http.Request) {
 // HandleUserAgent get and set the user agent header remover state
 // note that it shows the ENABLE STATE of user-agent remover, not the disable state
 func HandleUserAgent(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		domain, err = utils.GetPara(r, "domain")
@@ -2566,6 +2627,9 @@ func HandleUserAgent(w http.ResponseWriter, r *http.Request) {
 
 // Handle view or edit HSTS states
 func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		domain, err = utils.GetPara(r, "domain")
@@ -2615,6 +2679,9 @@ func HandleHSTSState(w http.ResponseWriter, r *http.Request) {
 
 // HandlePermissionPolicy handle read or write to permission policy
 func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		domain, err = utils.GetPara(r, "domain")
@@ -2689,6 +2756,9 @@ func HandlePermissionPolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleWsHeaderBehavior(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		domain, err = utils.GetPara(r, "domain")
@@ -2749,6 +2819,9 @@ func HandleGetListeningPorts(w http.ResponseWriter, r *http.Request) {
 
 // HandleSetListeningPorts sets the listening ports for a specific proxy endpoint
 func HandleSetListeningPorts(w http.ResponseWriter, r *http.Request) {
+	proxySettingsMu.Lock()
+	defer proxySettingsMu.Unlock()
+
 	domain, err := utils.PostPara(r, "domain")
 	if err != nil {
 		utils.SendErrorResponse(w, "domain not specified")
