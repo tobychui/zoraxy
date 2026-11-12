@@ -30,7 +30,7 @@ WORKDIR /opt/zerotier/source/
 RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano &&\
     mkdir -p /opt/zerotier/source/ &&\
     mkdir -p /usr/local/bin/ &&\
-    curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.16.2 &&\
+    curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.14.2 &&\
     tar -xzvf ZeroTierOne.tar.gz &&\
     cd ZeroTierOne-* &&\
     make -f make-linux.mk &&\
