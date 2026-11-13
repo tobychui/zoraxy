@@ -139,6 +139,10 @@ func RenderPlaceholders(content []byte, statusCode int) []byte {
 	statusText := http.StatusText(statusCode)
 	if statusText == "" {
 		statusText = "Error"
+		if statusCode == 521 {
+			//Not a registered status code, used by Zoraxy when no upstream can serve the request
+			statusText = "Web Server Is Down"
+		}
 	}
 	replacer := strings.NewReplacer(
 		"{{status_code}}", strconv.Itoa(statusCode),

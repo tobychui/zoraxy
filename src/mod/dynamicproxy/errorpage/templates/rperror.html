@@ -12,7 +12,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
         <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.9.2/semantic.min.js"></script>
-        <title>521 - Web server is down</title>
+        <title>{{status_code}} - {{status_text}}</title>
         <style>
              h1, h2, h3, h4, h5, p, a, span, .ui.list .item{
                 font-family: 'Noto Sans TC', sans-serif;
@@ -50,8 +50,8 @@
         <div>
             <br><br>
             <div class="ui container">
-                <h1 style="font-size: 4rem;">Error 521</h1>
-                <p style="font-size: 2rem; margin-bottom: 0.4em;">Web server is down</p>
+                <h1 style="font-size: 4rem;">Error {{status_code}}</h1>
+                <p style="font-size: 2rem; margin-bottom: 0.4em;">{{status_text}}</p>
                 <small id="timestamp"></small>
             </div>
             <br><br>
