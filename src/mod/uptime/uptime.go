@@ -410,7 +410,12 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 		Transport: transport,
 	}
 
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		// Invalid URL (e.g. bad host or health check URI), report it instead of
+		// panicking on a nil request
+		return 0, err
+	}
 	req.Header = http.Header{
 		"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 	}
@@ -429,7 +434,12 @@ func (m *Monitor) getWebsiteStatus(url string, skipTLSVerification bool, timeout
 			m.Config.Logger.PrintAndLog(LOG_MODULE_NAME, fmt.Sprintf("Error pinging %s: %v, try swapping protocol to %s", url, err, rewriteURL), err)
 		}
 
-		req, _ = http.NewRequest("GET", rewriteURL, nil)
+		var rewriteErr error
+		req, rewriteErr = http.NewRequest("GET", rewriteURL, nil)
+		if rewriteErr != nil {
+			// Keep the original error, it says why the first try failed
+			return 0, err
+		}
 		req.Header = http.Header{
 			"User-Agent": {UPTIME_MONITOR_USER_AGENT},
 		}

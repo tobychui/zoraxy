@@ -60,3 +60,26 @@ func TestGetWebsiteStatusClosesConnections(t *testing.T) {
 		t.Fatalf("expected at least %d closed connections after %d checks, got %d closed (opened=%d) - connections are leaking", n, n, closedNow, atomic.LoadInt64(&opened))
 	}
 }
+
+// GitHub issue #1369: a target URL that net/url cannot parse (for example a
+// host with a space, or a health-check URI with a bad percent escape) made
+// http.NewRequest return a nil request, and getWebsiteStatus panicked on it,
+// taking the whole process down. It should report an error instead.
+func TestGetWebsiteStatusInvalidURL(t *testing.T) {
+	m := &Monitor{Config: &Config{}}
+	urls := []string{
+		"http://bad host:8080",
+		"https://bad host:8443",
+		buildHealthCheckURL("http://127.0.0.1:8080", "/health%zz"),
+		"http://[fe80::1%eth0]:8080",
+	}
+	for _, u := range urls {
+		code, err := m.getWebsiteStatus(u, false, time.Second)
+		if err == nil {
+			t.Errorf("%q: expected an error, got status %d", u, code)
+		}
+		if code != 0 {
+			t.Errorf("%q: expected status 0, got %d", u, code)
+		}
+	}
+}
