@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // replaceLocationHost rewrite the backend server's location header to a new URL based on the given proxy rules
@@ -122,10 +123,20 @@ func isExternalDomainName(hostname string) bool {
 	return true
 }
 
+// emptyBodyProbeTimeout bounds how long markEmptyBody waits for the first byte
+// of a body of unknown length. net/http bounds its own probe the same way and
+// for the same reason, see probeRequestBody and golang/go#17480.
+const emptyBodyProbeTimeout = 200 * time.Millisecond
+
 // markEmptyBody replaces a request body known to be empty with http.NoBody.
 // HTTP/2 and HTTP/3 servers hand bodyless requests a non-nil Body, which makes
 // the transport send them chunked (#1204) and refuse to retry them when a reused
 // upstream connection turns out to be closed already.
+//
+// A body of unknown length is probed for its first byte, but only for
+// emptyBodyProbeTimeout: a client may hold its body back until it has seen the
+// response headers (a gRPC bidirectional stream does), and waiting for that
+// byte would keep the request from ever reaching the upstream.
 func markEmptyBody(req *http.Request) {
 	if req.Body == nil || req.Body == http.NoBody {
 		return
@@ -135,13 +146,27 @@ func markEmptyBody(req *http.Request) {
 	case 0:
 		setNoBody(req)
 	case -1:
-		peek := make([]byte, 1)
-		n, err := req.Body.Read(peek)
-		switch {
-		case n == 0 && err == io.EOF:
-			setNoBody(req)
-		case n > 0:
-			req.Body = io.NopCloser(io.MultiReader(bytes.NewReader(peek[:n]), req.Body))
+		body := req.Body
+		probe := make(chan firstRead, 1)
+		go func() {
+			var peek [1]byte
+			n, err := body.Read(peek[:])
+			probe <- firstRead{n: n, b: peek[0], err: err}
+		}()
+
+		timer := time.NewTimer(emptyBodyProbeTimeout)
+		defer timer.Stop()
+		select {
+		case first := <-probe:
+			if first.n == 0 && first.err == io.EOF {
+				setNoBody(req)
+				return
+			}
+			req.Body = &probedBody{rest: first.replay(body), body: body}
+		case <-timer.C:
+			// Nothing yet: forward the request now. The read in flight is
+			// handed to the transport as the start of the body.
+			req.Body = &probedBody{probe: probe, rest: body, body: body}
 		}
 	}
 }
@@ -151,6 +176,52 @@ func setNoBody(req *http.Request) {
 	req.ContentLength = 0
 	req.GetBody = nil
 }
+
+// firstRead is the outcome of the one-byte probe read of a request body.
+type firstRead struct {
+	n   int
+	b   byte
+	err error
+}
+
+// replay returns a reader that yields what the probe read took from body,
+// followed by the rest of body.
+func (f firstRead) replay(body io.Reader) io.Reader {
+	switch {
+	case f.n > 0 && f.err != nil:
+		return io.MultiReader(bytes.NewReader([]byte{f.b}), errorReader{f.err})
+	case f.n > 0:
+		return io.MultiReader(bytes.NewReader([]byte{f.b}), body)
+	case f.err != nil:
+		return errorReader{f.err}
+	}
+	return body
+}
+
+// probedBody is a request body whose first byte was, or is still being, read
+// by markEmptyBody. Close goes to the original body: the transport closes the
+// request body to end a read of it that would otherwise block forever, e.g.
+// when the upstream has answered and the client still holds its stream open.
+type probedBody struct {
+	probe <-chan firstRead // probe read still in flight, nil once collected
+	rest  io.Reader
+	body  io.Closer
+}
+
+func (p *probedBody) Read(b []byte) (int, error) {
+	if p.probe != nil {
+		first := <-p.probe
+		p.probe = nil
+		p.rest = first.replay(p.rest)
+	}
+	return p.rest.Read(b)
+}
+
+func (p *probedBody) Close() error { return p.body.Close() }
+
+type errorReader struct{ err error }
+
+func (e errorReader) Read([]byte) (int, error) { return 0, e.err }
 
 // DeepCopyRequest returns a deep copy of the given http.Request.
 func DeepCopyRequest(req *http.Request) (*http.Request, error) {
