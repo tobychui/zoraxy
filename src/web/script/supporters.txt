@@ -10,8 +10,10 @@
 #
 # Thank you — from the bottom of our hearts!
 #
-# Last update: 15/8/2026
-
+# Last update: 13/11/2026
+Simon Wesp
+Marvin Kickner
+Itamar Oren
 Peter Balslev
 Mathias König
 Robert Wunderl
