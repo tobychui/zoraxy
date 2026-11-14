@@ -1,903 +1,2975 @@
 <script src="./script/useragent.js"></script>
-<link href="./script/datepicker/dp-light.css" rel="stylesheet">
-<script defer src="./script/datepicker/datepicker.js"></script>
+<style>
+    /* Statistic Analysis Dashboard */
+    #stats{
+        --stats_c1: #4d9de0;
+        --stats_c2: #2c3e50;
+        --stats_c3: #9cc9ef;
+        --stats_c4: #6b8aa8;
+        --stats_c5: #d9c39a;
+        --stats_c6: #c4cad1;
+        --stats_red: #e06666;
+        --stats_green: #21ba45;
+        --stats_track: rgba(128, 128, 128, 0.14);
+        --stats_tick: #9ca3af;
+        --stats_grid: rgba(128, 128, 128, 0.12);
+        --stats_range: rgba(77, 157, 224, 0.14);
+    }
+
+    body.darkTheme #stats{
+        --stats_c1: #5aaaf0;
+        --stats_c2: #c9d6e3;
+        --stats_c3: #2f6fa8;
+        --stats_c4: #8aa6c1;
+        --stats_c5: #c9b080;
+        --stats_c6: #5c636b;
+        --stats_red: #ef7b7b;
+        --stats_track: rgba(255, 255, 255, 0.08);
+        --stats_range: rgba(90, 170, 240, 0.18);
+    }
+
+    #stats .statsHeader{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1em;
+    }
+
+    #stats .statsHeader h2{
+        margin-bottom: 0.2em;
+    }
+
+    #stats .statsToolbar{
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        flex-wrap: wrap;
+    }
+
+    /* Range selector */
+    #stats .statsRangePicker{
+        position: relative;
+    }
+
+    #stats .statsRangeButton{
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5em;
+        background: var(--theme_bg_primary);
+        color: var(--text_color);
+        border: 1px solid var(--divider_color);
+        border-radius: 0.6em;
+        padding: 0.55em 0.9em;
+        cursor: pointer;
+        font-size: 0.95em;
+        white-space: nowrap;
+    }
+
+    #stats .statsRangeButton i{
+        margin: 0;
+    }
+
+    #stats .statsRangeButton.open{
+        border-color: var(--stats_c1);
+    }
+
+    /* Range picker popover */
+    #stats .rangePopover{
+        display: none;
+        position: absolute;
+        top: calc(100% + 0.4em);
+        right: 0;
+        z-index: 30;
+        width: 640px;
+        max-width: calc(100vw - 32px);
+        background: var(--theme_bg_primary);
+        border: 1px solid var(--divider_color);
+        border-radius: 1em;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+        overflow: hidden;
+        color: var(--text_color);
+    }
+
+    #stats .rangePopover.open{
+        display: block;
+    }
+
+    #stats .rangeFields{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.7em;
+        padding: 0.9em;
+        border-bottom: 1px solid var(--divider_color);
+    }
+
+    #stats .rangeField{
+        display: flex;
+        align-items: center;
+        gap: 0.6em;
+        background: var(--theme_bg_active);
+        border: 1.5px solid transparent;
+        border-radius: 0.7em;
+        padding: 0.6em 0.8em;
+        cursor: text;
+        margin: 0;
+    }
+
+    #stats .rangeField.active{
+        border-color: var(--stats_c1);
+        background: var(--theme_bg_primary);
+    }
+
+    #stats .rangeField.invalid{
+        border-color: var(--stats_red);
+    }
+
+    #stats .rangeField i{
+        margin: 0;
+        color: var(--text_color_secondary);
+    }
+
+    #stats .rangeField input{
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--text_color);
+        font: inherit;
+        font-size: 1.05em;
+        width: 100%;
+        min-width: 0;
+        padding: 0;
+    }
+
+    #stats .rangeField input::placeholder{
+        color: var(--text_color_secondary);
+        opacity: 0.75;
+    }
+
+    #stats .rangeBody{
+        display: grid;
+        grid-template-columns: 215px minmax(0, 1fr);
+    }
+
+    #stats .rangePresets{
+        border-right: 1px solid var(--divider_color);
+        padding: 0.6em;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15em;
+    }
+
+    #stats .rangePreset{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8em;
+        width: 100%;
+        padding: 0.65em 0.8em;
+        border: none;
+        border-radius: 0.6em;
+        background: transparent;
+        color: var(--text_color);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    #stats .rangePreset:hover{
+        background: var(--theme_bg_active);
+    }
+
+    #stats .rangePreset.active{
+        background: var(--theme_bg_active);
+        font-weight: 600;
+    }
+
+    #stats .rangePreset .presetHint{
+        color: var(--text_color_secondary);
+        font-size: 0.85em;
+        font-weight: 400;
+        white-space: nowrap;
+    }
+
+    #stats .rangeCalendar{
+        padding: 0.9em 1.1em 0.7em 1.1em;
+    }
+
+    #stats .calHeader{
+        display: flex;
+        align-items: center;
+        gap: 0.2em;
+        margin-bottom: 0.5em;
+    }
+
+    #stats .calTitle{
+        flex: 1;
+        font-weight: 700;
+        font-size: 1.15em;
+        padding-left: 0.3em;
+    }
+
+    #stats .calNavButton{
+        border: none;
+        background: transparent;
+        color: var(--text_color);
+        border-radius: 0.5em;
+        padding: 0.4em 0.55em;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    #stats .calNavButton:hover:not(:disabled){
+        background: var(--theme_bg_active);
+    }
+
+    #stats .calNavButton:disabled{
+        opacity: 0.3;
+        cursor: default;
+    }
+
+    #stats .calNavButton i{
+        margin: 0;
+    }
+
+    #stats .calGrid{
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        row-gap: 0.2em;
+        text-align: center;
+        user-select: none;
+    }
+
+    #stats .calWeekday{
+        color: var(--text_color_secondary);
+        font-size: 0.85em;
+        padding: 0.3em 0 0.5em 0;
+    }
+
+    #stats .calDay{
+        height: 2.5em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-variant-numeric: tabular-nums;
+    }
+
+    #stats .calDay span{
+        position: relative;
+        width: 2.35em;
+        height: 2.35em;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #stats .calDay:hover span{
+        background: var(--theme_bg_active);
+    }
+
+    #stats .calDay.outside{
+        color: var(--text_color_secondary);
+    }
+
+    #stats .calDay.outside span{
+        opacity: 0.55;
+    }
+
+    #stats .calDay.future{
+        color: var(--text_color_secondary);
+        cursor: default;
+    }
+
+    #stats .calDay.future span{
+        opacity: 0.3;
+    }
+
+    #stats .calDay.future:hover span{
+        background: none;
+    }
+
+    #stats .calDay.today span{
+        font-weight: 700;
+    }
+
+    #stats .calDay.today span::after{
+        content: "";
+        position: absolute;
+        bottom: 0.3em;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--stats_c1);
+    }
+
+    /* Selected range band */
+    #stats .calDay.inRange{
+        background: var(--stats_range);
+    }
+
+    #stats .calDay.inRange.rowStart{
+        border-radius: 1.2em 0 0 1.2em;
+    }
+
+    #stats .calDay.inRange.rowEnd{
+        border-radius: 0 1.2em 1.2em 0;
+    }
+
+    #stats .calDay.inRange.rowStart.rowEnd{
+        border-radius: 1.2em;
+    }
+
+    #stats .calDay.rangeStart{
+        background: linear-gradient(to right, transparent 50%, var(--stats_range) 50%);
+    }
+
+    #stats .calDay.rangeEnd{
+        background: linear-gradient(to left, transparent 50%, var(--stats_range) 50%);
+    }
+
+    #stats .calDay.rangeStart.rangeEnd,
+    #stats .calDay.rangeStart.rowEnd,
+    #stats .calDay.rangeEnd.rowStart{
+        background: none;
+    }
+
+    #stats .calDay.rangeStart span,
+    #stats .calDay.rangeEnd span{
+        background: var(--theme_background) !important;
+        color: #ffffff;
+        font-weight: 600;
+        opacity: 1;
+    }
+
+    #stats .calDay.rangeStart.today span::after,
+    #stats .calDay.rangeEnd.today span::after{
+        background: #ffffff;
+    }
+
+    #stats .calDay.preview.rangeStart span,
+    #stats .calDay.preview.rangeEnd span{
+        opacity: 0.8;
+    }
+
+    #stats .rangeFooter{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.8em;
+        padding: 0.75em 0.9em;
+        border-top: 1px solid var(--divider_color);
+    }
+
+    #stats .rangeSummary{
+        color: var(--text_color_secondary);
+        font-size: 0.9em;
+    }
+
+    #stats .rangeSummary.warning{
+        color: var(--stats_red);
+    }
+
+    #stats .rangeActions{
+        display: flex;
+        gap: 0.5em;
+        margin-left: auto;
+    }
+
+    #stats .rangeCancel{
+        border: 1px solid var(--divider_color);
+        background: transparent;
+        color: var(--text_color);
+        border-radius: 0.6em;
+        padding: 0.55em 1.1em;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    #stats .rangeApply{
+        border: none;
+        background: var(--theme_background);
+        color: #ffffff;
+        border-radius: 0.6em;
+        padding: 0.55em 1.3em;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+    }
+
+    #stats .rangeApply:disabled{
+        opacity: 0.4;
+        cursor: default;
+    }
+
+    @media screen and (max-width: 640px){
+        #stats .rangePopover{
+            position: fixed;
+            top: 64px;
+            left: 12px !important;
+            right: 12px !important;
+            width: auto;
+            max-width: none;
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+        }
+        #stats .rangeBody{
+            grid-template-columns: minmax(0, 1fr);
+        }
+        #stats .rangePresets{
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.4em;
+            border-right: none;
+            border-bottom: 1px solid var(--divider_color);
+        }
+        #stats .rangePreset{
+            width: auto;
+            padding: 0.4em 0.85em;
+            border: 1px solid var(--divider_color);
+            border-radius: 2em;
+        }
+        #stats .rangePreset .presetHint{
+            display: none;
+        }
+    }
+
+    /* Simple / Detail toggle */
+    #stats .statsModeToggle{
+        display: inline-flex;
+        background: var(--theme_bg_active);
+        border-radius: 0.6em;
+        padding: 0.2em;
+    }
+
+    #stats .statsModeToggle button{
+        border: none;
+        background: transparent;
+        color: var(--text_color_secondary);
+        padding: 0.45em 1.1em;
+        border-radius: 0.45em;
+        cursor: pointer;
+        font-size: 0.95em;
+    }
+
+    #stats .statsModeToggle button.active{
+        background: var(--theme_bg_primary);
+        color: var(--text_color);
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    body.darkTheme #stats .statsModeToggle button.active{
+        background: #34343b;
+    }
+
+    #stats .statsIconButton{
+        border: 1px solid var(--divider_color);
+        background: var(--theme_bg_primary);
+        color: var(--text_color);
+        border-radius: 0.6em;
+        width: 2.4em;
+        height: 2.4em;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #stats .statsIconButton i{
+        margin: 0;
+    }
+
+    /* Cards and layout */
+    #stats .statsCard{
+        background: var(--theme_bg_primary);
+        border: 1px solid var(--divider_color);
+        border-radius: 1em;
+        padding: 1.2em;
+        min-width: 0;
+        position: relative;
+    }
+
+    #stats .statsGrid{
+        display: grid;
+        gap: 1em;
+        margin-bottom: 1em;
+    }
+
+    #stats .statsKpiRow{
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    #stats .statsTrendRow{
+        grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    }
+
+    #stats .statsInsightRow{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #stats.detailMode .statsInsightRow{
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #stats .detailOnly{
+        display: none;
+    }
+
+    #stats.detailMode .detailOnly{
+        display: block;
+    }
+
+    #stats.detailMode .simpleOnly{
+        display: none;
+    }
+
+    #stats .statsCardHeader{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.6em;
+        margin-bottom: 0.8em;
+    }
+
+    #stats .statsCardTitle{
+        font-weight: 700;
+        font-size: 1.05em;
+        color: var(--text_color);
+        display: flex;
+        align-items: center;
+        gap: 0.45em;
+        white-space: nowrap;
+    }
+
+    #stats .statsCardTitle i.icon{
+        margin: 0;
+        color: var(--stats_c4);
+    }
+
+    #stats .statsCardTitle .infoIcon{
+        color: var(--text_color_secondary);
+        font-size: 0.85em;
+        cursor: help;
+    }
+
+    #stats .statsLink{
+        color: var(--stats_c1);
+        cursor: pointer;
+        font-size: 0.9em;
+        white-space: nowrap;
+        background: none;
+        border: none;
+        padding: 0;
+    }
+
+    #stats .statsLink:hover{
+        text-decoration: underline;
+    }
+
+    /* KPI cards */
+    #stats .kpiIcon{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.4em;
+        height: 2.4em;
+        border-radius: 0.7em;
+        background: rgba(77, 157, 224, 0.12);
+        color: var(--stats_c1);
+        margin-bottom: 0.6em;
+    }
+
+    #stats .kpiIcon i{
+        margin: 0;
+        font-size: 1.15em;
+    }
+
+    #stats .kpiValue{
+        font-size: 2em;
+        font-weight: 600;
+        line-height: 1.1;
+        color: var(--text_color);
+    }
+
+    #stats .kpiLabel{
+        color: var(--text_color_secondary);
+        margin-top: 0.2em;
+    }
+
+    #stats .kpiDelta{
+        font-size: 0.85em;
+        margin-top: 0.5em;
+        color: var(--text_color_secondary);
+        min-height: 1.3em;
+    }
+
+    #stats .kpiDelta .up{
+        color: var(--stats_green);
+        font-weight: 600;
+    }
+
+    #stats .kpiDelta .down{
+        color: var(--stats_red);
+        font-weight: 600;
+    }
+
+    #stats .kpiProgress{
+        height: 8px;
+        border-radius: 4px;
+        background: var(--stats_track);
+        overflow: hidden;
+        margin-top: 0.75em;
+    }
+
+    #stats .kpiProgress .fill{
+        height: 100%;
+        border-radius: 4px;
+        background: var(--stats_c1);
+        transition: width 0.6s ease;
+    }
+
+    /* Legends */
+    #stats .chartLegend{
+        display: flex;
+        gap: 1em;
+        align-items: center;
+        font-size: 0.85em;
+        color: var(--text_color_secondary);
+    }
+
+    #stats .legendDot{
+        display: inline-block;
+        width: 0.65em;
+        height: 0.65em;
+        border-radius: 50%;
+        margin-right: 0.35em;
+        flex-shrink: 0;
+    }
+
+    #stats .lineChartWrapper{
+        position: relative;
+        height: 240px;
+        width: 100%;
+    }
+
+    /* Doughnut with legend */
+    #stats .donutRow{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1.2em;
+    }
+
+    #stats .donutWrapper{
+        position: relative;
+        width: 160px;
+        height: 160px;
+        flex-shrink: 0;
+    }
+
+    #stats .donutWrapper.small{
+        width: 130px;
+        height: 130px;
+    }
+
+    #stats .donutCenter{
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        text-align: center;
+    }
+
+    #stats .donutCenter .centerValue{
+        font-size: 1.45em;
+        font-weight: 600;
+        color: var(--text_color);
+        line-height: 1.1;
+    }
+
+    #stats .donutCenter .centerLabel{
+        font-size: 0.85em;
+        color: var(--text_color_secondary);
+    }
+
+    #stats .donutLegend{
+        flex: 1 1 130px;
+        min-width: 0;
+    }
+
+    #stats .donutLegend .legendRow{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.3em 0;
+        font-size: 0.92em;
+        color: var(--text_color);
+        gap: 0.5em;
+    }
+
+    #stats .donutLegend .legendRow .legendName{
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #stats .donutLegend .legendRow .legendValue{
+        color: var(--text_color_secondary);
+        white-space: nowrap;
+    }
+
+    /* Ranked bar list */
+    #stats .barRow{
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 3.6em;
+        align-items: center;
+        gap: 0.8em;
+        padding: 0.45em 0;
+        font-size: 0.92em;
+    }
+
+    #stats .barRow .barLabel{
+        color: var(--text_color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+
+    #stats .barRow .barTrack{
+        height: 14px;
+        border-radius: 4px;
+        background: var(--stats_track);
+        overflow: hidden;
+    }
+
+    #stats .barRow .barFill{
+        height: 100%;
+        border-radius: 4px;
+        background: var(--stats_c1);
+    }
+
+    #stats .barRow .barValue{
+        text-align: right;
+        color: var(--text_color_secondary);
+        white-space: nowrap;
+    }
+
+    /* Tables */
+    #stats table.statsTable{
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88em;
+        table-layout: fixed;
+    }
+
+    #stats table.statsTable th{
+        text-align: left;
+        color: var(--text_color_secondary);
+        font-weight: 600;
+        padding: 0.45em 0.5em;
+        border-bottom: 1px solid var(--divider_color);
+        background: var(--theme_bg_active);
+    }
+
+    #stats table.statsTable td{
+        padding: 0.45em 0.5em;
+        border-bottom: 1px solid var(--divider_color);
+        color: var(--text_color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #stats table.statsTable tr:last-child td{
+        border-bottom: none;
+    }
+
+    #stats table.statsTable .num{
+        text-align: right;
+        width: 6em;
+    }
+
+    #stats table.statsTable .share{
+        width: 5em;
+        text-align: right;
+    }
+
+    #stats table.statsTable .shareBar{
+        width: 28%;
+    }
+
+    #stats table.statsTable tr.othersRow td{
+        color: var(--text_color_secondary);
+    }
+
+    #stats .mutedText{
+        color: var(--text_color_secondary);
+    }
+
+    #stats .emptyNote{
+        color: var(--text_color_secondary);
+        padding: 1.5em 0;
+        text-align: center;
+        font-size: 0.92em;
+    }
+
+    #stats .inlineBar{
+        height: 8px;
+        border-radius: 4px;
+        background: var(--stats_track);
+        overflow: hidden;
+    }
+
+    #stats .inlineBar .fill{
+        height: 100%;
+        background: var(--stats_c1);
+        border-radius: 4px;
+    }
+
+    /* Detailed statistics */
+    #stats .detailHeader{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1em;
+        margin-bottom: 1em;
+    }
+
+    #stats .detailHeader .detailSubtitle{
+        color: var(--text_color_secondary);
+        font-size: 0.9em;
+        margin-top: 0.15em;
+    }
+
+    #stats .outlineButton{
+        border: 1px solid var(--stats_c1);
+        color: var(--stats_c1);
+        background: transparent;
+        border-radius: 0.6em;
+        padding: 0.5em 1em;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 0.92em;
+    }
+
+    #stats .outlineButton i{
+        margin: 0 0 0 0.3em;
+    }
+
+    #stats .accordionRow{
+        border: 1px solid var(--divider_color);
+        border-radius: 0.7em;
+        margin-bottom: 0.5em;
+        overflow: hidden;
+    }
+
+    #stats .accordionHead{
+        display: flex;
+        align-items: center;
+        gap: 0.8em;
+        padding: 0.8em 1em;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    #stats .accordionHead:hover{
+        background: var(--theme_bg_active);
+    }
+
+    #stats .accordionHead .accTitle{
+        font-weight: 600;
+        color: var(--text_color);
+        white-space: nowrap;
+    }
+
+    #stats .accordionHead .accTitle i{
+        color: var(--stats_c4);
+        margin-right: 0.5em;
+    }
+
+    #stats .accordionHead .accSummary{
+        flex: 1;
+        text-align: right;
+        color: var(--text_color_secondary);
+        font-size: 0.88em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #stats .accordionHead .accChevron{
+        margin-left: auto !important;
+        color: var(--text_color_secondary);
+        transition: transform 0.2s ease;
+        margin: 0;
+    }
+
+    #stats .accordionRow.open .accChevron{
+        transform: rotate(180deg);
+    }
+
+    #stats .accordionBody{
+        display: none;
+        padding: 0.2em 1em 0.8em 1em;
+        border-top: 1px solid var(--divider_color);
+    }
+
+    #stats .accordionRow.open .accordionBody{
+        display: block;
+    }
+
+    #stats .statsTabs{
+        display: flex;
+        gap: 0.2em;
+        border-bottom: 1px solid var(--divider_color);
+        margin-bottom: 1em;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+    }
+
+    #stats .statsTabs .tabItem{
+        padding: 0.7em 1em;
+        cursor: pointer;
+        color: var(--text_color_secondary);
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        font-size: 0.92em;
+        margin-bottom: -1px;
+    }
+
+    #stats .statsTabs .tabItem i{
+        margin-right: 0.35em;
+    }
+
+    #stats .statsTabs .tabItem.active{
+        color: var(--text_color);
+        border-bottom-color: var(--stats_c1);
+        font-weight: 600;
+    }
+
+    #stats .statsTabPane{
+        display: none;
+    }
+
+    #stats .statsTabPane.active{
+        display: block;
+    }
+
+    #stats .paneGrid{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1em;
+        margin-bottom: 1em;
+    }
+
+    #stats .paneGrid.two{
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+    }
+
+    #stats .paneCard{
+        border: 1px solid var(--divider_color);
+        border-radius: 0.8em;
+        padding: 1em;
+        min-width: 0;
+    }
+
+    #stats .paneCard .paneTitle{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: var(--text_color);
+        margin-bottom: 0.8em;
+    }
+
+    #stats .latencyStats{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        text-align: center;
+        margin-bottom: 0.6em;
+    }
+
+    #stats .latencyStats .latLabel{
+        color: var(--text_color_secondary);
+        font-size: 0.85em;
+    }
+
+    #stats .latencyStats .latValue{
+        font-size: 1.25em;
+        font-weight: 600;
+        color: var(--text_color);
+        margin-top: 0.2em;
+    }
+
+    #stats .sparkWrapper{
+        position: relative;
+        height: 80px;
+    }
+
+    #stats .respTrendWrapper{
+        position: relative;
+        height: 170px;
+    }
+
+    #stats .statsFooter{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.6em;
+        color: var(--text_color_secondary);
+        font-size: 0.85em;
+        margin-top: 0.4em;
+    }
+
+    /* Loading overlay */
+    #stats .statsBody{
+        position: relative;
+        transition: opacity 0.2s ease;
+    }
+
+    #stats .statsBody.loading{
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    /* View all modal */
+    #statsListModal{
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.45);
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+
+    #statsListModal.open{
+        display: flex;
+    }
+
+    #statsListModal .modalBox{
+        background: var(--theme_bg_primary);
+        border-radius: 1em;
+        width: 100%;
+        max-width: 760px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        padding: 1.2em;
+        color: var(--text_color);
+    }
+
+    #statsListModal .modalHead{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8em;
+        gap: 1em;
+    }
+
+    #statsListModal .modalHead h3{
+        margin: 0;
+    }
+
+    #statsListModal .modalSearch{
+        width: 100%;
+        margin-bottom: 0.8em;
+    }
+
+    #statsListModal .modalContent{
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    @media screen and (max-width: 640px){
+        #statsListModal .modalBox{
+            padding: 1em 0.8em;
+        }
+        #stats #statsListModal table.statsTable .shareBar{
+            display: none;
+        }
+    }
+
+    @media screen and (max-width: 1100px){
+        #stats.detailMode .statsInsightRow{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        #stats .paneGrid{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media screen and (max-width: 768px){
+        #stats .statsKpiRow{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        #stats .statsTrendRow,
+        #stats .statsInsightRow,
+        #stats.detailMode .statsInsightRow,
+        #stats .paneGrid,
+        #stats .paneGrid.two{
+            grid-template-columns: minmax(0, 1fr);
+        }
+        #stats .accordionHead .accSummary{
+            display: none;
+        }
+        #stats .donutWrapper{
+            width: 130px;
+            height: 130px;
+        }
+    }
+</style>
 
 <div class="standardContainer">
-    <div class="ui basic segment">
-        <h2>Statistical Analysis</h2>
-        <p>Statistic of your server in every aspects</p>
-        <div style="margin-bottom: 0.4em;">
-            <div class="ui small input">
-                <input type="text" id="statsRangeStart" placeholder="From date">
-            </div>
-            <span style="padding-left: 0.6em; padding-right: 0.6em;"> <i class="ui right arrow icon"></i> </span>
-            <div class="ui small input">
-                <input type="text" id="statsRangeEnd" placeholder="End date">
-            </div>
+    <!-- Header -->
+    <div class="ui basic segment statsHeader" style="padding-left: 0; padding-right: 0;">
+        <div>
+            <h2>Statistical Analysis</h2>
+            <p>Overview of your Zoraxy usage and traffic patterns</p>
         </div>
-        <button onclick="handleLoadStatisticButtonPress();" class="ui basic button"><i class="blue search icon"></i> Load</button>
-        <button onclick="clearStatisticDateRange();" class="ui basic button"><i class="eraser icon"></i> Clear Search</button>
-        <br>
-        <small>Leave end range as empty for showing starting day only statistic</small>
+        <div class="statsToolbar">
+            <div class="statsRangePicker">
+                <button class="statsRangeButton" id="statsRangeButton" onclick="toggleStatsRangePopover(event);">
+                    <i class="calendar alternate outline icon"></i>
+                    <span id="statsRangeLabel">Last 30 Days</span>
+                    <i class="dropdown icon"></i>
+                </button>
+                <div class="rangePopover" id="statsRangePopover" role="dialog" aria-label="Select date range">
+                    <div class="rangeFields">
+                        <label class="rangeField" id="statsRangeStartField">
+                            <i class="calendar alternate outline icon"></i>
+                            <input type="text" id="statsRangeStart" placeholder="Start date" autocomplete="off" maxlength="10" spellcheck="false">
+                        </label>
+                        <label class="rangeField" id="statsRangeEndField">
+                            <i class="calendar check outline icon"></i>
+                            <input type="text" id="statsRangeEnd" placeholder="End date" autocomplete="off" maxlength="10" spellcheck="false">
+                        </label>
+                    </div>
+                    <div class="rangeBody">
+                        <div class="rangePresets" id="statsRangePresets"></div>
+                        <div class="rangeCalendar">
+                            <div class="calHeader">
+                                <div class="calTitle" id="statsCalTitle"></div>
+                                <button type="button" class="calNavButton" onclick="statsCalGoToday();">Today</button>
+                                <button type="button" class="calNavButton" id="statsCalPrev" title="Previous month" onclick="statsCalShiftMonth(-1);"><i class="chevron up icon"></i></button>
+                                <button type="button" class="calNavButton" id="statsCalNext" title="Next month" onclick="statsCalShiftMonth(1);"><i class="chevron down icon"></i></button>
+                            </div>
+                            <div class="calGrid" id="statsCalGrid"></div>
+                        </div>
+                    </div>
+                    <div class="rangeFooter">
+                        <span class="rangeSummary" id="statsRangeSummary"></span>
+                        <div class="rangeActions">
+                            <button type="button" class="rangeCancel" onclick="closeStatsRangePopover();">Cancel</button>
+                            <button type="button" class="rangeApply" id="statsRangeApply" onclick="applyStatsCustomRange();">Apply</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="statsModeToggle">
+                <button data-mode="simple" onclick="setStatsMode('simple');">Simple</button>
+                <button data-mode="detail" onclick="setStatsMode('detail');">Detail</button>
+            </div>
+            <button class="statsIconButton" title="Refresh" onclick="loadStatsDashboard();"><i class="refresh icon"></i></button>
+            <button class="statsIconButton" title="Export or reset statistics" onclick="openStatsAdvanceOperations();"><i class="ellipsis horizontal icon"></i></button>
+        </div>
     </div>
-    <div class="ui divider"></div>
-    <div id="statisticRenderNotEnoughData" class="ui segment" style="padding: 2em;" align="center">
+
+    <!-- No data -->
+    <div id="statisticRenderNotEnoughData" class="ui segment" style="padding: 2em; display: none;" align="center">
         <h4 class="ui icon header">
             <i class="medium icons" style="color: #dbdbdb !important;">
                 <i class="chart pie icon"></i>
-                <i class="small corner remove icon" style="
-                    font-size: 1.4em;
-                    margin-right: -0.2em;
-                    margin-bottom: -0em;
-                "></i>
+                <i class="small corner remove icon" style="font-size: 1.4em; margin-right: -0.2em; margin-bottom: -0em;"></i>
             </i>
-            
             <div class="content" style="margin-top: 1em; color: #7c7c7c !important;">
-                No Data 
-                <div class="sub header" style="color: #adadad !important;">The selected period contains too little or no request data collected. <br>
-                    Please select a larger range or make sure there are enough traffic routing through this site.</div>
+                No Data
+                <div class="sub header" style="color: #adadad !important;">The selected period contains no request data. <br>
+                    Please select a larger range or make sure there is traffic routing through this site.</div>
             </div>
         </h4>
     </div>
-    <div id="statisticRenderElement" class="ui basic segment">
-        <!-- View Counts Statistics -->
-        <div class="ui three small statistics">
-            <div class="statistic">
-              <div class="value totalViewCount">
-                
-              </div>
-              <div class="label">
-                Total Requests
-              </div>
-            </div>
-            <div class="statistic">
-                <div class="value">
-                    <i class="ui green check circle icon"></i> <span class="totalSuccCount"></span>
-                </div>
-              <div class="label">
-                 Success Requests
-              </div>
-            </div>
-            <div class="statistic">
-              <div class="value">
-                <i class="ui red times circle icon"></i> <span class="totalErrorCount"></span>
-              </div>
-              <div class="label">
-                Error Requests
-              </div>
-            </div>
-        </div>
-        <!-- Forward Type Data -->
-        <h3>Forward Traffic Types</h3>
-        <p>Traffic forwarding type classified by their protocols and proxy rules.</p>
-        <table class="ui celled unstackable table">
-            <thead>
-                <tr><th>Forward Type</th>
-                <th>Counts</th>
-                <th>Percentage</th>
-            </tr></thead>
-            <tbody class="forwardTypeCounts">
-            </tbody>
-        </table>
-        <!-- Client Geolocation Analysis-->
-        <h3>Visitors Countries</h3>
-        <p>Distributions of visitors by country code. Access origin are estimated using open source GeoIP database and might not be accurate.</p>
-        <div style="min-height: 400px;">
-            <canvas id="stats_visitors"></canvas>
-        </div>
-        <div class="ui divider"></div>
-        <!-- Client IP Analysis -->
-        <div class="ui stackable grid">
-            <div class="eight wide column">
-                <h3>Requests IP Version</h3>
-                <p>The version of Internet Protocol that the client is using. If the request client is pass through a DNS proxy like CloudFlare, 
-                    the CloudFlare proxy server address will be filtered and only the first value in the RemoteAddress field will be analysised.</p>
-                <div>
-                    <canvas id="stats_ipver"></canvas>
-                </div>
-            </div>
-            <div class="eight wide column">
-                <h3>Request Origins</h3>
-                <p>Top 25 request origin sorted by request count</p>
-                <div style="height: 500px; overflow-y: auto;">
-                    <table class="ui unstackable striped celled table">
-                        <thead>
-                          <tr>
-                            <th class="no-sort">Request Origin</th>
-                            <th class="no-sort">No of Requests</th>
-                        </tr></thead>
-                        <tbody id="stats_requestCountlist">
-                         
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="ui divider"></div>
-        <!-- Client Device Analysis -->
-        <div class="ui stackable grid">
-            <div class="eight wide column">
-                <h3>Client Devices</h3>
-                <p>Device type analysis by its request interactions.The number of iteration count does not means the number unique device, as no cookie is used to track the devices identify.</p>
-                <div>
-                    <canvas id="stats_device"></canvas>
-                </div>
-            </div>
-            <div class="eight wide column">
-                <h3>Client Browsers</h3>
-                <p>The browsers where your client is using to visit your site</p>
-                <div>
-                    <canvas id="stats_browsers"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="ui stackable grid">
-            <div class="eight wide column">
-                <h3>Client OS</h3>
-                <p>The OS where your client is using. Estimated using the UserAgent header sent by the client browser while requesting a resources from one of your host.</p>
-                <div>
-                    <canvas id="stats_OS"></canvas>
-                </div>
-            </div>
-            <div class="eight wide column">
-                <h3>OS Versions</h3>
-                <p>The OS versions most commonly used by your site's visitors.</p>
-                <div style="height: 500px; overflow-y: auto;">
-                    <table class="ui unstackable striped celled table">
-                        <thead>
-                          <tr>
-                            <th>OS Version</th>
-                            <th>Request Counts</th>
-                            <th>Percentage</th>
-                        </tr></thead>
-                        <tbody id="stats_OSVersionList">
-                         
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="ui divider"></div>
-        <div class="ui stackable grid">
-            <div class="eight wide column">
-                <h3>Request File Types</h3>
-                <p>The file types being served by this proxy</p>
-                <div>
-                    <canvas id="stats_filetype"></canvas>
-                </div>
-            </div>
-            <div class="eight wide column">
-                <h3>Referring Sites</h3>
-                <p>The Top 100 sources of traffic according to referer header</p>
-                <div>
-                    <div style="height: 500px; overflow-y: auto;">
-                        <table class="ui unstackable striped celled table">
-                            <thead>
-                              <tr>
-                                <th class="no-sort">Referer</th>
-                                <th class="no-sort">Requests</th>
-                            </tr></thead>
-                            <tbody id="stats_RefererTable">
-                             
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div> 
-        <div class="ui divider"></div>
-        <div class="ui stackable grid">
-            <div class="eight wide column">
-                <h3>Requested Hostnames</h3>
-                <p>Most requested hostnames from downstream</p>
-                <div>
-                    <div style="height: 500px; overflow-y: auto;">
-                        <table class="ui unstackable striped celled table">
-                            <thead>
-                              <tr>
-                                <th class="no-sort">Hostname</th>
-                                <th class="no-sort">Requests</th>
-                            </tr></thead>
-                            <tbody id="stats_downstreamTable">
-                             
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="eight wide column">
-                <h3>Forwarded Upstreams</h3>
-                <p>The Top 100 upstreams where the requests are forwarded to</p>
-                <div>
-                    <div style="height: 500px; overflow-y: auto;">
-                        <table class="ui unstackable striped celled table">
-                            <thead>
-                              <tr>
-                                <th class="no-sort">Upstream Endpoint</th>
-                                <th class="no-sort">Requests</th>
-                            </tr></thead>
-                            <tbody id="stats_upstreamTable">
-                             
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div> 
-        <div class="ui divider"></div>
-        <div class="ui basic segment" id="trendGraphs">
-            <h3>Visitor Trend Analysis</h3>
-            <p>Request trends in the selected time range</p>
-            <div>
-                <canvas id="requestTrends"></canvas>
-            </div>
-        </div>
-        <button onclick="showSideWrapper('snippet/advanceStatsOprs.html?t=' + Date.now() + '#' + encodeURIComponent(JSON.stringify(getStatisticDateRange())));" class="ui basic right floated black button"><i class="external square alternate icon"></i> Advance Operations</button>
-    </div>
-    
-    <!-- <button class="ui icon right floated basic button" onclick="initStatisticSummery();"><i class="green refresh icon"></i> Refresh</button> -->
-    <br><br>
-</div>
-<script>
-    var statisticCharts = [];
 
-    //Start day must be earlier than end date
-    function initStatisticSummery(startdate="", enddate=""){
-            if (startdate == "" && enddate == "" ){
-                let todaykey = getTodayStatisticKey();
-                loadStatisticByDate(todaykey);
-            }else if ((startdate != "" && enddate == "") || startdate == enddate){
-                //Load the target date
-                let targetDate = startdate.trim();
-                loadStatisticByDate(targetDate);
-            }else{
-                //Two dates are given and they are not identical
-                loadStatisticByRange(startdate, enddate);
-                //console.log(startdate, enddate);
-            }
+    <div class="statsBody" id="statsBody">
+        <!-- KPI cards -->
+        <div class="statsGrid statsKpiRow">
+            <div class="statsCard">
+                <div class="kpiIcon"><i class="chart line icon"></i></div>
+                <div class="kpiValue" id="kpiTotalRequests">-</div>
+                <div class="kpiLabel">Total Requests</div>
+                <div class="kpiDelta" id="kpiTotalRequestsDelta"></div>
+            </div>
+            <div class="statsCard">
+                <div class="kpiIcon"><i class="users icon"></i></div>
+                <div class="kpiValue" id="kpiUniqueVisitors">-</div>
+                <div class="kpiLabel">Unique Visitors</div>
+                <div class="kpiDelta" id="kpiUniqueVisitorsDelta"></div>
+            </div>
+            <div class="statsCard">
+                <div class="kpiIcon"><i class="shield alternate icon"></i></div>
+                <div class="kpiValue" id="kpiBlockedRequests">-</div>
+                <div class="kpiLabel">Blocked Requests</div>
+                <div class="kpiDelta" id="kpiBlockedRequestsDelta"></div>
+            </div>
+            <div class="statsCard">
+                <div class="kpiIcon"><i class="check circle icon"></i></div>
+                <div class="kpiValue" id="kpiSuccessRate">-</div>
+                <div class="kpiLabel">Success Rate</div>
+                <div class="kpiProgress"><div class="fill" id="kpiSuccessRateBar" style="width: 0%;"></div></div>
+            </div>
+        </div>
+
+        <!-- Traffic trend & sources -->
+        <div class="statsGrid statsTrendRow">
+            <div class="statsCard">
+                <div class="statsCardHeader">
+                    <div class="statsCardTitle">
+                        <i class="chart line icon"></i> Traffic Trend
+                        <span data-tooltip="Blocked = rejected by access rules, rate limits, exploit / captcha detection or mTLS" data-position="bottom left" data-variation="mini"><i class="info circle icon infoIcon"></i></span>
+                    </div>
+                    <div class="chartLegend">
+                        <span><span class="legendDot" style="background: var(--stats_c1);"></span>Total</span>
+                        <span><span class="legendDot" style="background: var(--stats_c2);"></span>Blocked</span>
+                    </div>
+                </div>
+                <div class="lineChartWrapper">
+                    <canvas id="statsTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="statsCard">
+                <div class="statsCardHeader">
+                    <div class="statsCardTitle">
+                        <i class="chart pie icon"></i> Traffic Sources
+                        <span data-tooltip="Classified by the Referer header. Internal = referred by one of your own proxied hostnames (e.g. page resources)" data-position="bottom left" data-variation="mini"><i class="info circle icon infoIcon"></i></span>
+                    </div>
+                    <button class="statsLink" onclick="openStatsListModal('Referrers');">View Details <i class="arrow right icon"></i></button>
+                </div>
+                <div class="donutRow">
+                    <div class="donutWrapper">
+                        <canvas id="statsSourcesChart"></canvas>
+                        <div class="donutCenter"><span class="centerValue" id="statsSourcesTotal">-</span><span class="centerLabel">Total</span></div>
+                    </div>
+                    <div class="donutLegend" id="statsSourcesLegend"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Applications, users and response time -->
+        <div class="statsGrid statsInsightRow">
+            <div class="statsCard">
+                <div class="statsCardHeader">
+                    <div class="statsCardTitle"><i class="th large icon"></i> Top Applications</div>
+                    <button class="statsLink" onclick="openStatsListModal('Applications');">View Details <i class="arrow right icon"></i></button>
+                </div>
+                <div id="statsTopApplications"></div>
+            </div>
+            <div class="statsCard">
+                <div class="statsCardHeader">
+                    <div class="statsCardTitle">
+                        <i class="user friends icon"></i> Users Overview
+                        <span data-tooltip="Unique client IPs. Returning = seen on 2+ days (including the previous period), New = seen on a single day, Bots = crawler, scanner or script User-Agents" data-position="bottom left" data-variation="mini"><i class="info circle icon infoIcon"></i></span>
+                    </div>
+                </div>
+                <div class="donutRow">
+                    <div class="donutWrapper">
+                        <canvas id="statsUsersChart"></canvas>
+                        <div class="donutCenter"><span class="centerValue" id="statsUsersTotal">-</span><span class="centerLabel">Users</span></div>
+                    </div>
+                    <div class="donutLegend" id="statsUsersLegend"></div>
+                </div>
+            </div>
+            <div class="statsCard detailOnly">
+                <div class="statsCardHeader">
+                    <div class="statsCardTitle">
+                        <i class="stopwatch icon"></i> Response Time
+                        <span data-tooltip="Upstream time to first byte: from forwarding the request until the upstream returned its response headers" data-position="bottom right" data-variation="mini"><i class="info circle icon infoIcon"></i></span>
+                    </div>
+                    <div class="chartLegend">
+                        <span><span class="legendDot" style="background: var(--stats_c1);"></span>Avg</span>
+                        <span><span class="legendDot" style="background: var(--stats_c2);"></span>P95</span>
+                    </div>
+                </div>
+                <div class="respTrendWrapper">
+                    <canvas id="statsRespTrendChart"></canvas>
+                </div>
+                <div class="emptyNote" id="statsRespTrendEmpty" style="display: none;">No upstream response time recorded in this period</div>
+            </div>
+        </div>
+
+        <!-- Detailed statistics -->
+        <div class="statsCard" id="statsDetailCard">
+            <div class="detailHeader">
+                <div>
+                    <div class="statsCardTitle"><i class="chart bar icon"></i> Detailed Statistics</div>
+                    <div class="detailSubtitle">Dive into more detailed metrics and breakdowns</div>
+                </div>
+                <button class="outlineButton simpleOnly" onclick="setStatsMode('detail');">Show Detail <i class="arrow right icon"></i></button>
+                <button class="outlineButton detailOnly" onclick="setStatsMode('simple');">Collapse <i class="chevron up icon"></i></button>
+            </div>
+
+            <!-- Simple mode: accordion summary -->
+            <div class="simpleOnly" id="statsAccordion">
+                <div class="accordionRow" data-acc="status">
+                    <div class="accordionHead"><span class="accTitle"><i class="globe icon"></i>Request Status</span><span class="accSummary"></span><i class="chevron down icon accChevron"></i></div>
+                    <div class="accordionBody"></div>
+                </div>
+                <div class="accordionRow" data-acc="devices">
+                    <div class="accordionHead"><span class="accTitle"><i class="desktop icon"></i>Client Devices</span><span class="accSummary"></span><i class="chevron down icon accChevron"></i></div>
+                    <div class="accordionBody"></div>
+                </div>
+                <div class="accordionRow" data-acc="browsers">
+                    <div class="accordionHead"><span class="accTitle"><i class="compass outline icon"></i>Client Browsers</span><span class="accSummary"></span><i class="chevron down icon accChevron"></i></div>
+                    <div class="accordionBody"></div>
+                </div>
+                <div class="accordionRow" data-acc="os">
+                    <div class="accordionHead"><span class="accTitle"><i class="laptop icon"></i>Client OS</span><span class="accSummary"></span><i class="chevron down icon accChevron"></i></div>
+                    <div class="accordionBody"></div>
+                </div>
+                <div class="accordionRow" data-acc="countries">
+                    <div class="accordionHead"><span class="accTitle"><i class="world icon"></i>Top Countries</span><span class="accSummary"></span><i class="chevron down icon accChevron"></i></div>
+                    <div class="accordionBody"></div>
+                </div>
+            </div>
+
+            <!-- Detail mode: tabs -->
+            <div class="detailOnly">
+                <div class="statsTabs" id="statsTabs">
+                    <div class="tabItem active" data-tab="overview"><i class="home icon"></i>Overview</div>
+                    <div class="tabItem" data-tab="methods"><i class="list icon"></i>HTTP Methods</div>
+                    <div class="tabItem" data-tab="statuscodes"><i class="exclamation icon"></i>Status Codes</div>
+                    <div class="tabItem" data-tab="clients"><i class="desktop icon"></i>Clients &amp; Devices</div>
+                    <div class="tabItem" data-tab="countries"><i class="world icon"></i>Countries</div>
+                    <div class="tabItem" data-tab="origins"><i class="map marker alternate icon"></i>Origins</div>
+                    <div class="tabItem" data-tab="upstreams"><i class="server icon"></i>Upstreams</div>
+                </div>
+
+                <!-- Overview -->
+                <div class="statsTabPane active" data-pane="overview">
+                    <div class="paneGrid">
+                        <div class="paneCard">
+                            <div class="paneTitle">Request Status</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsOvStatusChart"></canvas></div>
+                                <div class="donutLegend" id="statsOvStatusLegend"></div>
+                            </div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">HTTP Methods</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsOvMethodChart"></canvas></div>
+                                <div class="donutLegend" id="statsOvMethodLegend"></div>
+                            </div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">Response Time (Percentile)</div>
+                            <div class="latencyStats">
+                                <div><div class="latLabel">Avg</div><div class="latValue" id="statsLatAvg">-</div></div>
+                                <div><div class="latLabel">P50</div><div class="latValue" id="statsLatP50">-</div></div>
+                                <div><div class="latLabel">P95</div><div class="latValue" id="statsLatP95">-</div></div>
+                                <div><div class="latLabel">P99</div><div class="latValue" id="statsLatP99">-</div></div>
+                            </div>
+                            <div class="sparkWrapper"><canvas id="statsOvLatencySpark"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="paneGrid">
+                        <div class="paneCard">
+                            <div class="paneTitle"><span><i class="sitemap icon"></i> Domains</span><button class="statsLink" onclick="openStatsListModal('Domains');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsOvDomains"></div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Top Endpoints</span><button class="statsLink" onclick="openStatsListModal('Endpoints');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsOvEndpoints"></div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span><i class="info circle icon"></i> Client Information</span><button class="statsLink" onclick="openStatsListModal('OSVersions');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsOvClientInfo"></div>
+                        </div>
+                    </div>
+                    <div class="paneGrid" style="margin-bottom: 0;">
+                        <div class="paneCard">
+                            <div class="paneTitle">Request File Types</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsOvFileTypeChart"></canvas></div>
+                                <div class="donutLegend" id="statsOvFileTypeLegend"></div>
+                            </div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Referring Sites</span><button class="statsLink" onclick="openStatsListModal('Referrers');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsOvReferrers"></div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">Client Browsers</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsOvBrowserChart"></canvas></div>
+                                <div class="donutLegend" id="statsOvBrowserLegend"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HTTP methods -->
+                <div class="statsTabPane" data-pane="methods">
+                    <div class="paneGrid two" style="margin-bottom: 0;">
+                        <div class="paneCard">
+                            <div class="paneTitle">Method Distribution</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper"><canvas id="statsMethodChart"></canvas></div>
+                                <div class="donutLegend" id="statsMethodLegend"></div>
+                            </div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">All Methods</div>
+                            <div id="statsMethodTable"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status codes -->
+                <div class="statsTabPane" data-pane="statuscodes">
+                    <div class="paneGrid two" style="margin-bottom: 0;">
+                        <div class="paneCard">
+                            <div class="paneTitle">Request Status</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper"><canvas id="statsStatusChart"></canvas></div>
+                                <div class="donutLegend" id="statsStatusLegend"></div>
+                            </div>
+                            <p class="mutedText" style="margin-top: 1em; font-size: 0.85em;">Blocked requests are rejected by Zoraxy itself (access rules, rate limits, exploit / captcha detection, mTLS). Errors are 4xx / 5xx responses from upstreams and gateway failures.</p>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">Status Codes</div>
+                            <div id="statsStatusTable"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients and devices -->
+                <div class="statsTabPane" data-pane="clients">
+                    <div class="paneGrid">
+                        <div class="paneCard">
+                            <div class="paneTitle">Devices</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsDeviceChart"></canvas></div>
+                                <div class="donutLegend" id="statsDeviceLegend"></div>
+                            </div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">Browsers</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsBrowserChart"></canvas></div>
+                                <div class="donutLegend" id="statsBrowserLegend"></div>
+                            </div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle">Operating Systems</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper small"><canvas id="statsOSChart"></canvas></div>
+                                <div class="donutLegend" id="statsOSLegend"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="paneCard">
+                        <div class="paneTitle"><span>OS Versions</span><button class="statsLink" onclick="openStatsListModal('OSVersions');">View All <i class="arrow right icon"></i></button></div>
+                        <div id="statsOSVersionTable"></div>
+                    </div>
+                </div>
+
+                <!-- Countries -->
+                <div class="statsTabPane" data-pane="countries">
+                    <div class="paneGrid two" style="margin-bottom: 0;">
+                        <div class="paneCard">
+                            <div class="paneTitle">Country Distribution</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper"><canvas id="statsCountryChart"></canvas></div>
+                                <div class="donutLegend" id="statsCountryLegend"></div>
+                            </div>
+                            <p class="mutedText" style="margin-top: 1em; font-size: 0.85em;">Request origins are estimated with an open source GeoIP database and might not be accurate.</p>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Countries</span><button class="statsLink" onclick="openStatsListModal('Countries');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsCountryTable"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Origins -->
+                <div class="statsTabPane" data-pane="origins">
+                    <div class="paneGrid two" style="margin-bottom: 0;">
+                        <div class="paneCard">
+                            <div class="paneTitle">IP Versions</div>
+                            <div class="donutRow">
+                                <div class="donutWrapper"><canvas id="statsIPVerChart"></canvas></div>
+                                <div class="donutLegend" id="statsIPVerLegend"></div>
+                            </div>
+                            <p class="mutedText" style="margin-top: 1em; font-size: 0.85em;">Unique client IPs by IP version. Requests forwarded by a CDN such as Cloudflare are counted by the first address in the forwarded chain.</p>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Top Client IPs</span><button class="statsLink" onclick="openStatsListModal('ClientIPs');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsClientIPTable"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upstreams -->
+                <div class="statsTabPane" data-pane="upstreams">
+                    <div class="paneGrid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: 0;">
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Forwarded Upstreams</span><button class="statsLink" onclick="openStatsListModal('Upstreams');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsUpstreamTable"></div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Proxy Rules</span><button class="statsLink" onclick="openStatsListModal('Applications');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsRuleTable"></div>
+                        </div>
+                        <div class="paneCard">
+                            <div class="paneTitle"><span>Forward Types</span><button class="statsLink" onclick="openStatsListModal('ForwardTypes');">View All <i class="arrow right icon"></i></button></div>
+                            <div id="statsForwardTypeTable"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="statsFooter">
+            <span id="statsRangeInfo"></span>
+        </div>
+    </div>
+    <br>
+</div>
+
+<!-- View all modal -->
+<div id="statsListModal" onclick="if (event.target === this) closeStatsListModal();">
+    <div class="modalBox">
+        <div class="modalHead">
+            <h3 id="statsListModalTitle">Details</h3>
+            <button class="ui icon basic button" onclick="closeStatsListModal();"><i class="remove icon"></i></button>
+        </div>
+        <div class="ui small fluid icon input modalSearch">
+            <input type="text" id="statsListModalSearch" placeholder="Filter" oninput="renderStatsListModalRows();">
+            <i class="search icon"></i>
+        </div>
+        <div class="modalContent" id="statsListModalContent"></div>
+    </div>
+</div>
+
+<script>
+    /*
+        Statistical Analysis Dashboard
+
+        Data is loaded from /api/analytic/dashboard which aggregates the
+        daily summaries of the selected range on the server side
+    */
+    let statsData = null;             //Last loaded dashboard payload
+    let statsDerived = null;          //Client side derived data (user agents)
+    let statsCharts = {};             //Chart instances by canvas id
+    let statsLastLoad = 0;            //Timestamp of the last successful load
+    let statsLoadSeq = 0;             //Sequence number to drop out of order responses
+    let statsRange = "30d";
+    let statsMode = "simple";
+    let statsModalKey = "";
+
+    const statsRangeLabels = {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "7d": "Last 7 Days",
+        "30d": "Last 30 Days",
+        "90d": "Last 90 Days",
+        "thismonth": "This Month",
+        "lastmonth": "Last Month",
+        "custom": "Custom Range"
+    };
+
+    //Presets listed in the range picker
+    const statsRangePresets = ["today", "yesterday", "7d", "30d", "90d", "thismonth", "lastmonth"];
+    const statsMaxRangeDays = 400; //Must match dashboardMaxDays on the server
+
+    let statsCustomStart = "";      //Applied custom range (YYYY-MM-DD)
+    let statsCustomEnd = "";
+    let statsPick = { start: "", end: "", edge: "start", keepEnd: false, hover: "", month: null }; //Range picker state
+
+    const statsStatusCodeNames = {
+        "100": "Continue", "101": "Switching Protocols",
+        "200": "OK", "201": "Created", "202": "Accepted", "204": "No Content", "206": "Partial Content", "207": "Multi-Status",
+        "301": "Moved Permanently", "302": "Found", "303": "See Other", "304": "Not Modified", "307": "Temporary Redirect", "308": "Permanent Redirect",
+        "400": "Bad Request", "401": "Unauthorized", "403": "Forbidden", "404": "Not Found", "405": "Method Not Allowed", "408": "Request Timeout",
+        "409": "Conflict", "413": "Payload Too Large", "418": "I'm a teapot", "429": "Too Many Requests", "444": "No Response",
+        "500": "Internal Server Error", "502": "Bad Gateway", "503": "Service Unavailable", "504": "Gateway Timeout", "521": "Web Server Is Down"
+    };
+
+    /*
+        Preferences
+    */
+    function statsLoadPreference(key, fallback){
+        try{
+            let value = localStorage.getItem(key);
+            return value == null ? fallback : value;
+        }catch(e){
+            return fallback;
+        }
     }
 
-   function loadStatisticByDate(dateid){
-        $.getJSON("/api/analytic/load?id=" + dateid, function(data){
+    function statsSavePreference(key, value){
+        try{
+            localStorage.setItem(key, value);
+        }catch(e){}
+    }
+
+    /*
+        Formatting helpers
+    */
+    function statsEsc(value){
+        return String(value == undefined ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function statsFmtNum(value){
+        value = Number(value) || 0;
+        let units = [[1e9, "B"], [1e6, "M"], [1e3, "K"]];
+        for (let [size, suffix] of units){
+            if (Math.abs(value) >= size){
+                let scaled = value / size;
+                let digits = Math.abs(scaled) >= 100 ? 0 : (Math.abs(scaled) >= 10 ? 1 : 2);
+                return parseFloat(scaled.toFixed(digits)) + suffix;
+            }
+        }
+        return String(Math.round(value));
+    }
+
+    function statsFmtPct(part, total, digits = 1){
+        if (!total){
+            return "0%";
+        }
+        return (part / total * 100).toFixed(digits) + "%";
+    }
+
+    function statsFmtMs(ms){
+        if (ms == undefined || isNaN(ms)){
+            return "-";
+        }
+        if (ms >= 1000){
+            return parseFloat((ms / 1000).toFixed(ms >= 10000 ? 0 : 1)) + "s";
+        }
+        if (ms < 10){
+            return parseFloat(ms.toFixed(1)) + "ms";
+        }
+        return Math.round(ms) + "ms";
+    }
+
+    function statsPad(n){
+        return String(n).padStart(2, "0");
+    }
+
+    function statsDateKey(date){
+        return date.getFullYear() + "-" + statsPad(date.getMonth() + 1) + "-" + statsPad(date.getDate());
+    }
+
+    function statsParseDate(dateString){
+        let parts = String(dateString).replace(/_/g, "-").split("-");
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+
+    function statsShortDate(dateString){
+        return statsParseDate(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+
+    function statsColor(name){
+        return getComputedStyle(document.getElementById("stats")).getPropertyValue(name).trim() || "#4d9de0";
+    }
+
+    function statsPalette(){
+        return ["--stats_c1", "--stats_c2", "--stats_c3", "--stats_c4", "--stats_c5", "--stats_c6"].map(statsColor);
+    }
+
+    //Sum of the listed items of a ranked list
+    function statsListedSum(list){
+        return (list.Items || []).reduce((acc, item) => acc + item.Count, 0);
+    }
+
+    function statsCountryLabel(code){
+        if (code == ""){
+            return "Unknown";
+        }
+        if (code == "lan"){
+            return "LAN";
+        }
+        if (code == "loopback"){
+            return "Loopback";
+        }
+        if (typeof getCountryName === "function"){
+            let name = getCountryName(code);
+            if (name && name != code){
+                return name;
+            }
+        }
+        return code.toUpperCase();
+    }
+
+    function statsRuleLabel(key){
+        if (key == "/"){
+            return "Default Site";
+        }
+        return key;
+    }
+
+    /*
+        Range selection
+    */
+    function statsTodayKey(){
+        return statsDateKey(new Date());
+    }
+
+    //Check if a string is a valid YYYY-MM-DD date that is not in the future
+    function statsIsValidDateKey(value){
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)){
+            return false;
+        }
+        return statsDateKey(statsParseDate(value)) == value && value <= statsTodayKey();
+    }
+
+    function statsAddDays(key, days){
+        let date = statsParseDate(key);
+        date.setDate(date.getDate() + days);
+        return statsDateKey(date);
+    }
+
+    //Number of days between two date keys, both ends included
+    function statsDaysBetween(start, end){
+        return Math.round((statsParseDate(end) - statsParseDate(start)) / 86400000) + 1;
+    }
+
+    function statsRangeDates(range){
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let todayKey = statsDateKey(today);
+        switch(range){
+            case "today":
+                return [todayKey, todayKey];
+            case "yesterday":
+                let yesterday = statsAddDays(todayKey, -1);
+                return [yesterday, yesterday];
+            case "7d":
+                return [statsAddDays(todayKey, -6), todayKey];
+            case "90d":
+                return [statsAddDays(todayKey, -89), todayKey];
+            case "thismonth":
+                return [statsDateKey(new Date(today.getFullYear(), today.getMonth(), 1)), todayKey];
+            case "lastmonth":
+                return [statsDateKey(new Date(today.getFullYear(), today.getMonth() - 1, 1)), statsDateKey(new Date(today.getFullYear(), today.getMonth(), 0))];
+            case "custom":
+                if (statsCustomStart != ""){
+                    return [statsCustomStart, statsCustomEnd || statsCustomStart];
+                }
+                return [todayKey, todayKey];
+            default:
+                return [statsAddDays(todayKey, -29), todayKey];
+        }
+    }
+
+    //Short label of a date range, e.g. "Nov 8 - 14", "Oct 16 - Nov 14" or "Dec 20, 2025 - Jan 3, 2026"
+    function statsFmtRange(start, end, withYear = false){
+        let s = statsParseDate(start);
+        let e = statsParseDate(end);
+        let month = (d) => d.toLocaleDateString("en-US", { month: "short" });
+        let dash = " " + String.fromCharCode(8211) + " "; //En dash
+        if (s.getFullYear() != e.getFullYear()){
+            return `${month(s)} ${s.getDate()}, ${s.getFullYear()}${dash}${month(e)} ${e.getDate()}, ${e.getFullYear()}`;
+        }
+        let year = withYear ? ", " + e.getFullYear() : "";
+        if (start == end){
+            return `${month(s)} ${s.getDate()}${year}`;
+        }
+        if (s.getMonth() == e.getMonth()){
+            return `${month(s)} ${s.getDate()}${dash}${e.getDate()}${year}`;
+        }
+        return `${month(s)} ${s.getDate()}${dash}${month(e)} ${e.getDate()}${year}`;
+    }
+
+    //Hint shown next to a preset: the weekday for single days, otherwise the dates
+    function statsPresetHint(range){
+        let [start, end] = statsRangeDates(range);
+        if (start == end){
+            return statsParseDate(start).toLocaleDateString("en-US", { weekday: "short" });
+        }
+        return statsFmtRange(start, end);
+    }
+
+    function statsRangeButtonLabel(){
+        if (statsRange != "custom"){
+            return statsRangeLabels[statsRange];
+        }
+        let [start, end] = statsRangeDates("custom");
+        return statsFmtRange(start, end, statsParseDate(end).getFullYear() != new Date().getFullYear());
+    }
+
+    function setStatsRange(range, reload = true){
+        if (!statsRangeLabels[range] || (range == "custom" && statsCustomStart == "")){
+            range = "30d";
+        }
+        statsRange = range;
+        statsSavePreference("zoraxy_stats_range", range);
+        $("#statsRangeLabel").text(statsRangeButtonLabel());
+        if (reload){
+            loadStatsDashboard();
+        }
+    }
+
+    /*
+        Range picker popover
+    */
+    function toggleStatsRangePopover(event){
+        event.stopPropagation();
+        if ($("#statsRangePopover").hasClass("open")){
+            closeStatsRangePopover();
+        }else{
+            openStatsRangePopover();
+        }
+    }
+
+    function openStatsRangePopover(){
+        let [start, end] = statsRangeDates(statsRange);
+        statsPick = { start: start, end: end, edge: "start", keepEnd: false, hover: "", month: statsMonthStart(end) };
+        $("#statsRangeStartField, #statsRangeEndField").removeClass("invalid");
+        renderStatsRangePresets();
+        buildStatsCalendar();
+        updateStatsRangeFields(true);
+        $("#statsRangePopover").addClass("open");
+        $("#statsRangeButton").addClass("open");
+        positionStatsRangePopover();
+    }
+
+    function closeStatsRangePopover(){
+        $("#statsRangePopover").removeClass("open");
+        $("#statsRangeButton").removeClass("open");
+    }
+
+    //Keep the popover inside the viewport when the toolbar wraps to the left
+    function positionStatsRangePopover(){
+        let popover = document.getElementById("statsRangePopover");
+        if (!popover){
+            return;
+        }
+        popover.style.left = "";
+        popover.style.right = "";
+        if (window.innerWidth <= 640 || !popover.classList.contains("open")){
+            return;
+        }
+        let rect = popover.getBoundingClientRect();
+        if (rect.left < 16){
+            //Align with the left edge of the range button instead, then keep it inside the viewport
+            let pickerLeft = popover.parentElement.getBoundingClientRect().left;
+            let viewportWidth = document.documentElement.clientWidth;
+            let offset = Math.min(0, viewportWidth - 16 - rect.width - pickerLeft);
+            offset = Math.max(offset, 16 - pickerLeft);
+            popover.style.right = "auto";
+            popover.style.left = offset + "px";
+        }
+    }
+    $(window).on("resize", positionStatsRangePopover);
+
+    $(document).on("click", function(event){
+        //Ignore clicks on elements that a re-render removed from the page
+        if (!document.body.contains(event.target)){
+            return;
+        }
+        if ($(event.target).closest(".statsRangePicker").length == 0){
+            closeStatsRangePopover();
+        }
+    });
+
+    function renderStatsRangePresets(){
+        $("#statsRangePresets").html(statsRangePresets.map(range => `<button type="button" class="rangePreset ${range == statsRange ? "active" : ""}" data-range="${range}">
+                <span>${statsRangeLabels[range]}</span>
+                <span class="presetHint">${statsEsc(statsPresetHint(range))}</span>
+            </button>`).join(""));
+    }
+
+    $("#statsRangePresets").on("click", ".rangePreset", function(){
+        closeStatsRangePopover();
+        setStatsRange($(this).attr("data-range"));
+    });
+
+    function statsMonthStart(key){
+        let date = statsParseDate(key);
+        return new Date(date.getFullYear(), date.getMonth(), 1);
+    }
+
+    function statsCalShiftMonth(offset){
+        let month = statsPick.month;
+        statsPick.month = new Date(month.getFullYear(), month.getMonth() + offset, 1);
+        buildStatsCalendar();
+    }
+
+    function statsCalGoToday(){
+        statsPick.month = statsMonthStart(statsTodayKey());
+        buildStatsCalendar();
+    }
+
+    //Build the day cells of the displayed month, weeks start on Monday
+    function buildStatsCalendar(){
+        let month = statsPick.month;
+        let todayKey = statsTodayKey();
+        $("#statsCalTitle").text(month.toLocaleDateString("en-US", { month: "long", year: "numeric" }));
+        $("#statsCalNext").prop("disabled", month >= statsMonthStart(todayKey));
+
+        let html = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(day => `<div class="calWeekday">${day}</div>`).join("");
+        let first = new Date(month.getFullYear(), month.getMonth(), 1 - ((month.getDay() + 6) % 7));
+        for (let i = 0; i < 42; i++){
+            let date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i);
+            let key = statsDateKey(date);
+            let classes = ["calDay"];
+            if (date.getMonth() != month.getMonth()){
+                classes.push("outside");
+            }
+            if (key > todayKey){
+                classes.push("future");
+            }
+            if (key == todayKey){
+                classes.push("today");
+            }
+            if (i % 7 == 0){
+                classes.push("rowStart");
+            }
+            if (i % 7 == 6){
+                classes.push("rowEnd");
+            }
+            html += `<div class="${classes.join(" ")}" data-date="${key}"><span>${date.getDate()}</span></div>`;
+        }
+        $("#statsCalGrid").html(html);
+        applyStatsCalHighlight();
+    }
+
+    //The picked range in order, a single picked date counts as a one day range
+    function statsPickedRange(){
+        let start = statsPick.start || statsPick.end;
+        let end = statsPick.end || statsPick.start;
+        return start > end ? [end, start] : [start, end];
+    }
+
+    //Highlight the picked range, or the range being previewed while choosing the end date
+    function applyStatsCalHighlight(){
+        let [lo, hi] = statsPickedRange();
+        let preview = false;
+        if (statsPick.start && statsPick.edge == "end" && statsPick.hover){
+            [lo, hi] = statsPick.hover < statsPick.start ? [statsPick.hover, statsPick.start] : [statsPick.start, statsPick.hover];
+            preview = true;
+        }
+        $("#statsCalGrid .calDay").each(function(){
+            let key = this.getAttribute("data-date");
+            this.classList.toggle("rangeStart", !!lo && key == lo);
+            this.classList.toggle("rangeEnd", !!hi && key == hi);
+            this.classList.toggle("inRange", !!lo && key > lo && key < hi);
+            this.classList.toggle("preview", preview);
+        });
+    }
+
+    $("#statsCalGrid").on("mouseenter", ".calDay:not(.future)", function(){
+        if (statsPick.start && statsPick.edge == "end"){
+            statsPick.hover = this.getAttribute("data-date");
+            applyStatsCalHighlight();
+        }
+    });
+
+    $("#statsCalGrid").on("mouseleave", function(){
+        if (statsPick.hover){
+            statsPick.hover = "";
+            applyStatsCalHighlight();
+        }
+    });
+
+    $("#statsCalGrid").on("click", ".calDay:not(.future)", function(){
+        statsPickDate(this.getAttribute("data-date"));
+    });
+
+    function statsPickDate(key){
+        let pick = statsPick;
+        if (pick.edge == "start" || !pick.start){
+            pick.start = key;
+            //Picking a start date begins a new range, unless the start field was chosen to change only the start
+            if (!pick.keepEnd || (pick.end && pick.end < key)){
+                pick.end = "";
+            }
+            pick.keepEnd = false;
+            pick.edge = "end";
+        }else{
+            if (key < pick.start){
+                pick.end = pick.start;
+                pick.start = key;
+            }else{
+                pick.end = key;
+            }
+            pick.edge = "start";
+        }
+        pick.hover = "";
+        $("#statsRangeStartField, #statsRangeEndField").removeClass("invalid");
+
+        //Follow a date picked from the previous or next month
+        let month = statsMonthStart(key);
+        if (month.getTime() != pick.month.getTime()){
+            pick.month = month;
+            buildStatsCalendar();
+        }else{
+            applyStatsCalHighlight();
+        }
+        updateStatsRangeFields(true);
+    }
+
+    //Sync the date fields, the summary line and the Apply button with the picker state
+    function updateStatsRangeFields(overwriteInputs){
+        if (overwriteInputs){
+            $("#statsRangeStart").val(statsPick.start);
+            $("#statsRangeEnd").val(statsPick.end);
+        }
+        $("#statsRangeStartField").toggleClass("active", statsPick.edge == "start");
+        $("#statsRangeEndField").toggleClass("active", statsPick.edge == "end");
+
+        let summary = $("#statsRangeSummary").removeClass("warning");
+        let fieldsValid = !$("#statsRangeStartField, #statsRangeEndField").hasClass("invalid");
+        let canApply = false;
+        if (!statsPick.start && !statsPick.end){
+            summary.text("Select a start date");
+        }else{
+            let [start, end] = statsPickedRange();
+            let days = statsDaysBetween(start, end);
+            if (days > statsMaxRangeDays){
+                summary.addClass("warning").text("Ranges are limited to " + statsMaxRangeDays + " days");
+            }else{
+                summary.text(statsFmtRange(start, end, true) + " " + String.fromCharCode(183) + " " + days + (days == 1 ? " day" : " days"));
+                canApply = fieldsValid;
+            }
+        }
+        $("#statsRangeApply").prop("disabled", !canApply);
+    }
+
+    function statsFieldEdge(input){
+        return input.id == "statsRangeStart" ? "start" : "end";
+    }
+
+    function statsNormalizeDateInput(value){
+        return value.trim().replace(/[_/.]/g, "-");
+    }
+
+    $("#statsRangeStart, #statsRangeEnd").on("focus", function(){
+        let edge = statsFieldEdge(this);
+        statsPick.edge = edge;
+        statsPick.keepEnd = (edge == "start");
+        statsPick.hover = "";
+        applyStatsCalHighlight();
+        updateStatsRangeFields(false);
+    });
+
+    $("#statsRangeStart, #statsRangeEnd").on("input", function(){
+        let edge = statsFieldEdge(this);
+        let value = statsNormalizeDateInput(this.value);
+        let field = $(this).closest(".rangeField");
+        if (value == ""){
+            statsPick[edge] = "";
+            field.removeClass("invalid");
+        }else if (statsIsValidDateKey(value)){
+            statsPick[edge] = value;
+            field.removeClass("invalid");
+            statsPick.month = statsMonthStart(value);
+            buildStatsCalendar();
+        }else{
+            //Only flag the date once it is complete
+            field.toggleClass("invalid", value.length >= 10);
+        }
+        applyStatsCalHighlight();
+        updateStatsRangeFields(false);
+    });
+
+    $("#statsRangeStart, #statsRangeEnd").on("blur", function(){
+        let value = statsNormalizeDateInput(this.value);
+        $(this).closest(".rangeField").toggleClass("invalid", value != "" && !statsIsValidDateKey(value));
+        updateStatsRangeFields(false);
+    });
+
+    $("#statsRangeStart, #statsRangeEnd").on("keydown", function(event){
+        if (event.key == "Enter" && !$("#statsRangeApply").prop("disabled")){
+            applyStatsCustomRange();
+        }
+    });
+
+    function applyStatsCustomRange(){
+        if (!statsPick.start && !statsPick.end){
+            return;
+        }
+        let [start, end] = statsPickedRange();
+        if (statsDaysBetween(start, end) > statsMaxRangeDays){
+            return;
+        }
+        closeStatsRangePopover();
+
+        //Use the preset instead if the picked dates match one
+        let preset = statsRangePresets.find(function(range){
+            let [presetStart, presetEnd] = statsRangeDates(range);
+            return presetStart == start && presetEnd == end;
+        });
+        if (preset){
+            setStatsRange(preset);
+            return;
+        }
+        statsCustomStart = start;
+        statsCustomEnd = end;
+        statsSavePreference("zoraxy_stats_custom", start + "," + end);
+        setStatsRange("custom");
+    }
+
+    function openStatsAdvanceOperations(){
+        let range = statsData ? [statsData.Start, statsData.End] : statsRangeDates(statsRange);
+        showSideWrapper('snippet/advanceStatsOprs.html?t=' + Date.now() + '#' + encodeURIComponent(JSON.stringify(range)));
+    }
+
+    /*
+        Simple / Detail mode
+    */
+    function setStatsMode(mode){
+        statsMode = mode == "detail" ? "detail" : "simple";
+        statsSavePreference("zoraxy_stats_mode", statsMode);
+        $("#stats").toggleClass("detailMode", statsMode == "detail");
+        $("#stats .statsModeToggle button").removeClass("active");
+        $(`#stats .statsModeToggle button[data-mode="${statsMode}"]`).addClass("active");
+    }
+
+    $("#statsTabs .tabItem").on("click", function(){
+        let tab = $(this).attr("data-tab");
+        $("#statsTabs .tabItem").removeClass("active");
+        $(this).addClass("active");
+        $("#stats .statsTabPane").removeClass("active");
+        $(`#stats .statsTabPane[data-pane="${tab}"]`).addClass("active");
+    });
+
+    $("#statsAccordion .accordionHead").on("click", function(){
+        $(this).closest(".accordionRow").toggleClass("open");
+    });
+
+    /*
+        Data loading
+    */
+    function loadStatsDashboard(){
+        let [start, end] = statsRangeDates(statsRange);
+        let seq = ++statsLoadSeq;
+        $("#statsBody").addClass("loading");
+        $.getJSON("/api/analytic/dashboard?start=" + encodeURIComponent(start) + "&end=" + encodeURIComponent(end), function(data){
+            if (seq != statsLoadSeq){
+                //A newer request has been sent
+                return;
+            }
+            $("#statsBody").removeClass("loading");
             if (data.error != undefined){
                 msgbox(data.error, false, 6000);
                 return;
             }
-            
-            //Destroy all the previous charts
-            statisticCharts.forEach(function(thisChart){
-                thisChart.destroy();
-            })
-
-            if (data.TotalRequest == 0){
-                //No data to analysis
-                $("#statisticRenderElement").hide()
-                $("#statisticRenderNotEnoughData").show();
-                return;
-            }else{
-                $("#statisticRenderElement").show();
-                $("#statisticRenderNotEnoughData").hide();
+            statsData = data;
+            statsDerived = deriveStatsClientData(data);
+            statsLastLoad = Date.now();
+            renderStatsDashboard();
+        }).fail(function(){
+            if (seq == statsLoadSeq){
+                $("#statsBody").removeClass("loading");
+                msgbox("Unable to load statistics", false, 5000);
             }
-
-            //Render the text values
-            $("#statisticRenderElement").find(".totalViewCount").text(abbreviateNumber(data.TotalRequest));
-            $("#statisticRenderElement").find(".totalSuccCount").text(abbreviateNumber(data.ValidRequest));
-            $("#statisticRenderElement").find(".totalErrorCount").text(abbreviateNumber(data.ErrorRequest));
-
-            //Render forward type data
-            renderForwardTypeCounts(data.ForwardTypes);
-            
-            //Render visitor data
-            renderVisitorChart(data.RequestOrigin);
-
-            //Render IP versions
-            renderIPVersionChart(data.RequestClientIp);
-
-            //Render user agent analysis
-            renderUserAgentCharts(data.UserAgent);
-
-            //Render file type by analysising request URL paths
-            renderFileTypeGraph(data.RequestURL);
-
-            //Render Referer header
-            renderRefererTable(data.Referer);
-
-            if (data.Downstreams == null){
-                //No downstream data to show
-                $("#stats_downstreamTable").html("<tr><td colspan='2'>No data</td></tr>");
-            }else{
-                //Render the downstream table
-                renderDownstreamTable(data.Downstreams);
-            }
-
-            if (data.Upstreams == null){
-                //No upstream data to show
-                $("#stats_upstreamTable").html("<tr><td colspan='2'>No data</td></tr>");
-            }else{
-                //Render the upstream table
-                renderUpstreamTable(data.Upstreams);
-            }
-
-            //Hide the trend graphs
-            $("#trendGraphs").hide();
         });
-   }
-   initStatisticSummery();
-   $("#statsRangeStart").val(getTodayStatisticKey().split("_").join("-"));
-
-   function loadStatisticByRange(startdate, endDate){
-        $.getJSON("/api/analytic/loadRange?start=" + startdate + "&end=" + endDate, function(data){
-            //console.log(data);
-            //Destroy all the previous charts
-           
-            statisticCharts.forEach(function(thisChart){
-                thisChart.destroy();
-            })
- 
-            if (data.Summary.TotalRequest == 0){
-                //No data to analysis
-                $("#statisticRenderElement").hide()
-                $("#statisticRenderNotEnoughData").show();
-                return;
-            }else{
-                $("#statisticRenderElement").show();
-                $("#statisticRenderNotEnoughData").hide();
-            }
-
-            //Render the text values
-            $("#statisticRenderElement").find(".totalViewCount").text(abbreviateNumber(data.Summary.TotalRequest));
-            $("#statisticRenderElement").find(".totalSuccCount").text(abbreviateNumber(data.Summary.ValidRequest));
-            $("#statisticRenderElement").find(".totalErrorCount").text(abbreviateNumber(data.Summary.ErrorRequest));
-
-            //Render forward type data
-            renderForwardTypeCounts(data.Summary.ForwardTypes);
-
-            //Render visitor data
-            renderVisitorChart(data.Summary.RequestOrigin);
-
-            //Render IP versions
-            renderIPVersionChart(data.Summary.RequestClientIp);
-
-            //Render user agent analysis
-            renderUserAgentCharts(data.Summary.UserAgent);
-
-            //Render file type by analysising request URL paths
-            renderFileTypeGraph(data.Summary.RequestURL);
-            
-            //Render Referer header
-            renderRefererTable(data.Summary.Referer);
-
-            //Render the trend graph
-            $("#trendGraphs").show();
-            renderTrendGraph(data.Records);
-        });
-   }
-
-   picker.attach({ target: document.getElementById("statsRangeStart") });
-   picker.attach({ target: document.getElementById("statsRangeEnd") });
-
-   function renderForwardTypeCounts(forwardTypes){
-        let tablBody = $("#statisticRenderElement").find(".forwardTypeCounts");
-        tablBody.empty();
-        let totalForwardCounts = 0;
-        for (let [key, value] of Object.entries(forwardTypes)) {
-            totalForwardCounts += value;
-        }
-
-        for (let [key, value] of Object.entries(forwardTypes)) {
-            tablBody.append(`<tr>
-                    <td>${key}</td>
-                    <td>${abbreviateNumber(value)} (${value})</td>
-                    <td>${((value/totalForwardCounts)*100).toFixed(3)}%</td>
-                </tr>
-            `);
-        }
-   }
-
-
-   function getTodayStatisticKey(){
-        var today = new Date();
-        var year = today.getFullYear();
-        var month = String(today.getMonth() + 1).padStart(2, '0');
-        var day = String(today.getDate()).padStart(2, '0');
-
-        var formattedDate = year + '_' + month + '_' + day;
-        return formattedDate
-   }
-
-   function handleLoadStatisticButtonPress(){
-        var sd = $("#statsRangeStart").val();
-        var ed = $("#statsRangeEnd").val();
-        //Swap them if sd is later than ed
-        if (sd != "" && ed != "" && sd > ed) {
-            ed = [sd, sd = ed][0];
-            $("#statsRangeStart").val(sd);
-            $("#statsRangeEnd").val(ed);
-        }
-       
-        initStatisticSummery(sd, ed);
-   }
-   
-   function getStatisticDateRange(){
-        var sd = $("#statsRangeStart").val();
-        var ed = $("#statsRangeEnd").val();
-
-        if (ed == ""){
-            ed = sd;
-        }
-
-        if (sd == "" && ed == ""){
-            var sk = getTodayStatisticKey();
-            sd = sk;
-            ed = sk;
-        }
-
-         //Swap them if sd is later than ed
-        if (sd != "" && ed != "" && sd > ed) {
-            ed = [sd, sd = ed][0];
-        }
-
-        return [sd, ed];
-   }
-
-   function clearStatisticDateRange(){
-        $("#statsRangeStart").val("");
-        $("#statsRangeEnd").val("");
-   }
-
-   function renderRefererTable(refererList){
-        const sortedEntries = Object.entries(refererList).sort(([, valueA], [, valueB]) => valueB - valueA);
-        $("#stats_RefererTable").html("");
-        let endStop = 100;
-        if (sortedEntries.length < 100){
-            endStop = sortedEntries.length;
-        }
-        for (var i = 0; i < endStop; i++) {
-            let referer = (decodeURIComponent(sortedEntries[i][0])).replace(/(<([^>]+)>)/ig,"");
-            if (sortedEntries[i][0] == ""){
-                //Root
-                referer = `<span style="color: #b5b5b5;">(<i class="eye slash outline icon"></i> Unknown or Hidden)</span>`;
-            }
-            $("#stats_RefererTable").append(`<tr>
-                    <td>${referer}</td>
-                    <td>${sortedEntries[i][1]}</td>
-                </tr>`);
-        }
-   }
-
-   function renderDownstreamTable(downstreamList){
-        const sortedEntries = Object.entries(downstreamList).sort(([, valueA], [, valueB]) => valueB - valueA);
-        $("#stats_downstreamTable").html("");
-        let endStop = 100;
-        if (sortedEntries.length < 100){
-            endStop = sortedEntries.length;
-        }
-        for (var i = 0; i < endStop; i++) {
-            let referer = (decodeURIComponent(sortedEntries[i][0])).replace(/(<([^>]+)>)/ig,"");
-            if (sortedEntries[i][0] == ""){
-                //Root
-                referer = `<span style="color: #b5b5b5;">(<i class="eye slash outline icon"></i> Unknown or Hidden)</span>`;
-            }
-            $("#stats_downstreamTable").append(`<tr>
-                    <td>${referer}</td>
-                    <td>${sortedEntries[i][1]}</td>
-                </tr>`);
-        }
-   }
-
-    function renderUpstreamTable(upstreamList){
-          const sortedEntries = Object.entries(upstreamList).sort(([, valueA], [, valueB]) => valueB - valueA);
-          $("#stats_upstreamTable").html("");
-          let endStop = 100;
-          if (sortedEntries.length < 100){
-                endStop = sortedEntries.length;
-          }
-          for (var i = 0; i < endStop; i++) {
-                let referer = (decodeURIComponent(sortedEntries[i][0])).replace(/(<([^>]+)>)/ig,"");
-                if (sortedEntries[i][0] == ""){
-                 //Root
-                 referer = `<span style="color: #b5b5b5;">(<i class="eye slash outline icon"></i> Unknown or Hidden)</span>`;
-                }
-                $("#stats_upstreamTable").append(`<tr>
-                      <td>${referer}</td>
-                      <td>${sortedEntries[i][1]}</td>
-                 </tr>`);
-          }
     }
 
-   function renderFileTypeGraph(requestURLs){
-     //Create the device chart
-     let fileExtensions = {};
-     for (const [url, count] of Object.entries(requestURLs)) {
-        let filename = url.split("/").pop();
-        let ext = "";
-        if (filename == ""){
-            //Loading from a folder
-            ext = "Folder path"
-        }else{
-            if (filename.includes(".")){
-                ext = filename.split(".").pop();
-            }else{
-                ext = "API call"
+    //Parse the user agents into devices, browsers and operating systems
+    function deriveStatsClientData(data){
+        let devices = {}, browsers = {}, osTypes = {}, osVersions = {};
+        let add = function(map, key, count){
+            map[key] = (map[key] || 0) + count;
+        };
+
+        let items = (data.UserAgents && data.UserAgents.Items) || [];
+        items.forEach(function(entry){
+            let ua = entry.Key;
+            let count = entry.Count;
+            let info = (ua == "") ? { os: "", browser: "", version: "", isMobile: false } : parseUserAgent(ua);
+            let isBot = (ua == "" || info.os == "Search Bot" || info.os == "Scripts" || info.browser.indexOf("//") >= 0);
+
+            //Device type
+            let device = "Desktop";
+            if (isBot){
+                device = "Bots & Scripts";
+            }else if (/iPad|Tablet|PlayBook|Silk|Kindle/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))){
+                device = "Tablet";
+            }else if (info.isMobile){
+                device = "Mobile";
             }
+            add(devices, device, count);
+
+            //Browser
+            let browser = isBot ? "Bots & Scripts" : (info.browser || "Unknown");
+            add(browsers, browser, count);
+
+            //Operating system
+            let os = info.os || "Unknown";
+            if (isBot){
+                os = "Bots & Scripts";
+            }else if (os == "Mac OS X" || os == "Mac OS"){
+                os = "macOS";
+            }
+            add(osTypes, os, count);
+
+            let version = isBot ? "" : String(info.version || "").split("_").join(".");
+            add(osVersions, (os + " " + version).trim(), count);
+        });
+
+        //User agents outside of the returned top list
+        let remainder = (data.UserAgents ? data.UserAgents.Total : 0) - statsListedSum(data.UserAgents || {});
+        if (remainder > 0){
+            add(devices, "Other", remainder);
+            add(browsers, "Other", remainder);
+            add(osTypes, "Other", remainder);
+            add(osVersions, "Other", remainder);
         }
 
-        if (fileExtensions[ext] != undefined){
-            fileExtensions[ext] = fileExtensions[ext] + count;
-        }else{
-            //First time this ext show up
-            fileExtensions[ext] = count;
+        let toList = function(map){
+            let entries = Object.entries(map).map(([key, count]) => ({ Key: key, Count: count }));
+            entries.sort((a, b) => b.Count - a.Count);
+            return { Items: entries, Total: entries.reduce((acc, e) => acc + e.Count, 0), Distinct: entries.length };
+        };
+
+        return {
+            Devices: toList(devices),
+            Browsers: toList(browsers),
+            OSTypes: toList(osTypes),
+            OSVersions: toList(osVersions)
+        };
+    }
+
+    /*
+        Chart helpers
+    */
+    function statsDestroyChart(id){
+        if (statsCharts[id]){
+            statsCharts[id].destroy();
+            delete statsCharts[id];
         }
-     }
+    }
 
-     //Convert the key-value pairs to array for graph render
-     let fileTypes = [];
-     let fileCounts = [];
-     let colors = [];
-     for (const [ftype, count] of Object.entries(fileExtensions)) {
-        fileTypes.push(ftype);
-        fileCounts.push(count);
-        colors.push(generateColorFromHash(ftype));
-     }  
+    //Convert a ranked list into top N entries plus an "Others" entry
+    function statsTopEntries(list, limit, labelFn = (k) => k){
+        let items = (list && list.Items) || [];
+        let entries = items.slice(0, limit).map(item => ({ label: labelFn(item.Key), value: item.Count }));
+        let others = ((list && list.Total) || 0) - entries.reduce((acc, e) => acc + e.value, 0);
+        if (others > 0){
+            entries.push({ label: "Others", value: others, isOthers: true });
+        }
+        return entries;
+    }
 
-     let filetypeChart = new Chart(document.getElementById("stats_filetype"), {
-            type: 'pie',
+    //Render a doughnut chart with an HTML legend
+    function renderStatsDonut(canvasId, legendSelector, entries, colors = undefined){
+        statsDestroyChart(canvasId);
+        let total = entries.reduce((acc, e) => acc + e.value, 0);
+        let palette = colors || statsPalette();
+        let entryColors = entries.map((e, i) => e.color || (e.isOthers ? statsColor("--stats_c6") : palette[i % palette.length]));
+
+        let legend = $(legendSelector);
+        legend.empty();
+        if (total == 0){
+            legend.html(`<div class="mutedText" style="font-size: 0.9em;">No data</div>`);
+        }
+        entries.forEach(function(entry, i){
+            if (entry.value == 0 && entry.hideZero){
+                return;
+            }
+            legend.append(`<div class="legendRow">
+                <span class="legendName" title="${statsEsc(entry.label)}"><span class="legendDot" style="background: ${entryColors[i]};"></span>${statsEsc(entry.label)}</span>
+                <span class="legendValue">${statsFmtPct(entry.value, total)}</span>
+            </div>`);
+        });
+
+        let canvas = document.getElementById(canvasId);
+        if (!canvas){
+            return;
+        }
+        statsCharts[canvasId] = new Chart(canvas, {
+            type: "doughnut",
             data: {
-                labels: fileTypes,
+                labels: entries.map(e => e.label),
                 datasets: [{
-                    data: fileCounts,
-                    backgroundColor: colors,
-                    hoverBackgroundColor: colors,
+                    data: total == 0 ? [1] : entries.map(e => e.value),
+                    backgroundColor: total == 0 ? [statsColor("--stats_track")] : entryColors,
+                    borderColor: statsColor("--theme_bg_primary") || "#ffffff",
+                    borderWidth: 2,
+                    hoverOffset: 4,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-            }
-        });
-
-        statisticCharts.push(filetypeChart);
-   }
-   
-   function renderTrendGraph(dailySummary){
-        // Get the canvas element
-        const canvas = document.getElementById('requestTrends');
-
-        //Generate the X axis labels
-        let datesLabel = [];
-        let succData = [];
-        let errorData = [];
-        let totalData = [];
-        for (var i = 0; i < dailySummary.length; i++){
-            let thisDayData = dailySummary[i];
-            datesLabel.push("Day " + i);
-            succData.push(thisDayData.ValidRequest);
-            errorData.push(thisDayData.ErrorRequest);
-            totalData.push(thisDayData.TotalRequest);
-        }
-        // Create the chart
-        let TrendChart = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: datesLabel,
-                datasets: [
-                    {
-                        label: 'All Requests',
-                        data: totalData,
-                        borderColor: '#7d99f7',
-                        backgroundColor: 'rgba(125, 153, 247, 0.4)',
-                        fill: false
-                    },
-                    {
-                        label: 'Success Requests',
-                        data: succData,
-                        borderColor: '#6dad7c',
-                        backgroundColor: "rgba(109, 173, 124, 0.4)",
-                        fill: true
-                    },
-                    {
-                        label: 'Error Requests',
-                        data: errorData,
-                        borderColor: '#de7373',
-                        backgroundColor: "rgba(222, 115, 115, 0.4)",
-                        fill: true
-                    },
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                title: {
-                    display: true,
-                    //text: 'Line Chart Example'
-                },
-                scales: {
-                    x: {
-                        display: true,
-                        title: {
-                            display: false,
-                            text: 'Time'
-                        }
-                    },
-                    y: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Request Counts'
+                cutout: "68%",
+                animation: { duration: 400 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: total > 0,
+                        callbacks: {
+                            label: function(ctx){
+                                return " " + ctx.label + ": " + statsFmtNum(ctx.raw) + " (" + statsFmtPct(ctx.raw, total) + ")";
+                            }
                         }
                     }
                 }
             }
         });
-
-        statisticCharts.push(TrendChart);
-   }
-
-    function renderUserAgentCharts(userAgentsEntries){
-        let userAgents = Object.keys(userAgentsEntries);
-        let requestCounts = Object.values(userAgentsEntries);
-        let mobileUser = 0;
-        let desktopUser = 0;
-        let osTypes = {};
-        let osVersion = {};
-        let browserTypes = {};
-        let totalRequestCounts = 0;
-        
-        requestCounts.forEach(function(rc){
-            totalRequestCounts += rc;
-        })
-
-        //Building a statistic summary
-        userAgents.forEach(function(thisUA){
-           var uaInfo = parseUserAgent(thisUA);
-           if (uaInfo.isMobile){
-                mobileUser+=userAgentsEntries[thisUA];
-           }else{
-                desktopUser+=userAgentsEntries[thisUA];
-           }
-
-           let currentNo = osTypes[uaInfo.os];
-           let osVersionKey = uaInfo.os + " " + uaInfo.version.split("_").join(".");
-           if (currentNo == undefined){
-                osTypes[uaInfo.os] = userAgentsEntries[thisUA];
-           }else{
-                osTypes[uaInfo.os] = currentNo + userAgentsEntries[thisUA];
-           }
-
-           let p = osVersion[osVersionKey];
-           if (p == undefined){
-                osVersion[osVersionKey] = userAgentsEntries[thisUA];
-           }else{
-                osVersion[osVersionKey] = p + userAgentsEntries[thisUA];
-           }
-
-
-           let browserTypeKey = uaInfo.browser;
-           if (browserTypeKey.indexOf("//") >= 0){
-                //This is a uncatergorize browser, mostly a bot
-                browserTypeKey = "Bots";
-           }else if (browserTypeKey == ""){
-                //No information
-                browserTypeKey = "Unknown";
-           }
-           let b = browserTypes[browserTypeKey];
-           if (b == undefined){
-                browserTypes[browserTypeKey] = userAgentsEntries[thisUA];
-           }else{
-                browserTypes[browserTypeKey] = b + userAgentsEntries[thisUA];
-           }
- 
-        });
-
-        //Create the device chart
-        let deviceTypeChart = new Chart(document.getElementById("stats_device"), {
-            type: 'pie',
-            data: {
-                labels: ['Desktop', 'Mobile'],
-                datasets: [{
-                    data: [desktopUser, mobileUser],
-                    backgroundColor: ['#e56b5e', '#6eb9c1'],
-                    hoverBackgroundColor: ['#e56b5e', '#6eb9c1']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-            }
-        });
-
-        statisticCharts.push(deviceTypeChart);
-
-        //Create the OS chart
-        let OSnames = [];
-        let OSCounts = [];
-        let OSColors = [];
-        for (const [key, value] of Object.entries(osTypes)) {
-            OSnames.push(key);
-            OSCounts.push(value);
-            OSColors.push(getOSColorCode(key));
-        }
-    
-        let osTypeChart = new Chart(document.getElementById("stats_OS"), {
-            type: 'pie',
-            data: {
-                labels: OSnames,
-                datasets: [{
-                    data: OSCounts,
-                    backgroundColor: OSColors,
-                    hoverBackgroundColor: OSColors
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-            }
-        });
-
-        statisticCharts.push(osTypeChart);
-
-        //Populate the OS version table
-        let sortedOSVersion = Object.entries(osVersion).sort((a, b) => b[1] - a[1]);
-        $("#stats_OSVersionList").html("");
-        // Loop through the sorted data and populate the table
-        for (let i = 0; i < sortedOSVersion.length; i++) {
-            let osVersion = sortedOSVersion[i][0];
-            let requestcount = abbreviateNumber(sortedOSVersion[i][1]);
-            let percentage = (sortedOSVersion[i][1] / totalRequestCounts * 100).toFixed(3);
-            
-            // Create a new row in the table
-            let row = $("<tr>");
-            
-            // Add the OS version and percentage as columns in the row
-            $("<td>").text(osVersion).appendTo(row);
-            $("<td>").text(requestcount).appendTo(row);
-            $("<td>").text(percentage + "%").appendTo(row);
-            
-            // Add the row to the table body
-            $("#stats_OSVersionList").append(row);
-        }
-
-        //Create the browser charts
-        let browserNames = [];
-        let broserCounts = [];
-        let browserColors = [];
-        let sortedBrowserTypes = Object.entries(browserTypes).sort((a, b) => b[1] - a[1]);
-        console.log(sortedBrowserTypes);
-        sortedBrowserTypes.forEach(function(entry){
-            browserNames.push(entry[0]);
-            broserCounts.push(entry[1]);
-            browserColors.push(generateColorFromHash(entry[0]));
-        });
-    
-        let browserTypeChart = new Chart(document.getElementById("stats_browsers"), {
-            type: 'pie',
-            data: {
-                labels: browserNames,
-                datasets: [{
-                    data: broserCounts,
-                    backgroundColor: browserColors,
-                    hoverBackgroundColor: browserColors
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-            }
-        });
-
-        statisticCharts.push(browserTypeChart);
-
     }
 
-    //Generate the IPversion pie chart
-    function renderIPVersionChart(RequestClientIp){
-        let ipv4Count = Object.keys(RequestClientIp).filter(ip => ip.includes('.')).length;
-        let ipv6Count = Object.keys(RequestClientIp).filter(ip => ip.includes(':')).length;
-        let totalCount = ipv4Count + ipv6Count;
-        let ipv4Percent = ((ipv4Count / totalCount) * 100).toFixed(2);
-        let ipv6Percent = ((ipv6Count / totalCount) * 100).toFixed(2);
+    function statsLineScales(yFormatter){
+        return {
+            x: {
+                grid: { display: false },
+                border: { display: false },
+                ticks: { color: statsColor("--stats_tick"), font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }
+            },
+            y: {
+                beginAtZero: true,
+                border: { display: false },
+                grid: { color: statsColor("--stats_grid") },
+                ticks: { color: statsColor("--stats_tick"), font: { size: 11 }, maxTicksLimit: 5, padding: 6, callback: yFormatter }
+            }
+        };
+    }
 
-        // Create the chart data object
-        let chartData = {
-            labels: ['IPv4', 'IPv6'],
-            datasets: [{
-                data: [ipv4Percent, ipv6Percent],
-                backgroundColor: ['#9295f0', '#bff092'],
-                hoverBackgroundColor: ['#9295f0', '#bff092']
-            }]
+    function statsGradientFill(rgbColor){
+        return function(context){
+            const { ctx, chartArea } = context.chart;
+            if (!chartArea){
+                return "transparent";
+            }
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, statsAlpha(rgbColor, 0.30));
+            gradient.addColorStop(1, statsAlpha(rgbColor, 0.02));
+            return gradient;
+        };
+    }
+
+    //Apply alpha to a #rrggbb color
+    function statsAlpha(hex, alpha){
+        let m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+        if (!m){
+            return hex;
+        }
+        return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
+    }
+
+    function statsTrendLabels(){
+        return statsData.Trend.map(p => statsData.Granularity == "hour" ? p.Label : statsShortDate(p.Label));
+    }
+
+    //Show a point on the last value of a line only
+    function statsLastPointRadius(length){
+        return function(ctx){
+            return ctx.dataIndex == length - 1 ? 4 : 0;
+        };
+    }
+
+    function renderStatsTrendChart(){
+        let id = "statsTrendChart";
+        statsDestroyChart(id);
+        let c1 = statsColor("--stats_c1"), c2 = statsColor("--stats_c2");
+        let totals = statsData.Trend.map(p => p.Total);
+        let blocked = statsData.Trend.map(p => p.Blocked);
+        statsCharts[id] = new Chart(document.getElementById(id), {
+            type: "line",
+            data: {
+                labels: statsTrendLabels(),
+                datasets: [
+                    {
+                        label: "Total",
+                        data: totals,
+                        borderColor: c1,
+                        backgroundColor: statsGradientFill(c1),
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: statsLastPointRadius(totals.length),
+                        pointBackgroundColor: c1,
+                        pointHoverRadius: 4,
+                    },
+                    {
+                        label: "Blocked",
+                        data: blocked,
+                        borderColor: c2,
+                        backgroundColor: c2,
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.35,
+                        pointRadius: statsLastPointRadius(blocked.length),
+                        pointBackgroundColor: c2,
+                        pointHoverRadius: 4,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => " " + ctx.dataset.label + ": " + statsFmtNum(ctx.raw)
+                        }
+                    }
+                },
+                scales: statsLineScales((v) => statsFmtNum(v))
+            }
+        });
+    }
+
+    function renderStatsLatencyLine(id, compact){
+        statsDestroyChart(id);
+        let c1 = statsColor("--stats_c1"), c2 = statsColor("--stats_c2");
+        let avg = statsData.Trend.map(p => p.AvgMs);
+        let p95 = statsData.Trend.map(p => p.P95Ms);
+        let datasets = [
+            {
+                label: "Avg",
+                data: avg,
+                borderColor: c1,
+                backgroundColor: statsGradientFill(c1),
+                borderWidth: 2,
+                fill: true,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: compact ? 0 : statsLastPointRadius(avg.length),
+                pointBackgroundColor: c1,
+            }
+        ];
+        if (!compact){
+            datasets.push({
+                label: "P95",
+                data: p95,
+                borderColor: c2,
+                borderWidth: 2,
+                fill: false,
+                tension: 0.35,
+                spanGaps: true,
+                pointRadius: statsLastPointRadius(p95.length),
+                pointBackgroundColor: c2,
+            });
+        }
+        let scales = statsLineScales((v) => statsFmtMs(v));
+        if (compact){
+            scales.x.display = false;
+            scales.y.display = false;
+        }
+        statsCharts[id] = new Chart(document.getElementById(id), {
+            type: "line",
+            data: { labels: statsTrendLabels(), datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => " " + ctx.dataset.label + ": " + statsFmtMs(ctx.raw)
+                        }
+                    }
+                },
+                scales: scales
+            }
+        });
+    }
+
+    /*
+        HTML helpers
+    */
+    //Ranked bars, used by Top Applications and the accordion
+    function renderStatsBarList(selector, entries, total){
+        let container = $(selector);
+        container.empty();
+        if (!total){
+            container.html(`<div class="emptyNote">No data</div>`);
+            return;
+        }
+        let max = Math.max(...entries.map(e => e.value), 1);
+        let palette = statsPalette();
+        entries.forEach(function(entry, i){
+            let color = entry.isOthers ? statsColor("--stats_c6") : (i == 0 ? palette[0] : (i % 2 == 1 ? palette[3] : palette[1]));
+            container.append(`<div class="barRow">
+                <div class="barLabel" title="${statsEsc(entry.label)}">${statsEsc(entry.label)}</div>
+                <div class="barTrack"><div class="barFill" style="width: ${(entry.value / max * 100).toFixed(1)}%; background: ${color};"></div></div>
+                <div class="barValue">${statsFmtPct(entry.value, total)}</div>
+            </div>`);
+        });
+    }
+
+    //Ranked table with requests and share columns
+    function renderStatsTable(selector, list, options = {}){
+        let limit = options.limit || 5;
+        let labelFn = options.labelFn || ((key) => statsEsc(key));
+        let header = options.header || "Name";
+        let total = (list && list.Total) || 0;
+        let items = ((list && list.Items) || []).slice(0, limit);
+        let container = $(selector);
+
+        if (items.length == 0){
+            container.html(`<div class="emptyNote">No data</div>`);
+            return;
+        }
+
+        let extraHead = options.extraColumn ? `<th style="width: ${options.extraColumn.width || "30%"};">${options.extraColumn.header}</th>` : "";
+        let rows = items.map(function(item){
+            let extra = options.extraColumn ? `<td>${options.extraColumn.render(item)}</td>` : "";
+            let bar = options.showBar ? `<td class="shareBar"><div class="inlineBar"><div class="fill" style="width: ${(item.Count / items[0].Count * 100).toFixed(1)}%;"></div></div></td>` : "";
+            return `<tr>
+                <td title="${statsEsc(item.Key)}">${labelFn(item.Key)}</td>
+                ${extra}
+                <td class="num">${statsFmtNum(item.Count)}</td>
+                ${bar}
+                <td class="share">${statsFmtPct(item.Count, total)}</td>
+            </tr>`;
+        }).join("");
+
+        let others = total - items.reduce((acc, item) => acc + item.Count, 0);
+        if (others > 0 && options.showOthers !== false){
+            let extra = options.extraColumn ? `<td></td>` : "";
+            let bar = options.showBar ? `<td class="shareBar"></td>` : "";
+            rows += `<tr class="othersRow"><td>others</td>${extra}<td class="num">${statsFmtNum(others)}</td>${bar}<td class="share">${statsFmtPct(others, total)}</td></tr>`;
+        }
+
+        let barHead = options.showBar ? `<th class="shareBar"></th>` : "";
+        container.html(`<table class="statsTable">
+            <thead><tr><th>${header}</th>${extraHead}<th class="num">Requests</th>${barHead}<th class="share">Share</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`);
+    }
+
+    function renderStatsDelta(selector, current, previous){
+        let el = $(selector);
+        let periodLabel = "vs previous " + statsData.Days + " days";
+        if (statsData.Days == 1){
+            periodLabel = statsRange == "today" ? "vs yesterday" : "vs previous day";
+        }
+        if (!previous){
+            el.html(`<span class="mutedText">No data ${statsEsc(periodLabel.replace("vs ", "for "))}</span>`);
+            return;
+        }
+        let change = (current - previous) / previous * 100;
+        let cls = change >= 0 ? "up" : "down";
+        let arrow = change >= 0 ? "arrow up" : "arrow down";
+        let sign = change >= 0 ? "+" : "";
+        el.html(`<span class="${cls}"><i class="${arrow} icon" style="margin: 0;"></i> ${sign}${change.toFixed(1)}%</span> ${periodLabel}`);
+    }
+
+    function statsSummaryText(entries, total, limit = 3){
+        if (!total){
+            return "No data";
+        }
+        return entries.filter(e => e.value > 0).slice(0, limit).map(e => statsEsc(e.label) + " " + statsFmtPct(e.value, total)).join(" &bull; ");
+    }
+
+    /*
+        Rendering
+    */
+    function statsStatusEntries(){
+        let c = statsData.Current;
+        return [
+            { label: "Success", value: c.Success, color: statsColor("--stats_c1") },
+            { label: "Redirect", value: c.Redirect, color: statsColor("--stats_c5") },
+            { label: "Blocked", value: c.Blocked, color: statsColor("--stats_c2") },
+            { label: "Error", value: c.Error, color: statsColor("--stats_red") },
+        ];
+    }
+
+    function renderStatsDashboard(){
+        if (!statsData){
+            return;
+        }
+        let data = statsData;
+        let current = data.Current;
+
+        //Range information
+        let rangeText = data.Start == data.End ? data.Start : data.Start + " to " + data.End;
+        $("#statsRangeInfo").html(`<i class="calendar outline icon"></i>${statsEsc(rangeText)} &middot; Compared with ${statsEsc(data.PrevStart == data.PrevEnd ? data.PrevStart : data.PrevStart + " to " + data.PrevEnd)}`);
+
+        if (current.TotalRequest == 0){
+            $("#statsBody").hide();
+            $("#statisticRenderNotEnoughData").show();
+            return;
+        }
+        $("#statsBody").show();
+        $("#statisticRenderNotEnoughData").hide();
+
+        //KPI cards
+        let classified = current.Success + current.Redirect + current.Blocked + current.Error;
+        let successRate = classified ? (current.Success + current.Redirect) / classified * 100 : 0;
+        $("#kpiTotalRequests").text(statsFmtNum(current.TotalRequest)).attr("title", current.TotalRequest.toLocaleString());
+        $("#kpiUniqueVisitors").text(statsFmtNum(current.UniqueVisitors)).attr("title", current.UniqueVisitors.toLocaleString());
+        $("#kpiBlockedRequests").text(statsFmtNum(current.Blocked)).attr("title", current.Blocked.toLocaleString());
+        $("#kpiSuccessRate").text(successRate.toFixed(1) + "%");
+        $("#kpiSuccessRateBar").css("width", successRate.toFixed(1) + "%");
+        renderStatsDelta("#kpiTotalRequestsDelta", current.TotalRequest, data.Previous.TotalRequest);
+        renderStatsDelta("#kpiUniqueVisitorsDelta", current.UniqueVisitors, data.Previous.UniqueVisitors);
+        renderStatsDelta("#kpiBlockedRequestsDelta", current.Blocked, data.Previous.Blocked);
+
+        //Traffic trend
+        renderStatsTrendChart();
+
+        //Traffic sources
+        let sources = data.TrafficSources;
+        let sourceEntries = [
+            { label: "Direct", value: sources.Direct },
+            { label: "Search Engine", value: sources.Search },
+            { label: "Referrer", value: sources.Referral },
+            { label: "Internal", value: sources.Internal },
+        ];
+        let palette = statsPalette();
+        sourceEntries.forEach((e, i) => e.color = [palette[0], palette[1], palette[2], palette[5]][i]);
+        renderStatsDonut("statsSourcesChart", "#statsSourcesLegend", sourceEntries);
+        $("#statsSourcesTotal").text(statsFmtNum(sources.Direct + sources.Search + sources.Referral + sources.Internal));
+
+        //Top applications
+        renderStatsBarList("#statsTopApplications", statsTopEntries(data.Applications, 3, statsRuleLabel), data.Applications.Total);
+
+        //Users overview
+        let users = data.Users;
+        renderStatsDonut("statsUsersChart", "#statsUsersLegend", [
+            { label: "Returning", value: users.Returning, color: palette[3] },
+            { label: "New", value: users.New, color: palette[2] },
+            { label: "Bots", value: users.Bots, color: palette[5] },
+        ]);
+        $("#statsUsersTotal").text(statsFmtNum(current.UniqueVisitors));
+
+        //Response time trend
+        let hasLatency = data.Latency.Count > 0;
+        $("#statsRespTrendChart").parent().toggle(hasLatency);
+        $("#statsRespTrendEmpty").toggle(!hasLatency);
+        if (hasLatency){
+            renderStatsLatencyLine("statsRespTrendChart", false);
+        }else{
+            statsDestroyChart("statsRespTrendChart");
+        }
+
+        renderStatsAccordion();
+        renderStatsOverviewTab();
+        renderStatsDetailTabs();
+
+        //Refresh the list modal if it is open
+        if ($("#statsListModal").hasClass("open")){
+            renderStatsListModalRows();
+        }
+    }
+
+    function renderStatsAccordion(){
+        let data = statsData;
+        let derived = statsDerived;
+        let setRow = function(key, entries, total, summaryLimit = 3){
+            let row = $(`#statsAccordion .accordionRow[data-acc="${key}"]`);
+            row.find(".accSummary").html(statsSummaryText(entries, total, summaryLimit));
+            renderStatsBarList(row.find(".accordionBody"), entries, total);
         };
 
-        // Create the chart options object
-        let ipvChartOption = {
-            responsive: true,
-            maintainAspectRatio: false,
-        };
+        let statusEntries = statsStatusEntries();
+        setRow("status", statusEntries, statusEntries.reduce((acc, e) => acc + e.value, 0), 4);
+        setRow("devices", statsTopEntries(derived.Devices, 8), derived.Devices.Total);
+        setRow("browsers", statsTopEntries(derived.Browsers, 8), derived.Browsers.Total);
+        setRow("os", statsTopEntries(derived.OSTypes, 8), derived.OSTypes.Total);
 
-        // Create the pie chart
-        let ipTypeChart = new Chart(document.getElementById("stats_ipver"), {
-            type: 'pie',
-            data: chartData,
-            options: ipvChartOption
+        let countryEntries = statsTopEntries(data.Countries, 8, statsCountryLabel);
+        let countryRow = $(`#statsAccordion .accordionRow[data-acc="countries"]`);
+        let top2 = statsTopEntries(data.Countries, 2, statsCountryLabel);
+        countryRow.find(".accSummary").html(statsSummaryText(top2, data.Countries.Total, 3));
+        renderStatsBarList(countryRow.find(".accordionBody"), countryEntries, data.Countries.Total);
+    }
+
+    function renderStatsOverviewTab(){
+        let data = statsData;
+        let derived = statsDerived;
+
+        renderStatsDonut("statsOvStatusChart", "#statsOvStatusLegend", statsStatusEntries());
+        renderStatsDonut("statsOvMethodChart", "#statsOvMethodLegend", statsTopEntries(data.Methods, 3));
+
+        //Response time percentiles
+        let lat = data.Latency;
+        let hasLatency = lat.Count > 0;
+        $("#statsLatAvg").text(hasLatency ? statsFmtMs(lat.AvgMs) : "-");
+        $("#statsLatP50").text(hasLatency ? statsFmtMs(lat.P50Ms) : "-");
+        $("#statsLatP95").text(hasLatency ? statsFmtMs(lat.P95Ms) : "-");
+        $("#statsLatP99").text(hasLatency ? statsFmtMs(lat.P99Ms) : "-");
+        if (hasLatency){
+            renderStatsLatencyLine("statsOvLatencySpark", true);
+        }else{
+            statsDestroyChart("statsOvLatencySpark");
+        }
+
+        renderStatsTable("#statsOvDomains", data.Domains, { header: "Domain" });
+        renderStatsTable("#statsOvEndpoints", data.Endpoints, { header: "Endpoint", labelFn: statsEndpointLabel });
+        renderStatsTable("#statsOvClientInfo", derived.OSVersions, { header: "OS" });
+        renderStatsDonut("statsOvFileTypeChart", "#statsOvFileTypeLegend", statsTopEntries(data.FileTypes, 3));
+        renderStatsTable("#statsOvReferrers", data.Referrers, { header: "Referrer", labelFn: statsReferrerLabel });
+        renderStatsDonut("statsOvBrowserChart", "#statsOvBrowserLegend", statsTopEntries(derived.Browsers, 3));
+    }
+
+    function statsReferrerLabel(key){
+        if (key == ""){
+            return `<span class="mutedText">Direct / None</span>`;
+        }
+        return statsEsc(key);
+    }
+
+    function statsCountryCell(code){
+        let flag = /^[a-z]{2}$/.test(code) ? `<i class="${code} flag"></i>` : `<i class="globe icon" style="color: var(--text_color_secondary);"></i>`;
+        return flag + statsEsc(statsCountryLabel(code));
+    }
+
+    function statsStatusCodeClass(code){
+        let n = parseInt(code);
+        if (n < 300) return "Success";
+        if (n < 400) return "Redirect";
+        if (n < 500) return "Client Error";
+        return "Server Error";
+    }
+
+    function renderStatsDetailTabs(){
+        let data = statsData;
+        let derived = statsDerived;
+
+        //HTTP methods
+        renderStatsDonut("statsMethodChart", "#statsMethodLegend", statsTopEntries(data.Methods, 5));
+        renderStatsTable("#statsMethodTable", data.Methods, { header: "Method", limit: 20, showBar: true });
+
+        //Status codes
+        renderStatsDonut("statsStatusChart", "#statsStatusLegend", statsStatusEntries());
+        renderStatsTable("#statsStatusTable", data.StatusCodes, {
+            header: "Code",
+            limit: 15,
+            labelFn: (code) => `<b>${statsEsc(code)}</b> <span class="mutedText">${statsEsc(statsStatusCodeNames[code] || "")}</span>`,
+            extraColumn: { header: "Class", width: "22%", render: (item) => statsEsc(statsStatusCodeClass(item.Key)) }
         });
 
-        statisticCharts.push(ipTypeChart);
+        //Clients and devices
+        renderStatsDonut("statsDeviceChart", "#statsDeviceLegend", statsTopEntries(derived.Devices, 4));
+        renderStatsDonut("statsBrowserChart", "#statsBrowserLegend", statsTopEntries(derived.Browsers, 4));
+        renderStatsDonut("statsOSChart", "#statsOSLegend", statsTopEntries(derived.OSTypes, 4));
+        renderStatsTable("#statsOSVersionTable", derived.OSVersions, { header: "OS Version", limit: 10, showBar: true });
 
-        //Populate the request count table
-        let requestCounts = Object.entries(RequestClientIp);
+        //Countries
+        renderStatsDonut("statsCountryChart", "#statsCountryLegend", statsTopEntries(data.Countries, 5, statsCountryLabel));
+        renderStatsTable("#statsCountryTable", data.Countries, { header: "Country", limit: 10, labelFn: statsCountryCell, showBar: true });
 
-        // Sort the array by the value (count)
-        requestCounts.sort((a, b) => b[1] - a[1]);
+        //Origins
+        renderStatsDonut("statsIPVerChart", "#statsIPVerLegend", [
+            { label: "IPv4", value: data.IPVersions.IPv4 },
+            { label: "IPv6", value: data.IPVersions.IPv6 },
+        ]);
+        renderStatsTable("#statsClientIPTable", data.ClientIPs, { header: "Client IP", limit: 10, showBar: true });
 
-        // Select the table body and empty it
-        let tableBody = $('#stats_requestCountlist');
-        tableBody.empty();
+        //Upstreams
+        renderStatsTable("#statsUpstreamTable", data.Upstreams, { header: "Upstream", limit: 10 });
+        renderStatsTable("#statsRuleTable", data.Applications, { header: "Proxy Rule", limit: 10, labelFn: (k) => statsEsc(statsRuleLabel(k)) });
+        renderStatsTable("#statsForwardTypeTable", data.ForwardTypes, { header: "Forward Type", limit: 10 });
+    }
 
-        // Loop through the sorted array and add the top 25 requested IPs to the table
-        for (let i = 0; i < 25 && i < requestCounts.length; i++) {
-            let [ip, count] = requestCounts[i];
-            let row = $('<tr>').appendTo(tableBody);
-            $('<td style="word-break: break-all;">').text(ip).appendTo(row);
-            $('<td>').text(count).appendTo(row);
+    /*
+        View all modal
+    */
+    let statsEndpointDomains = { key: "", list: null, error: "" }; //Hostname breakdown of the endpoints, loaded on demand
+
+    //Decode percent-encoded paths for display, e.g. /Pixel%20Studio/* becomes /Pixel Studio/*
+    function statsDecodePath(path){
+        try{
+            return decodeURIComponent(path);
+        }catch(e){
+            return path;
         }
     }
 
-    //Generate a fixed color code from string hash
-    function generateColorFromHash(stringToHash){
-        let hash = 0;
-        for (let i = 0; i < stringToHash.length; i++) {
-            hash = stringToHash.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const hue = hash % 300;
-        const saturation = Math.floor(Math.random() * 20) + 70;
-        const lightness = Math.floor(Math.random() * 20) + 60;
-        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    function statsEndpointLabel(path){
+        return statsEsc(statsDecodePath(path));
     }
 
-    //Generate the visitor country pie chart    
-   function renderVisitorChart(visitorData){
-        // Extract the labels and data from the visitor data object
-        let labels = [];
-        let data = Object.values(visitorData);
+    function statsHostCell(host){
+        if (host == ""){
+            return `<span class="mutedText">(no host)</span>`;
+        }
+        return `<span title="${statsEsc(host)}">${statsEsc(host)}</span>`;
+    }
 
-        Object.keys(visitorData).forEach(function(cc){
-            console.log(cc);
-            if (cc == ""){
-                labels.push("Unknown")
-            }else if (cc == "lan"){
-                labels.push(`LAN / Loopback`);
+    //Fetch the endpoint + hostname rows of the loaded range, unless they are already cached
+    function loadStatsEndpointDomains(){
+        let key = statsData.Start + "|" + statsData.End + "|" + statsLastLoad;
+        if (statsEndpointDomains.key == key && !statsEndpointDomains.error){
+            return;
+        }
+        statsEndpointDomains = { key: key, list: null, error: "" };
+        let rerender = function(){
+            if (statsModalKey == "Endpoints" && $("#statsListModal").hasClass("open")){
+                renderStatsListModalRows();
+            }
+        };
+        $.getJSON("/api/analytic/endpoints?start=" + encodeURIComponent(statsData.Start) + "&end=" + encodeURIComponent(statsData.End), function(data){
+            if (statsEndpointDomains.key != key){
+                return;
+            }
+            if (data.error != undefined){
+                statsEndpointDomains.error = data.error;
             }else{
-                labels.push(`${getCountryName(cc)} [${cc.toUpperCase()}]` );
+                statsEndpointDomains.list = {
+                    Items: (data.Items || []).map(item => ({ Key: item.Path, Host: item.Host, Count: item.Count })),
+                    Total: data.Total,
+                    Distinct: data.Distinct,
+                    MissingDays: data.MissingDays
+                };
+            }
+            rerender();
+        }).fail(function(){
+            if (statsEndpointDomains.key == key){
+                statsEndpointDomains.error = "Unable to load the endpoint domains";
+                rerender();
             }
         });
+    }
 
-        // Define the colors to be used in the pie chart
-        let colors = [];
-        labels.forEach(function(cc){
-            colors.push(generateColorFromHash(cc));
+    const statsModalSources = {
+        "Applications": { title: "Top Applications", header: "Proxy Rule", list: () => statsData.Applications, label: (k) => statsEsc(statsRuleLabel(k)), text: statsRuleLabel },
+        "Domains": { title: "Domains", header: "Domain", list: () => statsData.Domains },
+        "Endpoints": {
+            title: "Top Endpoints",
+            header: "Endpoint",
+            prepare: loadStatsEndpointDomains,
+            status: () => statsEndpointDomains.error || (statsEndpointDomains.list ? "" : "Loading endpoint domains..."),
+            list: () => statsEndpointDomains.list,
+            label: statsEndpointLabel,
+            extraColumn: { header: "Domain", width: "32%", render: (item) => statsHostCell(item.Host) },
+            match: (item) => statsDecodePath(item.Key) + " " + item.Host,
+            note: function(list){
+                if (!list.MissingDays){
+                    return "";
+                }
+                return list.MissingDays + (list.MissingDays == 1 ? " day" : " days") + " in this range were recorded before Zoraxy tracked the domain of each endpoint and are not included.";
+            }
+        },
+        "Referrers": { title: "Referring Sites", header: "Referrer", list: () => statsData.Referrers, label: statsReferrerLabel, text: (k) => k == "" ? "Direct / None" : k },
+        "Countries": { title: "Countries", header: "Country", list: () => statsData.Countries, label: statsCountryCell, text: statsCountryLabel },
+        "ClientIPs": { title: "Top Client IPs", header: "Client IP", list: () => statsData.ClientIPs },
+        "Upstreams": { title: "Forwarded Upstreams", header: "Upstream", list: () => statsData.Upstreams },
+        "ForwardTypes": { title: "Forward Types", header: "Forward Type", list: () => statsData.ForwardTypes },
+        "OSVersions": { title: "Client Operating Systems", header: "OS Version", list: () => statsDerived.OSVersions },
+    };
+
+    function openStatsListModal(key){
+        if (!statsData || !statsModalSources[key]){
+            return;
+        }
+        statsModalKey = key;
+        $("#statsListModalTitle").text(statsModalSources[key].title);
+        $("#statsListModalSearch").val("");
+        $("#statsListModal").addClass("open");
+        if (statsModalSources[key].prepare){
+            statsModalSources[key].prepare();
+        }
+        renderStatsListModalRows();
+    }
+
+    function closeStatsListModal(){
+        $("#statsListModal").removeClass("open");
+    }
+
+    function renderStatsListModalRows(){
+        let source = statsModalSources[statsModalKey];
+        if (!source || !statsData){
+            return;
+        }
+        //Lists loaded on demand show their loading or error state first
+        let status = source.status ? source.status() : "";
+        if (status){
+            $("#statsListModalContent").html(`<div class="emptyNote">${statsEsc(status)}</div>`);
+            return;
+        }
+
+        let list = source.list();
+        let keyword = $("#statsListModalSearch").val().trim().toLowerCase();
+        let textFn = source.text || ((k) => k);
+        let matchText = source.match || ((item) => textFn(item.Key));
+        let filtered = {
+            Items: (list.Items || []).filter(item => keyword == "" || String(matchText(item)).toLowerCase().indexOf(keyword) >= 0),
+            Total: list.Total,
+        };
+        renderStatsTable("#statsListModalContent", filtered, {
+            header: source.header,
+            limit: 1000,
+            labelFn: source.label,
+            extraColumn: source.extraColumn,
+            showBar: true,
+            showOthers: keyword == ""
         });
+        let note = source.note ? source.note(list) : "";
+        if (note){
+            $("#statsListModalContent").prepend(`<p class="mutedText" style="margin-bottom: 0.6em; font-size: 0.85em;"><i class="info circle icon"></i>${statsEsc(note)}</p>`);
+        }
+        if (list.Distinct > (list.Items || []).length){
+            $("#statsListModalContent").append(`<p class="mutedText" style="margin-top: 0.6em; font-size: 0.85em;">Showing the top ${(list.Items || []).length} of ${list.Distinct} entries</p>`);
+        }
+    }
 
-        // Create the chart data object
-        let CCchartData = {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors
-            }]
+    $(document).on("keydown", function(event){
+        if (event.key == "Escape" && $("#statsListModal").hasClass("open")){
+            closeStatsListModal();
+        }
+        if (event.key == "Escape" && $("#statsRangePopover").hasClass("open")){
+            closeStatsRangePopover();
+        }
+    });
+
+    /*
+        Initialization
+    */
+    function initStatsDashboard(){
+        setStatsMode(statsLoadPreference("zoraxy_stats_mode", "simple"));
+        let customRange = statsLoadPreference("zoraxy_stats_custom", "").split(",");
+        if (customRange.length == 2 && statsIsValidDateKey(customRange[0]) && statsIsValidDateKey(customRange[1])){
+            statsCustomStart = customRange[0];
+            statsCustomEnd = customRange[1];
+        }
+        setStatsRange(statsLoadPreference("zoraxy_stats_range", "30d"), false);
+
+        //Re-render the charts with the new colors when the theme changes
+        let statsDarkTheme = $("body").hasClass("darkTheme");
+        new MutationObserver(function(){
+            let isDark = $("body").hasClass("darkTheme");
+            if (isDark != statsDarkTheme){
+                statsDarkTheme = isDark;
+                if (statsData){
+                    renderStatsDashboard();
+                }
+            }
+        }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+        //Load (or refresh stale data) when the tab is opened
+        tabSwitchEventBind["stats"] = function(){
+            if (statsData == null || Date.now() - statsLastLoad > 60000){
+                loadStatsDashboard();
+            }
         };
 
-        // Create the chart options object
-        let CCchartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-        };
+        if ($("#stats").is(":visible")){
+            loadStatsDashboard();
+        }
+    }
 
-        // Create the pie chart
-        const visitorsChart = new Chart(document.getElementById("stats_visitors"), {
-            type: 'pie',
-            data: CCchartData,
-            options: CCchartOptions
-        });
-
-        statisticCharts.push(visitorsChart);
-   }
+    $(document).ready(function(){
+        setTimeout(initStatsDashboard, 0);
+    });
 </script>

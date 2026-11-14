@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"imuslab.com/zoraxy/mod/dynamicproxy/dpcore"
 	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
@@ -204,7 +205,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 	})
 
 	//Handle the request reverse proxy
-	statusCode, err := selectedUpstream.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	rrr := &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:                    selectedUpstream.OriginIpOrDomain,
 		OriginalHost:                   reqHostname,
 		UseTLS:                         selectedUpstream.RequireTLS,
@@ -222,7 +223,8 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		Version:                        target.parent.Option.HostVersion,
 		DevelopmentMode:                target.parent.Option.DevelopmentMode,
 		AltSvc:                         h.Parent.getAltSvcValue(),
-	})
+	}
+	statusCode, err := selectedUpstream.ServeHTTP(w, r, rrr)
 
 	//validate the error
 	var dnsError *net.DNSError
@@ -242,7 +244,7 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 		return
 	}
 
-	h.Parent.logRequest(r, true, statusCode, "host-http", reqHostname, upstreamHostname, target)
+	h.Parent.logUpstreamResponse(r, statusCode, "host-http", reqHostname, upstreamHostname, target, rrr)
 }
 
 // hostWebSocketRequest proxies a host level WebSocket upgrade request via websocketproxy
@@ -360,7 +362,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 	})
 
 	//Handle the virtual directory reverse proxy request
-	statusCode, err := target.proxy.ServeHTTP(w, r, &dpcore.ResponseRewriteRuleSet{
+	rrr := &dpcore.ResponseRewriteRuleSet{
 		ProxyDomain:                    target.Domain,
 		OriginalHost:                   reqHostname,
 		UseTLS:                         target.RequireTLS,
@@ -375,9 +377,10 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		NoRemoveHopByHop:               headerRewriteOptions.DisableHopByHopHeaderRemoval,
 		AllowUpgrade:                   target.parent.EnableUpgradeForwarding,
 		Version:                        target.parent.parent.Option.HostVersion,
-		DevelopmentMode:                 target.parent.parent.Option.DevelopmentMode,
+		DevelopmentMode:                target.parent.parent.Option.DevelopmentMode,
 		AltSvc:                         h.Parent.getAltSvcValue(),
-	})
+	}
+	statusCode, err := target.proxy.ServeHTTP(w, r, rrr)
 
 	var dnsError *net.DNSError
 	if err != nil {
@@ -392,7 +395,7 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 		}
 		return
 	}
-	h.Parent.logRequest(r, true, statusCode, "vdir-http", reqHostname, target.Domain, target.parent)
+	h.Parent.logUpstreamResponse(r, statusCode, "vdir-http", reqHostname, target.Domain, target.parent, rrr)
 
 }
 
@@ -420,8 +423,31 @@ func (ep *ProxyEndpoint) shouldCollectStatistic(succ bool) bool {
 	return !ep.DisableErrorStatistic
 }
 
+// Forward types of requests that are rejected by Zoraxy's own rules instead of being served by an upstream
+var blockedForwardTypes = map[string]bool{
+	"blacklist":        true, //Access rule blacklist
+	"whitelist":        true, //Access rule whitelist
+	"ratelimit":        true, //Rate limit exceeded
+	"exploit-blocked":  true, //Exploit detection
+	"captcha-required": true, //Captcha challenge not passed
+	"mtls-blocked":     true, //Client certificate rejected
+	"vdir-block":       true, //Virtual directory set to block access
+	"root-no_resp":     true, //Unknown host dropped by the default site
+	"root-teapot":      true, //Unknown host rejected by the default site
+}
+
+// Log a request that has been served by an upstream, carrying the upstream response information for statistics
+func (router *Router) logUpstreamResponse(r *http.Request, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint, rrr *dpcore.ResponseRewriteRuleSet) {
+	router.logRequestWithResponseInfo(r, true, statusCode, forwardType, originalHostname, upstreamHostname, endpoint, rrr.UpstreamLatency, rrr.UpstreamContentType)
+}
+
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
 func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
+	router.logRequestWithResponseInfo(r, succ, statusCode, forwardType, originalHostname, upstreamHostname, endpoint, 0, "")
+}
+
+// logRequestWithResponseInfo is logRequest with the upstream latency (TTFB) and response content type, if available
+func (router *Router) logRequestWithResponseInfo(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint, upstreamLatency time.Duration, contentType string) {
 	// Resolve the client IP once via the trusted-proxy aware resolver so that
 	// untrusted proxy headers (X-Forwarded-For, X-Real-IP, etc.) cannot be used
 	// to spoof the IP recorded in the log file or the statistics collector.
@@ -461,6 +487,10 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 				RequestURL:                    r.Host + r.URL.EscapedPath(),
 				Target:                        originalHostname,
 				Upstream:                      upstreamHostname,
+				Blocked:                       blockedForwardTypes[forwardType],
+				ProxyRule:                     endpoint.RootOrMatchingDomain,
+				UpstreamLatency:               upstreamLatency,
+				ContentType:                   contentType,
 			}
 			router.Option.StatisticCollector.RecordRequest(requestInfo)
 		}()

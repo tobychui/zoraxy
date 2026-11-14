@@ -3,8 +3,10 @@ package statistic
 import (
 	"log"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -34,6 +36,16 @@ type DailySummary struct {
 	RequestMethods      *sync.Map //Map that hold the HTTP methods (GET / POST / ...) of the requests
 	DownstreamHostnames *sync.Map //Request count of downstream hostname
 	UpstreamHostnames   *sync.Map //Forwarded request count of upstream hostname
+	StatusCodes         *sync.Map //Map that hold [HTTP status code]: request counter
+	ProxyRules          *sync.Map //Map that hold [proxy rule primary hostname]: request counter
+	FileTypes           *sync.Map //Map that hold [file type of upstream responses]: request counter
+	RequestPaths        *sync.Map //Map that hold [request path pattern, e.g. /api/*]: request counter
+	HostPaths           *sync.Map //Map that hold [requested hostname + path pattern, e.g. example.com/api/*]: request counter
+	BotClientIp         *sync.Map //Map that hold the IPs of clients identified as bots or scripts
+
+	status  *statusClassCounters //Request counts by status class (success / redirect / blocked / error)
+	latency *latencyHistogram    //Upstream TTFB histogram of the day
+	hourly  *hourlyStats         //Per hour counters of the day
 
 	// bounded tracks the logical size of each map above and serializes
 	// the trim path so that high-cardinality request inputs (many unique
@@ -54,6 +66,11 @@ type RequestInfo struct {
 	RequestURL                    string //Request URL
 	Target                        string //Target domain or hostname
 	Upstream                      string ////Upstream domain or hostname, if the request is forwarded to upstream
+
+	Blocked         bool          //If the request is rejected by Zoraxy rules (access list, rate limit, exploit / captcha detection or mTLS)
+	ProxyRule       string        //Primary hostname (RootOrMatchingDomain) of the proxy rule that handled the request
+	UpstreamLatency time.Duration //Time until the upstream returned its response headers (TTFB), 0 if not measured
+	ContentType     string        //Content-Type header of the upstream response, empty if not proxied
 }
 
 type CollectorOption struct {
@@ -256,11 +273,27 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 			}
 		}()
 
-		c.DailySummary.TotalRequest++
+		//Capture the summary once so a midnight rollover cannot split one request across two days
+		d := c.DailySummary
+
+		atomic.AddInt64(&d.TotalRequest, 1)
 		if ri.Succ {
-			c.DailySummary.ValidRequest++
+			atomic.AddInt64(&d.ValidRequest, 1)
 		} else {
-			c.DailySummary.ErrorRequest++
+			atomic.AddInt64(&d.ErrorRequest, 1)
+		}
+
+		//Record the status class, status code and upstream latency (TTFB)
+		class := ClassifyRequest(ri)
+		d.status.add(class)
+		latency := time.Duration(0)
+		if class != StatusClassBlocked && ri.StatusCode != 101 && ri.UpstreamLatency > 0 {
+			latency = ri.UpstreamLatency
+			d.latency.observe(latency)
+		}
+		d.hourly.record(time.Now().Hour(), class, latency)
+		if ri.StatusCode > 0 {
+			c.incr(d.StatusCodes, d.bounded.StatusCodes, strconv.Itoa(ri.StatusCode))
 		}
 
 		//Store the request info into correct types of maps. c.incr is
@@ -268,15 +301,15 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 		//a capped variant that drops the lowest-count entries when
 		//full. Selected once at startup based on the -stats_max_entries
 		//flag (default 0 = unbounded).
-		c.incr(c.DailySummary.ForwardTypes, c.DailySummary.bounded.ForwardTypes, ri.ForwardType)
+		c.incr(d.ForwardTypes, d.bounded.ForwardTypes, ri.ForwardType)
 
 		//Record the HTTP method of the request
 		if ri.RequestMethod != "" {
-			c.incr(c.DailySummary.RequestMethods, c.DailySummary.bounded.RequestMethods, ri.RequestMethod)
+			c.incr(d.RequestMethods, d.bounded.RequestMethods, ri.RequestMethod)
 		}
 
 		originISO := strings.ToLower(ri.RequestOriginalCountryISOCode)
-		c.incr(c.DailySummary.RequestOrigin, c.DailySummary.bounded.RequestOrigin, originISO)
+		c.incr(d.RequestOrigin, d.bounded.RequestOrigin, originISO)
 
 		//Filter out CF forwarded requests
 		if strings.Contains(ri.IpAddr, ",") {
@@ -288,34 +321,57 @@ func (c *Collector) RecordRequest(ri RequestInfo) {
 			}
 		}
 
-		c.incr(c.DailySummary.RequestClientIp, c.DailySummary.bounded.RequestClientIp, ri.IpAddr)
+		c.incr(d.RequestClientIp, d.bounded.RequestClientIp, ri.IpAddr)
+		if isBotUserAgent(ri.UserAgent) {
+			c.incr(d.BotClientIp, d.bounded.BotClientIp, ri.IpAddr)
+		}
 
 		//Record the referer
 		p := bluemonday.StripTagsPolicy()
 		filteredReferer := p.Sanitize(
 			ri.Referer,
 		)
-		c.incr(c.DailySummary.Referer, c.DailySummary.bounded.Referer, truncateStatKey(filteredReferer))
+		c.incr(d.Referer, d.bounded.Referer, truncateStatKey(filteredReferer))
 
 		//Record the UserAgent
-		c.incr(c.DailySummary.UserAgent, c.DailySummary.bounded.UserAgent, truncateStatKey(ri.UserAgent))
+		c.incr(d.UserAgent, d.bounded.UserAgent, truncateStatKey(ri.UserAgent))
+
+		//Record the proxy rule that handled this request
+		if ri.ProxyRule != "" {
+			c.incr(d.ProxyRules, d.bounded.ProxyRules, truncateStatKey(ri.ProxyRule))
+		}
+
+		//Record the downstream hostname
+		//This is the hostname that the user visited, not the target domain
+		c.incr(d.DownstreamHostnames, d.bounded.DownstreamHostnames, ri.Target)
+
+		//Record the upstream hostname
+		//This is the selected load balancer upstream hostname or ip
+		if ri.Upstream != "" && class != StatusClassBlocked {
+			c.incr(d.UpstreamHostnames, d.bounded.UpstreamHostnames, ri.Upstream)
+		}
+
+		//Record the path pattern of the request
+		requestPath := requestPathOf(ri.RequestURL)
+		pathPattern := requestPathPattern(requestPath)
+		c.incr(d.RequestPaths, d.bounded.RequestPaths, truncateStatKey(pathPattern))
+
+		//Record the path pattern together with the hostname the client requested.
+		//ri.Target is used because the request Host is already rewritten for the upstream here.
+		c.incr(d.HostPaths, d.bounded.HostPaths, truncateStatKey(hostPathKey(ri.Target, pathPattern)))
+
+		//Record the file type of responses served by an upstream
+		if latency > 0 {
+			c.incr(d.FileTypes, d.bounded.FileTypes, classifyFileType(ri.ContentType, requestPath))
+		}
 
 		//Record request URL, if it is a page
 		ext := filepath.Ext(ri.RequestURL)
-
 		if ext != "" && !isWebPageExtension(ext) {
 			return
 		}
 
-		c.incr(c.DailySummary.RequestURL, c.DailySummary.bounded.RequestURL, truncateStatKey(ri.RequestURL))
-
-		//Record the downstream hostname
-		//This is the hostname that the user visited, not the target domain
-		c.incr(c.DailySummary.DownstreamHostnames, c.DailySummary.bounded.DownstreamHostnames, ri.Target)
-
-		//Record the upstream hostname
-		//This is the selected load balancer upstream hostname or ip
-		c.incr(c.DailySummary.UpstreamHostnames, c.DailySummary.bounded.UpstreamHostnames, ri.Upstream)
+		c.incr(d.RequestURL, d.bounded.RequestURL, truncateStatKey(ri.RequestURL))
 	}()
 
 	//ADD MORE HERE IF NEEDED
@@ -365,6 +421,15 @@ func NewDailySummary() *DailySummary {
 		RequestMethods:      &sync.Map{},
 		DownstreamHostnames: &sync.Map{},
 		UpstreamHostnames:   &sync.Map{},
+		StatusCodes:         &sync.Map{},
+		ProxyRules:          &sync.Map{},
+		FileTypes:           &sync.Map{},
+		RequestPaths:        &sync.Map{},
+		HostPaths:           &sync.Map{},
+		BotClientIp:         &sync.Map{},
+		status:              &statusClassCounters{},
+		latency:             &latencyHistogram{},
+		hourly:              &hourlyStats{},
 		bounded:             newBoundedCounters(),
 	}
 }

@@ -98,6 +98,10 @@ type ResponseRewriteRuleSet struct {
 
 	/* HTTP/3 (QUIC) */
 	AltSvc string //Alt-Svc header value to advertise HTTP/3 support; empty = no header
+
+	/* Upstream Response Information (written back by dpcore after the upstream responded) */
+	UpstreamLatency     time.Duration //Time from sending the request until the upstream response headers arrived (TTFB)
+	UpstreamContentType string        //Content-Type header of the upstream response
 }
 
 type DpcoreOptions struct {
@@ -431,6 +435,7 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 	}
 
 	// Perform the request to the backend server
+	roundTripStart := time.Now()
 	res, err := transport.RoundTrip(outreq)
 	if err != nil {
 		if p.Verbal {
@@ -438,6 +443,10 @@ func (p *ReverseProxy) ProxyHTTP(rw http.ResponseWriter, req *http.Request, rrr 
 		}
 		return http.StatusBadGateway, err
 	}
+
+	// Report the upstream response time and content type back to the caller for statistics
+	rrr.UpstreamLatency = time.Since(roundTripStart)
+	rrr.UpstreamContentType = res.Header.Get("Content-Type")
 
 	// An upgraded connection is a raw byte tunnel, not a response body to be rewritten
 	if res.StatusCode == http.StatusSwitchingProtocols {

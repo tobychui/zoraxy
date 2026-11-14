@@ -33,12 +33,11 @@ func (d *DataLoader) GetAllStatisticSummaryInRange(start, end string) ([]*statis
 		return dailySummaries, collectedDates, err
 	}
 
-	//Load all the data from database
+	//Load all the data from database, today's data comes from the in-memory collector
 	for _, key := range keys {
-		thisStat := statistic.DailySummaryExport{}
-		err = d.Database.Read("stats", key, &thisStat)
-		if err == nil {
-			dailySummaries = append(dailySummaries, &thisStat)
+		thisStat := d.loadDay(key)
+		if thisStat != nil {
+			dailySummaries = append(dailySummaries, thisStat)
 			collectedDates = append(collectedDates, key)
 		}
 	}

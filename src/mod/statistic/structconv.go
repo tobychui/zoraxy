@@ -16,10 +16,24 @@ type DailySummaryExport struct {
 	RequestMethods  map[string]int
 	Downstreams     map[string]int
 	Upstreams       map[string]int
+
+	//Dashboard statistics, empty in summaries recorded before they were introduced
+	RequestStatus RequestStatusExport    //Request counts by status class
+	StatusCodes   map[string]int         //HTTP status code: request count
+	ProxyRules    map[string]int         //Proxy rule primary hostname: request count
+	FileTypes     map[string]int         //File type of upstream responses: request count
+	RequestPaths  map[string]int         //Request path pattern: request count
+	HostPaths     map[string]int         //Requested hostname + path pattern: request count
+	BotClientIp   map[string]int         //IPs of clients identified as bots or scripts
+	Latency       LatencyHistogramExport //Upstream TTFB histogram
+	Hourly        []HourlyStatExport     //Per hour counters (24 entries)
 }
 
 func SyncMapToMapStringInt(syncMap *sync.Map) map[string]int {
 	result := make(map[string]int)
+	if syncMap == nil {
+		return result
+	}
 	syncMap.Range(func(key, value interface{}) bool {
 		strKey, okKey := key.(string)
 		intValue, okValue := value.(int)
@@ -56,6 +70,21 @@ func DailySummaryToExport(summary DailySummary) DailySummaryExport {
 	export.RequestMethods = SyncMapToMapStringInt(summary.RequestMethods)
 	export.Downstreams = SyncMapToMapStringInt(summary.DownstreamHostnames)
 	export.Upstreams = SyncMapToMapStringInt(summary.UpstreamHostnames)
+	export.StatusCodes = SyncMapToMapStringInt(summary.StatusCodes)
+	export.ProxyRules = SyncMapToMapStringInt(summary.ProxyRules)
+	export.FileTypes = SyncMapToMapStringInt(summary.FileTypes)
+	export.RequestPaths = SyncMapToMapStringInt(summary.RequestPaths)
+	export.HostPaths = SyncMapToMapStringInt(summary.HostPaths)
+	export.BotClientIp = SyncMapToMapStringInt(summary.BotClientIp)
+	if summary.status != nil {
+		export.RequestStatus = summary.status.export()
+	}
+	if summary.latency != nil {
+		export.Latency = summary.latency.export()
+	}
+	if summary.hourly != nil {
+		export.Hourly = summary.hourly.export()
+	}
 
 	return export
 }
@@ -82,6 +111,15 @@ func DailySummaryExportToSummary(export DailySummaryExport) DailySummary {
 		RequestMethods:      MapStringIntToSyncMap(export.RequestMethods),
 		DownstreamHostnames: MapStringIntToSyncMap(export.Downstreams),
 		UpstreamHostnames:   MapStringIntToSyncMap(export.Upstreams),
+		StatusCodes:         MapStringIntToSyncMap(export.StatusCodes),
+		ProxyRules:          MapStringIntToSyncMap(export.ProxyRules),
+		FileTypes:           MapStringIntToSyncMap(export.FileTypes),
+		RequestPaths:        MapStringIntToSyncMap(export.RequestPaths),
+		HostPaths:           MapStringIntToSyncMap(export.HostPaths),
+		BotClientIp:         MapStringIntToSyncMap(export.BotClientIp),
+		status:              newStatusClassCountersFromExport(export.RequestStatus),
+		latency:             newLatencyHistogramFromExport(export.Latency),
+		hourly:              newHourlyStatsFromExport(export.Hourly),
 		bounded: boundedCounters{
 			ForwardTypes:        newBoundedCounter(len(export.ForwardTypes)),
 			RequestOrigin:       newBoundedCounter(len(export.RequestOrigin)),
@@ -92,6 +130,12 @@ func DailySummaryExportToSummary(export DailySummaryExport) DailySummary {
 			RequestMethods:      newBoundedCounter(len(export.RequestMethods)),
 			DownstreamHostnames: newBoundedCounter(len(export.Downstreams)),
 			UpstreamHostnames:   newBoundedCounter(len(export.Upstreams)),
+			StatusCodes:         newBoundedCounter(len(export.StatusCodes)),
+			ProxyRules:          newBoundedCounter(len(export.ProxyRules)),
+			FileTypes:           newBoundedCounter(len(export.FileTypes)),
+			RequestPaths:        newBoundedCounter(len(export.RequestPaths)),
+			HostPaths:           newBoundedCounter(len(export.HostPaths)),
+			BotClientIp:         newBoundedCounter(len(export.BotClientIp)),
 		},
 	}
 

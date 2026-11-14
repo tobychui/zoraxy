@@ -39,6 +39,18 @@ func mergeDailySummaryExports(exports []*statistic.DailySummaryExport) *statisti
 		RequestMethods:  make(map[string]int),
 		Downstreams:     make(map[string]int),
 		Upstreams:       make(map[string]int),
+		StatusCodes:     make(map[string]int),
+		ProxyRules:      make(map[string]int),
+		FileTypes:       make(map[string]int),
+		RequestPaths:    make(map[string]int),
+		HostPaths:       make(map[string]int),
+		BotClientIp:     make(map[string]int),
+	}
+
+	mergeInto := func(target map[string]int, source map[string]int) {
+		for key, value := range source {
+			target[key] += value
+		}
 	}
 
 	for _, export := range exports {
@@ -81,6 +93,15 @@ func mergeDailySummaryExports(exports []*statistic.DailySummaryExport) *statisti
 		for key, value := range export.Upstreams {
 			mergedExport.Upstreams[key] += value
 		}
+
+		mergeInto(mergedExport.StatusCodes, export.StatusCodes)
+		mergeInto(mergedExport.ProxyRules, export.ProxyRules)
+		mergeInto(mergedExport.FileTypes, export.FileTypes)
+		mergeInto(mergedExport.RequestPaths, export.RequestPaths)
+		mergeInto(mergedExport.HostPaths, export.HostPaths)
+		mergeInto(mergedExport.BotClientIp, export.BotClientIp)
+		mergedExport.RequestStatus.Merge(export.RequestStatus)
+		mergedExport.Latency.Merge(export.Latency)
 	}
 
 	return mergedExport

@@ -44,6 +44,12 @@ type boundedCounters struct {
 	RequestMethods      *boundedCounter
 	DownstreamHostnames *boundedCounter
 	UpstreamHostnames   *boundedCounter
+	StatusCodes         *boundedCounter
+	ProxyRules          *boundedCounter
+	FileTypes           *boundedCounter
+	RequestPaths        *boundedCounter
+	HostPaths           *boundedCounter
+	BotClientIp         *boundedCounter
 }
 
 func newBoundedCounters() boundedCounters {
@@ -57,6 +63,12 @@ func newBoundedCounters() boundedCounters {
 		RequestMethods:      newBoundedCounter(0),
 		DownstreamHostnames: newBoundedCounter(0),
 		UpstreamHostnames:   newBoundedCounter(0),
+		StatusCodes:         newBoundedCounter(0),
+		ProxyRules:          newBoundedCounter(0),
+		FileTypes:           newBoundedCounter(0),
+		RequestPaths:        newBoundedCounter(0),
+		HostPaths:           newBoundedCounter(0),
+		BotClientIp:         newBoundedCounter(0),
 	}
 }
 
