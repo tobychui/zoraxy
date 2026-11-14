@@ -60,3 +60,18 @@ func TestGetWebsiteStatusClosesConnections(t *testing.T) {
 		t.Fatalf("expected at least %d closed connections after %d checks, got %d closed (opened=%d) - connections are leaking", n, n, closedNow, atomic.LoadInt64(&opened))
 	}
 }
+
+// An invalid upstream URL makes http.NewRequest return a nil request.
+// getWebsiteStatus must return an error instead of panicking (nil deref).
+func TestGetWebsiteStatusInvalidURL(t *testing.T) {
+	m := &Monitor{Config: &Config{}}
+	for _, u := range []string{"http://exa mple.com", "http://host\x7f/", "://bad", "http://[::1"} {
+		status, err := m.getWebsiteStatus(u, false, time.Second, "GET")
+		if err == nil {
+			t.Errorf("expected error for %q, got status %d", u, status)
+		}
+	}
+	if _, err := m.getWebsiteStatus("http://127.0.0.1:1/", false, time.Second, "BAD METHOD"); err == nil {
+		t.Errorf("expected error for invalid method")
+	}
+}
