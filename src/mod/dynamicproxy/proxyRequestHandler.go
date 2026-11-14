@@ -236,8 +236,9 @@ func (h *ProxyHandler) hostRequest(w http.ResponseWriter, r *http.Request, targe
 			http.Error(w, "Request canceled", http.StatusRequestTimeout)
 			h.Parent.logRequest(r, false, http.StatusRequestTimeout, "host-http", reqHostname, upstreamHostname, target)
 		} else {
-			serveProxyRequestError(w, 521, h.Parent, errorpage.ActionProxyError)
-			h.Parent.logRequest(r, false, 521, "host-http", reqHostname, upstreamHostname, target)
+			errStatusCode := upstreamErrorStatusCode(statusCode, err)
+			serveProxyRequestError(w, errStatusCode, h.Parent, errorpage.ActionProxyError)
+			h.Parent.logRequest(r, false, errStatusCode, "host-http", reqHostname, upstreamHostname, target)
 		}
 		return
 	}
@@ -386,9 +387,10 @@ func (h *ProxyHandler) vdirRequest(w http.ResponseWriter, r *http.Request, targe
 			//log.Println(err.Error())
 			h.Parent.logRequest(r, false, 404, "vdir-http", reqHostname, target.Domain, target.parent)
 		} else {
-			serveProxyRequestError(w, 521, h.Parent, errorpage.ActionProxyError)
+			errStatusCode := upstreamErrorStatusCode(statusCode, err)
+			serveProxyRequestError(w, errStatusCode, h.Parent, errorpage.ActionProxyError)
 			//log.Println(err.Error())
-			h.Parent.logRequest(r, false, 521, "vdir-http", reqHostname, target.Domain, target.parent)
+			h.Parent.logRequest(r, false, errStatusCode, "vdir-http", reqHostname, target.Domain, target.parent)
 		}
 		return
 	}
@@ -473,6 +475,27 @@ func (router *Router) errorPages() *errorpage.Manager {
 		return nil
 	}
 	return router.Option.ErrorPageManager
+}
+
+// upstreamErrorStatusCode returns the status code for the error page shown
+// when the request to the upstream failed. An upstream that cannot be reached
+// (connection refused, reset, TLS failure...) is a 502 Bad Gateway and one
+// that does not answer in time is a 504 Gateway Timeout, so clients, monitors
+// and retry logic see the standard gateway errors. Anything else keeps the
+// legacy 521.
+func upstreamErrorStatusCode(proxyStatusCode int, err error) int {
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return http.StatusGatewayTimeout
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return http.StatusGatewayTimeout
+	}
+	switch proxyStatusCode {
+	case http.StatusBadGateway, http.StatusGatewayTimeout:
+		return proxyStatusCode
+	}
+	return 521
 }
 
 // Serve error page with status code, using the template assigned to the action in the error page manager

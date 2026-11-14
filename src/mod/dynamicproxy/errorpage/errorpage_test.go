@@ -2,9 +2,11 @@ package errorpage
 
 import (
 	"bytes"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -223,5 +225,26 @@ func TestServeErrorPage(t *testing.T) {
 	nilManager.ServeErrorPage(rec, ActionRateLimit, 0)
 	if rec.Code != 429 || !bytes.Contains(rec.Body.Bytes(), []byte("429")) {
 		t.Errorf("unexpected nil manager response %d", rec.Code)
+	}
+}
+
+// The built-in upstream error page follows the status code of the response
+func TestProxyErrorPageFollowsStatusCode(t *testing.T) {
+	tests := map[int]string{
+		502: "Bad Gateway",
+		504: "Gateway Timeout",
+		521: "Web Server Is Down",
+	}
+	for statusCode, statusText := range tests {
+		page := string(RenderPlaceholders(pageProxyError, statusCode))
+		if !strings.Contains(page, fmt.Sprintf("<title>%d - %s</title>", statusCode, statusText)) {
+			t.Errorf("status %d: title does not show %q", statusCode, statusText)
+		}
+		if !strings.Contains(page, fmt.Sprintf("Error %d</h1>", statusCode)) {
+			t.Errorf("status %d: heading does not show the status code", statusCode)
+		}
+		if strings.Contains(page, "{{") {
+			t.Errorf("status %d: unresolved placeholder left in the page", statusCode)
+		}
 	}
 }
