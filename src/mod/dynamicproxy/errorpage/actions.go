@@ -27,13 +27,14 @@ var (
 type Action string
 
 const (
-	ActionBlacklist  Action = "blacklist" //Client IP is in the blacklist
-	ActionWhitelist  Action = "whitelist" //Client IP is not in the whitelist
-	ActionNotFound   Action = "notfound"  //Default site is set to 404 Not Found mode
-	ActionHostError  Action = "hosterror" //Upstream not available or cannot be resolved
-	ActionProxyError Action = "rperror"   //Unable to connect to the upstream
-	ActionRateLimit  Action = "ratelimit" //Rate limit exceeded
-	ActionVdirBlock  Action = "vdirblock" //Request matched a virtual directory in block access mode
+	ActionBlacklist        Action = "blacklist"        //Client IP is in the blacklist
+	ActionWhitelist        Action = "whitelist"        //Client IP is not in the whitelist
+	ActionNotFound         Action = "notfound"         //Default site is set to 404 Not Found mode
+	ActionHostError        Action = "hosterror"        //Upstream not available or cannot be resolved
+	ActionProxyError       Action = "rperror"          //Unable to connect to the upstream
+	ActionRateLimit        Action = "ratelimit"        //Rate limit exceeded
+	ActionMethodNotAllowed Action = "methodnotallowed" //Request method is not in the allowed methods of the host
+	ActionVdirBlock        Action = "vdirblock"        //Request matched a virtual directory in block access mode
 )
 
 // ActionInfo describes an action that can be assigned a template
@@ -92,6 +93,13 @@ var actions = []*ActionInfo{
 		Name:        "Rate Limited",
 		Description: "Client exceeded the request rate limit of the host",
 		StatusCode:  429,
+		Builtin:     "generic",
+	},
+	{
+		ID:          ActionMethodNotAllowed,
+		Name:        "Method Not Allowed",
+		Description: "Request method is not in the allowed HTTP methods of the host",
+		StatusCode:  405,
 		Builtin:     "generic",
 	},
 	{

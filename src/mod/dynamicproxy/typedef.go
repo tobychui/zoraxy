@@ -310,6 +310,9 @@ type ProxyEndpoint struct {
 	BlockAICrawlers     bool //Enable blocking of AI crawlers and bots
 	MitigationAction    int  //Action to take when exploit/crawler detected (0=404, 1=403, 2=400, 3=Drop, 4=Delay, 5=Captcha)
 
+	//Allowed HTTP Methods
+	AllowedMethods []string //HTTP methods accepted by this endpoint, other methods get a 405 response. Empty to allow all methods
+
 	// Chunked Transfer Encoding
 	DisableChunkedTransferEncoding bool //Disable chunked transfer encoding for this endpoint
 	ForceHTTP11                    bool //Force use HTTP/1.1 for upstream connection

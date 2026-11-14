@@ -82,6 +82,12 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		/* Allowed HTTP Methods */
+		if !sep.IsMethodAllowed(r.Method) {
+			h.handleMethodNotAllowed(w, r, sep)
+			return
+		}
+
 		/* Exploit Detection */
 		if sep.detector != nil {
 			if sep.detector.CheckIsAttack(w, r) {
