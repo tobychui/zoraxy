@@ -81,7 +81,10 @@ func main() {
 			return plugin.SniffResultAccept
 		}
 
-		// If the request URI does not match, we skip this request
+		// If the request URI does not match, we skip this request.
+		// To reject a request without forwarding it anywhere (e.g. a firewall
+		// or bouncer plugin), return dsfr.Deny(http.StatusForbidden, "reason")
+		// instead. Zoraxy then answers the client with that status directly.
 		fmt.Println("Skipping request with UUID: " + dsfr.GetRequestUUID())
 		return plugin.SniffResultSkip
 	})

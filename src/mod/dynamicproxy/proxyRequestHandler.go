@@ -14,6 +14,7 @@ import (
 	"imuslab.com/zoraxy/mod/dynamicproxy/errorpage"
 	"imuslab.com/zoraxy/mod/dynamicproxy/loadbalance"
 	"imuslab.com/zoraxy/mod/dynamicproxy/rewrite"
+	"imuslab.com/zoraxy/mod/plugins"
 	"imuslab.com/zoraxy/mod/statistic"
 	"imuslab.com/zoraxy/mod/websocketproxy"
 )
@@ -422,6 +423,29 @@ func (ep *ProxyEndpoint) shouldCollectStatistic(succ bool) bool {
 
 // This logger collect data for the statistical analysis. For log to file logger, check the Logger and LogHTTPRequest handler
 func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, forwardType string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
+	router.logRequestAs(r, succ, statusCode, forwardType, forwardType, originalHostname, upstreamHostname, endpoint)
+}
+
+// logPluginDenial records a request a dynamic capture plugin rejected, the
+// same way access rule blocks are recorded. The access log line names the
+// plugin and its short reason (plugin-deny:<plugin id>:<reason>); statistics
+// count every denial as "plugin-deny", so plugin-chosen values cannot grow
+// the statistic maps.
+func (router *Router) logPluginDenial(r *http.Request, denial *plugins.Denial, originalHostname string, endpoint *ProxyEndpoint) {
+	plugin := denial.Plugin
+	if plugin == "" {
+		plugin = "unknown"
+	}
+	logClass := "plugin-deny:" + plugin
+	if denial.Reason != "" {
+		logClass += ":" + denial.Reason
+	}
+	router.logRequestAs(r, false, denial.Status, logClass, "plugin-deny", originalHostname, "", endpoint)
+}
+
+// logRequestAs is logRequest with separate request classes for the access
+// log line (logClass) and the statistics (statClass).
+func (router *Router) logRequestAs(r *http.Request, succ bool, statusCode int, logClass string, statClass string, originalHostname string, upstreamHostname string, endpoint *ProxyEndpoint) {
 	// Resolve the client IP once via the trusted-proxy aware resolver so that
 	// untrusted proxy headers (X-Forwarded-For, X-Real-IP, etc.) cannot be used
 	// to spoof the IP recorded in the log file or the statistics collector.
@@ -431,7 +455,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 	// e.g. Redirection matching rule
 	if endpoint == nil || endpoint.shouldLogRequest(succ) {
 		// log the http request to file
-		router.Option.Logger.LogHTTPRequest(r, forwardType, statusCode, originalHostname, upstreamHostname, clientIP)
+		router.Option.Logger.LogHTTPRequest(r, logClass, statusCode, originalHostname, upstreamHostname, clientIP)
 	}
 
 	if endpoint == nil || router.Option.StatisticCollector == nil {
@@ -454,7 +478,7 @@ func (router *Router) logRequest(r *http.Request, succ bool, statusCode int, for
 				RequestOriginalCountryISOCode: countryISOCode,
 				Succ:                          succ,
 				StatusCode:                    statusCode,
-				ForwardType:                   forwardType,
+				ForwardType:                   statClass,
 				RequestMethod:                 r.Method,
 				Referer:                       r.Referer(),
 				UserAgent:                     r.UserAgent(),

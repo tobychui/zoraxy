@@ -125,9 +125,16 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//Plugin routing
-		if h.Parent.Option.PluginManager != nil && h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags, h.Parent.GetClientIPForEndpoint(r, sep)) {
-			//Request handled by subroute
-			return
+		if h.Parent.Option.PluginManager != nil {
+			handled, denial := h.Parent.Option.PluginManager.HandleRoute(w, r, sep.Tags, h.Parent.GetClientIPForEndpoint(r, sep))
+			if denial != nil {
+				//A plugin rejected the request; log it like an access rule block
+				h.Parent.logPluginDenial(r, denial, domainOnly, sep)
+			}
+			if handled {
+				//Request handled by subroute
+				return
+			}
 		}
 
 		//Check if any virtual directory rules matches
