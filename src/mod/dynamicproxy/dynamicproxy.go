@@ -253,60 +253,8 @@ func (router *Router) StartProxyService() error {
 		if router.Option.Port != 80 && router.Option.ListenOnPort80 && !netutils.CheckIfPortOccupied(80) {
 			//Add a 80 to 443 redirector
 			httpServer := &http.Server{
-				Addr: ":80",
-				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					//Check if the domain requesting allow non TLS mode
-					domainOnly := r.Host
-					if strings.Contains(r.Host, ":") {
-						hostPath := strings.Split(r.Host, ":")
-						domainOnly = hostPath[0]
-					}
-					sep := router.GetProxyEndpointFromHostname(domainOnly)
-					if sep != nil && sep.BypassGlobalTLS {
-						//Allow routing via non-TLS handler
-						router.handleNonTLSRequest(w, r, sep)
-						return
-					}
-
-					if router.Option.ForceHttpsRedirect {
-						//Redirect to https is enabled
-						protocol := "https://"
-						if router.Option.Port == 443 {
-							http.Redirect(w, r, protocol+r.Host+r.RequestURI, http.StatusTemporaryRedirect)
-						} else {
-							http.Redirect(w, r, protocol+r.Host+":"+strconv.Itoa(router.Option.Port)+r.RequestURI, http.StatusTemporaryRedirect)
-						}
-					} else {
-						//Do not do redirection
-						if sep != nil {
-							//Sub-domain exists but not allow non-TLS access
-							w.WriteHeader(http.StatusBadRequest)
-							w.Write([]byte("400 - Bad Request"))
-						} else {
-							//No defined sub-domain
-							if router.Root.DefaultSiteOption == DefaultSite_NoResponse {
-								//No response. Just close the connection
-								hijacker, ok := w.(http.Hijacker)
-								if !ok {
-									w.Header().Set("Connection", "close")
-									return
-								}
-								conn, _, err := hijacker.Hijack()
-								if err != nil {
-									w.Header().Set("Connection", "close")
-									return
-								}
-								conn.Close()
-							} else {
-								//Default behavior
-								router.mux.ServeHTTP(w, r)
-							}
-
-						}
-
-					}
-
-				}),
+				Addr:              ":80",
+				Handler:           http.HandlerFunc(router.handlePort80Request),
 				ReadHeaderTimeout: time.Duration(router.Option.ReadHeaderTimeout) * time.Second,
 				WriteTimeout:      time.Duration(router.Option.WriteTimeout) * time.Second,
 				IdleTimeout:       time.Duration(router.Option.IdleTimeout) * time.Second,
@@ -402,9 +350,71 @@ func (router *Router) StartProxyService() error {
 	return nil
 }
 
+// handlePort80Request dispatches incoming plain HTTP requests received on the port 80 listener.
+func (router *Router) handlePort80Request(w http.ResponseWriter, r *http.Request) {
+	//Check if the domain requesting allow non TLS mode
+	domainOnly := r.Host
+	if strings.Contains(r.Host, ":") {
+		hostPath := strings.Split(r.Host, ":")
+		domainOnly = hostPath[0]
+	}
+	sep := router.GetProxyEndpointFromHostname(domainOnly)
+	if sep != nil && sep.BypassGlobalTLS {
+		//Allow routing via non-TLS handler
+		router.handleNonTLSRequest(w, r, sep)
+		return
+	}
+
+	if router.Option.ForceHttpsRedirect {
+		//Redirect to https is enabled
+		protocol := "https://"
+		if router.Option.Port == 443 {
+			http.Redirect(w, r, protocol+r.Host+r.RequestURI, http.StatusTemporaryRedirect)
+		} else {
+			http.Redirect(w, r, protocol+r.Host+":"+strconv.Itoa(router.Option.Port)+r.RequestURI, http.StatusTemporaryRedirect)
+		}
+		return
+	}
+
+	//Do not do redirection
+	if sep != nil {
+		//Sub-domain exists but not allow non-TLS access
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("400 - Bad Request"))
+		return
+	}
+
+	//No defined sub-domain
+	if router.Root.DefaultSiteOption == DefaultSite_NoResponse {
+		//No response. Just close the connection
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			w.Header().Set("Connection", "close")
+			return
+		}
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			w.Header().Set("Connection", "close")
+			return
+		}
+		conn.Close()
+		return
+	}
+
+	//Default behavior
+	router.mux.ServeHTTP(w, r)
+}
+
 // handleNonTLSRequest handles HTTP requests for endpoints that allow plain HTTP access
 // This is the common handler logic used by both port 80 listener and secondary listeners
 func (router *Router) handleNonTLSRequest(w http.ResponseWriter, r *http.Request, sep *ProxyEndpoint) {
+	// Special routing rules (e.g. ACME HTTP-01 challenge handler) must take
+	// precedence over access/rate-limit/auth/upstream routing, matching ProxyHandler.ServeHTTP.
+	if matchedRoutingRule := router.GetMatchingRoutingRule(r); matchedRoutingRule != nil {
+		matchedRoutingRule.Route(w, r)
+		return
+	}
+
 	//Access Check (blacklist / whitelist)
 	ruleID := sep.AccessFilterUUID
 	if sep.AccessFilterUUID == "" {
