@@ -33,16 +33,14 @@ func isValidPort(port string) bool {
 }
 
 func (c *ProxyRelayInstance) connCopy(conn1 net.Conn, conn2 net.Conn, wg *sync.WaitGroup, accumulator *int64) {
-	n, err := io.Copy(conn1, conn2)
-	if err != nil {
-		return
-	}
+	defer wg.Done()
+	n, _ := io.Copy(conn1, conn2)
 	*accumulator += n //Add to accumulator
+	// Close both ends whether the copy ended with EOF or an error (e.g. the other
+	// direction already closed the socket), so the opposite copy returns too.
 	conn1.Close()
+	conn2.Close()
 	c.LogMsg("[←] close the connect at local:["+conn1.LocalAddr().String()+"] and remote:["+conn1.RemoteAddr().String()+"]", nil)
-	//conn2.Close()
-	//c.LogMsg("[←] close the connect at local:["+conn2.LocalAddr().String()+"] and remote:["+conn2.RemoteAddr().String()+"]", nil)
-	wg.Done()
 }
 
 func WriteProxyProtocolHeader(dst net.Conn, src net.Conn, version ProxyProtocolVersion) error {
