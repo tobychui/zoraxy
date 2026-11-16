@@ -1,5 +1,5 @@
 ## Build Zoraxy
-FROM docker.io/golang:alpine AS build-zoraxy
+FROM docker.io/golang:1.27.3-alpine3.24 AS build-zoraxy
 RUN mkdir -p /opt/zoraxy/source/ &&\
     mkdir -p /usr/local/bin/
 
@@ -12,36 +12,41 @@ RUN go mod tidy &&\
     go build -o /usr/local/bin/zoraxy &&\
     chmod 755 /usr/local/bin/zoraxy
 
+# Build entrypoint
+FROM docker.io/golang:1.27.3-alpine3.24 AS build-entrypoint
+
+COPY ./entrypoint.go /opt/zoraxy/entrypoint/
+
+WORKDIR /opt/zoraxy/entrypoint/
+
+RUN go build -o /usr/local/bin/zoraxy-entrypoint entrypoint.go &&\
+    chmod 755 /usr/local/bin/zoraxy-entrypoint
 
 ## Build ZeroTier
-FROM docker.io/rust:1.79-alpine AS build-zerotier
-RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano
-
-RUN mkdir -p /opt/zerotier/source/ &&\
-    mkdir -p /usr/local/bin/
+FROM docker.io/rust:1.99-alpine AS build-zerotier
 
 WORKDIR /opt/zerotier/source/
 
-# Version is pinned because newer versions don't work for whatever reason
-RUN curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.10.6 &&\
+RUN apk add --update --no-cache curl make gcc g++ linux-headers openssl-dev nano &&\
+    mkdir -p /opt/zerotier/source/ &&\
+    mkdir -p /usr/local/bin/ &&\
+    curl -Lo ZeroTierOne.tar.gz https://codeload.github.com/zerotier/ZeroTierOne/tar.gz/refs/tags/1.14.2 &&\
     tar -xzvf ZeroTierOne.tar.gz &&\
-    cd ZeroTierOne-*/zeroidc &&\
-    cargo update -p getrandom &&\
-    cd .. &&\
+    cd ZeroTierOne-* &&\
     make -f make-linux.mk &&\
     mv ./zerotier-one /usr/local/bin/zerotier-one &&\
     chmod 755 /usr/local/bin/zerotier-one
 
-
 ## Main
-FROM docker.io/alpine:latest
-RUN apk add --update --no-cache tzdata python3 sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
+FROM docker.io/alpine:3.24
+
+RUN apk add --update --no-cache tzdata sudo netcat-openbsd libressl-dev openssh ca-certificates libc6-compat libstdc++ &&\
     rm -rf /sbin/apk /var/cache/apk/* /tmp/* # Simple cleanup
 
-COPY --chmod=700 ./entrypoint.py /opt/zoraxy/
 
 COPY --from=build-zerotier /usr/local/bin/zerotier-one /usr/local/bin/zerotier-one
 COPY --from=build-zoraxy /usr/local/bin/zoraxy /usr/local/bin/zoraxy
+COPY --from=build-entrypoint /usr/local/bin/zoraxy-entrypoint /usr/local/bin/zoraxy-entrypoint
 
 RUN mkdir -p /opt/zoraxy/plugin/ &&\
     echo "tun" | tee -a /etc/modules # For ZeroTier
@@ -72,7 +77,7 @@ VOLUME [ "/opt/zoraxy/config/" ]
 
 LABEL com.imuslab.zoraxy.container-identifier="Zoraxy"
 
-ENTRYPOINT [ "python3", "-u", "/opt/zoraxy/entrypoint.py" ]
+ENTRYPOINT [ "/usr/local/bin/zoraxy-entrypoint" ]
 
 HEALTHCHECK --start-period=5s --interval=15s --timeout=5s --retries=3 CMD nc -vz 127.0.0.1 $PORT || exit 1
 
