@@ -89,6 +89,8 @@ Standalone mode is the default mode for Zoraxy. This allows a single account to 
 sudo ./zoraxy -port=:8000
 ```
 
+Community-maintained `.deb` and `.rpm` packages of the official binaries, with a systemd service, are available at [fdefilippo/zoraxy-linux-packages](https://github.com/fdefilippo/zoraxy-linux-packages).
+
 #### Windows
 
 Download the binary executable and double click the binary file to start it.
