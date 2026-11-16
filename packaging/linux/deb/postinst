@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+configure)
+    getent group zoraxy >/dev/null || groupadd --system zoraxy
+    getent passwd zoraxy >/dev/null || \
+        useradd --system --gid zoraxy --home-dir /var/lib/zoraxy \
+            --shell /usr/sbin/nologin --comment "Zoraxy reverse proxy" zoraxy
+    chown zoraxy:zoraxy /var/lib/zoraxy
+    chmod 0750 /var/lib/zoraxy
+
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        if [ -n "$2" ]; then
+            systemctl try-restart zoraxy.service >/dev/null 2>&1 || true
+        fi
+    fi
+    if [ -z "$2" ]; then
+        echo "Zoraxy installed. Review /etc/default/zoraxy, then: systemctl enable --now zoraxy"
+    fi
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
+# The data in /var/lib/zoraxy (certificates, configuration, database) and the
+# zoraxy user are kept on purge: remove them by hand if no longer needed.
+
+exit 0

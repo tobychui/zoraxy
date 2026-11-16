@@ -1,0 +1,13 @@
+# Command line options for the zoraxy service (see "zoraxy -h").
+# Paths are relative to the data directory /var/lib/zoraxy.
+#
+# The management interface listens on :8000 by default. On the first visit it
+# asks to create the admin account, so expose it only to trusted networks, e.g.
+#   ZORAXY_OPTS="-port=127.0.0.1:8000"
+#
+# Other common options:
+#   -mdns=false          disable the mDNS scanner and transponder
+#   -fastgeoip=false     lower memory usage on small devices
+#
+# Apply changes with: systemctl restart zoraxy
+ZORAXY_OPTS=""

@@ -1,0 +1,15 @@
+Package: zoraxy
+Version: @VERSION@-@RELEASE@
+Architecture: @ARCH@
+Maintainer: @MAINTAINER@
+Installed-Size: @SIZE@
+Section: net
+Priority: optional
+Homepage: https://github.com/tobychui/zoraxy
+Description: General purpose HTTP reverse proxy and forwarding tool
+ Zoraxy is a general purpose HTTP reverse proxy and forwarding tool with a
+ web management interface: TLS/ACME certificates, access control, load
+ balancing, stream (TCP/UDP) proxy, statistics and plugins.
+ .
+ The service runs as the "zoraxy" user and keeps its data in /var/lib/zoraxy.
+ Options are set in /etc/default/zoraxy.
