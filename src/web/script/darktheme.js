@@ -21,7 +21,6 @@ function _darkThemeHandleApplyChange(){
     if (isDarkTheme){
         $("body").addClass("darkTheme");
         $("#themeColorButton").html(`<i class="ui sun icon"></i>`);
-        localStorage.setItem("theme", "dark");
 
         //Check if the page is still loading, if not change the logo
         if (document.readyState == "complete"){
@@ -35,7 +34,6 @@ function _darkThemeHandleApplyChange(){
     }else{
         $("body").removeClass("darkTheme")
         $("#themeColorButton").html(`<i class="ui moon icon"></i>`);
-        localStorage.setItem("theme", "light");
         //By default the page is white theme. So no need to change the logo if page is still loading
         if (document.readyState == "complete"){
             //Switching back to light theme
@@ -44,8 +42,28 @@ function _darkThemeHandleApplyChange(){
     }
 }
 
-if (localStorage.getItem("theme") == "dark"){
-    setDarkTheme(true);
-}else{
-    setDarkTheme(false);
+/*
+    Theme selection:
+    - If the user has clicked the toggle button, the choice is stored in localStorage
+      ("dark" or "light", written by toggleTheme() in index.html) and always wins.
+    - Otherwise, follow the system / browser setting (prefers-color-scheme),
+      including live changes while the page is open.
+*/
+const _systemDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+function _hasStoredTheme(){
+    let stored = localStorage.getItem("theme");
+    return stored == "dark" || stored == "light";
 }
+
+if (_hasStoredTheme()){
+    setDarkTheme(localStorage.getItem("theme") == "dark");
+}else{
+    setDarkTheme(_systemDarkQuery.matches);
+}
+
+_systemDarkQuery.addEventListener("change", function(e){
+    if (!_hasStoredTheme()){
+        setDarkTheme(e.matches);
+    }
+});

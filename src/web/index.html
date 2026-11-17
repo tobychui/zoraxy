@@ -483,6 +483,7 @@
                 let editorSideWrapper = $("#httprpEditModal .wrapper_frame");
                 if ($("body").hasClass("darkTheme")){
                     setDarkTheme(false);
+                    localStorage.setItem("theme", "light"); //Explicit user choice, overrides the system theme
                     //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
                     if ($(".sideWrapper").is(":visible")){
                         $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(false);
@@ -502,6 +503,7 @@
                     }
                 }else{
                     setDarkTheme(true);
+                    localStorage.setItem("theme", "dark"); //Explicit user choice, overrides the system theme
                     //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
                     if ($(".sideWrapper").is(":visible")){
                         $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(true);
