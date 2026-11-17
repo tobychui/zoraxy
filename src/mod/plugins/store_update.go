@@ -50,6 +50,8 @@ func storeVersionIsNewer(storeCopy *DownloadablePlugin, installedCopy *Plugin) b
 // If the same plugin is offered by multiple sources, the one with the highest version wins.
 func (m *Manager) getDownloadablePluginByID(pluginID string) *DownloadablePlugin {
 	var best *DownloadablePlugin
+	m.pluginCacheMutex.RLock()
+	defer m.pluginCacheMutex.RUnlock()
 	for _, p := range m.Options.DownloadablePluginCache {
 		if p.PluginIntroSpect.ID != pluginID {
 			continue
