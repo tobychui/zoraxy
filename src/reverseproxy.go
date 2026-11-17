@@ -520,6 +520,14 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
 	}
 
+	// Allowed HTTP methods, empty to allow all methods
+	allowedMethodsStr, _ := utils.PostPara(r, "allowedMethods")
+	allowedMethods, err := dynamicproxy.ParseAllowedMethods(allowedMethodsStr)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
 	// WebSocket options
 	disableWebSocket, _ := utils.PostBool(r, "disableWebSocket")
 	websocketTimeoutStr, _ := utils.PostPara(r, "websocketTimeout")
@@ -627,6 +635,7 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 			BlockCommonExploits: blockCommonExploits,
 			BlockAICrawlers:     blockAICrawlers,
 			MitigationAction:    mitigationAction,
+			AllowedMethods:      allowedMethods,
 
 			// WebSocket Options
 			DisableWebSocket:               disableWebSocket,
@@ -824,6 +833,18 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 		mitigationAction, _ = strconv.Atoi(mitigationActionStr)
 	}
 
+	// Allowed HTTP methods, empty to allow all methods. The list is only changed when
+	// the parameter is sent, so API clients written before this option cannot clear it by accident
+	var allowedMethods []string
+	_, allowedMethodsSet := r.PostForm["allowedMethods"]
+	if allowedMethodsSet {
+		allowedMethods, err = dynamicproxy.ParseAllowedMethods(r.PostForm.Get("allowedMethods"))
+		if err != nil {
+			utils.SendErrorResponse(w, err.Error())
+			return
+		}
+	}
+
 	//Load the previous basic auth credentials from current proxy rules
 	targetProxyEntry, err := dynamicProxyRouter.LoadProxy(rootNameOrMatchingDomain)
 	if err != nil {
@@ -892,6 +913,9 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 	newProxyEndpoint.BlockCommonExploits = blockCommonExploits
 	newProxyEndpoint.BlockAICrawlers = blockAICrawlers
 	newProxyEndpoint.MitigationAction = mitigationAction
+	if allowedMethodsSet {
+		newProxyEndpoint.AllowedMethods = allowedMethods
+	}
 	newProxyEndpoint.Tags = tags
 
 	//Prepare to replace the current routing rule
