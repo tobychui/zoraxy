@@ -52,11 +52,10 @@ func (s *Store) search(ip string) string {
 func constrctTrieTree(data [][]string) *trie {
 	tt := newTrie()
 	for _, entry := range data {
-		startIp := entry[0]
-		endIp := entry[1]
-		cc := entry[2]
-		tt.insert(startIp, cc)
-		tt.insert(endIp, cc)
+		if len(entry) < 3 {
+			continue
+		}
+		tt.insertRange(entry[0], entry[1], entry[2])
 	}
 
 	// Sort the ranges for binary search after all inserts

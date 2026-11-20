@@ -73,13 +73,53 @@ func ipv6ToUint64Pair(ip net.IP) (uint64, uint64) {
 	return high, low
 }
 
+// nextIP returns the address right after the given one. ok is false if the
+// given address is the last address of its address family
+func nextIP(ip net.IP) (next net.IP, ok bool) {
+	if ipv4 := ip.To4(); ipv4 != nil {
+		//Use the 4 bytes form so 255.255.255.255 does not overflow into
+		//the IPv6 address space
+		ip = ipv4
+	}
+	next = make(net.IP, len(ip))
+	copy(next, ip)
+	for i := len(next) - 1; i >= 0; i-- {
+		next[i]++
+		if next[i] != 0 {
+			return next, true
+		}
+	}
+	return nil, false
+}
+
+// insertRange adds an IP range with its country code. Only the start of the
+// range is stored with the country code. The address right after the end of
+// the range is stored with an empty (unknown) country code, so addresses in a
+// gap between two ranges are not resolved to the country of the previous range
+func (t *trie) insertRange(startIP string, endIP string, cc string) {
+	parsedStartIP := net.ParseIP(startIP)
+	parsedEndIP := net.ParseIP(endIP)
+	if parsedStartIP == nil || parsedEndIP == nil {
+		return
+	}
+
+	t.insertIP(parsedStartIP, cc)
+	if afterEndIP, ok := nextIP(parsedEndIP); ok {
+		t.insertIP(afterEndIP, "")
+	}
+}
+
 // insert adds an IP address with its country code
 func (t *trie) insert(ipAddr string, cc string) {
 	parsedIP := net.ParseIP(ipAddr)
 	if parsedIP == nil {
 		return
 	}
+	t.insertIP(parsedIP, cc)
+}
 
+// insertIP adds a parsed IP address with its country code
+func (t *trie) insertIP(parsedIP net.IP, cc string) {
 	ccIdx := t.getOrCreateCCIndex(cc)
 
 	if parsedIP.To4() != nil {
@@ -116,6 +156,43 @@ func (t *trie) build() {
 		sort.Slice(t.ranges, func(i, j int) bool {
 			return t.ranges[i].startIP < t.ranges[j].startIP
 		})
+	}
+
+	t.removeDuplicatedEntries()
+}
+
+// removeDuplicatedEntries merge the entries sharing the same address after
+// sorting. This happens when a range starts right after the end of the
+// previous one, where the start of the next range must win over the unknown
+// marker added after the end of the previous range (see insertRange)
+func (t *trie) removeDuplicatedEntries() {
+	gapIdx, hasGapMarker := t.ccToIndex[""]
+	if t.isIPv6 {
+		compacted := make([]ipRangeV6, 0, len(t.rangesV6))
+		for _, entry := range t.rangesV6 {
+			last := len(compacted) - 1
+			if last >= 0 && compacted[last].startIPHigh == entry.startIPHigh && compacted[last].startIPLow == entry.startIPLow {
+				if hasGapMarker && compacted[last].ccIdx == gapIdx {
+					compacted[last] = entry
+				}
+				continue
+			}
+			compacted = append(compacted, entry)
+		}
+		t.rangesV6 = append([]ipRangeV6(nil), compacted...)
+	} else {
+		compacted := make([]ipRange, 0, len(t.ranges))
+		for _, entry := range t.ranges {
+			last := len(compacted) - 1
+			if last >= 0 && compacted[last].startIP == entry.startIP {
+				if hasGapMarker && compacted[last].ccIdx == gapIdx {
+					compacted[last] = entry
+				}
+				continue
+			}
+			compacted = append(compacted, entry)
+		}
+		t.ranges = append([]ipRange(nil), compacted...)
 	}
 }
 

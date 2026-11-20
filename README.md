@@ -264,3 +264,6 @@ If you like the project and want to support us, please consider a donation. You 
 
 This project is open-sourced under AGPL. I open-sourced this project so everyone can check for security issues and benefit all users. **This software is intended to be free of charge. If you have acquired this software from a third-party seller, the authors of this repository bears no responsibility for any technical difficulties assistance or support.**
 
+### Third-Party Data
+
+Zoraxy ships with the [IP Geolocation by DB-IP](https://db-ip.com) "IP to Country Lite" database (via the [ip-location-db](https://github.com/sapics/ip-location-db) project) for country lookups, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

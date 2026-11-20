@@ -55,7 +55,7 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 	// Test an IP address that should return a valid country code
 	knownIpCountryMap := [][]string{
 		{"3.224.220.101", "US"},
-		{"176.113.115.113", "RU"},
+		{"77.88.55.88", "RU"},
 		{"65.21.233.213", "FI"},
 		{"94.23.207.193", "FR"},
 		{"77.131.21.232", "FR"},
@@ -66,6 +66,11 @@ func TestResolveCountryCodeFromIP(t *testing.T) {
 		{"2a01:4f9:3070:124a:1234:5678:9abc:def0", "DE"},
 		{"2a01:4f9:3070:124b:dead:beef:cafe:1", "DE"},
 		{"2a00:20:4290:164d:a4a3:efb6:aea1:4b8e", "DE"},
+		//Malaysian ISP prefixes previously resolved as AU by the deprecated
+		//geo-whois-asn-country dataset
+		{"2001:d08:1234::1", "MY"},
+		{"2001:f40:1234::1", "MY"},
+		{"2001:e68:1234::1", "MY"},
 		{"100.67.181.105", "CarrierNAT"},
 	}
 

@@ -23,8 +23,18 @@ import (
 )
 
 const (
-	ipv4UpdateSource = "https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country/geo-whois-asn-country-ipv4.csv"
-	ipv6UpdateSource = "https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country/geo-whois-asn-country-ipv6.csv"
+	/*
+		The geoip dataset is the DB-IP "IP to Country Lite" database, licensed
+		under CC BY 4.0 by DB-IP (https://db-ip.com), as repackaged into the
+		start,end,CC csv format by the ip-location-db project. The previously
+		used @ip-location-db/geo-whois-asn-country npm package is deprecated
+		upstream and produces incorrect results, especially for IPv6.
+
+		Attribution is required by the license, see the "IP Geolocation by
+		DB-IP" links in the web UI pages that display the lookup results
+	*/
+	ipv4UpdateSource = "https://github.com/sapics/ip-location-db/releases/download/latest/dbip-country-ipv4.csv"
+	ipv6UpdateSource = "https://github.com/sapics/ip-location-db/releases/download/latest/dbip-country-ipv6.csv"
 
 	//GeoDBUpdateInterval is the base interval between two scheduled updates
 	GeoDBUpdateInterval = 7 * 24 * time.Hour
