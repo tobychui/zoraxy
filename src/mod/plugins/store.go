@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,16 +57,64 @@ func (m *Manager) UpdateDownloadablePluginList() error {
 		return lastErr
 	}
 
+	m.pluginCacheMutex.Lock()
 	m.Options.DownloadablePluginCache = newCache
 	m.Options.LastSuccPluginSyncTime = time.Now().Unix()
+	m.pluginCacheMutex.Unlock()
 
 	return nil
 }
 
+// StartAutoSync re-syncs the plugin list from the plugin store URLs every
+// interval, so that new plugins and plugin updates show up without a manual resync.
+// The first sync is not done here, the caller is expected to do the initial sync.
+func (m *Manager) StartAutoSync(interval time.Duration) error {
+	m.autoSyncMutex.Lock()
+	defer m.autoSyncMutex.Unlock()
+	if m.autoSyncStop != nil {
+		return errors.New("plugin list auto sync already started")
+	}
+
+	stop := make(chan struct{})
+	m.autoSyncStop = stop
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				err := m.UpdateDownloadablePluginList()
+				if err != nil {
+					m.Log("Failed to auto sync plugin list from plugin store", err)
+				} else {
+					m.Log("Plugin list auto synced from plugin store", nil)
+				}
+			case <-stop:
+				return
+			}
+		}
+	}()
+	return nil
+}
+
+// StopAutoSync stops the plugin list auto sync, it is safe to call if it is not running
+func (m *Manager) StopAutoSync() {
+	m.autoSyncMutex.Lock()
+	defer m.autoSyncMutex.Unlock()
+	if m.autoSyncStop != nil {
+		close(m.autoSyncStop)
+		m.autoSyncStop = nil
+	}
+}
+
+// pluginStoreClient is used to fetch the plugin store indexes. The timeout makes sure
+// a hanging store source cannot block the (auto) sync forever.
+var pluginStoreClient = &http.Client{Timeout: 30 * time.Second}
+
 // Get the plugin list from the URL
 func (m *Manager) getPluginListFromURL(url string) ([]*DownloadablePlugin, error) {
 	//Get the plugin list from the URL
-	resp, err := http.Get(url)
+	resp, err := pluginStoreClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +148,8 @@ func (m *Manager) getPluginListFromURL(url string) ([]*DownloadablePlugin, error
 
 func (m *Manager) ListDownloadablePlugins() []*DownloadablePlugin {
 	//List all downloadable plugins
+	m.pluginCacheMutex.RLock()
+	defer m.pluginCacheMutex.RUnlock()
 	if len(m.Options.DownloadablePluginCache) == 0 {
 		return []*DownloadablePlugin{}
 	}

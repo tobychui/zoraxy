@@ -56,6 +56,7 @@ const (
 	MDNS_IDENTIFY_VENDOR         = "imuslab.com"
 	MDNS_SCAN_TIMEOUT            = 30 /* Seconds */
 	MDNS_SCAN_UPDATE_INTERVAL    = 15 /* Minutes */
+	PLUGIN_LIST_SYNC_INTERVAL    = 24 /* Hours */
 	GEODB_CACHE_CLEAR_INTERVAL   = 15 /* Minutes */
 	CSRF_COOKIENAME              = "zoraxy_csrf"
 	LOG_PREFIX                   = "zr"

@@ -808,10 +808,22 @@
     asRenderAppGrid();
   }
 
+  // Show the number of available app updates next to the App Store entry of the main menu,
+  // so that updates are visible without opening the App Store tab
+  function asRenderMenuBadge(updateCount) {
+    const menuItem = $("#mainmenu .item[tag='appstore']");
+    menuItem.find(".as-menu-badge").remove();
+    if (updateCount > 0) {
+      menuItem.append(`<span class="ui mini orange circular label as-menu-badge" title="${updateCount} app update(s) available">${updateCount}</span>`);
+    }
+  }
+
   function asRenderStats() {
     $("#asStatTotal").text(asAvailableApps.length);
     $("#asStatInstalled").text(asInstalledApps.length);
-    $("#asStatUpdates").text(asUpdateInfos.filter(u => u.updateAvailable).length);
+    const updateCount = asUpdateInfos.filter(u => u.updateAvailable).length;
+    $("#asStatUpdates").text(updateCount);
+    asRenderMenuBadge(updateCount);
 
     const categories = new Set(asAvailableApps.map(a => asGetAppCategory(a)));
     $("#asStatCategories").text(categories.size);

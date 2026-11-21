@@ -246,6 +246,8 @@ func (m *Manager) LogForPlugin(p *Plugin, message string, err error) {
 
 // Terminate all plugins and exit
 func (m *Manager) Close() {
+	m.StopAutoSync()
+
 	m.loadedPluginsMutex.Lock()
 	pluginsToStop := make([]*Plugin, 0)
 	for _, plugin := range m.LoadedPlugins {
