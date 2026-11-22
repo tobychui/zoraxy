@@ -61,16 +61,17 @@ the plugin shell return this payload as JSON and exit
 */
 type IntroSpect struct {
 	/* Plugin metadata */
-	ID            string     `json:"id"`             //Unique ID of your plugin, recommended using your own domain in reverse like com.yourdomain.pluginname
-	Name          string     `json:"name"`           //Name of your plugin
-	Author        string     `json:"author"`         //Author name of your plugin
-	AuthorContact string     `json:"author_contact"` //Author contact of your plugin, like email
-	Description   string     `json:"description"`    //Description of your plugin
-	URL           string     `json:"url"`            //URL of your plugin
-	Type          PluginType `json:"type"`           //Type of your plugin, Router(0) or Utilities(1)
-	VersionMajor  int        `json:"version_major"`  //Major version of your plugin
-	VersionMinor  int        `json:"version_minor"`  //Minor version of your plugin
-	VersionPatch  int        `json:"version_patch"`  //Patch version of your plugin
+	ID            string     `json:"id"`                //Unique ID of your plugin, recommended using your own domain in reverse like com.yourdomain.pluginname
+	Name          string     `json:"name"`              //Name of your plugin
+	Author        string     `json:"author"`            //Author name of your plugin
+	AuthorContact string     `json:"author_contact"`    //Author contact of your plugin, like email
+	Description   string     `json:"description"`       //Description of your plugin
+	URL           string     `json:"url"`               //URL of your plugin
+	Type          PluginType `json:"type"`              //Type of your plugin, Router(0) or Utilities(1)
+	VersionMajor  int        `json:"version_major"`     //Major version of your plugin
+	VersionMinor  int        `json:"version_minor"`     //Minor version of your plugin
+	VersionPatch  int        `json:"version_patch"`     //Patch version of your plugin
+	Preview       bool       `json:"preview,omitempty"` //Optional: mark this plugin as a preview / beta release, shown as a "Preview" tag in the plugin store
 
 	/*
 
