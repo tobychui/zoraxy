@@ -952,6 +952,41 @@
    }
   ]
  },
+ "comlaude": {
+  "Name": "comlaude",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "GroupID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "connbyte": {
   "Name": "connbyte",
   "ConfigableFields": [
@@ -1670,6 +1705,33 @@
    }
   ]
  },
+ "domainchief": {
+  "Name": "domainchief",
+  "ConfigableFields": [
+   {
+    "Title": "APIToken",
+    "Datatype": "string"
+   },
+   {
+    "Title": "TeamSlug",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
  "domeneshop": {
   "Name": "domeneshop",
   "ConfigableFields": [
@@ -1679,6 +1741,33 @@
    },
    {
     "Title": "APISecret",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "dondominio": {
+  "Name": "dondominio",
+  "ConfigableFields": [
+   {
+    "Title": "APIUser",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIPassword",
     "Datatype": "string"
    },
    {
@@ -1868,6 +1957,37 @@
    },
    {
     "Title": "Key",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "edgecdnx": {
+  "Name": "edgecdnx",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "ProjectID",
+    "Datatype": "string"
+   },
+   {
+    "Title": "APIURL",
     "Datatype": "string"
    },
    {
@@ -2482,6 +2602,29 @@
    },
    {
     "Title": "ServerURL",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "gyro": {
+  "Name": "gyro",
+  "ConfigableFields": [
+   {
+    "Title": "Token",
     "Datatype": "string"
    },
    {
@@ -3606,6 +3749,29 @@
    },
    {
     "Title": "Server",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "nameocean": {
+  "Name": "nameocean",
+  "ConfigableFields": [
+   {
+    "Title": "APIKey",
     "Datatype": "string"
    },
    {
@@ -5247,6 +5413,33 @@
    },
    {
     "Title": "APIKey",
+    "Datatype": "string"
+   },
+   {
+    "Title": "PropagationTimeout",
+    "Datatype": "time.Duration"
+   },
+   {
+    "Title": "PollingInterval",
+    "Datatype": "time.Duration"
+   }
+  ],
+  "HiddenFields": [
+   {
+    "Title": "HTTPClient",
+    "Datatype": "*http.Client"
+   }
+  ]
+ },
+ "totaluptime": {
+  "Name": "totaluptime",
+  "ConfigableFields": [
+   {
+    "Title": "Username",
+    "Datatype": "string"
+   },
+   {
+    "Title": "Password",
     "Datatype": "string"
    },
    {
