@@ -83,7 +83,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		/* Allowed HTTP Methods */
-		if !sep.IsMethodAllowed(r.Method) {
+		if !sep.IsMethodAllowed(HTTPMethod(r.Method)) {
 			h.handleMethodNotAllowed(w, r, sep)
 			return
 		}

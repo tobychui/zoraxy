@@ -673,7 +673,7 @@
                             <div class="ui small fluid input" style="margin-top: 0.4em;">
                                 <input type="text" class="AllowedMethods" placeholder="All methods allowed" autocomplete="off" spellcheck="false">
                             </div>
-                            <small style="opacity:0.7;">Comma separated list of the HTTP methods this host accepts (e.g. <code>GET, HEAD, POST</code>). Requests with any other method get a <code>405 Method Not Allowed</code> response and are not forwarded to the upstream. Leave empty to allow all methods.</small>
+                            <small style="opacity:0.7;">Comma separated list of the HTTP methods this host accepts (e.g. <code>GET, HEAD, POST</code>). Methods must be listed in the <a href="https://www.iana.org/assignments/http-methods" target="_blank" rel="noopener">IANA HTTP Method Registry</a>, which includes the WebDAV and CalDAV ones (<code>PROPFIND</code>, <code>MKCOL</code>, <code>REPORT</code>, ...). Requests with any other method get a <code>405 Method Not Allowed</code> response and are not forwarded to the upstream. Leave empty to allow all methods.</small>
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">

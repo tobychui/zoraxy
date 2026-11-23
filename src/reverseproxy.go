@@ -835,7 +835,7 @@ func ReverseProxyHandleEditEndpoint(w http.ResponseWriter, r *http.Request) {
 
 	// Allowed HTTP methods, empty to allow all methods. The list is only changed when
 	// the parameter is sent, so API clients written before this option cannot clear it by accident
-	var allowedMethods []string
+	var allowedMethods []dynamicproxy.HTTPMethod
 	_, allowedMethodsSet := r.PostForm["allowedMethods"]
 	if allowedMethodsSet {
 		allowedMethods, err = dynamicproxy.ParseAllowedMethods(r.PostForm.Get("allowedMethods"))

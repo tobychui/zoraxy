@@ -11,14 +11,15 @@ import (
 func TestParseAllowedMethods(t *testing.T) {
 	tests := []struct {
 		raw  string
-		want []string
+		want []HTTPMethod
 	}{
-		{"", []string{}},
-		{"  ,  ", []string{}},
-		{"GET", []string{"GET"}},
-		{"get, head,POST", []string{"GET", "HEAD", "POST"}},
-		{"POST GET\tGET\nPUT", []string{"GET", "POST", "PUT"}},
-		{"PROPFIND, M-SEARCH", []string{"M-SEARCH", "PROPFIND"}},
+		{"", []HTTPMethod{}},
+		{"  ,  ", []HTTPMethod{}},
+		{"GET", []HTTPMethod{MethodGet}},
+		{"get, head,POST", []HTTPMethod{MethodGet, MethodHead, MethodPost}},
+		{"POST GET\tGET\nPUT", []HTTPMethod{MethodGet, MethodPost, MethodPut}},
+		{"patch, options, trace, connect, delete", []HTTPMethod{MethodConnect, MethodDelete, MethodOptions, MethodPatch, MethodTrace}},
+		{"GET, propfind, MKCOL, report, version-control", []HTTPMethod{MethodGet, MethodMkcol, MethodPropfind, MethodReport, MethodVersionControl}},
 	}
 	for _, tt := range tests {
 		got, err := ParseAllowedMethods(tt.raw)
@@ -31,23 +32,52 @@ func TestParseAllowedMethods(t *testing.T) {
 		}
 	}
 
-	for _, raw := range []string{"GET; DROP", "GE/T", "POST, <script>", strings.Repeat("A", 33)} {
+	// Only the methods of the IANA registry are accepted
+	for _, raw := range []string{"PURGE", "GET, M-SEARCH", "PRI", "*", "GET; DROP", "GE/T", "POST, <script>", strings.Repeat("A", 33)} {
 		if _, err := ParseAllowedMethods(raw); err == nil {
 			t.Errorf("%q: expected an error", raw)
 		}
 	}
 }
 
+func TestRegisteredHTTPMethods(t *testing.T) {
+	// IANA HTTP Method Registry, https://www.iana.org/assignments/http-methods
+	// without "PRI" and "*"
+	registry := strings.Fields(`ACL BASELINE-CONTROL BIND CHECKIN CHECKOUT CONNECT COPY DELETE GET
+		HEAD LABEL LINK LOCK MERGE MKACTIVITY MKCALENDAR MKCOL MKREDIRECTREF MKWORKSPACE MOVE
+		OPTIONS ORDERPATCH PATCH POST PROPFIND PROPPATCH PUT QUERY REBIND REPORT SEARCH TRACE
+		UNBIND UNCHECKOUT UNLINK UNLOCK UPDATE UPDATEREDIRECTREF VERSION-CONTROL`)
+	if len(RegisteredHTTPMethods) != len(registry) {
+		t.Errorf("got %d registered methods, want %d", len(RegisteredHTTPMethods), len(registry))
+	}
+	for _, method := range registry {
+		if !HTTPMethod(method).IsRegistered() {
+			t.Errorf("%s is not recognized as a registered method", method)
+		}
+	}
+	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete, http.MethodConnect, http.MethodOptions, http.MethodTrace} {
+		if !HTTPMethod(method).IsRegistered() {
+			t.Errorf("net/http method %s is not recognized as a registered method", method)
+		}
+	}
+	for _, method := range []HTTPMethod{"", "get", "PURGE", "PRI", "*"} {
+		if method.IsRegistered() {
+			t.Errorf("%q recognized as a registered method", method)
+		}
+	}
+}
+
 func TestIsMethodAllowed(t *testing.T) {
 	all := &ProxyEndpoint{}
-	for _, method := range []string{"GET", "DELETE", "PROPFIND", "anything"} {
+	for _, method := range []HTTPMethod{MethodGet, MethodDelete, "PROPFIND", "anything"} {
 		if !all.IsMethodAllowed(method) {
 			t.Errorf("endpoint without allow-list refused %s", method)
 		}
 	}
 
-	limited := &ProxyEndpoint{AllowedMethods: []string{"GET", "HEAD", "POST"}}
-	tests := map[string]bool{
+	limited := &ProxyEndpoint{AllowedMethods: []HTTPMethod{MethodGet, MethodHead, MethodPost}}
+	tests := map[HTTPMethod]bool{
 		"GET":     true,
 		"HEAD":    true,
 		"POST":    true,
@@ -69,7 +99,7 @@ func TestHandleMethodNotAllowed(t *testing.T) {
 	h := &ProxyHandler{Parent: router}
 	pe := &ProxyEndpoint{
 		RootOrMatchingDomain: "host.example.com",
-		AllowedMethods:       []string{"GET", "HEAD", "POST"},
+		AllowedMethods:       []HTTPMethod{MethodGet, MethodHead, MethodPost},
 		DisableLogging:       true,
 	}
 
