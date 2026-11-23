@@ -45,9 +45,9 @@ type TrafficMapUpstream struct {
 
 // TrafficMapProxy represents a proxy rule node for the traffic flow diagram
 type TrafficMapProxy struct {
-	Domain       string               `json:"domain"`
-	Disabled     bool                 `json:"disabled"`
-	RequestCount int                  `json:"requestCount"`
+	Domain       string                `json:"domain"`
+	Disabled     bool                  `json:"disabled"`
+	RequestCount int                   `json:"requestCount"`
 	Upstreams    []*TrafficMapUpstream `json:"upstreams"`
 }
 
@@ -66,7 +66,9 @@ func HandleTrafficMapData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Helper to look up today's request count for a given key
-	lookupCount := func(m interface{ Load(key interface{}) (interface{}, bool) }, key string) int {
+	lookupCount := func(m interface {
+		Load(key interface{}) (interface{}, bool)
+	}, key string) int {
 		if v, ok := m.Load(key); ok {
 			if count, ok := v.(int); ok {
 				return count
@@ -80,7 +82,7 @@ func HandleTrafficMapData(w http.ResponseWriter, r *http.Request) {
 		proxyNode := &TrafficMapProxy{
 			Domain:       ep.RootOrMatchingDomain,
 			Disabled:     ep.Disabled,
-			RequestCount: lookupCount(statisticCollector.DailySummary.DownstreamHostnames, ep.RootOrMatchingDomain),
+			RequestCount: lookupCount(statisticCollector.DailySummary.ProxyRules, ep.RootOrMatchingDomain),
 			Upstreams:    []*TrafficMapUpstream{},
 		}
 
