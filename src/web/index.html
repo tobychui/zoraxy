@@ -34,8 +34,10 @@
             <div id="logoutButtonWrapper" class="ui right floated buttons" style="padding-top: 2px; padding-right: 0.4em;">
                 <button class="ui basic white icon button" onclick="logout();"><i class="sign-out icon"></i></button>
             </div>
-            <div class="ui right floated buttons" style="padding-top: 2px; margin-right: 0.4em;">
-                <button id="themeColorButton" class="ui icon button" onclick="toggleTheme();"><i class="sun icon"></i></button>
+            <div id="themeModeSelector" class="ui right floated icon buttons" style="margin-top: 2px; margin-right: 0.4em;">
+                <button class="ui icon button themeModeButton" data-theme-mode="light" title="Light theme" onclick="selectThemeMode('light');"><i class="sun icon"></i></button>
+                <button class="ui icon button themeModeButton" data-theme-mode="dark" title="Dark theme" onclick="selectThemeMode('dark');"><i class="moon icon"></i></button>
+                <button class="ui icon button themeModeButton" data-theme-mode="system" title="Follow system theme" onclick="selectThemeMode('system');"><i class="desktop icon"></i></button>
             </div>
         </div>
         <div class="wrapper">
@@ -479,44 +481,34 @@
                 });
             }
 
-            function toggleTheme(){
-                let editorSideWrapper = $("#httprpEditModal .wrapper_frame");
-                if ($("body").hasClass("darkTheme")){
-                    setDarkTheme(false);
-                    //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
-                    if ($(".sideWrapper").is(":visible")){
-                        $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(false);
-                    }
+            //Apply a theme mode ("light", "dark" or "system") chosen with the theme selector
+            function selectThemeMode(mode){
+                setThemeMode(mode);
+                applyThemeToFrames($("body").hasClass("darkTheme"));
+            }
 
-                    $(editorSideWrapper).each(function(){
-                        if ($(this)[0].contentWindow.setDarkTheme){
-                            $(this)[0].contentWindow.setDarkTheme(false);
-                        }
-                    });
-
-                    // Remove dark theme for traffic flow diagram
-                    $("#trafficFlowDiagram")[0].contentWindow.document.body.classList.remove("darkTheme");
-
-                    if ($("#pluginContextLoader").is(":visible")){
-                        $("#pluginContextLoader")[0].contentWindow.setDarkTheme(false);
-                    }
-                }else{
-                    setDarkTheme(true);
-                    //Check if the snippet iframe is opened. If yes, set the dark theme to the iframe
-                    if ($(".sideWrapper").is(":visible")){
-                        $(".sideWrapper iframe")[0].contentWindow.setDarkTheme(true);
-                    }
-                    $(editorSideWrapper).each(function(){
-                        if ($(this)[0].contentWindow.setDarkTheme){
-                            $(this)[0].contentWindow.setDarkTheme(true);
-                        }
-                    })
-                    // Add dark theme for traffic flow diagram
-                    $("#trafficFlowDiagram")[0].contentWindow.document.body.classList.add("darkTheme");
-                    if ($("#pluginContextLoader").is(":visible")){
-                        $("#pluginContextLoader")[0].contentWindow.setDarkTheme(true);
-                    }
+            //Pass the theme to the pages loaded in iframes. Pages that load darktheme.js
+            //also read the stored theme themselves, this updates the ones that are already open
+            function applyThemeToFrames(isDark){
+                let frames = [];
+                //Check if the snippet iframe is opened. If yes, set the theme to the iframe
+                if ($(".sideWrapper").is(":visible")){
+                    frames.push($(".sideWrapper iframe")[0]);
                 }
+                $("#httprpEditModal .wrapper_frame").each(function(){
+                    frames.push($(this)[0]);
+                });
+                if ($("#pluginContextLoader").is(":visible")){
+                    frames.push($("#pluginContextLoader")[0]);
+                }
+                frames.forEach(function(frame){
+                    if (frame.contentWindow.setDarkTheme){
+                        frame.contentWindow.setDarkTheme(isDark);
+                    }
+                });
+
+                // Set the theme for traffic flow diagram
+                $("#trafficFlowDiagram")[0].contentWindow.document.body.classList.toggle("darkTheme", isDark);
             }
 
             function getTabButtonById(targetTabId){

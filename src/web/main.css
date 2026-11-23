@@ -4,14 +4,46 @@
 
 /* Theme color palletes are defined in darktheme.css */
 
-/* Theme Toggle CSS */
-#themeColorButton{
+/* Theme Selector CSS (light / dark / system) */
+#themeModeSelector{
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--button_border_color);
+    border-radius: 999px;
+}
+
+#themeModeSelector .themeModeButton.ui.button{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background-color: transparent;
+    color: var(--text_color);
+    box-shadow: none;
+}
+
+#themeModeSelector .themeModeButton.ui.button i.icon{
+    margin: 0;
+}
+
+#themeModeSelector .themeModeButton.ui.button:hover{
+    background-color: rgba(128, 128, 128, 0.2);
+}
+
+#themeModeSelector .themeModeButton.ui.button.active{
     background-color: black;
     color: var(--text_color_inverted);
 }
 
-body.darkTheme #themeColorButton{
+body.darkTheme #themeModeSelector .themeModeButton.ui.button.active{
     background-color: white;
+    color: #121214;
 }
 
 body{
