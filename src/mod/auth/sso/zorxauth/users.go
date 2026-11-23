@@ -78,8 +78,9 @@ func (ar *AuthRouter) getUserByUsername(username string) (*User, error) {
 	}
 
 	user := &User{}
-	if ar.Database.KeyExists(DB_USERS_TABLE, ar.userDbKey(normalizedUsername)) {
-		if err := ar.Database.Read(DB_USERS_TABLE, ar.userDbKey(normalizedUsername), user); err != nil {
+	dbKey := ar.userDbKey(normalizedUsername)
+	if ar.Database.KeyExists(DB_USERS_TABLE, dbKey) {
+		if err := ar.Database.Read(DB_USERS_TABLE, dbKey, user); err != nil {
 			return nil, err
 		}
 	} else {
@@ -91,10 +92,32 @@ func (ar *AuthRouter) getUserByUsername(username string) (*User, error) {
 		user.Username = normalizedUsername
 	}
 	if user.ID == "" {
-		user.ID = uuid.NewString()
+		if err := ar.persistMissingUserID(user, dbKey); err != nil {
+			return nil, err
+		}
 	}
 
 	return user, nil
+}
+
+// persistMissingUserID assigns and saves a User.ID for a record written without one,
+// so the ID forwarded to upstreams is the same on every request
+func (ar *AuthRouter) persistMissingUserID(user *User, dbKey string) error {
+	ar.userIDMutex.Lock()
+	defer ar.userIDMutex.Unlock()
+
+	stored := &User{}
+	if err := ar.Database.Read(DB_USERS_TABLE, dbKey, stored); err != nil {
+		return err
+	}
+	if stored.ID == "" {
+		stored.ID = uuid.NewString()
+		if err := ar.Database.Write(DB_USERS_TABLE, dbKey, stored); err != nil {
+			return err
+		}
+	}
+	user.ID = stored.ID
+	return nil
 }
 
 func (ar *AuthRouter) getUserByEmail(email string) (*User, error) {
@@ -225,16 +248,9 @@ func (ar *AuthRouter) saveUser(user *User, previousUsername string) error {
 		return err
 	}
 
+	// Sessions are bound to user.ID, so they follow a rename without any update here
 	if previousUsername != "" && !strings.EqualFold(previousUsername, user.Username) {
 		ar.Database.Delete(DB_USERS_TABLE, ar.userDbKey(previousUsername))
-
-		ar.sessionIdStore.Range(func(key, value interface{}) bool {
-			name, ok := value.(string)
-			if ok && strings.EqualFold(name, previousUsername) {
-				ar.sessionIdStore.Store(key, user.Username)
-			}
-			return true
-		})
 	}
 
 	return nil
@@ -427,13 +443,7 @@ func (ar *AuthRouter) HandleUserDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ar.sessionIdStore.Range(func(key, value interface{}) bool {
-		name, ok := value.(string)
-		if ok && strings.EqualFold(name, user.Username) {
-			ar.sessionIdStore.Delete(key)
-		}
-		return true
-	})
+	ar.deleteAllSessionsOfUser(user.ID)
 
 	utils.SendOK(w)
 }
@@ -456,13 +466,23 @@ func (ar *AuthRouter) GetUserFromRequest(w http.ResponseWriter, r *http.Request)
 
 	// Check if session has expired
 	if time.Now().After(browserSession.Expiry) {
-		ar.cookieIdStore.Delete(cookie.Value)
+		ar.removeBrowserSession(cookie.Value)
 		return nil, errors.New("session expired")
 	}
 
-	user, err := ar.getUserByUsername(browserSession.Username)
+	user, err := ar.resolveSessionUser(browserSession.Username, browserSession.UserID)
 	if err != nil {
-		return nil, errors.New("user record not found")
+		ar.removeBrowserSession(cookie.Value)
+		return nil, err
+	}
+
+	if user.Username != browserSession.Username {
+		// User was renamed, refresh the lookup hint so later requests take the fast path
+		ar.replaceBrowserSession(cookie.Value, browserSession, &BrowserSession{
+			Username: user.Username,
+			UserID:   user.ID,
+			Expiry:   browserSession.Expiry,
+		})
 	}
 
 	return user, nil

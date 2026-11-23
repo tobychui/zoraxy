@@ -200,12 +200,13 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 	// Check if the user already has a valid session cookie in the SSO portal
 	// if yes, grant access without showing the login page and directly redirect to the original
 	// request domain set session URL with a one-time validation code
-	authenticated, username := gs.router.RequestIsAuthenticatedInSSO(w, r)
-	if authenticated {
+	ssoUser := gs.router.getSSOSessionUser(r)
+	if ssoUser != nil {
 		redirectURL := r.URL.Query().Get("redirect")
 		if redirectURL == "" {
 			redirectURL = "/user" // default to user portal if redirect URL is missing
 			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+			return
 		}
 
 		host := ""
@@ -218,22 +219,22 @@ func (gs *GatewayServer) handleAuthPage(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 
-		if gs.router.ValidateUserAccessToHost(username, host) {
+		if gs.router.ValidateUserAccessToHost(ssoUser.Username, host) {
 			// Renew the gateway session expiry time since the user is actively using it
 			cookie, cookieErr := r.Cookie(gs.router.Options.CookieName)
 			if cookieErr == nil && cookie.Value != "" {
 				// Load the existing gateway session
 				if sessionData, exists := gs.router.gatewaySessionStore.Load(cookie.Value); exists {
 					if gatewaySession, ok := sessionData.(*GatewaySession); ok {
-						// Extend the session expiry time
-						newExpiry := time.Now().Add(time.Duration(gs.router.Options.CookieDuration) * time.Second)
-						gatewaySession.Expiry = newExpiry
-						gs.router.gatewaySessionStore.Store(cookie.Value, gatewaySession)
+						// Extend the session expiry time on a copy, other requests may be reading the stored one
+						renewed := *gatewaySession
+						renewed.Expiry = time.Now().Add(time.Duration(gs.router.Options.CookieDuration) * time.Second)
+						gs.router.replaceGatewaySession(cookie.Value, gatewaySession, &renewed)
 					}
 				}
 			}
 
-			sessionId := gs.router.generateValidationCodeForSession(username)
+			sessionId := gs.router.generateValidationCodeForUser(ssoUser)
 			// Parse the redirect target so we can build the session-set URL on the target host.
 			parsedTarget, parseErr := url.Parse(redirectURL)
 			if parseErr == nil && parsedTarget.Host != "" {
@@ -432,9 +433,10 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
 	gatewaySession := &GatewaySession{
 		Username: u.Username,
+		UserID:   u.ID,
 		Expiry:   expiryTime,
 	}
-	gs.router.gatewaySessionStore.Store(sessionToken, gatewaySession)
+	gs.router.storeGatewaySession(sessionToken, gatewaySession)
 
 	// Set the gateway cookie
 	http.SetCookie(w, &http.Cookie{
@@ -449,7 +451,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Schedule automatic removal from the store when the cookie expires
 	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
-		gs.router.gatewaySessionStore.Delete(sessionToken)
+		gs.router.removeGatewaySession(sessionToken)
 	})
 
 	// Direct login: user accessed the gateway domain directly with no redirect target.
@@ -464,7 +466,7 @@ func (gs *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionId := gs.router.generateValidationCodeForSession(u.Username)
+	sessionId := gs.router.generateValidationCodeForUser(u)
 	hostWithPort := host
 	if port != "" {
 		hostWithPort = host + ":" + port
@@ -528,9 +530,9 @@ func (gs *GatewayServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the current user's username from their session
-	authenticated, username := gs.router.RequestIsAuthenticatedInSSO(w, r)
-	if !authenticated || username == "" {
+	// Get the current user from their session
+	ssoUser := gs.router.getSSOSessionUser(r)
+	if ssoUser == nil {
 		// No valid session to logout from
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -545,29 +547,12 @@ func (gs *GatewayServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(gs.router.Options.CookieName)
 	if err == nil && cookie.Value != "" {
 		// Remove from gateway session store
-		gs.router.gatewaySessionStore.Delete(cookie.Value)
+		gs.router.removeGatewaySession(cookie.Value)
 	}
 
-	// Iterate through all browser sessions and remove all sessions for this username
+	// Remove all browser sessions of this user
 	// This ensures the user is logged out from ALL devices/browsers
-	gs.router.cookieIdStore.Range(func(key, value interface{}) bool {
-		sessionID, ok := key.(string)
-		if !ok {
-			return true // continue iteration
-		}
-
-		browserSession, ok := value.(*BrowserSession)
-		if !ok {
-			return true // continue iteration
-		}
-
-		// If this session belongs to the current user, delete it
-		if browserSession.Username == username {
-			gs.router.cookieIdStore.Delete(sessionID)
-		}
-
-		return true // continue iteration
-	})
+	gs.router.deleteBrowserSessionsOfUser(ssoUser.ID)
 
 	// Expire the cookie in the current browser
 	isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
@@ -686,12 +671,13 @@ func (gs *GatewayServer) handleTOTPVerify(w http.ResponseWriter, r *http.Request
 
 	sessionToken := gs.router.generateSessionToken()
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
-	gs.router.gatewaySessionStore.Store(sessionToken, &GatewaySession{
+	gs.router.storeGatewaySession(sessionToken, &GatewaySession{
 		Username: u.Username,
+		UserID:   u.ID,
 		Expiry:   expiryTime,
 	})
 	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
-		gs.router.gatewaySessionStore.Delete(sessionToken)
+		gs.router.removeGatewaySession(sessionToken)
 	})
 
 	http.SetCookie(w, &http.Cookie{
@@ -716,7 +702,7 @@ func (gs *GatewayServer) handleTOTPVerify(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	sessionId := gs.router.generateValidationCodeForSession(u.Username)
+	sessionId := gs.router.generateValidationCodeForUser(u)
 	hostWithPort := pending.Host
 	if pending.Port != "" {
 		hostWithPort = pending.Host + ":" + pending.Port

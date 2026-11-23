@@ -481,12 +481,13 @@ func (gs *GatewayServer) handlePasskeyAuthComplete(w http.ResponseWriter, r *htt
 
 	sessionToken := gs.router.generateSessionToken()
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
-	gs.router.gatewaySessionStore.Store(sessionToken, &GatewaySession{
+	gs.router.storeGatewaySession(sessionToken, &GatewaySession{
 		Username: foundUser.Username,
+		UserID:   foundUser.ID,
 		Expiry:   expiryTime,
 	})
 	time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
-		gs.router.gatewaySessionStore.Delete(sessionToken)
+		gs.router.removeGatewaySession(sessionToken)
 	})
 
 	http.SetCookie(w, &http.Cookie{
@@ -511,7 +512,7 @@ func (gs *GatewayServer) handlePasskeyAuthComplete(w http.ResponseWriter, r *htt
 		return
 	}
 
-	sessionId := gs.router.generateValidationCodeForSession(foundUser.Username)
+	sessionId := gs.router.generateValidationCodeForUser(foundUser)
 	hostWithPort := host
 	if port != "" {
 		hostWithPort = host + ":" + port

@@ -194,6 +194,19 @@ func (ar *AuthRouter) GetAllowedHostsForUser(user *User) []string {
 	return user.AllowedHosts
 }
 
+// getAssignedGroupPolicy returns the group policy currently assigned to the user,
+// or nil when the user does not use group policy or the group no longer exists
+func (ar *AuthRouter) getAssignedGroupPolicy(user *User) *GroupPolicy {
+	if user == nil || !user.UseGroupPolicy || user.GroupID == "" {
+		return nil
+	}
+	gp, err := ar.GetGroupPolicyByID(user.GroupID)
+	if err != nil {
+		return nil
+	}
+	return gp
+}
+
 /* ===================== HTTP API Handlers ===================== */
 
 // HandleGroupPolicyList returns all group policies as JSON (GET)

@@ -235,6 +235,21 @@
                                 e.g. <code>https://auth.example.com/logout</code></li>
                             <li>Click the "Logout from All Services" button to end your session across all connected services.</li>
                         </ol>
+                        <br>
+                        <p><b>Forwarded Headers</b></p>
+                        <p>After a successful login, Zoraxy Auth sends these headers to the upstream. Any values the client sent under these names are removed first, and routes exempted from Zoraxy Auth receive none of them.</p>
+                        <table class="ui very basic compact table">
+                            <thead><tr><th>Header</th><th>Value</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>X-Auth-Method</code></td><td><code>zoraxy_sso</code></td></tr>
+                                <tr><td><code>Remote-User</code>, <code>Remote-Name</code></td><td>Username</td></tr>
+                                <tr><td><code>Remote-Email</code></td><td>Email, only when the user has one</td></tr>
+                                <tr><td><code>Remote-User-Id</code></td><td>User ID. Use this to link app accounts <br>(Rename will not change this, but a new one will be generated when a user is re-created)</td></tr>
+                                <tr><td><code>Remote-Group-Id</code></td><td>Group policy ID, only when a group policy is assigned</td></tr>
+                                <tr><td><code>Remote-Group-Name</code>, <code>Remote-Groups</code></td><td>Group policy name, only when a group policy is assigned</td></tr>
+                            </tbody>
+                        </table>
+                        <p><small>The names of the user ID and group headers can be changed under SSO Behavior &gt; Advanced Options &gt; Identity Headers.</small></p>
                     </div>
                 </div>
             </div>
@@ -324,6 +339,25 @@
                             <div class="ui checkbox">
                                 <input type="checkbox" id="zorxAuthUseExpotentialBackoff" name="useExpotentialBackoff">
                                 <label>Use Exponential Backoff<br><small>Increase delay between failed authentication attempts exponentially</small></label>
+                            </div>
+                            <div class="ui divider"></div>
+                            <b>Identity Headers</b>
+                            <br><br>
+                            <p><small>Names of the headers that carry the stable user and group identifiers to the upstream. Leave a field empty to use its default name. Use letters, digits and dashes only.</small></p>
+                            <div class="field">
+                                <label for="zorxAuthUserIdHeader">User ID Header</label>
+                                <input type="text" id="zorxAuthUserIdHeader" name="userIdHeader" placeholder="Remote-User-Id" maxlength="64">
+                                <small>Carries the user's ID. It stays the same when the user is renamed and is new for a deleted and re-created user. Default: Remote-User-Id</small>
+                            </div>
+                            <div class="field">
+                                <label for="zorxAuthGroupIdHeader">Group ID Header</label>
+                                <input type="text" id="zorxAuthGroupIdHeader" name="groupIdHeader" placeholder="Remote-Group-Id" maxlength="64">
+                                <small>Carries the ID of the user's group policy. Only sent when a valid group is assigned. Default: Remote-Group-Id</small>
+                            </div>
+                            <div class="field">
+                                <label for="zorxAuthGroupNameHeader">Group Name Header</label>
+                                <input type="text" id="zorxAuthGroupNameHeader" name="groupNameHeader" placeholder="Remote-Group-Name" maxlength="64">
+                                <small>Carries the name of the user's group policy. Only sent when a valid group is assigned. Default: Remote-Group-Name</small>
                             </div>
                             <div class="ui divider"></div>
                             <b>Login Page Appearance</b>
@@ -671,7 +705,12 @@
                 } else {
                     $("#zorxAuthUseExpotentialBackoff").parent().checkbox("set unchecked");
                 }
-                
+
+                // Identity header names
+                $('#zorxAuthUserIdHeader').val(data.userIdHeader || 'Remote-User-Id');
+                $('#zorxAuthGroupIdHeader').val(data.groupIdHeader || 'Remote-Group-Id');
+                $('#zorxAuthGroupNameHeader').val(data.groupNameHeader || 'Remote-Group-Name');
+
                 // Update logout URL display based on SSO Redirect URL
                 updateLogoutUrlDisplay();
             },
@@ -722,6 +761,9 @@
         const enableRateLimit = $('#zorxAuthEnableRateLimit').is(':checked');
         const rateLimitPerIp = parseInt($('#zorxAuthRateLimitPerIp').val()) || 60;
         const useExpotentialBackoff = $('#zorxAuthUseExpotentialBackoff').is(':checked');
+        const userIdHeader = $('#zorxAuthUserIdHeader').val().trim();
+        const groupIdHeader = $('#zorxAuthGroupIdHeader').val().trim();
+        const groupNameHeader = $('#zorxAuthGroupNameHeader').val().trim();
 
         console.log(`Updating Zoraxy Auth settings. SSO Redirect: ${ssoRedirectURL}. Session Set URL: ${ssoSessionSetURL}. Cookie: ${cookieName}. Duration: ${cookieDuration}. RememberMe Duration: ${cookieDurationRememberMe}. Rate Limit: ${enableRateLimit}. Rate Limit/IP: ${rateLimitPerIp}. Exponential Backoff: ${useExpotentialBackoff}`);
 
@@ -736,13 +778,18 @@
                 cookieDurationRememberMe: cookieDurationRememberMe,
                 enableRateLimit: enableRateLimit,
                 rateLimitPerIp: rateLimitPerIp,
-                useExpotentialBackoff: useExpotentialBackoff
+                useExpotentialBackoff: useExpotentialBackoff,
+                userIdHeader: userIdHeader,
+                groupIdHeader: groupIdHeader,
+                groupNameHeader: groupNameHeader
             },
             success: function(data) {
                 if (data.error !== undefined) {
                     msgbox(data.error, false);
                     return;
                 }
+                //Reload to show the canonical header names saved by the server
+                getZorxAuthSettings();
                 msgbox('Zoraxy Auth settings updated', true);
                 console.log('Zoraxy Auth settings updated:', data);
             },

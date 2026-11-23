@@ -28,6 +28,7 @@ func (ar *AuthRouter) handleSettingsGET(w http.ResponseWriter, r *http.Request) 
 		cookieDurationRememberMe = getDefaultOptions().CookieDurationRememberMe
 	}
 
+	headerNames := ar.identityHeaderNames()
 	js, _ := json.Marshal(map[string]interface{}{
 		"ssoRedirectURL":           ar.Options.SSORedirectURL,
 		"ssoSessionSetURL":         ar.Options.SSOSessionSetURL,
@@ -37,6 +38,9 @@ func (ar *AuthRouter) handleSettingsGET(w http.ResponseWriter, r *http.Request) 
 		"enableRateLimit":          ar.Options.EnableRateLimit,
 		"rateLimitPerIp":           ar.Options.RateLimitPerIp,
 		"useExpotentialBackoff":    ar.Options.UseExpotentialBackoff,
+		"userIdHeader":             headerNames.UserID,
+		"groupIdHeader":            headerNames.GroupID,
+		"groupNameHeader":          headerNames.GroupName,
 	})
 
 	utils.SendJSONResponse(w, string(js))
@@ -91,6 +95,17 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 	}
 	useExpotentialBackoff, _ := utils.PostBool(r, "useExpotentialBackoff")
 
+	// Identity header names, empty selects the default name
+	headerNames, err := validateIdentityHeaderNames(
+		r.FormValue("userIdHeader"),
+		r.FormValue("groupIdHeader"),
+		r.FormValue("groupNameHeader"),
+	)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
 	// Update runtime configuration
 	ar.Options.SSORedirectURL = ssoRedirectURL
 	ar.Options.SSOSessionSetURL = ssoSessionSetURL
@@ -100,6 +115,9 @@ func (ar *AuthRouter) handleSettingsPOST(w http.ResponseWriter, r *http.Request)
 	ar.Options.EnableRateLimit = enableRateLimit
 	ar.Options.RateLimitPerIp = rateLimitPerIp
 	ar.Options.UseExpotentialBackoff = useExpotentialBackoff
+	ar.Options.UserIDHeader = headerNames.UserID
+	ar.Options.GroupIDHeader = headerNames.GroupID
+	ar.Options.GroupNameHeader = headerNames.GroupName
 
 	// Save to database
 	err = ar.Database.Write(DB_NAME, "options", ar.Options)
@@ -123,6 +141,9 @@ func (ar *AuthRouter) handleSettingsDELETE(w http.ResponseWriter, r *http.Reques
 	ar.Options.EnableRateLimit = defaultOpts.EnableRateLimit
 	ar.Options.RateLimitPerIp = defaultOpts.RateLimitPerIp
 	ar.Options.UseExpotentialBackoff = defaultOpts.UseExpotentialBackoff
+	ar.Options.UserIDHeader = defaultOpts.UserIDHeader
+	ar.Options.GroupIDHeader = defaultOpts.GroupIDHeader
+	ar.Options.GroupNameHeader = defaultOpts.GroupNameHeader
 
 	// Delete from database
 	ar.Database.Delete(DB_NAME, "options")
@@ -248,35 +269,20 @@ func (ar *AuthRouter) HandleLogoutAllUsers(w http.ResponseWriter, r *http.Reques
 		return true
 	})
 
-	// Clear all gateway session store
+	// Clear gateway and browser sessions in memory and in the database together,
+	// so a login racing with this cannot leave a session in only one of them
+	ar.sessionPersistMutex.Lock()
 	ar.gatewaySessionStore.Range(func(key, value interface{}) bool {
 		ar.gatewaySessionStore.Delete(key)
 		return true
 	})
-
-	// Clear all cookie ID store (browser sessions)
 	ar.cookieIdStore.Range(func(key, value interface{}) bool {
 		ar.cookieIdStore.Delete(key)
 		return true
 	})
-
-	// Clear all browser sessions from database
-	entries, err := ar.Database.ListTable(DB_BROWSER_SESSIONS_TABLE)
-	if err == nil {
-		for _, entry := range entries {
-			key := string(entry[0])
-			ar.Database.Delete(DB_BROWSER_SESSIONS_TABLE, key)
-		}
-	}
-
-	// Clear all gateway sessions from database
-	gatewayEntries, err := ar.Database.ListTable(DB_GATEWAY_SESSIONS_TABLE)
-	if err == nil {
-		for _, entry := range gatewayEntries {
-			key := string(entry[0])
-			ar.Database.Delete(DB_GATEWAY_SESSIONS_TABLE, key)
-		}
-	}
+	ar.clearSessionTable(DB_BROWSER_SESSIONS_TABLE)
+	ar.clearSessionTable(DB_GATEWAY_SESSIONS_TABLE)
+	ar.sessionPersistMutex.Unlock()
 
 	if ar.Logger != nil {
 		ar.Logger.PrintAndLog("zorxauth", "All user sessions have been cleared", nil)

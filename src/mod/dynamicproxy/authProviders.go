@@ -195,10 +195,25 @@ func (h *ProxyHandler) handleZorxAuth(w http.ResponseWriter, r *http.Request, se
 	// Check ZorxAuth exception rules before applying authentication
 	if sep != nil && sep.AuthenticationProvider != nil {
 		if zorxAuthExceptionMatched(sep.AuthenticationProvider.ZorxAuthExceptionRules, r) {
+			// Exempt requests are anonymous, never pass client supplied identity headers on
+			h.stripZorxAuthIdentityHeaders(sep, r)
 			return nil
 		}
 	}
 	return h.Parent.Option.ZorxAuthAgentRouter.HandleAuthRouting(w, r)
+}
+
+// stripZorxAuthIdentityHeaders removes the Zoraxy Auth identity headers from a
+// request to a ZorxAuth protected endpoint that skips the login step
+// (exception rules or mTLS bypass), so the upstream cannot be fed a spoofed identity
+func (h *ProxyHandler) stripZorxAuthIdentityHeaders(sep *ProxyEndpoint, r *http.Request) {
+	if sep == nil || sep.AuthenticationProvider == nil || sep.AuthenticationProvider.AuthMethod != AuthMethodZorxAuth {
+		return
+	}
+	if h.Parent.Option.ZorxAuthAgentRouter == nil {
+		return
+	}
+	h.Parent.Option.ZorxAuthAgentRouter.StripIdentityHeaders(r)
 }
 
 // zorxAuthExceptionMatched reports whether the request is exempt from ZorxAuth by

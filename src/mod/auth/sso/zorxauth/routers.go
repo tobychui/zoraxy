@@ -34,62 +34,68 @@ func (ar *AuthRouter) RequestIsAuthenticatedInHost(w http.ResponseWriter, r *htt
 	}
 
 	if time.Now().After(browserSession.Expiry) {
-		ar.cookieIdStore.Delete(cookie.Value)
+		ar.removeBrowserSession(cookie.Value)
 		return false
 	}
 
 	return true
 }
 
+// RequestIsAuthenticatedInSSO reports whether the request carries a valid SSO gateway
+// session and returns the current username of its owner
 func (ar *AuthRouter) RequestIsAuthenticatedInSSO(w http.ResponseWriter, r *http.Request) (bool, string) {
+	user := ar.getSSOSessionUser(r)
+	if user == nil {
+		return false, ""
+	}
+	return true, user.Username
+}
+
+// getSSOSessionUser returns the user signed in to the SSO gateway, or nil if the
+// request has no valid gateway session
+func (ar *AuthRouter) getSSOSessionUser(r *http.Request) *User {
 	//Check if cookie exists
 	cookie, err := r.Cookie(ar.Options.CookieName)
 	if err != nil {
-		return false, ""
+		return nil
 	}
 
 	sessionData, exists := ar.gatewaySessionStore.Load(cookie.Value)
 	if !exists {
-		return false, ""
+		return nil
 	}
 
 	gatewaySession, ok := sessionData.(*GatewaySession)
 	if !ok {
-		return false, ""
+		return nil
 	}
 
 	// Check if session has expired
 	if time.Now().After(gatewaySession.Expiry) {
-		username := gatewaySession.Username
-
 		// Delete the expired gateway session
-		ar.gatewaySessionStore.Delete(cookie.Value)
+		ar.removeGatewaySession(cookie.Value)
 
-		// Clear all browser sessions (cookieIdStore) for this user
-		// When the SSO portal session expires, all site-specific sessions should also be invalidated
-		ar.cookieIdStore.Range(func(key, value interface{}) bool {
-			sessionID, ok := key.(string)
-			if !ok {
-				return true // continue iteration
-			}
-
-			browserSession, ok := value.(*BrowserSession)
-			if !ok {
-				return true // continue iteration
-			}
-
-			// If this browser session belongs to the expired user, delete it
-			if browserSession.Username == username {
-				ar.cookieIdStore.Delete(sessionID)
-			}
-
-			return true // continue iteration
-		})
-
-		return false, ""
+		// When the SSO portal session expires, all site-specific sessions of this user should also be invalidated
+		ar.deleteBrowserSessionsOfUser(gatewaySession.UserID)
+		return nil
 	}
 
-	return true, gatewaySession.Username
+	user, err := ar.resolveSessionUser(gatewaySession.Username, gatewaySession.UserID)
+	if err != nil {
+		ar.removeGatewaySession(cookie.Value)
+		return nil
+	}
+
+	if user.Username != gatewaySession.Username {
+		// User was renamed, refresh the lookup hint so later requests take the fast path
+		ar.replaceGatewaySession(cookie.Value, gatewaySession, &GatewaySession{
+			Username: user.Username,
+			UserID:   user.ID,
+			Expiry:   gatewaySession.Expiry,
+		})
+	}
+
+	return user
 }
 
 // generateSessionToken creates a new random session token
@@ -120,7 +126,8 @@ func (ar *AuthRouter) handleSessionSetCallback(w http.ResponseWriter, r *http.Re
 		redirectURL = "/" // default to home page if redirect URL is missing
 	}
 
-	usernameObj, exists := ar.sessionIdStore.Load(sessionID)
+	// One-time use validation code
+	handoffObj, exists := ar.sessionIdStore.LoadAndDelete(sessionID)
 	if !exists {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -128,16 +135,21 @@ func (ar *AuthRouter) handleSessionSetCallback(w http.ResponseWriter, r *http.Re
 		return errors.New("validation session not found or expired")
 	}
 
-	username, ok := usernameObj.(string)
-	if !ok || username == "" {
+	handoff, ok := handoffObj.(*ValidationCodeSession)
+	if !ok || handoff == nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write(invalidHTML)
 		return errors.New("validation session is invalid")
 	}
 
-	// One-time use validation code
-	ar.sessionIdStore.Delete(sessionID)
+	user, err := ar.resolveSessionUser(handoff.Username, handoff.UserID)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(invalidHTML)
+		return errors.New("validation session is invalid: " + err.Error())
+	}
 
 	// Generate long living session cookie for browser with the username and expiry time
 	browserSessionID := ar.generateSessionToken()
@@ -157,15 +169,16 @@ func (ar *AuthRouter) handleSessionSetCallback(w http.ResponseWriter, r *http.Re
 	// Create browser session with expiry time
 	expiryTime := time.Now().Add(time.Duration(cookieDuration) * time.Second)
 	browserSession := &BrowserSession{
-		Username: username,
+		Username: user.Username,
+		UserID:   user.ID,
 		Expiry:   expiryTime,
 	}
-	ar.cookieIdStore.Store(browserSessionID, browserSession)
+	ar.storeBrowserSession(browserSessionID, browserSession)
 
 	// Set up cleanup timer for when session expires
 	if cookieDuration > 0 {
 		time.AfterFunc(time.Duration(cookieDuration)*time.Second, func() {
-			ar.cookieIdStore.Delete(browserSessionID)
+			ar.removeBrowserSession(browserSessionID)
 		})
 	}
 
@@ -203,19 +216,6 @@ func isAjaxRequest(r *http.Request) bool {
 	}
 
 	return false
-}
-
-// setAuthHeaders sets the authentication headers to be passed to the backend service after successful authentication
-func (ar *AuthRouter) setAuthHeaders(r *http.Request, user *User) {
-	r.Header.Set("X-Auth-Method", "zoraxy_sso")
-	r.Header.Set("Remote-User", user.Username) //Authelia compatibility
-	r.Header.Set("Remote-Name", user.Username) //Authelia compatibility
-	r.Header.Del("Remote-Groups")
-	if user.Email != "" {
-		r.Header.Set("Remote-Email", user.Email) //Authelia compatibility
-	} else {
-		r.Header.Del("Remote-Email")
-	}
 }
 
 // buildLoginRedirectURL returns the absolute SSO login URL for an unauthenticated request.

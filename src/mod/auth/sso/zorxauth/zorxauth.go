@@ -92,9 +92,9 @@ func NewAuthRouter(db *database.Database, log *logger.Logger) *AuthRouter {
 	return authRouter
 }
 
-// GenerateValidationCodeForSession generates a one-time validation code for the given session ID and stores the mapping in sessionIdStore.
+// generateValidationCodeForUser generates a one-time validation code for the given user and stores the mapping in sessionIdStore.
 // this is not the cookie session ID, for cookie session ID, see generateSessionToken() instead.
-func (ar *AuthRouter) generateValidationCodeForSession(sessionId string) string {
+func (ar *AuthRouter) generateValidationCodeForUser(user *User) string {
 	buf := make([]byte, 24)
 	if _, err := rand.Read(buf); err != nil {
 		// Fallback to time-derived code when entropy source fails
@@ -102,7 +102,10 @@ func (ar *AuthRouter) generateValidationCodeForSession(sessionId string) string 
 	}
 
 	validationCode := hex.EncodeToString(buf)
-	ar.sessionIdStore.Store(validationCode, sessionId)
+	ar.sessionIdStore.Store(validationCode, &ValidationCodeSession{
+		Username: user.Username,
+		UserID:   user.ID,
+	})
 
 	// Validation code is short-lived and one-time use.
 	time.AfterFunc(30*time.Second, func() {
@@ -164,6 +167,7 @@ func (ar *AuthRouter) loadBrowserSessions() {
 	now := time.Now()
 	loadedCount := 0
 	expiredCount := 0
+	legacyCount := 0
 
 	for _, entry := range entries {
 		var session BrowserSession
@@ -183,6 +187,13 @@ func (ar *AuthRouter) loadBrowserSessions() {
 			continue
 		}
 
+		// Sessions from before user ID binding cannot be tied to a user record, drop them
+		if session.UserID == "" {
+			legacyCount++
+			ar.Database.Delete(DB_BROWSER_SESSIONS_TABLE, key)
+			continue
+		}
+
 		// Extract session ID from key (remove prefix)
 		sessionID := strings.TrimPrefix(key, DB_BROWSER_SESSION_KEY_PREFIX)
 
@@ -195,13 +206,13 @@ func (ar *AuthRouter) loadBrowserSessions() {
 		if timeUntilExpiry > 0 {
 			sessionIDCopy := sessionID
 			time.AfterFunc(timeUntilExpiry, func() {
-				ar.cookieIdStore.Delete(sessionIDCopy)
+				ar.removeBrowserSession(sessionIDCopy)
 			})
 		}
 	}
 
 	if ar.Logger != nil {
-		ar.Logger.PrintAndLog("zorxauth", "Loaded "+strconv.Itoa(loadedCount)+" browser sessions from database ("+strconv.Itoa(expiredCount)+" expired sessions removed)", nil)
+		ar.Logger.PrintAndLog("zorxauth", "Loaded "+strconv.Itoa(loadedCount)+" browser sessions from database ("+strconv.Itoa(expiredCount)+" expired and "+strconv.Itoa(legacyCount)+" legacy sessions removed)", nil)
 	}
 }
 
@@ -219,6 +230,7 @@ func (ar *AuthRouter) loadGatewaySessions() {
 	now := time.Now()
 	loadedCount := 0
 	expiredCount := 0
+	legacyCount := 0
 
 	for _, entry := range entries {
 		var session GatewaySession
@@ -238,6 +250,13 @@ func (ar *AuthRouter) loadGatewaySessions() {
 			continue
 		}
 
+		// Sessions from before user ID binding cannot be tied to a user record, drop them
+		if session.UserID == "" {
+			legacyCount++
+			ar.Database.Delete(DB_GATEWAY_SESSIONS_TABLE, key)
+			continue
+		}
+
 		// Extract session ID from key (remove prefix)
 		sessionID := strings.TrimPrefix(key, DB_GATEWAY_SESSION_KEY_PREFIX)
 
@@ -250,13 +269,13 @@ func (ar *AuthRouter) loadGatewaySessions() {
 		if timeUntilExpiry > 0 {
 			sessionIDCopy := sessionID
 			time.AfterFunc(timeUntilExpiry, func() {
-				ar.gatewaySessionStore.Delete(sessionIDCopy)
+				ar.removeGatewaySession(sessionIDCopy)
 			})
 		}
 	}
 
 	if ar.Logger != nil {
-		ar.Logger.PrintAndLog("zorxauth", "Loaded "+strconv.Itoa(loadedCount)+" gateway sessions from database ("+strconv.Itoa(expiredCount)+" expired sessions removed)", nil)
+		ar.Logger.PrintAndLog("zorxauth", "Loaded "+strconv.Itoa(loadedCount)+" gateway sessions from database ("+strconv.Itoa(expiredCount)+" expired and "+strconv.Itoa(legacyCount)+" legacy sessions removed)", nil)
 	}
 }
 
@@ -274,6 +293,14 @@ func (ar *AuthRouter) Close() {
 	if ar.gatewayServer != nil {
 		ar.gatewayServer.Stop()
 	}
+
+	// Sessions are already written through as they change (see sessions.go).
+	// Rewrite the tables as an exact snapshot of memory anyway, so they carry
+	// the latest expiry times and nothing that is no longer live.
+	ar.sessionPersistMutex.Lock()
+	defer ar.sessionPersistMutex.Unlock()
+	ar.clearSessionTable(DB_BROWSER_SESSIONS_TABLE)
+	ar.clearSessionTable(DB_GATEWAY_SESSIONS_TABLE)
 
 	// Save all browser sessions to database
 	ar.cookieIdStore.Range(func(key, value interface{}) bool {

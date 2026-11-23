@@ -64,6 +64,10 @@
 					<b class="ui header">Editing User: <span id="editUsernameLabel"></span></b>
 					<p>Update the user information and click "Save Changes". Leave password blank to keep current password.</p>
 					<input type="hidden" id="editOriginalUsername">
+					<div class="field">
+						<label>User ID <small class="passwordHint">(sent to upstreams as the user ID header, never changes)</small></label>
+						<input id="editUserId" type="text" readonly onclick="this.select();">
+					</div>
 					<div class="two stackable fields">
 						<div class="field">
 							<label>Username</label>
@@ -191,6 +195,10 @@
 					<b class="ui header">Editing Group Policy: <span id="editGPNameLabel"></span></b>
 					<p>Update the group policy and click "Save Changes".</p>
 					<input type="hidden" id="editGPId">
+					<div class="field">
+						<label>Group ID <small class="passwordHint">(sent to upstreams as the group ID header, never changes)</small></label>
+						<input id="editGPIdDisplay" type="text" readonly onclick="this.select();">
+					</div>
 					<div class="two stackable fields">
 						<div class="field">
 							<label>Name</label>
@@ -428,7 +436,7 @@
                         accessDisplay = '<span style="opacity:0.5;">all hosts</span>';
                     }
                     const emailDisplay = escapeHtml(user.email) || '<span style="opacity:0.5;">—</span>';
-                    body.append(`<tr class="userRow" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}" data-usegrouppolicy="${user.useGroupPolicy ? '1' : '0'}" data-groupid="${escapeHtml(user.groupId || '')}" data-enable2fa="${user.enable2FA ? '1' : '0'}">
+                    body.append(`<tr class="userRow" data-userid="${escapeHtml(user.id || '')}" data-username="${escapeHtml(user.username)}" data-email="${escapeHtml(user.email)}" data-allowedhosts="${escapeHtml(normalizeHostsForInput(user.allowedHosts))}" data-usegrouppolicy="${user.useGroupPolicy ? '1' : '0'}" data-groupid="${escapeHtml(user.groupId || '')}" data-enable2fa="${user.enable2FA ? '1' : '0'}">
                         <td>${escapeHtml(user.username)}</td>
                         <td>${emailDisplay}</td>
                         <td>${accessDisplay}</td>
@@ -449,6 +457,7 @@
 				const groupId = row.attr('data-groupid') || '';
 
 				$('#editOriginalUsername').val(username);
+				$('#editUserId').val(row.attr('data-userid') || '');
 				$('#editUsername').val(username);
 				$('#editEmail').val(email);
 				$('#editPassword').val('');
@@ -694,6 +703,7 @@
 			function openEditGroupPolicy(btn){
 				const row = $(btn).closest('.gpRow');
 				$('#editGPId').val(row.attr('data-id'));
+				$('#editGPIdDisplay').val(row.attr('data-id'));
 				$('#editGPName').val(row.attr('data-name'));
 				$('#editGPDescription').val(row.attr('data-description'));
 				populateHostTable('editGPHostsTable', row.attr('data-allowedhosts'));

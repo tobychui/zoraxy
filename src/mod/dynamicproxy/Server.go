@@ -122,6 +122,9 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				//Request handled by subroute
 				return
 			}
+		} else {
+			//Login skipped, so the client is not a Zoraxy Auth user. Drop any identity headers it sent
+			h.stripZorxAuthIdentityHeaders(sep, r)
 		}
 
 		//Plugin routing

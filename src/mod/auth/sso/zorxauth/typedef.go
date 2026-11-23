@@ -66,18 +66,36 @@ type AuthRouterOptions struct {
 	CookieName               string `json:"cookie_name"`                 //Name of the session cookie
 	CookieDuration           int    `json:"cookie_duration"`             //Duration in seconds for the session cookie
 	CookieDurationRememberMe int    `json:"cookie_duration_remember_me"` //Duration in seconds for the session cookie when "Remember Me" is selected
+	/* Identity Header Options, empty means the default name. See identityHeaders.go */
+	UserIDHeader    string `json:"user_id_header"`    //Header carrying the stable User.ID. Default: Remote-User-Id
+	GroupIDHeader   string `json:"group_id_header"`   //Header carrying the assigned group policy ID. Default: Remote-Group-Id
+	GroupNameHeader string `json:"group_name_header"` //Header carrying the assigned group policy name. Default: Remote-Group-Name
 	/* Storage Options */
 	ConfigFolderPath string `json:"config_folder_path"` //Path to the config folder for storing group policy files. Default: ./conf/sso/zorxauth
 }
 
+// BrowserSession is a per-site login session (cookie on the protected host).
+// UserID is authoritative: it ties the session to one user record so a
+// deleted user's session can never be reused by a new user with the same name.
+// Username is only a lookup hint and is refreshed after a rename.
 type BrowserSession struct {
 	Username string
+	UserID   string
 	Expiry   time.Time
 }
 
+// GatewaySession is the login session on the SSO gateway domain.
+// See BrowserSession for the meaning of UserID and Username.
 type GatewaySession struct {
 	Username string
+	UserID   string
 	Expiry   time.Time
+}
+
+// ValidationCodeSession is what a one-time SSO callback validation code maps to
+type ValidationCodeSession struct {
+	Username string
+	UserID   string
 }
 
 // PendingTOTPSession holds login context while waiting for 2FA verification
@@ -105,10 +123,12 @@ type AuthRouter struct {
 	Options  *AuthRouterOptions
 
 	/* Internal */
-	sessionIdStore      sync.Map //sessionId -> userID
-	gatewaySessionStore sync.Map //sessionId -> *GatewaySession
-	cookieIdStore       sync.Map //browserSessionID (cookie value) -> *BrowserSession
+	sessionIdStore      sync.Map //validation code -> *ValidationCodeSession
+	gatewaySessionStore sync.Map //sessionId -> *GatewaySession, change only via the write-through helpers in sessions.go
+	cookieIdStore       sync.Map //browserSessionID (cookie value) -> *BrowserSession, change only via the write-through helpers in sessions.go
 	gatewayServer       *GatewayServer
+	userIDMutex         sync.Mutex //Serializes assigning IDs to user records that lack one
+	sessionPersistMutex sync.Mutex //Keeps a session's in-memory and database state in step
 
 	/* Group Policies */
 	groupPolicies sync.Map // id (string) -> *GroupPolicy
@@ -143,6 +163,9 @@ func getDefaultOptions() *AuthRouterOptions {
 		CookieName:               "zr_xauth_session",
 		CookieDuration:           3600,
 		CookieDurationRememberMe: 604800, // 7 days
+		UserIDHeader:             DefaultUserIDHeader,
+		GroupIDHeader:            DefaultGroupIDHeader,
+		GroupNameHeader:          DefaultGroupNameHeader,
 		ConfigFolderPath:         "./conf/sso/zorxauth",
 	}
 }
