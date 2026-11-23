@@ -137,6 +137,11 @@ func (router *Router) startH3Listener(tlsConfig *tls.Config) (*http3.Server, err
 }
 
 func NewDynamicProxy(option RouterOption) (*Router, error) {
+	switch option.PlainHTTPOnTLS {
+	case "", "off", "redirect", "link":
+	default:
+		return nil, errors.New("plain_http_on_tls must be off, redirect, or link")
+	}
 	proxyMap := sync.Map{}
 	thisRouter := Router{
 		Option:              &option,
@@ -352,9 +357,9 @@ func (router *Router) StartProxyService() error {
 				finalListener = ln
 			}
 
-		if err := srv.ServeTLS(finalListener, "", ""); err != nil && err != http.ErrServerClosed {
-			router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
-		}
+			if err := router.serveTLSListener(srv, finalListener); err != nil && err != http.ErrServerClosed {
+				router.Option.Logger.PrintAndLog("dprouter", "Could not start proxy server", err)
+			}
 
 		}(router.server)
 

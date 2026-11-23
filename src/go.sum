@@ -1579,6 +1579,8 @@ github.com/softlayer/softlayer-go v1.2.1/go.mod h1:Gz9/ktcmB7Z8EJlu+QEJJpkv8lAmn
 github.com/softlayer/xmlrpc v0.0.0-20200409220501-5f089df7cb7e h1:3OgWYFw7jxCZPcvAg+4R8A50GZ+CCkARF10lxu2qDsQ=
 github.com/softlayer/xmlrpc v0.0.0-20200409220501-5f089df7cb7e/go.mod h1:fKZCUVdirrxrBpwd9wb+lSoVixvpwAu8eHzbQB2tums=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
+github.com/soheilhy/cmux v0.1.5 h1:jjzc5WVemNEDTLwv9tlmemhC73tI08BNOIGwBOo10Js=
+github.com/soheilhy/cmux v0.1.5/go.mod h1:T7TcVDs9LWfQgPlPsdngu6I6QIoyIFZDDC6sNE1GqG0=
 github.com/sony/gobreaker v0.4.1/go.mod h1:ZKptC7FHNvhBz7dN2LGjPVBz2sZJmc0/PkyDJOjmxWY=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=

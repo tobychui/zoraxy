@@ -92,6 +92,7 @@ var (
 	/* Default Configuration Flags */
 	defaultInboundPort          = flag.Int("default_inbound_port", 443, "Default web server listening port")
 	defaultEnableInboundTraffic = flag.Bool("default_inbound_enabled", true, "If web server is enabled by default")
+	plainHTTPOnTLS              = flag.String("plain_http_on_tls", "off", "Plain HTTP on the main TLS port: off, redirect, or link")
 
 	/* Proxy Timeout Configuration Flags */
 	proxyReadHeaderTimeout = flag.Int("readheadertimeout", 30, "Proxy server read header timeout in seconds (0 = disabled)")

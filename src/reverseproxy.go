@@ -211,6 +211,7 @@ func ReverseProxyInit() {
 		NoCache:            developmentMode,
 		ListenOnPort80:     listenOnPort80,
 		ForceHttpsRedirect: forceHttpsRedirect,
+		PlainHTTPOnTLS:     *plainHTTPOnTLS,
 		UseProxyProtocol:   useProxyProtocol,
 		/* Routing Service Managers */
 		TlsManager:          tlsCertManager,

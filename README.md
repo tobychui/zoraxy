@@ -167,6 +167,18 @@ Usage of zoraxy:
         Static web server root folder. Only allow change in start paramters (default "./www")
 ```
 
+### Plain HTTP on the HTTPS Port
+
+Set `-plain_http_on_tls=redirect` to send an HTTP 307 redirect when a client
+uses plain HTTP on the main TLS listener. Set `-plain_http_on_tls=link` to show
+a **Continue over HTTPS** link that the visitor can click. The default is
+`off`.
+
+Both modes use the configured hostname and listener port and preserve the path
+and query string. They apply to active proxy hostnames and affect only the
+initial plain HTTP response. The destination still uses the normal TLS and
+proxy configuration.
+
 ### External Permission Management Mode
 
 If you already have an upstream reverse proxy server in place with permission management, you can use Zoraxy in noauth mode. To enable noauth mode, start Zoraxy with the following flag:

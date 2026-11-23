@@ -19,6 +19,7 @@ require (
 	github.com/pires/go-proxyproto v0.8.1
 	github.com/quic-go/quic-go v0.61.0
 	github.com/shirou/gopsutil/v4 v4.25.1
+	github.com/soheilhy/cmux v0.1.5
 	github.com/stretchr/testify v1.12.1
 	github.com/syndtr/goleveldb v1.0.0
 	go.etcd.io/bbolt v1.4.1
