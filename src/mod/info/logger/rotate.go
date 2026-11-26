@@ -161,7 +161,7 @@ func (l *Logger) RotateLog() error {
 	}
 
 	// Reopen a new log file
-	file, err := os.OpenFile(l.CurrentLogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(l.CurrentLogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
