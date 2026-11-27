@@ -32,6 +32,24 @@
                background: var(--theme_advance) !important;
                border-radius: 0.4em !important;
             }
+
+            /* Fixed column widths, so long header keys and values wrap instead of widening the table */
+            .ui.table.customHeaderTable{
+                table-layout: fixed;
+            }
+
+            .customHeaderTable th:first-child{
+                width: 30%;
+            }
+
+            .customHeaderTable th:last-child{
+                width: 6.5em;
+            }
+
+            .customHeaderTable td{
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
         </style>
     </head>
     <body>
@@ -44,7 +62,7 @@
                 <a class="item narrowpadding" data-tab="security">Security Headers</a>
             </div>
             <div class="ui tab basic segment active" data-tab="customheaders">
-                <table class="ui basic very compacted unstackable celled table">
+                <table class="ui basic very compacted unstackable celled table customHeaderTable">
                     <thead>
                     <tr>
                         <th>Key</th>
@@ -334,17 +352,24 @@
                             data.forEach(header => {
                                 let editModeIcon = header.IsRemove?`<i class="ui red times circle icon"></i>`:`<i class="ui green add circle icon"></i>`;
                                 let direction = (header.Direction==0)?`<i class="angle double right blue icon"></i>`:`<i class="angle double left orange icon"></i>`;
-                                let valueField = header.Value;
-                                if (header.IsRemove){
-                                    valueField = "<small style='color: grey;'>(Field Removed)</small>";
-                                }
-                                $("#headerTable").append(`
+                                let row = $(`
                                 <tr>
-                                    <td>${direction} ${header.Key}</td>
-                                    <td>${editModeIcon} ${valueField}</td>
-                                    <td><button class="ui basic circular mini red icon button" onclick="deleteCustomHeader('${header.Key}');"><i class="ui trash icon"></i></button></td>
+                                    <td>${direction} </td>
+                                    <td>${editModeIcon} </td>
+                                    <td><button class="ui basic circular mini red icon button"><i class="ui trash icon"></i></button></td>
                                 </tr>
                                 `);
+                                // Keys and values are user input, add them as text so they are not parsed as HTML
+                                row.children("td").eq(0).append(document.createTextNode(header.Key));
+                                if (header.IsRemove){
+                                    row.children("td").eq(1).append("<small style='color: grey;'>(Field Removed)</small>");
+                                }else{
+                                    row.children("td").eq(1).append(document.createTextNode(header.Value));
+                                }
+                                row.find("button").on("click", function(){
+                                    deleteCustomHeader(header.Key);
+                                });
+                                $("#headerTable").append(row);
                             });
 
                             if (data.length == 0){

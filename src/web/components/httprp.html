@@ -76,6 +76,30 @@
             max-width: 840px;
         }
 
+        /* Allowed HTTP Methods labels, in theme colors instead of the Semantic UI ones */
+        #httprpEditModal .AllowedMethods.ui.dropdown > .ui.label{
+            background: var(--theme_background) !important;
+            color: white !important;
+            box-shadow: none !important;
+        }
+
+        #httprpEditModal .AllowedMethods.ui.dropdown > .ui.label > .delete.icon{
+            color: white !important;
+            background-color: transparent !important; /* darktheme.css gives label icons a background */
+        }
+
+        /* Hovered, or highlighted with the keyboard for deletion */
+        #httprpEditModal .AllowedMethods.ui.dropdown > .ui.label:hover,
+        #httprpEditModal .AllowedMethods.ui.dropdown > .ui.label.active{
+            filter: brightness(1.15);
+        }
+
+        /* Grey box around the advanced settings accordions */
+        #httprpEditModal .ui.basic.segment.advanceoptions{
+            margin: 0.4em 0 0 0;
+            border-radius: 0.4em;
+        }
+
         #httprpEditModal .rpconfig_content{
             height: 100%;
             overflow-y: auto;
@@ -318,7 +342,7 @@
                                         <small>Allow inbound connections without TLS/SSL</small></label>
                                 </div>
                                 <br>
-                                <div class="ui basic segment hostAdvancedSettingsWrapper" style="margin: 0.4em 0 0 0; padding: 0;">
+                                <div class="ui basic segment advanceoptions hostAdvancedSettingsWrapper">
                                     <div class="ui hostDownstreamAdvancedSettings accordion">
                                         <div class="title" style="color: inherit; padding: 0.4em 0;">
                                             <i class="dropdown icon"></i>
@@ -336,44 +360,44 @@
                                                 <label>Enable protocol upgrade forwarding<br>
                                                     <small>Forward non-WebSocket Upgrade requests (e.g. Tailscale / Headscale TS2021) to the upstream as a raw tunnel. WebSocket is handled separately in the WebSocket tab.</small></label>
                                             </div>
+                                            <div class="ui divider"></div>
+                                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                <input type="checkbox" class="DisableLogging">
+                                                <label>Disable Requests Logging<br>
+                                                    <small>Disable logging for all incoming requests for this hostname</small></label>
+                                            </div>
+                                            <div class="loggingChildOptions" style="margin-left: 1.8em;">
+                                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                    <input type="checkbox" class="DisableErrorRequestLogging">
+                                                    <label>Disable Error Request Logging<br>
+                                                        <small>Skip requests rejected or failed by Zoraxy (e.g. access rules, rate limit, auth)</small></label>
+                                                </div>
+                                                <br>
+                                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                    <input type="checkbox" class="DisableSuccRequestLogging">
+                                                    <label>Disable Success Request Logging<br>
+                                                        <small>Skip requests served by the upstream</small></label>
+                                                </div>
+                                            </div>
+                                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                <input type="checkbox" class="DisableStatisticCollection">
+                                                <label>Disable Statistic Collection<br>
+                                                    <small>Disable collecting statistics for this hostname but keep request logging</small></label>
+                                            </div>
+                                            <div class="statisticChildOptions" style="margin-left: 1.8em;">
+                                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                    <input type="checkbox" class="DisableErrorStatistic">
+                                                    <label>Disable Error Statistic Collection<br>
+                                                        <small>Exclude requests rejected or failed by Zoraxy from statistics and traffic map</small></label>
+                                                </div>
+                                                <br>
+                                                <div class="ui checkbox" style="margin-top: 0.4em;">
+                                                    <input type="checkbox" class="DisableSuccStatistic">
+                                                    <label>Disable Success Statistic Collection<br>
+                                                        <small>Exclude requests served by the upstream from statistics and traffic map</small></label>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="ui divider"></div>
-                                <div class="ui checkbox" style="margin-top: 0.4em;">
-                                    <input type="checkbox" class="DisableLogging">
-                                    <label>Disable Requests Logging<br>
-                                        <small>Disable logging for all incoming requests for this hostname</small></label>
-                                </div>
-                                <div class="loggingChildOptions" style="margin-left: 1.8em;">
-                                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="DisableErrorRequestLogging">
-                                        <label>Disable Error Request Logging<br>
-                                            <small>Skip requests rejected or failed by Zoraxy (e.g. access rules, rate limit, auth)</small></label>
-                                    </div>
-                                    <br>
-                                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="DisableSuccRequestLogging">
-                                        <label>Disable Success Request Logging<br>
-                                            <small>Skip requests served by the upstream</small></label>
-                                    </div>
-                                </div>
-                                <div class="ui checkbox" style="margin-top: 0.4em;">
-                                    <input type="checkbox" class="DisableStatisticCollection">
-                                    <label>Disable Statistic Collection<br>
-                                        <small>Disable collecting statistics for this hostname but keep request logging</small></label>
-                                </div>
-                                <div class="statisticChildOptions" style="margin-left: 1.8em;">
-                                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="DisableErrorStatistic">
-                                        <label>Disable Error Statistic Collection<br>
-                                            <small>Exclude requests rejected or failed by Zoraxy from statistics and traffic map</small></label>
-                                    </div>
-                                    <br>
-                                    <div class="ui checkbox" style="margin-top: 0.4em;">
-                                        <input type="checkbox" class="DisableSuccStatistic">
-                                        <label>Disable Success Statistic Collection<br>
-                                            <small>Exclude requests served by the upstream from statistics and traffic map</small></label>
                                     </div>
                                 </div>
                             </div>
@@ -407,7 +431,7 @@
                                 <label>Monitor Uptime<br>
                                     <small>Enable active uptime monitor and auto disable upstreams that are offline</small></label>
                             </div>
-                            <div class="ui basic segment" style="margin: 0.4em 0 0 0; padding: 0;">
+                            <div class="ui basic segment advanceoptions">
                                 <div class="ui uptimeMonitorAdvancedSettings accordion">
                                     <div class="title" style="color: inherit; padding: 0.4em 0;">
                                         <i class="dropdown icon"></i>
@@ -476,6 +500,12 @@
                                 <label>Enable WebSocket<br>
                                     <small>Allow WebSocket upgrade requests to be proxied to this endpoint</small></label>
                             </div>
+                            <br>
+                            <div class="ui checkbox" style="margin-top: 0.4em;">
+                                <input type="checkbox" class="EnableTimeoutRefreshOnActivity">
+                                <label>Refresh timeout on activity<br>
+                                    <small>Reset the WebSocket deadline each time a message is received (idle timeout instead of max lifetime)</small></label>
+                            </div>
                             <br><br>
                             <b>Connection Timeout</b>
                             <div class="ui small right labeled fluid input" style="margin-top: 0.8em;">
@@ -483,12 +513,6 @@
                                 <label class="ui basic label">seconds</label>
                             </div>
                             <small style="opacity:0.7;">WebSocket connection timeout in seconds. Set to 0 to use the default (300 seconds).</small>
-                            <br><br>
-                            <div class="ui checkbox" style="margin-top: 0.4em;">
-                                <input type="checkbox" class="EnableTimeoutRefreshOnActivity">
-                                <label>Refresh timeout on activity<br>
-                                    <small>Reset the WebSocket deadline each time a message is received (idle timeout instead of max lifetime)</small></label>
-                            </div>
                         </div>
                     </div>
                     <!-- Virtual Directories-->
@@ -548,37 +572,46 @@
                                 </label>
                             </div>
                             <div class="ui divider"></div>
-                            <h4><i class="id card icon"></i> Client Certificate (mTLS)</h4>
-                            <p>Ask visitors of this host to present a client certificate issued by one of your trusted client CAs.
-                                CAs are managed in the <b>mTLS</b> tab under Security.</p>
-                            <div class="ui form">
-                                <div class="field">
-                                    <label>Mode</label>
-                                    <select class="ui dropdown Mtls_Mode">
-                                        <option value="off">Off</option>
-                                        <option value="optional">Optional (verify the certificate if the client sends one)</option>
-                                        <option value="required">Required (reject clients without a valid certificate)</option>
-                                    </select>
-                                </div>
-                                <div class="field Mtls_CAField">
-                                    <label>Trusted Client CAs</label>
-                                    <div class="Mtls_CAList"></div>
-                                </div>
-                                <div class="field Mtls_BypassField">
-                                    <div class="ui checkbox">
-                                        <input type="checkbox" class="Mtls_BypassAuth">
-                                        <label>Skip login for clients with a valid certificate<br>
-                                            <small>Clients without a certificate still go through the authentication provider (Basic Auth / SSO) if one is set</small>
-                                        </label>
+                            <div class="ui basic segment advanceoptions">
+                                <div class="ui tlsAdvancedSettings accordion">
+                                    <div class="title" style="color: inherit; padding: 0.4em 0;">
+                                        <i class="dropdown icon"></i>
+                                        Advanced Settings
+                                    </div>
+                                    <div class="content">
+                                        <h4>Client Certificate (mTLS)</h4>
+                                        <p>Ask visitors of this host to present a client certificate issued by one of your trusted client CAs.
+                                            CAs are managed in the <b>mTLS</b> tab under Security.</p>
+                                        <div class="ui form">
+                                            <div class="field">
+                                                <label>Mode</label>
+                                                <select class="ui dropdown Mtls_Mode">
+                                                    <option value="off">Off</option>
+                                                    <option value="optional">Optional (verify the certificate if the client sends one)</option>
+                                                    <option value="required">Required (reject clients without a valid certificate)</option>
+                                                </select>
+                                            </div>
+                                            <div class="field Mtls_CAField">
+                                                <label>Trusted Client CAs</label>
+                                                <div class="Mtls_CAList"></div>
+                                            </div>
+                                            <div class="field Mtls_BypassField">
+                                                <div class="ui checkbox">
+                                                    <input type="checkbox" class="Mtls_BypassAuth">
+                                                    <label>Skip login for clients with a valid certificate<br>
+                                                        <small>Clients without a certificate still go through the authentication provider (Basic Auth / SSO) if one is set</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="ui small yellow message Mtls_RequiredWarning" style="display:none;">
+                                                <i class="exclamation triangle icon"></i> Install a client certificate on your device before saving, or you will be locked out of this host.
+                                                Client certificates require HTTPS, so plain HTTP access to this host is refused.
+                                            </div>
+                                            <button class="ui basic small button Mtls_SaveBtn"><i class="green save icon"></i> Save Client Certificate Settings</button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="ui small yellow message Mtls_RequiredWarning" style="display:none;">
-                                    <i class="exclamation triangle icon"></i> Install a client certificate on your device before saving, or you will be locked out of this host.
-                                    Client certificates require HTTPS, so plain HTTP access to this host is refused.
-                                </div>
-                                <button class="ui basic small button Mtls_SaveBtn"><i class="green save icon"></i> Save Client Certificate Settings</button>
                             </div>
-                            <br>
                             <div class="ui divider"></div>
                             <button class="ui basic small button getCertificateBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="green lock icon"></i> Get Certificate</button>
                             <button class="ui basic small button getSelfSignCertBtn" style="margin-left: 0.4em; margin-top: 0.4em;"><i class="yellow lock icon"></i> Generate Self-Signed Certificate</button>
@@ -670,10 +703,9 @@
                             <div class="ui divider"></div>
                             <!-- Allowed HTTP Methods -->
                             <label><b>Allowed HTTP Methods <span style="opacity:0.6; font-weight:normal;">(optional)</span></b></label>
-                            <div class="ui small fluid input" style="margin-top: 0.4em;">
-                                <input type="text" class="AllowedMethods" placeholder="All methods allowed" autocomplete="off" spellcheck="false">
-                            </div>
-                            <small style="opacity:0.7;">Comma separated list of the HTTP methods this host accepts (e.g. <code>GET, HEAD, POST</code>). Methods must be listed in the <a href="https://www.iana.org/assignments/http-methods" target="_blank" rel="noopener">IANA HTTP Method Registry</a>, which includes the WebDAV and CalDAV ones (<code>PROPFIND</code>, <code>MKCOL</code>, <code>REPORT</code>, ...). Requests with any other method get a <code>405 Method Not Allowed</code> response and are not forwarded to the upstream. Leave empty to allow all methods.</small>
+                            <!-- Dropdown is generated by initAllowedMethodsPicker -->
+                            <div class="allowedMethodsPicker" style="margin-top: 0.4em; margin-bottom: 0.4em;"></div>
+                            <small style="opacity:0.7;">HTTP methods this host accepts. Pick from the list, or type a method followed by a space or comma. Methods must be listed in the <a href="https://www.iana.org/assignments/http-methods" target="_blank" rel="noopener">IANA HTTP Method Registry</a>, which includes the WebDAV and CalDAV ones (<code>PROPFIND</code>, <code>MKCOL</code>, <code>REPORT</code>, ...). Requests with any other method get a <code>405 Method Not Allowed</code> response and are not forwarded to the upstream. Leave empty to allow all methods.</small>
                             <div class="ui divider"></div>
                             <!-- Rate Limits-->
                             <div class="ui checkbox" style="margin-top: 0.4em;">
@@ -774,6 +806,7 @@
 
     $('#httprpEditModal .tabular.menu .item').tab();
     $('.hostDownstreamAdvancedSettings.accordion').accordion();
+    $('.tlsAdvancedSettings.accordion').accordion();
     $('.uptimeMonitorAdvancedSettings.accordion').accordion();
 
     /* Renderers */
@@ -1343,7 +1376,7 @@
         let disableSuccStatistic = $(editor).find(".DisableSuccStatistic")[0].checked;
         let blockCommonExploits = $(editor).find(".BlockCommonExploits")[0].checked;
         let blockAICrawlers = $(editor).find(".BlockAICrawlers")[0].checked;
-        let allowedMethods = $(editor).find(".AllowedMethods").val().trim();
+        let allowedMethods = $(editor).find(".AllowedMethods input[type='hidden']").val() || "";
         let mitigationAction = $(editor).find(".mitigationActionDropdown").dropdown("get value");
 
         // CAPTCHA Gating
@@ -1797,7 +1830,8 @@
             success: function(data) {
                 let dropdown = $('<div class="ui fluid selection dropdown"></div>');
                 let menu = $('<div class="menu"></div>');
-                data.forEach(cert => {
+                // The list is null if there is no certificate in the store
+                (data || []).forEach(cert => {
                     menu.append(`<div class="item" data-value="${cert}">${cert}</div>`);
                 });
                 // Add a hidden input to store the selected certificate
@@ -1831,6 +1865,83 @@
         $(".ui.toggle.tiny.fitted.checkbox").css("z-index", 0);
         $("#httprpEditModalWrapper").fadeIn("fast", function(){
             $(".ui.toggle.tiny.fitted.checkbox").css("z-index", "auto");
+        });
+    }
+
+    // Methods offered by the Allowed HTTP Methods picker, keep in sync with
+    // RegisteredHTTPMethods in mod/dynamicproxy/methodfilter.go
+    const registeredHTTPMethods = [
+        // Common methods first
+        "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT", "TRACE",
+        // WebDAV, CalDAV and others
+        "ACL", "BASELINE-CONTROL", "BIND", "CHECKIN", "CHECKOUT", "COPY", "LABEL", "LINK",
+        "LOCK", "MERGE", "MKACTIVITY", "MKCALENDAR", "MKCOL", "MKREDIRECTREF", "MKWORKSPACE",
+        "MOVE", "ORDERPATCH", "PROPFIND", "PROPPATCH", "QUERY", "REBIND", "REPORT", "SEARCH",
+        "UNBIND", "UNCHECKOUT", "UNLINK", "UNLOCK", "UPDATE", "UPDATEREDIRECTREF", "VERSION-CONTROL"
+    ];
+
+    // Render the searchable multi-select of HTTP methods into wrapper.
+    // onUpdate is called when the user adds or removes a method.
+    function initAllowedMethodsPicker(wrapper, selectedMethods, onUpdate){
+        // Rebuilt on every call, so no labels or settings are left over from the last host
+        let dropdown = $(`<div class="ui fluid multiple search selection dropdown AllowedMethods">
+                <input type="hidden">
+                <i class="dropdown icon"></i>
+                <div class="default text">All methods allowed</div>
+                <div class="menu"></div>
+            </div>`);
+        registeredHTTPMethods.forEach(method => {
+            dropdown.find(".menu").append($('<div class="item"></div>').attr("data-value", method).text(method));
+        });
+        wrapper.empty().append(dropdown);
+
+        // forceSelection would add the highlighted method when the field loses focus
+        dropdown.dropdown({ forceSelection: false });
+        dropdown.dropdown("set selected", selectedMethods);
+
+        // Bound after the initial values are set, so loading a host does not save it
+        let addingTypedMethods = false;
+        dropdown.dropdown("setting", "onChange", function(){
+            if (!addingTypedMethods){
+                onUpdate();
+            }
+        });
+
+        // Turn the typed (or pasted) text into labels
+        let search = dropdown.find("input.search");
+        function addTypedMethods(){
+            let typed = search.val().toUpperCase().split(/[\s,]+/).filter(word => word != "");
+            let selected = dropdown.dropdown("get values") || [];
+            let newMethods = [...new Set(typed)].filter(m => registeredHTTPMethods.includes(m) && !selected.includes(m));
+            let unknown = typed.filter(m => !registeredHTTPMethods.includes(m));
+
+            search.val("").trigger("input");
+            if (unknown.length > 0){
+                msgbox($("<span>").text("Unsupported HTTP method: " + unknown.join(", ")).html(), false, 5000);
+            }
+            if (newMethods.length > 0){
+                // Save once, even if multiple methods were pasted
+                addingTypedMethods = true;
+                dropdown.dropdown("set selected", newMethods);
+                addingTypedMethods = false;
+                onUpdate();
+            }
+        }
+
+        search.on("input", function(){
+            if (/[\s,]/.test(search.val())){
+                addTypedMethods();
+            }
+        });
+
+        search.on("blur", function(){
+            let typed = search.val();
+            // Clicking a menu item also blurs the input, give it time to clear the text first
+            setTimeout(function(){
+                if (typed != "" && search.val() == typed && dropdown[0].isConnected){
+                    addTypedMethods();
+                }
+            }, 250);
         });
     }
 
@@ -1913,9 +2024,7 @@
         });
 
         // Allowed HTTP Methods
-        editor.find(".AllowedMethods").off("change");
-        editor.find(".AllowedMethods").val((subd.AllowedMethods || []).join(", "));
-        editor.find(".AllowedMethods").on("change", function() {
+        initAllowedMethodsPicker(editor.find(".allowedMethodsPicker"), subd.AllowedMethods || [], function() {
             saveProxyInlineEdit(uuid);
         });
 
