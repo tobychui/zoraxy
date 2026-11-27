@@ -535,7 +535,11 @@ func ReverseProxyHandleAddEndpoint(w http.ResponseWriter, r *http.Request) {
 	if websocketTimeout < 0 {
 		websocketTimeout = 0
 	}
-	enableTimeoutRefreshOnActivity, _ := utils.PostBool(r, "enableTimeoutRefreshOnActivity")
+	// Refresh timeout on activity is on for new rules unless explicitly turned off
+	enableTimeoutRefreshOnActivity := true
+	if value, err := utils.PostBool(r, "enableTimeoutRefreshOnActivity"); err == nil {
+		enableTimeoutRefreshOnActivity = value
+	}
 
 	var proxyEndpointCreated *dynamicproxy.ProxyEndpoint
 	switch eptype {
