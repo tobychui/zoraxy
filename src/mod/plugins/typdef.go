@@ -73,4 +73,8 @@ type Manager struct {
 	pluginCheckMutex   sync.RWMutex //Mutex for the plugin hash
 	pluginReloadTicker *time.Ticker //Ticker for the plugin reload
 	pluginReloadStop   chan bool    //Channel to stop the plugin reload ticker
+
+	pluginCacheMutex sync.RWMutex  //Mutex for Options.DownloadablePluginCache and Options.LastSuccPluginSyncTime
+	autoSyncMutex    sync.Mutex    //Mutex for autoSyncStop
+	autoSyncStop     chan struct{} //Closing this channel stops the plugin list auto sync
 }

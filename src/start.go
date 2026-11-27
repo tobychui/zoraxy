@@ -431,13 +431,19 @@ func startupSequence() {
 
 	//Sync latest plugin list from the plugin store
 	go func() {
-		err = pluginManager.UpdateDownloadablePluginList()
+		err := pluginManager.UpdateDownloadablePluginList()
 		if err != nil {
 			SystemWideLogger.PrintAndLog("plugin-manager", "Failed to sync plugin list from plugin store", err)
 		} else {
 			SystemWideLogger.PrintAndLog("plugin-manager", "Plugin list synced from plugin store", nil)
 		}
 	}()
+
+	//Keep the plugin list (and the plugin update info derived from it) up to date
+	err = pluginManager.StartAutoSync(PLUGIN_LIST_SYNC_INTERVAL * time.Hour)
+	if err != nil {
+		SystemWideLogger.PrintAndLog("plugin-manager", "Failed to start plugin list auto sync", err)
+	}
 
 	err = pluginManager.LoadPluginsFromDisk()
 	if err != nil {
